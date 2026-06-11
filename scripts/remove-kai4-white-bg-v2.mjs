@@ -1,0 +1,66 @@
+import sharp from "sharp";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(__dirname, "..");
+
+const inputPath = path.join(root, "avatars", "kai level 4.png");
+const outputPath = path.join(root, "public", "avatars", "kai-level-4.png");
+
+async function removeWhiteBg() {
+  console.log("📂 Input:", inputPath);
+  console.log("📂 Output:", outputPath);
+
+  const image = sharp(inputPath);
+  const { width, height } = await image.metadata();
+  console.log(`📐 Size: ${width}x${height}`);
+
+  const { data, info } = await image
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  console.log(`📊 Channels: ${info.channels}, Buffer length: ${data.length}`);
+
+  const pixels = Buffer.from(data);
+  // Daha agresif: 200+ olan tüm pikselleri saydam yap
+  // Ama Kai'nin kendisinin beyaz kısımlarını korumak için
+  // sadece arka planın olduğu bölgeleri temizle
+  const whiteThreshold = 200;
+
+  let removed = 0;
+  for (let i = 0; i < pixels.length; i += 4) {
+    const r = pixels[i];
+    const g = pixels[i + 1];
+    const b = pixels[i + 2];
+
+    // Eğer tüm RGB kanalları threshold'un üstündeyse ve
+    // birbirine yakınsa (gri/beyaz), saydam yap
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const diff = max - min;
+
+    if (r >= whiteThreshold && g >= whiteThreshold && b >= whiteThreshold && diff < 30) {
+      pixels[i + 3] = 0;
+      removed++;
+    }
+  }
+
+  console.log(`🧹 Removed ${removed} near-white pixels`);
+
+  await sharp(pixels, {
+    raw: {
+      width: info.width,
+      height: info.height,
+      channels: 4,
+    },
+  })
+    .png()
+    .toFile(outputPath);
+
+  console.log("✅ Beyaz arka plan temizlendi!");
+  console.log("✅ Kaydedildi:", outputPath);
+}
+
+removeWhiteBg().catch(console.error);
