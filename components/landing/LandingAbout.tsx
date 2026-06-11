@@ -47,7 +47,7 @@ export function LandingAbout() {
             Why K.AIFY
           </p>
           <h2 className="landing-section-title mt-4">
-            Health tracking that{" "}
+            Body tracking that{" "}
             <span className="landing-gradient-text">finally sticks.</span>
           </h2>
           <p className="mt-6 text-lg leading-relaxed text-zinc-400">
