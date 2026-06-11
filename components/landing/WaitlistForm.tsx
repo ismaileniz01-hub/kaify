@@ -17,12 +17,43 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
 
     setStatus("loading");
 
-    // Simüle edilmiş başarılı kayıt (API olmadığı için)
-    setTimeout(() => {
-      setStatus("success");
-      setName("");
-      setEmail("");
-    }, 1000);
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_SENDER_API_KEY;
+
+      console.log("📤 Sender.net API'ye istek gönderiliyor...");
+      console.log("  → Endpoint: https://api.sender.net/v2/subscribers");
+      console.log("  → Email:", email);
+      console.log("  → Name:", name);
+      console.log("  → API Key mevcut:", !!apiKey);
+
+      const response = await fetch("https://api.sender.net/v2/subscribers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          email: email,
+          first_name: name,
+          tags: ["kaify-waitlist"],
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log("✅ Sender.net API başarılı:", data);
+        setStatus("success");
+        setName("");
+        setEmail("");
+      } else {
+        console.error("❌ Sender.net API hatası:", response.status, data);
+        setStatus("error");
+      }
+    } catch (err) {
+      console.error("❌ Sender.net API isteği başarısız:", err);
+      setStatus("error");
+    }
   };
 
   if (status === "success") {
