@@ -47,8 +47,9 @@ export function LandingAbout() {
             Why K.AIFY
           </p>
           <h2 className="landing-section-title mt-4">
-            Body tracking that{" "}
-            <span className="landing-gradient-text">finally sticks.</span>
+            4 AI Coach,{" "}
+            <span className="landing-gradient-text">One Team,</span>
+            {" "}Built For You
           </h2>
           <p className="mt-6 text-lg leading-relaxed text-zinc-400">
             Most fitness apps dump data on you and disappear. K.AIFY is different:
