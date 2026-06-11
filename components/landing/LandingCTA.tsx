@@ -22,7 +22,7 @@ export function LandingCTA() {
             />
 
             <h2 className="mt-8 text-center text-3xl font-bold text-white md:text-4xl lg:text-5xl">
-              Ready to feel in control of your health?
+              Ready to feel in control of your progress?
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-center text-lg text-zinc-400">
               K.AIFY is launching soon. Join the waitlist and be among the first

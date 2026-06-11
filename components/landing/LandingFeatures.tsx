@@ -29,8 +29,8 @@ export function LandingFeatures() {
             Analytics
           </p>
           <h2 className="landing-section-title mt-4">
-            Data you can{" "}
-            <span className="landing-gradient-text">actually understand.</span>
+            Body tracking{" "}
+            <span className="landing-gradient-text">that finally sticks.</span>
           </h2>
           <p className="mt-6 text-lg text-zinc-400">
             No spreadsheets. No confusion. Watch your weight, calories, workouts,

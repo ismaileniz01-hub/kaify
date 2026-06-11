@@ -35,7 +35,7 @@ export function LandingHero() {
               <h1 className="landing-hero-title">
                 Your personal
                 <br />
-                <span className="landing-gradient-text">Body Wellness Team</span>
+                <span className="landing-gradient-text">Pro Coaching Team</span>
                 <br />
                 in one app.
               </h1>
