@@ -54,13 +54,29 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
         statusCode: 200,
         body: JSON.stringify({ success: true, message: "You're on the list!" }),
       };
-    } else {
-      console.error("❌ Sender.net API hatası:", response.status, data);
+    }
+
+    // E-posta zaten kayıtlı mı kontrol et
+    const errorMessage = JSON.stringify(data).toLowerCase();
+    if (
+      errorMessage.includes("already subscribed") ||
+      errorMessage.includes("already exists") ||
+      errorMessage.includes("already registered") ||
+      errorMessage.includes("duplicate") ||
+      response.status === 409
+    ) {
+      console.log("ℹ️ E-posta zaten kayıtlı:", email);
       return {
-        statusCode: response.status,
-        body: JSON.stringify({ error: "Failed to subscribe" }),
+        statusCode: 200,
+        body: JSON.stringify({ success: true, message: "Zaten kayıtlısınız, ilginiz için teşekkürler!" }),
       };
     }
+
+    console.error("❌ Sender.net API hatası:", response.status, data);
+    return {
+      statusCode: response.status,
+      body: JSON.stringify({ error: "Failed to subscribe" }),
+    };
   } catch (err) {
     console.error("❌ Sender.net API isteği başarısız:", err);
     return {
