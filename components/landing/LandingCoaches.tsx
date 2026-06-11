@@ -66,7 +66,7 @@ export function LandingCoaches() {
       <div className="landing-container">
         <ScrollReveal className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-purple-400">
-            Your team
+            Body Wellness Team
           </p>
           <h2 className="landing-section-title mt-4">
             Four experts.{" "}
