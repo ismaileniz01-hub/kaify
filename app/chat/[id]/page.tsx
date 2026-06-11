@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
+
 import { ArrowLeft, Camera, Mic, Send } from "lucide-react";
 import { useState, useRef } from "react";
 import { ChatBubbles } from "@/components/ChatBubbles";

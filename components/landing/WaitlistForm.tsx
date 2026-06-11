@@ -17,28 +17,12 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
 
     setStatus("loading");
 
-    // İsim soyisim ayırma: ilk kelime firstName, gerisi lastName
-    const parts = name.trim().split(/\s+/);
-    const firstName = parts[0];
-    const lastName = parts.slice(1).join(" ");
-
-    try {
-      const response = await fetch("/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, email: email.trim() }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to subscribe");
-      }
-
+    // Simüle edilmiş başarılı kayıt (API olmadığı için)
+    setTimeout(() => {
       setStatus("success");
       setName("");
       setEmail("");
-    } catch {
-      setStatus("error");
-    }
+    }, 1000);
   };
 
   if (status === "success") {
