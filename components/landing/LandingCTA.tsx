@@ -29,6 +29,14 @@ export function LandingCTA() {
               to get four AI coaches, smart analytics, and Kai — your dragon
               companion — in one beautifully designed app.
             </p>
+            <p className="mx-auto mt-2 text-center text-sm text-zinc-500">
+              Plans starting from{" "}
+              <span className="relative inline-block font-semibold text-zinc-300">
+                <span className="absolute -inset-x-1 -inset-y-0.5 rounded-md bg-emerald-500/10 blur-sm" />
+                <span className="relative">just $15/mo</span>
+              </span>{" "}
+              — that's less than a coffee run for a whole month of personalized coaching.
+            </p>
 
             <div className="mx-auto mt-10 max-w-md">
               <WaitlistForm />
