@@ -35,7 +35,7 @@ export function LandingCTA() {
                 <span className="absolute -inset-x-1 -inset-y-0.5 rounded-md bg-emerald-500/10 blur-sm" />
                 <span className="relative">just $15/mo</span>
               </span>{" "}
-              — that's less than a coffee run for a whole month of personalized coaching.
+              {" "}&mdash; that's less than a coffee run for a whole month of personalized coaching.
             </p>
 
             <div className="mx-auto mt-10 max-w-md">

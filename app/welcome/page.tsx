@@ -8,10 +8,10 @@ import { WelcomeExtras } from "@/components/welcome/WelcomeExtras";
 import { GemBalance } from "@/components/GemBalance";
 import { ProfileModal } from "@/components/ProfileModal";
 import { DEMO_USER_NAME, DEMO_USER_PROFILE } from "@/lib/user";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function WelcomePage() {
+function WelcomeContent() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [userProfile, setUserProfile] = useState(DEMO_USER_PROFILE);
   const searchParams = useSearchParams();
@@ -118,7 +118,7 @@ export default function WelcomePage() {
           </div>
         </section>
 
-        {/* Alt öneriler — haftalık hedef kaldırıldı, her şey aşağı çekildi */}
+        {/* Alt öneriler */}
         <section className="animate-in animate-in--7 mt-6 px-4 pb-10">
           <WelcomeExtras />
         </section>
@@ -132,5 +132,13 @@ export default function WelcomePage() {
         onSave={(updated) => setUserProfile(updated)}
       />
     </div>
+  );
+}
+
+export default function WelcomePage() {
+  return (
+    <Suspense fallback={<div className="phone-shell flex items-center justify-center"><p className="text-zinc-400">Loading...</p></div>}>
+      <WelcomeContent />
+    </Suspense>
   );
 }
