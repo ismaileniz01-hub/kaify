@@ -18,40 +18,38 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
     setStatus("loading");
 
     try {
-      const apiKey = process.env.NEXT_PUBLIC_SENDER_API_KEY;
+      // Netlify Function'a istek at (CORS yok, server-side çalışır)
+      const functionUrl = "/.netlify/functions/subscribe";
 
-      console.log("📤 Sender.net API'ye istek gönderiliyor...");
-      console.log("  → Endpoint: https://api.sender.net/v2/subscribers");
+      console.log("📤 Netlify Function'a istek gönderiliyor...");
+      console.log("  → Endpoint:", functionUrl);
       console.log("  → Email:", email);
       console.log("  → Name:", name);
-      console.log("  → API Key mevcut:", !!apiKey);
 
-      const response = await fetch("https://api.sender.net/v2/subscribers", {
+      const response = await fetch(functionUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           email: email,
-          first_name: name,
-          tags: ["kaify-waitlist"],
+          name: name,
         }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        console.log("✅ Sender.net API başarılı:", data);
+        console.log("✅ Abonelik başarılı:", data);
         setStatus("success");
         setName("");
         setEmail("");
       } else {
-        console.error("❌ Sender.net API hatası:", response.status, data);
+        console.error("❌ Abonelik hatası:", response.status, data);
         setStatus("error");
       }
     } catch (err) {
-      console.error("❌ Sender.net API isteği başarısız:", err);
+      console.error("❌ Abonelik isteği başarısız:", err);
       setStatus("error");
     }
   };
