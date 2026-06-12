@@ -26,13 +26,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!firstName || typeof firstName !== "string" || !firstName.trim()) {
-      return NextResponse.json(
-        { error: "First name is required." },
-        { status: 400 }
-      );
-    }
-
     // Basic email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
@@ -41,6 +34,17 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // --- Normalize name fields (use fallback if empty) ---
+    const safeFirstName =
+      firstName && typeof firstName === "string" && firstName.trim()
+        ? firstName.trim()
+        : "Unknown";
+
+    const safeLastName =
+      lastName && typeof lastName === "string" && lastName.trim()
+        ? lastName.trim()
+        : undefined;
 
     // --- Read API key from environment (server-side only) ---
     const apiKey = process.env.SENDER_API_KEY;
@@ -64,8 +68,8 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           email: email.trim(),
-          first_name: firstName.trim(),
-          last_name: lastName?.trim() || undefined,
+          first_name: safeFirstName,
+          last_name: safeLastName,
           tags: ["kaify-waitlist"],
           groups: ["dPGkyz"],
         }),
