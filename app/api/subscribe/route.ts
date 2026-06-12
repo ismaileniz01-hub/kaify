@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
           first_name: safeFirstName,
           last_name: safeLastName,
           tags: ["kaify-waitlist"],
-          groups: ["dJ1MpD"],
+          groups: ["dL9kZA"],
         }),
       }
     );
