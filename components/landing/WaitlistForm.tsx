@@ -60,6 +60,9 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
         <p className="text-sm text-zinc-400">
           Thanks{firstName ? ` ${firstName}` : ""}, we'll keep you posted.
         </p>
+        <p className="mt-1 text-xs text-amber-400/80">
+          💡 If our email lands in Promotions/Spam, move it to Primary to stay in the loop!
+        </p>
       </div>
     );
   }
