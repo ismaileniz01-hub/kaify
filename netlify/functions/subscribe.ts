@@ -1,10 +1,26 @@
 import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
 
+const headers = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 export const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
+  // Handle CORS preflight
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 204,
+      headers,
+      body: "",
+    };
+  }
+
   // Sadece POST isteklerine izin ver
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
+      headers,
       body: JSON.stringify({ error: "Method not allowed" }),
     };
   }
@@ -15,6 +31,7 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
     if (!email || !name) {
       return {
         statusCode: 400,
+        headers,
         body: JSON.stringify({ error: "Email and name are required" }),
       };
     }
@@ -25,6 +42,7 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
       console.error("❌ SENDER_API_KEY environment variable is not set");
       return {
         statusCode: 500,
+        headers,
         body: JSON.stringify({ error: "Server configuration error" }),
       };
     }
@@ -43,6 +61,7 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
         email: email,
         first_name: name,
         tags: ["kaify-waitlist"],
+        groups: ["dJ1MpD"],
       }),
     });
 
@@ -52,6 +71,7 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
       console.log("✅ Sender.net API başarılı:", data);
       return {
         statusCode: 200,
+        headers,
         body: JSON.stringify({ success: true, message: "You're on the list!" }),
       };
     }
@@ -68,6 +88,7 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
       console.log("ℹ️ E-posta zaten kayıtlı:", email);
       return {
         statusCode: 200,
+        headers,
         body: JSON.stringify({ success: true, message: "Zaten kayıtlısınız, ilginiz için teşekkürler!" }),
       };
     }
@@ -75,12 +96,14 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
     console.error("❌ Sender.net API hatası:", response.status, data);
     return {
       statusCode: response.status,
+      headers,
       body: JSON.stringify({ error: "Failed to subscribe" }),
     };
   } catch (err) {
     console.error("❌ Sender.net API isteği başarısız:", err);
     return {
       statusCode: 500,
+      headers,
       body: JSON.stringify({ error: "Internal server error" }),
     };
   }
