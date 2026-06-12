@@ -22,7 +22,7 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
 
     try {
       // Submit to our own server-side API route (no CORS, no API key exposure)
-      const response = await fetch("/api/subscribe", {
+      const response = await fetch("/.netlify/functions/subscribe", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
