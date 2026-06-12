@@ -12,6 +12,7 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Client-side validation
     if (!firstName.trim() || !email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setStatus("error");
       return;
@@ -20,46 +21,31 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
     setStatus("loading");
 
     try {
-      const apiKey = process.env.NEXT_PUBLIC_SENDER_API_KEY;
-
-      const response = await fetch("https://api.sender.net/v2/subscribers", {
+      // Submit to our own server-side API route (no CORS, no API key exposure)
+      const response = await fetch("/api/waitlist", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           email: email.trim(),
-          first_name: firstName.trim(),
-          last_name: lastName.trim() || undefined,
-          tags: ["kaify-waitlist"],
+          firstName: firstName.trim(),
+          lastName: lastName.trim() || undefined,
         }),
       });
 
       const data = await response.json();
 
-      if (response.ok) {
+      if (response.ok && data.success) {
         setStatus("success");
         setFirstName("");
         setLastName("");
         setEmail("");
       } else {
-        // "already subscribed" gibi durumları da başarılı say
-        const errorMsg = JSON.stringify(data).toLowerCase();
-        if (
-          errorMsg.includes("already subscribed") ||
-          errorMsg.includes("already exists") ||
-          response.status === 409
-        ) {
-          setStatus("success");
-          setFirstName("");
-          setLastName("");
-          setEmail("");
-        } else {
-          setStatus("error");
-        }
+        setStatus("error");
       }
     } catch {
+      // Network failure
       setStatus("error");
     }
   };
