@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
           first_name: firstName.trim(),
           last_name: lastName?.trim() || undefined,
           tags: ["kaify-waitlist"],
-          groups: ["dJ1MpD"],
+          groups: ["dPGkyz"],
         }),
       }
     );
