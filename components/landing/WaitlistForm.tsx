@@ -1,19 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ArrowRight, Check, Loader2 } from "lucide-react";
+import ReCAPTCHA from "react-google-recaptcha";
 
 export function WaitlistForm({ className = "" }: { className?: string }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Client-side validation
     if (!firstName.trim() || !email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setStatus("error");
+      return;
+    }
+
+    // Execute reCAPTCHA
+    const token = await recaptchaRef.current?.executeAsync();
+    if (!token) {
       setStatus("error");
       return;
     }
@@ -31,6 +40,7 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
           email: email.trim(),
           firstName: firstName.trim(),
           lastName: lastName.trim() || undefined,
+          recaptchaToken: token,
         }),
       });
 
@@ -109,6 +119,11 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
           )}
         </button>
       </div>
+      <ReCAPTCHA
+        ref={recaptchaRef}
+        sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ""}
+        size="invisible"
+      />
       {status === "error" && (
         <p className="text-xs text-red-400">
           Something went wrong. Please try again.

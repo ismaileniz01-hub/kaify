@@ -12,11 +12,36 @@ export async function POST(request: NextRequest) {
   try {
     // --- Parse request body ---
     const body = await request.json();
-    const { email, firstName, lastName } = body as {
+    const { email, firstName, lastName, recaptchaToken } = body as {
       email?: string;
       firstName?: string;
       lastName?: string;
+      recaptchaToken?: string;
     };
+
+    // --- Verify reCAPTCHA token ---
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    if (secretKey) {
+      const verifyUrl = "https://www.google.com/recaptcha/api/siteverify";
+      const params = new URLSearchParams({
+        secret: secretKey,
+        response: recaptchaToken || "",
+      });
+
+      const recaptchaRes = await fetch(verifyUrl, {
+        method: "POST",
+        body: params,
+      });
+      const recaptchaData = await recaptchaRes.json();
+
+      if (!recaptchaData.success) {
+        console.warn("[api/waitlist] reCAPTCHA verification failed:", recaptchaData);
+        return NextResponse.json(
+          { error: "Bot detected. Please try again." },
+          { status: 403 }
+        );
+      }
+    }
 
     // --- Validate required fields ---
     if (!email || typeof email !== "string" || !email.trim()) {
