@@ -20,9 +20,9 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
       return;
     }
 
-    // Execute reCAPTCHA
+    // Execute reCAPTCHA (if configured)
     const token = await recaptchaRef.current?.executeAsync();
-    if (!token) {
+    if (!token && process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) {
       setStatus("error");
       return;
     }
@@ -119,11 +119,13 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
           )}
         </button>
       </div>
-      <ReCAPTCHA
-        ref={recaptchaRef}
-        sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ""}
-        size="invisible"
-      />
+      {process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
+        <ReCAPTCHA
+          ref={recaptchaRef}
+          sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+          size="invisible"
+        />
+      )}
       {status === "error" && (
         <p className="text-xs text-red-400">
           Something went wrong. Please try again.
