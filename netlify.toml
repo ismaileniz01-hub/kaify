@@ -5,9 +5,8 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Netlify Functions'a direkt erişim için
 [[redirects]]
-  from = "/.netlify/functions/*"
+  from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
   force = true
