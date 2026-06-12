@@ -24,6 +24,12 @@
 .env*.local
 .vercel
 
+# local avatars (not used in app, duplicates of public/avatars/)
+/avatars/
+
+# PNG optimization backups
+*.original
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
