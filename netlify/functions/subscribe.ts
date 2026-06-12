@@ -26,7 +26,8 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
   }
 
   try {
-    const { email, name } = JSON.parse(event.body || "{}");
+    const { email, firstName, lastName } = JSON.parse(event.body || "{}");
+    const name = firstName || "";
 
     if (!email || !name) {
       return {
