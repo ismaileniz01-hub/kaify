@@ -5,6 +5,7 @@ import { ArrowLeft, BarChart3, Flame, MessageCircle, Settings, ShoppingCart, Use
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { WelcomeCard } from "@/components/welcome/WelcomeCard";
 import { WelcomeExtras } from "@/components/welcome/WelcomeExtras";
+import { WelcomeLeaderboard } from "@/components/welcome/WelcomeLeaderboard";
 import { GemBalance } from "@/components/GemBalance";
 import { ProfileModal } from "@/components/ProfileModal";
 import { DEMO_USER_NAME, DEMO_USER_PROFILE } from "@/lib/user";
@@ -59,8 +60,13 @@ function WelcomeContent() {
       </header>
 
       <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {/* Leaderboard — en üstte */}
+        <div className="animate-in animate-in--2">
+          <WelcomeLeaderboard />
+        </div>
+
         {/* Karşılama — büyük ve gösterişli */}
-        <section className="animate-in animate-in--2 flex flex-col items-center px-6 pt-12 text-center">
+        <section className="animate-in animate-in--3 flex flex-col items-center px-6 pt-6 text-center">
           <h1
             className="welcome-title text-5xl font-extrabold leading-none tracking-tight drop-shadow-[0_4px_32px_rgba(168,85,247,0.35)]"
             style={{
