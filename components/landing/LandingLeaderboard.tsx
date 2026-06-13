@@ -53,6 +53,7 @@ const COUNTRIES = [
 
 // Floating flag orbs scattered around the card — positioned outside on left & right
 // Left side: leaderboard countries, Right side: developed / high-population nations
+// Hidden on mobile (sm:flex) to prevent overflow issues
 const FLOATING_FLAGS = [
   { flagCode: "tr", x: "-8%", y: "10%", size: 56, delay: 0, duration: 6 },
   { flagCode: "es", x: "104%", y: "5%", size: 52, delay: 0.8, duration: 7 },
@@ -162,9 +163,9 @@ function CountryRow({
         </div>
 
         {/* Flag + Name */}
-        <div className="flex min-w-0 flex-1 items-center gap-4">
-          <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/[0.04] ring-1 ring-white/[0.08]">
-            <FlagImage flagCode={country.flagCode} size={56} />
+        <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+          <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/[0.04] ring-1 ring-white/[0.08] sm:h-14 sm:w-14">
+            <FlagImage flagCode={country.flagCode} size={48} />
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-white">
@@ -176,9 +177,9 @@ function CountryRow({
 
         {/* Streak count */}
         <div className="flex shrink-0 items-center gap-2.5">
-          <div className="flex items-center gap-1.5 rounded-full bg-orange-500/10 px-3 py-1.5 ring-1 ring-orange-500/20">
-            <Flame className="h-3.5 w-3.5 text-orange-400" />
-            <span className="text-sm font-bold tabular-nums text-white">
+          <div className="flex items-center gap-1.5 rounded-full bg-orange-500/10 px-2.5 py-1 ring-1 ring-orange-500/20 sm:px-3 sm:py-1.5">
+            <Flame className="h-3 w-3 text-orange-400 sm:h-3.5 sm:w-3.5" />
+            <span className="text-xs font-bold tabular-nums text-white sm:text-sm">
               {(country.totalStreaks / 1000).toFixed(1)}K
             </span>
           </div>
@@ -218,8 +219,8 @@ export function LandingLeaderboard() {
         </ScrollReveal>
 
         <div className="relative mx-auto mt-12 max-w-2xl sm:mt-16">
-          {/* Floating flag orbs scattered around */}
-          <div className="pointer-events-none absolute inset-0 overflow-visible" aria-hidden>
+          {/* Floating flag orbs scattered around — hidden on mobile */}
+          <div className="pointer-events-none absolute inset-0 overflow-visible max-sm:hidden" aria-hidden>
             {FLOATING_FLAGS.map((f, i) => (
               <FloatingFlag key={i} {...f} />
             ))}
