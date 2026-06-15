@@ -27,7 +27,7 @@ export function LandingHero() {
           <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
             <ScrollReveal delay={80}>
               <p className="mb-5 text-sm font-semibold uppercase tracking-[0.25em] text-purple-300/80">
-                Fitness · AI · Made enjoyable
+                Fitness · Coaching · Made enjoyable
               </p>
             </ScrollReveal>
 
@@ -44,10 +44,10 @@ export function LandingHero() {
             <ScrollReveal delay={240}>
               <p className="mt-6 max-w-lg text-lg leading-relaxed text-zinc-400">
                 No more juggling five apps, guessing your macros, or losing
-                motivation after week two. K.AIFY gives you four expert AI coaches,
+                motivation after week two. K.AIFY gives you four expert coaches,
                 real progress tracking, and Kai — your dragon companion who keeps
-                you showing up. Whether you&apos;re 22 or 52, getting healthier
-                shouldn&apos;t feel overwhelming.
+                you showing up. Whether you're 22 or 52, getting healthier
+                shouldn't feel overwhelming.
               </p>
             </ScrollReveal>
 

@@ -47,7 +47,7 @@ export function LandingAbout() {
             Why K.AIFY
           </p>
           <h2 className="landing-section-title mt-4">
-            4 AI Coach,{" "}
+            4 Expert Coaches,{" "}
             <span className="landing-gradient-text">One Team,</span>
             {" "}Built For You
           </h2>

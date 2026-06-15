@@ -19,9 +19,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "K.AIFY — Your AI Health Team",
+  title: "K.AIFY — Your Personal Health Team",
   description:
-    "Four AI coaches, smart analytics, and Kai your dragon companion. Join the waitlist for the fitness app that finally sticks.",
+    "Four expert coaches, smart analytics, and Kai your dragon companion. Join the waitlist for the fitness app that finally sticks.",
 };
 
 export const viewport: Viewport = {

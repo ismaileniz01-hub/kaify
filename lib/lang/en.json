@@ -65,7 +65,7 @@
   "streak.evolving": "EVOLVING...",
   "streak.transforming": "TRANSFORMING...",
   "streak.scan_complete": "Scan complete!",
-  "streak.scan_success": "AI analysis successful",
+  "streak.scan_success": "Body scan successful",
 
   "chat.placeholder": "Type a message...",
   "chat.send": "Send",

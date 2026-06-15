@@ -33,7 +33,7 @@ export default function LoginPage() {
               K.AIFY
             </h1>
             <p className="max-w-[280px] text-base font-medium leading-snug tracking-wide text-purple-100/90">
-              4 AI coaches. One team. Designed for you.
+              4 coaches. One team. Designed for you.
             </p>
           </div>
         </div>

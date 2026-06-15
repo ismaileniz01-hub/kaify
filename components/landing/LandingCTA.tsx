@@ -26,7 +26,7 @@ export function LandingCTA() {
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-center text-lg text-zinc-400">
               K.AIFY is launching soon. Join the waitlist and be among the first
-              to get four AI coaches, smart analytics, and Kai — your dragon
+              to get four expert coaches, smart analytics, and Kai — your dragon
               companion — in one beautifully designed app.
             </p>
             <p className="mx-auto mt-2 text-center text-sm text-zinc-500">
