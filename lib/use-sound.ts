@@ -21,12 +21,12 @@ function getAudioContext(): AudioContext {
   if (typeof window === "undefined") {
     return null as unknown as AudioContext;
   }
-  const existing = (window as any)[AUDIO_CTX_KEY] as AudioContext | undefined;
+  const existing = (window as unknown as Record<string, AudioContext | undefined>)[AUDIO_CTX_KEY];
   if (existing && existing.state !== "closed") {
     return existing;
   }
   const ctx = new AudioContext();
-  (window as any)[AUDIO_CTX_KEY] = ctx;
+  (window as unknown as Record<string, AudioContext>)[AUDIO_CTX_KEY] = ctx;
   return ctx;
 }
 

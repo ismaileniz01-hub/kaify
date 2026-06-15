@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Chrome } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 
 export default function LoginPage() {
@@ -33,40 +33,41 @@ export default function LoginPage() {
               K.AIFY
             </h1>
             <p className="max-w-[280px] text-base font-medium leading-snug tracking-wide text-purple-100/90">
-              4 AI koç. Tek takım. Senin için tasarlandı.
+              4 AI coaches. One team. Designed for you.
             </p>
           </div>
         </div>
 
         <div className="flex w-full max-w-xs flex-col gap-4">
-          <Link
-            href="/welcome"
+          <a
+            href="https://kaifyai.org/"
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex w-full items-center justify-center gap-3 rounded-full bg-white px-6 py-4 text-sm font-semibold text-zinc-900 shadow-xl shadow-black/30 transition active:scale-[0.98]"
           >
-            <Chrome className="h-5 w-5" strokeWidth={2} />
-            Google ile devam et
-          </Link>
+            Sign Up
+            <ArrowRight className="h-5 w-5" strokeWidth={2} />
+          </a>
 
           <Link
             href="/welcome"
             className="flex w-full items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 py-4 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/15 active:scale-[0.98]"
           >
-            Prototipi önizle
+            Preview Prototype
           </Link>
 
           <Link
             href="/"
             className="text-center text-xs text-purple-200/60 transition hover:text-purple-100"
           >
-            ← Ana sayfaya dön
+            ← Back to home
           </Link>
 
           <p className="text-center text-xs text-purple-200/50">
-            Devam ederek{" "}
+            By continuing, you agree to our{" "}
             <span className="text-purple-100/70 underline-offset-2 hover:underline">
-              Kullanım Şartları
+              Terms of Service
             </span>
-            &apos;nı kabul edersin
           </p>
         </div>
       </main>

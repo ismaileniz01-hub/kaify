@@ -41,6 +41,7 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
           firstName: firstName.trim(),
           lastName: lastName.trim() || undefined,
           recaptchaToken: token,
+          honeypot: "", // Honeypot alanı — botlar doldurur, gerçek kullanıcılar boş bırakır
         }),
       });
 
@@ -79,6 +80,18 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
 
   return (
     <form onSubmit={handleSubmit} className={`flex flex-col gap-3 ${className}`}>
+      {/* Honeypot — CSS ile gizli, sadece botlar görür */}
+      <div style={{ position: "absolute", left: "-9999px" }} aria-hidden="true">
+        <label htmlFor="honeypot">Leave this empty</label>
+        <input
+          id="honeypot"
+          type="text"
+          name="honeypot"
+          tabIndex={-1}
+          autoComplete="off"
+          defaultValue=""
+        />
+      </div>
       <div className="flex gap-2">
         <input
           type="text"

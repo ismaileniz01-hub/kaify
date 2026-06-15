@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, Sparkles } from "lucide-react";
+import { ChevronRight, Sparkles, BookOpen } from "lucide-react";
 import { useKai } from "@/lib/kai-context";
 import { getKaiLevelInfo } from "@/lib/kai-level";
 
@@ -63,6 +63,21 @@ export function WelcomeExtras() {
             Kai — Level {kaiInfo.level} ({kaiInfo.label})
           </p>
           <p className="text-sm font-semibold text-white">Kai ile sohbet</p>
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-zinc-500" />
+      </Link>
+
+      {/* Kütüphane */}
+      <Link
+        href="/library"
+        className="analytics-card analytics-card--emerald flex items-center gap-3 p-3.5 transition active:scale-[0.99]"
+      >
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-emerald-500/25 text-emerald-300">
+          <BookOpen className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] text-zinc-500">Egzersiz Kütüphanesi</p>
+          <p className="text-sm font-semibold text-white">Hareketleri keşfet</p>
         </div>
         <ChevronRight className="h-4 w-4 shrink-0 text-zinc-500" />
       </Link>

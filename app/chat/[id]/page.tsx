@@ -38,6 +38,13 @@ export default function ChatPage() {
         default: return contact.avatar;
       }
     }
+    if (contactId === "leo") {
+      switch (avatarState) {
+        case "typing": return "/avatars/leo-1.png";
+        case "sent": return "/avatars/leo-2.png";
+        default: return contact.avatar;
+      }
+    }
     if (contactId === "kai") {
       return kaiAvatar;
     }
@@ -130,8 +137,8 @@ export default function ChatPage() {
             contactId === "alex" && avatarState === "sent" ? "/avatars/alex 2.png" :
             contactId === "maya" && avatarState === "typing" ? "/avatars/dr maya 1.png" :
             contactId === "maya" && avatarState === "sent" ? "/avatars/dr maya 2.png" :
-            contactId === "leo" && avatarState === "typing" ? "/avatars/Leo 1.png" :
-            contactId === "leo" && avatarState === "sent" ? "/avatars/Leo 2.png" :
+            contactId === "leo" && avatarState === "typing" ? "/avatars/leo-1.png" :
+            contactId === "leo" && avatarState === "sent" ? "/avatars/leo-2.png" :
             contactId === "kai" ? kaiAvatar :
             contact.avatar
           }

@@ -1,207 +1,108 @@
 import { NextRequest, NextResponse } from "next/server";
-import { allowMethods, sanitizeInput, apiError } from "@/lib/api-security";
+import { allowMethods, apiError, leaderboardQuerySchema } from "@/lib/api-security";
 
 // İnsani Gelişim Endeksi (HDI) 2022 sıralamasına göre ülkeler
 // Kaynak: UNDP Human Development Report 2023/2024
 const COUNTRIES_BY_HDI = [
-  // En yüksek HDI
-  { code: "ch", name: "Switzerland" },
-  { code: "no", name: "Norway" },
-  { code: "is", name: "Iceland" },
-  { code: "hk", name: "Hong Kong" },
-  { code: "dk", name: "Denmark" },
-  { code: "se", name: "Sweden" },
-  { code: "ie", name: "Ireland" },
-  { code: "de", name: "Germany" },
-  { code: "sg", name: "Singapore" },
-  { code: "nl", name: "Netherlands" },
-  { code: "li", name: "Liechtenstein" },
-  { code: "fi", name: "Finland" },
-  { code: "gb", name: "United Kingdom" },
-  { code: "nz", name: "New Zealand" },
-  { code: "ae", name: "UAE" },
-  { code: "ca", name: "Canada" },
-  { code: "kr", name: "South Korea" },
-  { code: "au", name: "Australia" },
-  { code: "lu", name: "Luxembourg" },
-  { code: "be", name: "Belgium" },
-  { code: "at", name: "Austria" },
-  { code: "jp", name: "Japan" },
-  { code: "il", name: "Israel" },
-  { code: "si", name: "Slovenia" },
-  { code: "us", name: "United States" },
-  { code: "mt", name: "Malta" },
-  { code: "es", name: "Spain" },
-  { code: "fr", name: "France" },
-  { code: "cy", name: "Cyprus" },
-  { code: "it", name: "Italy" },
-  { code: "ee", name: "Estonia" },
-  { code: "tr", name: "Türkiye" },
-  { code: "ct", name: "Northern Cyprus" },
-  { code: "cz", name: "Czech Republic" },
-  { code: "gr", name: "Greece" },
-  { code: "pl", name: "Poland" },
-  { code: "sa", name: "Saudi Arabia" },
-  { code: "lt", name: "Lithuania" },
-  { code: "pt", name: "Portugal" },
-  { code: "lv", name: "Latvia" },
-  { code: "sk", name: "Slovakia" },
-  { code: "hu", name: "Hungary" },
-  { code: "ro", name: "Romania" },
-  { code: "hr", name: "Croatia" },
-  { code: "cl", name: "Chile" },
-  { code: "qa", name: "Qatar" },
-  { code: "bh", name: "Bahrain" },
-  { code: "rs", name: "Serbia" },
-  { code: "ru", name: "Russia" },
-  { code: "my", name: "Malaysia" },
-  { code: "bg", name: "Bulgaria" },
-  { code: "me", name: "Montenegro" },
-  { code: "kz", name: "Kazakhstan" },
-  { code: "al", name: "Albania" },
-  { code: "mk", name: "North Macedonia" },
-  { code: "ba", name: "Bosnia" },
-  { code: "az", name: "Azerbaijan" },
-  { code: "ua", name: "Ukraine" },
-  { code: "mu", name: "Mauritius" },
-  { code: "md", name: "Moldova" },
-  { code: "ge", name: "Georgia" },
-  { code: "am", name: "Armenia" },
-  { code: "by", name: "Belarus" },
-  { code: "cn", name: "China" },
-  { code: "th", name: "Thailand" },
-  { code: "cr", name: "Costa Rica" },
-  { code: "ar", name: "Argentina" },
-  { code: "br", name: "Brazil" },
-  { code: "co", name: "Colombia" },
-  { code: "pe", name: "Peru" },
-  { code: "mx", name: "Mexico" },
-  { code: "uy", name: "Uruguay" },
-  { code: "ec", name: "Ecuador" },
-  { code: "pa", name: "Panama" },
-  { code: "do", name: "Dominican Republic" },
-  { code: "cu", name: "Cuba" },
-  { code: "ve", name: "Venezuela" },
-  { code: "bo", name: "Bolivia" },
-  { code: "py", name: "Paraguay" },
-  { code: "sv", name: "El Salvador" },
-  { code: "gt", name: "Guatemala" },
-  { code: "hn", name: "Honduras" },
-  { code: "ni", name: "Nicaragua" },
-  { code: "ir", name: "Iran" },
-  { code: "lb", name: "Lebanon" },
-  { code: "jo", name: "Jordan" },
-  { code: "ps", name: "Palestine" },
-  { code: "eg", name: "Egypt" },
-  { code: "tn", name: "Tunisia" },
-  { code: "dz", name: "Algeria" },
-  { code: "ma", name: "Morocco" },
-  { code: "om", name: "Oman" },
-  { code: "kw", name: "Kuwait" },
-  { code: "id", name: "Indonesia" },
-  { code: "ph", name: "Philippines" },
-  { code: "vn", name: "Vietnam" },
-  { code: "la", name: "Laos" },
-  { code: "kh", name: "Cambodia" },
-  { code: "mm", name: "Myanmar" },
-  { code: "mn", name: "Mongolia" },
-  { code: "bt", name: "Bhutan" },
-  { code: "np", name: "Nepal" },
-  { code: "bd", name: "Bangladesh" },
-  { code: "lk", name: "Sri Lanka" },
-  { code: "in", name: "India" },
-  { code: "pk", name: "Pakistan" },
-  { code: "af", name: "Afghanistan" },
-  { code: "uz", name: "Uzbekistan" },
-  { code: "tm", name: "Turkmenistan" },
-  { code: "kg", name: "Kyrgyzstan" },
-  { code: "tj", name: "Tajikistan" },
-  { code: "za", name: "South Africa" },
-  { code: "bw", name: "Botswana" },
-  { code: "na", name: "Namibia" },
-  { code: "ga", name: "Gabon" },
-  { code: "ke", name: "Kenya" },
-  { code: "ng", name: "Nigeria" },
-  { code: "gh", name: "Ghana" },
-  { code: "ci", name: "Côte d'Ivoire" },
-  { code: "sn", name: "Senegal" },
-  { code: "ml", name: "Mali" },
-  { code: "bf", name: "Burkina Faso" },
-  { code: "ne", name: "Niger" },
-  { code: "td", name: "Chad" },
-  { code: "cm", name: "Cameroon" },
-  { code: "cf", name: "Central African Republic" },
-  { code: "cd", name: "DR Congo" },
-  { code: "ao", name: "Angola" },
-  { code: "zm", name: "Zambia" },
-  { code: "zw", name: "Zimbabwe" },
-  { code: "mw", name: "Malawi" },
-  { code: "mz", name: "Mozambique" },
-  { code: "mg", name: "Madagascar" },
-  { code: "tz", name: "Tanzania" },
-  { code: "ug", name: "Uganda" },
-  { code: "rw", name: "Rwanda" },
-  { code: "bi", name: "Burundi" },
-  { code: "sd", name: "Sudan" },
-  { code: "ss", name: "South Sudan" },
-  { code: "et", name: "Ethiopia" },
-  { code: "so", name: "Somalia" },
-  { code: "dj", name: "Djibouti" },
-  { code: "er", name: "Eritrea" },
-  { code: "lr", name: "Liberia" },
-  { code: "sl", name: "Sierra Leone" },
-  { code: "gn", name: "Guinea" },
-  { code: "tg", name: "Togo" },
-  { code: "bj", name: "Benin" },
-  { code: "gm", name: "Gambia" },
-  { code: "mr", name: "Mauritania" },
-  { code: "ls", name: "Lesotho" },
-  { code: "sz", name: "Eswatini" },
-  { code: "km", name: "Comoros" },
-  { code: "tl", name: "Timor-Leste" },
-  { code: "fj", name: "Fiji" },
-  { code: "pg", name: "Papua New Guinea" },
-  { code: "sb", name: "Solomon Islands" },
-  { code: "vu", name: "Vanuatu" },
-  { code: "ws", name: "Samoa" },
-  { code: "to", name: "Tonga" },
-  { code: "ki", name: "Kiribati" },
-  { code: "fm", name: "Micronesia" },
-  { code: "mh", name: "Marshall Islands" },
-  { code: "pw", name: "Palau" },
-  { code: "nr", name: "Nauru" },
-  { code: "tv", name: "Tuvalu" },
-  { code: "ht", name: "Haiti" },
-  { code: "gy", name: "Guyana" },
-  { code: "sr", name: "Suriname" },
-  { code: "bz", name: "Belize" },
-  { code: "ag", name: "Antigua" },
-  { code: "dm", name: "Dominica" },
-  { code: "gd", name: "Grenada" },
-  { code: "kn", name: "St Kitts" },
-  { code: "lc", name: "St Lucia" },
-  { code: "vc", name: "St Vincent" },
-  { code: "cv", name: "Cape Verde" },
-  { code: "st", name: "Sao Tome" },
-  { code: "gw", name: "Guinea-Bissau" },
-  { code: "gq", name: "Equatorial Guinea" },
-  { code: "cg", name: "Congo" },
-  { code: "sy", name: "Syria" },
-  { code: "ye", name: "Yemen" },
-  { code: "jm", name: "Jamaica" },
-  { code: "tt", name: "Trinidad" },
-  { code: "bs", name: "Bahamas" },
-  { code: "bb", name: "Barbados" },
-  { code: "sc", name: "Seychelles" },
-  { code: "mv", name: "Maldives" },
-  { code: "bn", name: "Brunei" },
-  { code: "fo", name: "Faroe Islands" },
-  { code: "gl", name: "Greenland" },
-  { code: "mc", name: "Monaco" },
-  { code: "pr", name: "Puerto Rico" },
+  { code: "ch", name: "Switzerland" }, { code: "no", name: "Norway" },
+  { code: "is", name: "Iceland" }, { code: "hk", name: "Hong Kong" },
+  { code: "dk", name: "Denmark" }, { code: "se", name: "Sweden" },
+  { code: "ie", name: "Ireland" }, { code: "de", name: "Germany" },
+  { code: "sg", name: "Singapore" }, { code: "nl", name: "Netherlands" },
+  { code: "li", name: "Liechtenstein" }, { code: "fi", name: "Finland" },
+  { code: "gb", name: "United Kingdom" }, { code: "nz", name: "New Zealand" },
+  { code: "ae", name: "UAE" }, { code: "ca", name: "Canada" },
+  { code: "kr", name: "South Korea" }, { code: "au", name: "Australia" },
+  { code: "lu", name: "Luxembourg" }, { code: "be", name: "Belgium" },
+  { code: "at", name: "Austria" }, { code: "jp", name: "Japan" },
+  { code: "il", name: "Israel" }, { code: "si", name: "Slovenia" },
+  { code: "us", name: "United States" }, { code: "mt", name: "Malta" },
+  { code: "es", name: "Spain" }, { code: "fr", name: "France" },
+  { code: "cy", name: "Cyprus" }, { code: "it", name: "Italy" },
+  { code: "ee", name: "Estonia" }, { code: "tr", name: "Türkiye" },
+  { code: "ct", name: "Northern Cyprus" }, { code: "cz", name: "Czech Republic" },
+  { code: "gr", name: "Greece" }, { code: "pl", name: "Poland" },
+  { code: "sa", name: "Saudi Arabia" }, { code: "lt", name: "Lithuania" },
+  { code: "pt", name: "Portugal" }, { code: "lv", name: "Latvia" },
+  { code: "sk", name: "Slovakia" }, { code: "hu", name: "Hungary" },
+  { code: "ro", name: "Romania" }, { code: "hr", name: "Croatia" },
+  { code: "cl", name: "Chile" }, { code: "qa", name: "Qatar" },
+  { code: "bh", name: "Bahrain" }, { code: "rs", name: "Serbia" },
+  { code: "ru", name: "Russia" }, { code: "my", name: "Malaysia" },
+  { code: "bg", name: "Bulgaria" }, { code: "me", name: "Montenegro" },
+  { code: "kz", name: "Kazakhstan" }, { code: "al", name: "Albania" },
+  { code: "mk", name: "North Macedonia" }, { code: "ba", name: "Bosnia" },
+  { code: "az", name: "Azerbaijan" }, { code: "ua", name: "Ukraine" },
+  { code: "mu", name: "Mauritius" }, { code: "md", name: "Moldova" },
+  { code: "ge", name: "Georgia" }, { code: "am", name: "Armenia" },
+  { code: "by", name: "Belarus" }, { code: "cn", name: "China" },
+  { code: "th", name: "Thailand" }, { code: "cr", name: "Costa Rica" },
+  { code: "ar", name: "Argentina" }, { code: "br", name: "Brazil" },
+  { code: "co", name: "Colombia" }, { code: "pe", name: "Peru" },
+  { code: "mx", name: "Mexico" }, { code: "uy", name: "Uruguay" },
+  { code: "ec", name: "Ecuador" }, { code: "pa", name: "Panama" },
+  { code: "do", name: "Dominican Republic" }, { code: "cu", name: "Cuba" },
+  { code: "ve", name: "Venezuela" }, { code: "bo", name: "Bolivia" },
+  { code: "py", name: "Paraguay" }, { code: "sv", name: "El Salvador" },
+  { code: "gt", name: "Guatemala" }, { code: "hn", name: "Honduras" },
+  { code: "ni", name: "Nicaragua" }, { code: "ir", name: "Iran" },
+  { code: "lb", name: "Lebanon" }, { code: "jo", name: "Jordan" },
+  { code: "ps", name: "Palestine" }, { code: "eg", name: "Egypt" },
+  { code: "tn", name: "Tunisia" }, { code: "dz", name: "Algeria" },
+  { code: "ma", name: "Morocco" }, { code: "om", name: "Oman" },
+  { code: "kw", name: "Kuwait" }, { code: "id", name: "Indonesia" },
+  { code: "ph", name: "Philippines" }, { code: "vn", name: "Vietnam" },
+  { code: "la", name: "Laos" }, { code: "kh", name: "Cambodia" },
+  { code: "mm", name: "Myanmar" }, { code: "mn", name: "Mongolia" },
+  { code: "bt", name: "Bhutan" }, { code: "np", name: "Nepal" },
+  { code: "bd", name: "Bangladesh" }, { code: "lk", name: "Sri Lanka" },
+  { code: "in", name: "India" }, { code: "pk", name: "Pakistan" },
+  { code: "af", name: "Afghanistan" }, { code: "uz", name: "Uzbekistan" },
+  { code: "tm", name: "Turkmenistan" }, { code: "kg", name: "Kyrgyzstan" },
+  { code: "tj", name: "Tajikistan" }, { code: "za", name: "South Africa" },
+  { code: "bw", name: "Botswana" }, { code: "na", name: "Namibia" },
+  { code: "ga", name: "Gabon" }, { code: "ke", name: "Kenya" },
+  { code: "ng", name: "Nigeria" }, { code: "gh", name: "Ghana" },
+  { code: "ci", name: "Côte d'Ivoire" }, { code: "sn", name: "Senegal" },
+  { code: "ml", name: "Mali" }, { code: "bf", name: "Burkina Faso" },
+  { code: "ne", name: "Niger" }, { code: "td", name: "Chad" },
+  { code: "cm", name: "Cameroon" }, { code: "cf", name: "Central African Republic" },
+  { code: "cd", name: "DR Congo" }, { code: "ao", name: "Angola" },
+  { code: "zm", name: "Zambia" }, { code: "zw", name: "Zimbabwe" },
+  { code: "mw", name: "Malawi" }, { code: "mz", name: "Mozambique" },
+  { code: "mg", name: "Madagascar" }, { code: "tz", name: "Tanzania" },
+  { code: "ug", name: "Uganda" }, { code: "rw", name: "Rwanda" },
+  { code: "bi", name: "Burundi" }, { code: "sd", name: "Sudan" },
+  { code: "ss", name: "South Sudan" }, { code: "et", name: "Ethiopia" },
+  { code: "so", name: "Somalia" }, { code: "dj", name: "Djibouti" },
+  { code: "er", name: "Eritrea" }, { code: "lr", name: "Liberia" },
+  { code: "sl", name: "Sierra Leone" }, { code: "gn", name: "Guinea" },
+  { code: "tg", name: "Togo" }, { code: "bj", name: "Benin" },
+  { code: "gm", name: "Gambia" }, { code: "mr", name: "Mauritania" },
+  { code: "ls", name: "Lesotho" }, { code: "sz", name: "Eswatini" },
+  { code: "km", name: "Comoros" }, { code: "tl", name: "Timor-Leste" },
+  { code: "fj", name: "Fiji" }, { code: "pg", name: "Papua New Guinea" },
+  { code: "sb", name: "Solomon Islands" }, { code: "vu", name: "Vanuatu" },
+  { code: "ws", name: "Samoa" }, { code: "to", name: "Tonga" },
+  { code: "ki", name: "Kiribati" }, { code: "fm", name: "Micronesia" },
+  { code: "mh", name: "Marshall Islands" }, { code: "pw", name: "Palau" },
+  { code: "nr", name: "Nauru" }, { code: "tv", name: "Tuvalu" },
+  { code: "ht", name: "Haiti" }, { code: "gy", name: "Guyana" },
+  { code: "sr", name: "Suriname" }, { code: "bz", name: "Belize" },
+  { code: "ag", name: "Antigua" }, { code: "dm", name: "Dominica" },
+  { code: "gd", name: "Grenada" }, { code: "kn", name: "St Kitts" },
+  { code: "lc", name: "St Lucia" }, { code: "vc", name: "St Vincent" },
+  { code: "cv", name: "Cape Verde" }, { code: "st", name: "Sao Tome" },
+  { code: "gw", name: "Guinea-Bissau" }, { code: "gq", name: "Equatorial Guinea" },
+  { code: "cg", name: "Congo" }, { code: "sy", name: "Syria" },
+  { code: "ye", name: "Yemen" }, { code: "jm", name: "Jamaica" },
+  { code: "tt", name: "Trinidad" }, { code: "bs", name: "Bahamas" },
+  { code: "bb", name: "Barbados" }, { code: "sc", name: "Seychelles" },
+  { code: "mv", name: "Maldives" }, { code: "bn", name: "Brunei" },
+  { code: "fo", name: "Faroe Islands" }, { code: "gl", name: "Greenland" },
+  { code: "mc", name: "Monaco" }, { code: "pr", name: "Puerto Rico" },
 ];
 
-// Demo kullanıcı isimleri
 const FIRST_NAMES = [
   "Alex", "Emma", "Liam", "Olivia", "Noah", "Ava", "Ethan", "Sophia",
   "Mason", "Isabella", "James", "Mia", "Benjamin", "Charlotte", "Lucas",
@@ -214,16 +115,15 @@ const FIRST_NAMES = [
   "Leo", "Maya", "Kai", "Levi", "Adam", "Eli", "Ezra", "Ian",
 ];
 
-function generateDemoUsers(): Array<{ id: string; name: string; countryCode: string; countryName: string; flagCode: string; streak: number }> {
+function generateDemoUsers() {
   const users: Array<{ id: string; name: string; countryCode: string; countryName: string; flagCode: string; streak: number }> = [];
   let userId = 1;
 
   for (const country of COUNTRIES_BY_HDI) {
-    // Her ülkeden 1-5 arası kullanıcı
     const userCount = 1 + Math.floor(Math.random() * 5);
     for (let i = 0; i < userCount; i++) {
       const name = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
-      const streak = 1 + Math.floor(Math.random() * 60); // 1-60 gün
+      const streak = 1 + Math.floor(Math.random() * 60);
       users.push({
         id: `user_${String(userId).padStart(3, "0")}`,
         name: `${name}${userId > FIRST_NAMES.length ? ` ${userId}` : ""}`,
@@ -242,7 +142,6 @@ function generateDemoUsers(): Array<{ id: string; name: string; countryCode: str
 const DEMO_USERS = generateDemoUsers();
 
 export async function GET(request: NextRequest) {
-  // Method kontrolü
   const methodCheck = allowMethods(request, ["GET"]);
   if (methodCheck) return methodCheck;
 
@@ -250,14 +149,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId") || "user_001";
 
-    // Input sanitizasyon
-    const cleanUserId = sanitizeInput(userId);
+    // Zod ile query validasyonu
+    const parsed = leaderboardQuerySchema.safeParse({ userId });
+    if (!parsed.success) {
+      return apiError("Invalid query parameters.", 400);
+    }
 
-    // Kullanıcının ülkesini bul
+    const cleanUserId = parsed.data.userId || "user_001";
+
     const currentUser = DEMO_USERS.find((u) => u.id === cleanUserId);
     const userCountry = currentUser?.countryCode ?? null;
 
-    // Ülkelere göre grupla ve streak'leri topla
     const countryMap = new Map<string, { countryCode: string; countryName: string; flagCode: string; totalStreak: number; userCount: number }>();
 
     for (const user of DEMO_USERS) {
@@ -276,18 +178,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Tüm ülkeleri al
     let allEntries = Array.from(countryMap.values());
 
-    // İlk 3'ü sabitle: 1. Türkiye, 2. Amerika, 3. Brezilya
     const turkeyEntry = allEntries.find((c) => c.countryCode === "tr");
     const usEntry = allEntries.find((c) => c.countryCode === "us");
     const brazilEntry = allEntries.find((c) => c.countryCode === "br");
 
-    // Bu ülkeleri listeden çıkar
     allEntries = allEntries.filter((c) => !["tr", "us", "br"].includes(c.countryCode));
 
-    // Avrupa ülkeleri kodları
     const europeanCodes = new Set([
       "al", "at", "ba", "be", "bg", "by", "ch", "ct", "cy", "cz", "de", "dk",
       "ee", "es", "fi", "fo", "fr", "gb", "ge", "gl", "gr", "hr", "hu",
@@ -296,29 +194,23 @@ export async function GET(request: NextRequest) {
       "sk", "ua",
     ]);
 
-    // Avrupa ülkeleri
     const europeanEntries = allEntries.filter((c) => europeanCodes.has(c.countryCode));
-    // Geri kalan ülkeler
     const restEntries = allEntries.filter((c) => !europeanCodes.has(c.countryCode));
 
-    // HDI sırasına göre sırala (listedeki index = HDI sırası, düşük index = yüksek HDI)
     const hdiOrder = new Map(COUNTRIES_BY_HDI.map((c, i) => [c.code, i]));
 
-    // Avrupa ülkelerini HDI sırasına göre sırala
     europeanEntries.sort((a, b) => {
       const aIdx = hdiOrder.get(a.countryCode) ?? 999;
       const bIdx = hdiOrder.get(b.countryCode) ?? 999;
       return aIdx - bIdx;
     });
 
-    // Geri kalan ülkeleri HDI sırasına göre sırala
     restEntries.sort((a, b) => {
       const aIdx = hdiOrder.get(a.countryCode) ?? 999;
       const bIdx = hdiOrder.get(b.countryCode) ?? 999;
       return aIdx - bIdx;
     });
 
-    // İlk 3'ü başa ekle, sonra Avrupa ülkeleri, sonra geri kalanı
     const leaderboard = [
       ...(turkeyEntry ? [turkeyEntry] : []),
       ...(usEntry ? [usEntry] : []),
@@ -327,7 +219,6 @@ export async function GET(request: NextRequest) {
       ...restEntries,
     ];
 
-    // Kullanıcının ülkesinin sırasını bul
     const userCountryRank = userCountry
       ? leaderboard.findIndex((c) => c.countryCode === userCountry) + 1
       : null;

@@ -1,13 +1,70 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { getDisposableRisk } from "./disposable-domains";
 
-/**
- * Validates reCAPTCHA token with Google's API
- */
+// ──────────────────────────────────────────────
+// 1. Zod Schemas — Tüm API route'ları için
+// ──────────────────────────────────────────────
+
+export const waitlistSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(1, "Email is required")
+    .max(254, "Email too long")
+    .email("Invalid email format"),
+  firstName: z
+    .string()
+    .trim()
+    .max(100, "First name too long")
+    .optional()
+    .default("Unknown"),
+  lastName: z
+    .string()
+    .trim()
+    .max(100, "Last name too long")
+    .optional(),
+  recaptchaToken: z.string().min(1, "reCAPTCHA token is required"),
+  honeypot: z.string().max(0, "Bot detected").optional(),
+});
+
+export const subscribeSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(1, "Email is required")
+    .max(254, "Email too long")
+    .email("Invalid email format"),
+  firstName: z
+    .string()
+    .trim()
+    .max(100, "First name too long")
+    .optional()
+    .default("Unknown"),
+  lastName: z
+    .string()
+    .trim()
+    .max(100, "Last name too long")
+    .optional(),
+  recaptchaToken: z.string().min(1, "reCAPTCHA token is required"),
+  honeypot: z.string().max(0, "Bot detected").optional(),
+});
+
+export const leaderboardQuerySchema = z.object({
+  userId: z.string().max(50).optional(),
+});
+
+// ──────────────────────────────────────────────
+// 2. reCAPTCHA — Zorunlu doğrulama
+// ──────────────────────────────────────────────
+
 export async function validateRecaptcha(token: string): Promise<boolean> {
   const secretKey = process.env.RECAPTCHA_SECRET_KEY;
-  
-  if (!secretKey || secretKey === "your_recaptcha_secret_key_here") {
-    console.error("RECAPTCHA_SECRET_KEY is not configured");
+
+  if (!secretKey || secretKey.includes("your_") || secretKey.includes("_here")) {
+    console.error("[security] RECAPTCHA_SECRET_KEY is not configured");
     return false;
   }
 
@@ -20,80 +77,158 @@ export async function validateRecaptcha(token: string): Promise<boolean> {
         body: `secret=${secretKey}&response=${token}`,
       }
     );
-    
+
     const data = await response.json();
     return data.success === true;
   } catch (error) {
-    console.error("reCAPTCHA validation error:", error);
+    console.error("[security] reCAPTCHA validation error:", error);
     return false;
   }
 }
 
-/**
- * Validates that required environment variables are set
- */
-export function validateEnvVars(vars: string[]): { valid: boolean; missing: string[] } {
-  const missing = vars.filter(
-    (v) => !process.env[v] || process.env[v]?.includes("your_") || process.env[v]?.includes("_here")
+// ──────────────────────────────────────────────
+// 3. Email Hash Logging (KVKK/GDPR uyumlu)
+//    Web Crypto API kullanır (Edge Runtime uyumlu)
+// ──────────────────────────────────────────────
+
+export async function hashEmail(email: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(email.toLowerCase().trim());
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// ──────────────────────────────────────────────
+// 4. Disposable Email Check (Risk-tabanlı)
+// ──────────────────────────────────────────────
+
+export function checkDisposableEmail(email: string): {
+  isDisposable: boolean;
+  risk: "high" | "medium" | "none";
+} {
+  const domain = email.split("@")[1]?.toLowerCase().trim() || "";
+  const risk = getDisposableRisk(domain);
+  return {
+    isDisposable: risk !== "none",
+    risk,
+  };
+}
+
+// ──────────────────────────────────────────────
+// 5. Client IP Extraction (Cloudflare-aware)
+// ──────────────────────────────────────────────
+
+export function getClientIP(request: NextRequest): string {
+  // Cloudflare'dan gelip gelmediğini kontrol et
+  const isCloudflare = request.headers.get("cf-ray") !== null;
+
+  if (isCloudflare) {
+    // Cloudflare arkasındaysak CF-Connecting-IP güvenilir
+    return request.headers.get("cf-connecting-ip") || "unknown";
+  }
+
+  // Local development, Vercel Preview, test ortamları
+  return (
+    request.headers.get("x-real-ip") ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown"
   );
-  return { valid: missing.length === 0, missing };
 }
 
-/**
- * Standard API error response
- */
-export function apiError(message: string, status: number = 400): NextResponse {
-  return NextResponse.json({ error: message }, { status });
+// ──────────────────────────────────────────────
+// 6. Body Size Limit (10KB)
+// ──────────────────────────────────────────────
+
+export const MAX_BODY_SIZE = 10 * 1024; // 10KB
+
+export async function parseBodyWithLimit(
+  request: NextRequest
+): Promise<unknown | null> {
+  const text = await request.text();
+  if (text.length > MAX_BODY_SIZE) {
+    console.warn(
+      `[security] Body too large: ${text.length} bytes (max ${MAX_BODY_SIZE})`
+    );
+    return null;
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }
 
-/**
- * Sanitize string input to prevent XSS
- * Escapes HTML special characters to their entity equivalents
- */
-export function sanitizeInput(input: string): string {
-  const AMP = String.fromCharCode(38) + "amp;";
-  const LT = String.fromCharCode(38) + "lt;";
-  const GT = String.fromCharCode(38) + "gt;";
-  const QUOT = String.fromCharCode(38) + "quot;";
-  const APOS = String.fromCharCode(38) + "#x27;";
-  
-  let result = "";
-  for (let i = 0; i < input.length; i++) {
-    const ch = input[i];
-    switch (ch) {
-      case String.fromCharCode(38):
-        result += AMP;
-        break;
-      case String.fromCharCode(60):
-        result += LT;
-        break;
-      case String.fromCharCode(62):
-        result += GT;
-        break;
-      case String.fromCharCode(34):
-        result += QUOT;
-        break;
-      case String.fromCharCode(39):
-        result += APOS;
-        break;
-      default:
-        result += ch;
+// ──────────────────────────────────────────────
+// 7. Origin/Referer Validation (Whitelist)
+// ──────────────────────────────────────────────
+
+export function isAllowedOrigin(request: NextRequest): boolean {
+  const origin = request.headers.get("origin");
+  const referer = request.headers.get("referer");
+
+  // ALLOWED_ORIGINS env'den veya varsayılan whitelist
+  const allowedOrigins = (
+    process.env.ALLOWED_ORIGINS ||
+    "https://kaify.org,https://www.kaify.org"
+  )
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  // Origin kontrolü (regex yok, includes ile tam eşleşme)
+  if (origin && allowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  // Referer fallback
+  if (referer) {
+    try {
+      const refererOrigin = new URL(referer).origin;
+      if (allowedOrigins.includes(refererOrigin)) {
+        return true;
+      }
+    } catch {
+      // Invalid URL
     }
   }
-  return result.trim().slice(0, 1000);
+
+  // Development ortamında localhost'a izin ver
+  if (
+    process.env.NODE_ENV === "development" &&
+    (origin?.includes("localhost") || referer?.includes("localhost"))
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
-/**
- * Validate email format
- */
-export function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email) && email.length <= 254;
+// ──────────────────────────────────────────────
+// 8. Bot Detection (User-Agent Heuristics)
+// ──────────────────────────────────────────────
+
+const BOT_USER_AGENTS = [
+  "curl", "wget", "python-requests", "python-urllib", "go-http-client",
+  "java/", "libwww-perl", "scrapy", "httpclient", "okhttp",
+  "ruby", "php", "perl", "nikto", "nmap", "sqlmap",
+  "zgrab", "masscan", "burpsuite", "postmanruntime",
+];
+
+export function isLikelyBot(request: NextRequest): boolean {
+  const ua = (request.headers.get("user-agent") || "").toLowerCase();
+
+  // Boş User-Agent → şüpheli
+  if (!ua || ua.length < 10) return true;
+
+  // Bilinen bot imzaları
+  return BOT_USER_AGENTS.some((bot) => ua.includes(bot));
 }
 
-/**
- * Check if request method is allowed
- */
+// ──────────────────────────────────────────────
+// 9. Method Check
+// ──────────────────────────────────────────────
+
 export function allowMethods(
   request: NextRequest,
   methods: string[]
@@ -105,4 +240,31 @@ export function allowMethods(
     });
   }
   return null;
+}
+
+// ──────────────────────────────────────────────
+// 10. Standard API Error Response
+// ──────────────────────────────────────────────
+
+export function apiError(
+  message: string,
+  status: number = 400
+): NextResponse {
+  // İç detayları sızdırma — generic hata mesajı
+  const publicMessage =
+    status >= 500
+      ? "An unexpected error occurred. Please try again later."
+      : message;
+
+  return NextResponse.json({ error: publicMessage }, { status });
+}
+
+// ──────────────────────────────────────────────
+// 11. CSP Nonce Generator (Web Crypto API)
+// ──────────────────────────────────────────────
+
+export async function generateNonce(): Promise<string> {
+  const buffer = new Uint8Array(16);
+  crypto.getRandomValues(buffer);
+  return btoa(String.fromCharCode(...buffer));
 }

@@ -2,11 +2,11 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { User } from "lucide-react";
 import type { ContactId } from "@/lib/contacts";
 import { CHAT_THREADS, CONTACTS } from "@/lib/contacts";
 import { useKai } from "@/lib/kai-context";
 import { useSound } from "@/lib/use-sound";
+import { DEMO_USER_PROFILE } from "@/lib/user";
 
 type ChatBubblesProps = {
   contactId: ContactId;
@@ -129,7 +129,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
                 <div className="flex max-w-[82%] items-end gap-2">
                   <div className="relative h-8 w-8 shrink-0">
                     <Image
-                      src={contactId === "leo" ? "/avatars/leo-typing.png" : contactAvatar}
+                      src={contactId === "leo" ? "/avatars/leo-1.png" : contactAvatar}
                       alt={contact.name}
                       width={32}
                       height={32}
@@ -145,10 +145,21 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
                 </div>
               ) : (
                 <div className="flex max-w-[82%] flex-col items-end gap-1 self-end">
-                  <div className="bubble-user flex items-center gap-1.5 bg-gradient-to-br from-purple-500 to-violet-600 px-5 py-3.5 shadow-md shadow-purple-900/30">
-                    <span className="typing-dot typing-dot--user" />
-                    <span className="typing-dot typing-dot--user" />
-                    <span className="typing-dot typing-dot--user" />
+                  <div className="flex items-end gap-2">
+                    <div className="bubble-user flex items-center gap-1.5 bg-gradient-to-br from-purple-500 to-violet-600 px-5 py-3.5 shadow-md shadow-purple-900/30">
+                      <span className="typing-dot typing-dot--user" />
+                      <span className="typing-dot typing-dot--user" />
+                      <span className="typing-dot typing-dot--user" />
+                    </div>
+                    <div className="relative h-8 w-8 shrink-0">
+                      <Image
+                        src={DEMO_USER_PROFILE.avatar}
+                        alt={DEMO_USER_PROFILE.name}
+                        width={32}
+                        height={32}
+                        className="h-full w-full rounded-full object-cover"
+                      />
+                    </div>
                   </div>
                 </div>
               )
@@ -187,8 +198,14 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
                         {msg.time}
                       </span>
                     </div>
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-purple-300 ring-1 ring-purple-400/30">
-                      <User className="h-4 w-4" strokeWidth={2} />
+                    <div className="relative h-8 w-8 shrink-0">
+                      <Image
+                        src={DEMO_USER_PROFILE.avatar}
+                        alt={DEMO_USER_PROFILE.name}
+                        width={32}
+                        height={32}
+                        className="h-full w-full rounded-full object-cover"
+                      />
                     </div>
                   </div>
                 </div>

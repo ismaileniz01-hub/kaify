@@ -2,48 +2,65 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
-const VALUES = [4200, 5800, 5100, 7200, 6400, 8100, 4900];
-const MAX = Math.max(...VALUES);
-const MIN = Math.min(...VALUES);
-const AVG = Math.round(VALUES.reduce((a, b) => a + b, 0) / VALUES.length);
+type Period = "W" | "M" | "3M";
+
+const PERIOD_DATA: Record<Period, { labels: string[]; values: number[] }> = {
+  W: {
+    labels: ["M", "T", "W", "T", "F", "S", "S"],
+    values: [4200, 5800, 5100, 7200, 6400, 8100, 4900],
+  },
+  M: {
+    labels: ["W1", "W2", "W3", "W4"],
+    values: [38500, 41200, 39800, 45600],
+  },
+  "3M": {
+    labels: ["Jan", "Feb", "Mar"],
+    values: [158000, 165000, 172000],
+  },
+};
 
 const W = 300;
 const H = 100;
 const PAD = 8;
 
 function toPoints(values: number[]) {
-  const range = MAX - MIN || 1;
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const range = max - min || 1;
   return values
     .map((v, i) => {
       const x = PAD + (i / (values.length - 1)) * (W - PAD * 2);
-      const y = H - PAD - ((v - MIN) / range) * (H - PAD * 2);
+      const y = H - PAD - ((v - min) / range) * (H - PAD * 2);
       return `${x},${y}`;
     })
     .join(" ");
 }
 
-const linePoints = toPoints(VALUES);
-const areaPoints = `${PAD},${H - PAD} ${linePoints} ${W - PAD},${H - PAD}`;
-
 export function WeeklyChart() {
+  const [period, setPeriod] = useState<Period>("W");
   const polylineRef = useRef<SVGPolylineElement>(null);
   const polygonRef = useRef<SVGPolygonElement>(null);
   const [displayAvg, setDisplayAvg] = useState(0);
   const [displayPct, setDisplayPct] = useState(0);
-  const [barHeights, setBarHeights] = useState<number[]>(VALUES.map(() => 0));
+  const [barHeights, setBarHeights] = useState<number[]>([]);
   const [visibleDots, setVisibleDots] = useState(0);
-  const [animatedPoints, setAnimatedPoints] = useState(linePoints);
+  const [animatedPoints, setAnimatedPoints] = useState("");
+
+  const data = PERIOD_DATA[period];
+  const max = Math.max(...data.values);
+  const min = Math.min(...data.values);
+  const range = max - min || 1;
+  const avg = Math.round(data.values.reduce((a, b) => a + b, 0) / data.values.length);
+  const linePoints = toPoints(data.values);
+  const areaPoints = `${PAD},${H - PAD} ${linePoints} ${W - PAD},${H - PAD}`;
 
   useEffect(() => {
     const polyline = polylineRef.current;
     const polygon = polygonRef.current;
 
-    // Önce çizgiyi gizle (stroke-dashoffset ile değil, opacity ile kontrol)
     if (polyline) polyline.style.opacity = "0";
     if (polygon) polygon.style.opacity = "0";
 
-    // Sayı + Bar + Nokta animasyonu
     const duration = 1600;
     const steps = 40;
     const stepMs = duration / steps;
@@ -54,32 +71,28 @@ export function WeeklyChart() {
       const progress = Math.min(step / steps, 1);
       const eased = 1 - (1 - progress) * (1 - progress);
 
-      setDisplayAvg(AVG * eased);
+      setDisplayAvg(avg * eased);
       setDisplayPct(12 * eased);
-      setBarHeights(VALUES.map((v) => v * eased));
-      setVisibleDots(Math.min(Math.floor(progress * VALUES.length) + 1, VALUES.length));
+      setBarHeights(data.values.map((v) => v * eased));
+      setVisibleDots(Math.min(Math.floor(progress * data.values.length) + 1, data.values.length));
 
       // Trend line — 0'dan başlayıp dalgalanarak normal haline gelsin
-      const range = MAX - MIN || 1;
-      const wobble = Math.sin(progress * Math.PI * 4) * (1 - progress) * 20; // sönümlü salınım
-      const wobbled = VALUES.map((v, i) => {
-        const x = PAD + (i / (VALUES.length - 1)) * (W - PAD * 2);
-        const baseY = H - PAD - ((v - MIN) / range) * (H - PAD * 2);
-        // Başlangıçta tüm noktalar aynı hizada (düz çizgi), sonra dalgalanarak hedefe oturur
-        const startY = H - PAD; // en alt
+      const wobble = Math.sin(progress * Math.PI * 4) * (1 - progress) * 20;
+      const wobbled = data.values.map((v, i) => {
+        const x = PAD + (i / (data.values.length - 1)) * (W - PAD * 2);
+        const baseY = H - PAD - ((v - min) / range) * (H - PAD * 2);
+        const startY = H - PAD;
         const currentY = startY + (baseY - startY) * eased + wobble * (1 - eased);
         return `${x},${currentY}`;
       }).join(" ");
 
       setAnimatedPoints(wobbled);
 
-      // Çizgiyi progress %5'ten sonra görünür yap
       if (polyline && progress > 0.05) {
         polyline.style.opacity = "1";
         polyline.style.transition = "opacity 0.2s ease-out";
       }
 
-      // Alanı progress %40'tan sonra göster
       if (polygon && progress > 0.4) {
         polygon.style.opacity = "0.85";
         polygon.style.transition = "opacity 0.5s ease-out";
@@ -89,26 +102,25 @@ export function WeeklyChart() {
     }, stepMs);
 
     return () => clearInterval(interval);
-  }, []);
-
-  const range = MAX - MIN || 1;
+  }, [period, data, avg, min, range]);
 
   return (
     <div className="analytics-card analytics-card--purple p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-medium text-white">Weekly activity</h2>
         <div className="flex gap-1 rounded-full bg-black/30 p-0.5">
-          {(["W", "M", "3M"] as const).map((period) => (
+          {(["W", "M", "3M"] as const).map((p) => (
             <button
-              key={period}
+              key={p}
               type="button"
+              onClick={() => setPeriod(p)}
               className={`rounded-full px-2.5 py-1 text-[10px] font-medium transition ${
-                period === "W"
+                period === p
                   ? "bg-purple-500 text-white shadow-sm shadow-purple-500/40"
                   : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
-              {period}
+              {p}
             </button>
           ))}
         </div>
@@ -123,7 +135,7 @@ export function WeeklyChart() {
           steps
         </span>
         <span className="text-emerald-400 font-medium">
-          ▲ {Math.round(displayPct)}% vs. last week
+          ▲ {Math.round(displayPct)}% vs. last {period === "W" ? "week" : period === "M" ? "month" : "quarter"}
         </span>
       </div>
 
@@ -148,11 +160,11 @@ export function WeeklyChart() {
           ))}
 
           {/* Bar'lar — 0'dan yükseklik animasyonu */}
-          {VALUES.map((v, i) => {
-            const barW = (W - PAD * 2) / VALUES.length * 0.6;
-            const gap = (W - PAD * 2) / VALUES.length;
+          {data.values.map((v, i) => {
+            const barW = (W - PAD * 2) / data.values.length * 0.6;
+            const gap = (W - PAD * 2) / data.values.length;
             const x = PAD + i * gap + (gap - barW) / 2;
-            const currentH = ((barHeights[i] - MIN) / range) * (H - PAD * 2) || 0;
+            const currentH = ((barHeights[i] || 0) - min) / range * (H - PAD * 2) || 0;
             const y = H - PAD - currentH;
             return (
               <rect
@@ -175,7 +187,7 @@ export function WeeklyChart() {
             opacity={0}
           />
 
-          {/* Çizgi — 0'dan başlayıp dalgalanarak normal haline gelir */}
+          {/* Çizgi */}
           <polyline
             ref={polylineRef}
             points={animatedPoints}
@@ -187,10 +199,10 @@ export function WeeklyChart() {
             opacity={0}
           />
 
-          {/* Noktalar — sırayla belirir */}
-          {VALUES.map((v, i) => {
-            const x = PAD + (i / (VALUES.length - 1)) * (W - PAD * 2);
-            const y = H - PAD - ((v - MIN) / range) * (H - PAD * 2);
+          {/* Noktalar */}
+          {data.values.map((v, i) => {
+            const x = PAD + (i / (data.values.length - 1)) * (W - PAD * 2);
+            const y = H - PAD - ((v - min) / range) * (H - PAD * 2);
             const isVisible = i < visibleDots;
             return (
               <circle
@@ -219,14 +231,14 @@ export function WeeklyChart() {
       </div>
 
       <div className="mt-2 flex justify-between px-0.5">
-        {DAYS.map((day, i) => (
+        {data.labels.map((label, i) => (
           <span
-            key={`${day}-${i}`}
+            key={`${label}-${i}`}
             className={`text-[10px] font-medium ${
-              i === 5 ? "text-purple-400" : "text-zinc-600"
+              i === data.labels.length - 1 ? "text-purple-400" : "text-zinc-600"
             }`}
           >
-            {day}
+            {label}
           </span>
         ))}
       </div>

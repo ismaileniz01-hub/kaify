@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { allowMethods, sanitizeInput, apiError } from "@/lib/api-security";
+import { allowMethods, apiError, leaderboardQuerySchema } from "@/lib/api-security";
 
 // Demo leaderboard verisi — gerçek uygulamada veritabanından gelecek
 const DEMO_LEADERBOARD = [
@@ -24,8 +24,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
 
-    // Input sanitizasyon
-    const cleanUserId = userId ? sanitizeInput(userId) : null;
+    // Zod ile query validasyonu
+    const parsed = leaderboardQuerySchema.safeParse({ userId });
+    if (!parsed.success) {
+      return apiError("Invalid query parameters.", 400);
+    }
+
+    const cleanUserId = parsed.data.userId || null;
 
     // Sırala (streak'e göre azalan)
     const sorted = [...DEMO_LEADERBOARD].sort((a, b) => b.streak - a.streak);

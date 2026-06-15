@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { allowMethods, sanitizeInput, isValidEmail, apiError } from "@/lib/api-security";
+import {
+  allowMethods,
+  validateRecaptcha,
+  apiError,
+  subscribeSchema,
+  checkDisposableEmail,
+  hashEmail,
+  parseBodyWithLimit,
+} from "@/lib/api-security";
 
 /**
  * POST /api/subscribe
  *
- * Receives waitlist signup data from the client, validates it,
- * and forwards it to the Sender.net API server-side.
- *
- * The SENDER_API_KEY environment variable is never exposed to the browser.
+ * Subscribe kaydı alır, Zod ile doğrular, reCAPTCHA kontrolü yapar,
+ * disposable email kontrolü yapar ve Sender.net API'sine iletir.
  */
 export async function POST(request: NextRequest) {
   // Method kontrolü
@@ -15,41 +21,52 @@ export async function POST(request: NextRequest) {
   if (methodCheck) return methodCheck;
 
   try {
-    // --- Parse request body ---
-    const body = await request.json();
-    const { email, firstName, lastName } = body as {
-      email?: string;
-      firstName?: string;
-      lastName?: string;
-    };
-
-    // --- Validate required fields ---
-    if (!email || typeof email !== "string" || !email.trim()) {
-      return apiError("Email is required.", 400);
+    // Body boyut limiti + parse
+    const body = await parseBodyWithLimit(request);
+    if (!body) {
+      return apiError("Invalid request body.", 400);
     }
 
-    // Email format validation
-    const cleanEmail = sanitizeInput(email.trim());
-    if (!isValidEmail(cleanEmail)) {
-      return apiError("Invalid email format.", 400);
+    // Zod ile validasyon
+    const parsed = subscribeSchema.safeParse(body);
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0]?.message || "Validation error";
+      return apiError(firstError, 400);
     }
 
-    // --- Normalize name fields (use fallback if empty) ---
-    const safeFirstName =
-      firstName && typeof firstName === "string" && firstName.trim()
-        ? sanitizeInput(firstName.trim())
-        : "Unknown";
+    const { email, firstName, lastName, recaptchaToken } = parsed.data;
 
-    const safeLastName =
-      lastName && typeof lastName === "string" && lastName.trim()
-        ? sanitizeInput(lastName.trim())
-        : undefined;
+    // Honeypot kontrolü (boş olmalı)
+    const honeypot = (body as Record<string, unknown>).honeypot;
+    if (honeypot && typeof honeypot === "string" && honeypot.length > 0) {
+      console.warn(`[api/subscribe] Honeypot triggered for email hash: ${hashEmail(email)}`);
+      return NextResponse.json(
+        { success: true, message: "Successfully subscribed!" },
+        { status: 200 }
+      );
+    }
+
+    // reCAPTCHA doğrulaması
+    const isHuman = await validateRecaptcha(recaptchaToken);
+    if (!isHuman) {
+      console.warn(`[api/subscribe] reCAPTCHA failed for email hash: ${hashEmail(email)}`);
+      return apiError("Bot detected. Please try again.", 403);
+    }
+
+    // Disposable email kontrolü
+    const disposableCheck = checkDisposableEmail(email);
+    if (disposableCheck.isDisposable) {
+      console.warn(
+        `[api/subscribe] Disposable email blocked: ${email} (risk: ${disposableCheck.risk})`
+      );
+      return apiError("Please use a permanent email address.", 400);
+    }
 
     // --- Read API key from environment (server-side only) ---
     const apiKey = process.env.SENDER_API_KEY;
 
-    if (!apiKey) {
-      console.error("[api/subscribe] SENDER_API_KEY is not set in environment.");
+    if (!apiKey || apiKey.includes("YOUR_") || apiKey.includes("_here")) {
+      console.error("[api/subscribe] SENDER_API_KEY is not configured.");
       return apiError("Server configuration error. Please try again later.", 500);
     }
 
@@ -63,9 +80,9 @@ export async function POST(request: NextRequest) {
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          email: cleanEmail,
-          first_name: safeFirstName,
-          last_name: safeLastName,
+          email,
+          first_name: firstName,
+          last_name: lastName || undefined,
           tags: ["kaify-waitlist"],
           groups: ["dPGkyz"],
         }),
@@ -99,7 +116,6 @@ export async function POST(request: NextRequest) {
     console.error("[api/subscribe] Sender.net error:", senderResponse.status, senderData);
     return apiError("Failed to subscribe. Please try again later.", 502);
   } catch (error) {
-    // Network failure or JSON parse error
     console.error("[api/subscribe] Unexpected error:", error);
     return apiError("An unexpected error occurred. Please try again.", 500);
   }

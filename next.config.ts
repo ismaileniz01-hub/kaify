@@ -1,5 +1,29 @@
 import type { NextConfig } from "next";
 
+const cspDirectives = [
+  "default-src 'self'",
+  // Scripts: nonce ile güvence altına alınmış inline script'ler
+  "script-src 'self' 'unsafe-eval' 'nonce-{NONCE}' https://www.google.com https://www.gstatic.com https://cdn.sender.net",
+  // Styles: nonce ile
+  "style-src 'self' 'unsafe-inline'",
+  // Images
+  "img-src 'self' data: blob: https:",
+  // Fonts
+  "font-src 'self'",
+  // Connect
+  "connect-src 'self' https://api.sender.net https://www.google.com",
+  // Frames (reCAPTCHA)
+  "frame-src https://www.google.com https://recaptcha.google.com",
+  // Objects
+  "object-src 'none'",
+  // Base
+  "base-uri 'self'",
+  // Form actions
+  "form-action 'self'",
+  // Upgrade insecure requests
+  "upgrade-insecure-requests",
+].join("; ");
+
 const securityHeaders = [
   {
     key: "X-DNS-Prefetch-Control",
@@ -11,7 +35,7 @@ const securityHeaders = [
   },
   {
     key: "X-Frame-Options",
-    value: "SAMEORIGIN",
+    value: "DENY",
   },
   {
     key: "X-Content-Type-Options",
@@ -27,23 +51,24 @@ const securityHeaders = [
   },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+    value:
+      "camera=(), microphone=(), geolocation=(), browsing-topics=(), interest-cohort=()",
+  },
+  {
+    key: "Cross-Origin-Opener-Policy",
+    value: "same-origin",
+  },
+  {
+    key: "Cross-Origin-Resource-Policy",
+    value: "same-origin",
+  },
+  {
+    key: "Cross-Origin-Embedder-Policy",
+    value: "require-corp",
   },
   {
     key: "Content-Security-Policy",
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https:",
-      "font-src 'self'",
-      "connect-src 'self' https://api.sender.net https://www.google.com",
-      "frame-src https://www.google.com https://recaptcha.google.com",
-      "object-src 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "upgrade-insecure-requests",
-    ].join("; "),
+    value: cspDirectives,
   },
 ];
 
@@ -63,6 +88,8 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Server-side only modules
+  serverExternalPackages: ["@upstash/redis"],
 };
 
 export default nextConfig;
