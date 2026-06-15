@@ -62,10 +62,11 @@ const securityHeaders = [
     key: "Cross-Origin-Resource-Policy",
     value: "same-origin",
   },
-  {
-    key: "Cross-Origin-Embedder-Policy",
-    value: "require-corp",
-  },
+  // COEP devre dışı: flagcdn.com gibi üçüncü parti kaynakları blokluyor
+  // {
+  //   key: "Cross-Origin-Embedder-Policy",
+  //   value: "require-corp",
+  // },
   {
     key: "Content-Security-Policy",
     value: cspDirectives,
