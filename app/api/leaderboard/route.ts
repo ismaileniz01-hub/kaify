@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { allowMethods, sanitizeInput, apiError } from "@/lib/api-security";
 
 // Demo leaderboard verisi — gerçek uygulamada veritabanından gelecek
 const DEMO_LEADERBOARD = [
@@ -14,21 +15,33 @@ const DEMO_LEADERBOARD = [
   { userId: "user_010", name: "Ali", flagCode: "ae", streak: 35, avatar: "" },
 ];
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get("userId");
+export async function GET(request: NextRequest) {
+  // Method kontrolü
+  const methodCheck = allowMethods(request, ["GET"]);
+  if (methodCheck) return methodCheck;
 
-  // Sırala (streak'e göre azalan)
-  const sorted = [...DEMO_LEADERBOARD].sort((a, b) => b.streak - a.streak);
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
 
-  // Kullanıcının sırasını bul
-  const userRank = userId
-    ? sorted.findIndex((u) => u.userId === userId) + 1
-    : null;
+    // Input sanitizasyon
+    const cleanUserId = userId ? sanitizeInput(userId) : null;
 
-  return NextResponse.json({
-    leaderboard: sorted,
-    userRank: userRank && userRank > 0 ? userRank : null,
-    totalUsers: sorted.length,
-  });
+    // Sırala (streak'e göre azalan)
+    const sorted = [...DEMO_LEADERBOARD].sort((a, b) => b.streak - a.streak);
+
+    // Kullanıcının sırasını bul
+    const userRank = cleanUserId
+      ? sorted.findIndex((u) => u.userId === cleanUserId) + 1
+      : null;
+
+    return NextResponse.json({
+      leaderboard: sorted,
+      userRank: userRank && userRank > 0 ? userRank : null,
+      totalUsers: sorted.length,
+    });
+  } catch (error) {
+    console.error("[api/leaderboard] Error:", error);
+    return apiError("Sunucu hatası", 500);
+  }
 }

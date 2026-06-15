@@ -21,7 +21,10 @@
 # misc
 .DS_Store
 *.pem
+.env
+.env.local
 .env*.local
+.env.production
 .vercel
 
 # local avatars (not used in app, duplicates of public/avatars/)

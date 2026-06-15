@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { allowMethods, sanitizeInput, isValidEmail, apiError } from "@/lib/api-security";
 
 /**
  * POST /api/subscribe
@@ -9,6 +10,10 @@ import { NextRequest, NextResponse } from "next/server";
  * The SENDER_API_KEY environment variable is never exposed to the browser.
  */
 export async function POST(request: NextRequest) {
+  // Method kontrolü
+  const methodCheck = allowMethods(request, ["POST"]);
+  if (methodCheck) return methodCheck;
+
   try {
     // --- Parse request body ---
     const body = await request.json();
@@ -20,30 +25,24 @@ export async function POST(request: NextRequest) {
 
     // --- Validate required fields ---
     if (!email || typeof email !== "string" || !email.trim()) {
-      return NextResponse.json(
-        { error: "Email is required." },
-        { status: 400 }
-      );
+      return apiError("Email is required.", 400);
     }
 
-    // Basic email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      return NextResponse.json(
-        { error: "Invalid email format." },
-        { status: 400 }
-      );
+    // Email format validation
+    const cleanEmail = sanitizeInput(email.trim());
+    if (!isValidEmail(cleanEmail)) {
+      return apiError("Invalid email format.", 400);
     }
 
     // --- Normalize name fields (use fallback if empty) ---
     const safeFirstName =
       firstName && typeof firstName === "string" && firstName.trim()
-        ? firstName.trim()
+        ? sanitizeInput(firstName.trim())
         : "Unknown";
 
     const safeLastName =
       lastName && typeof lastName === "string" && lastName.trim()
-        ? lastName.trim()
+        ? sanitizeInput(lastName.trim())
         : undefined;
 
     // --- Read API key from environment (server-side only) ---
@@ -51,10 +50,7 @@ export async function POST(request: NextRequest) {
 
     if (!apiKey) {
       console.error("[api/subscribe] SENDER_API_KEY is not set in environment.");
-      return NextResponse.json(
-        { error: "Server configuration error. Please try again later." },
-        { status: 500 }
-      );
+      return apiError("Server configuration error. Please try again later.", 500);
     }
 
     // --- Forward request to Sender.net API ---
@@ -67,7 +63,7 @@ export async function POST(request: NextRequest) {
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          email: email.trim(),
+          email: cleanEmail,
           first_name: safeFirstName,
           last_name: safeLastName,
           tags: ["kaify-waitlist"],
@@ -101,16 +97,10 @@ export async function POST(request: NextRequest) {
 
     // Other Sender.net errors
     console.error("[api/subscribe] Sender.net error:", senderResponse.status, senderData);
-    return NextResponse.json(
-      { error: "Failed to subscribe. Please try again later." },
-      { status: 502 }
-    );
+    return apiError("Failed to subscribe. Please try again later.", 502);
   } catch (error) {
     // Network failure or JSON parse error
     console.error("[api/subscribe] Unexpected error:", error);
-    return NextResponse.json(
-      { error: "An unexpected error occurred. Please try again." },
-      { status: 500 }
-    );
+    return apiError("An unexpected error occurred. Please try again.", 500);
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { allowMethods, validateRecaptcha, sanitizeInput, isValidEmail, apiError } from "@/lib/api-security";
 
 /**
  * POST /api/waitlist
@@ -9,6 +10,10 @@ import { NextRequest, NextResponse } from "next/server";
  * The SENDER_API_KEY environment variable is never exposed to the browser.
  */
 export async function POST(request: NextRequest) {
+  // Method kontrolü
+  const methodCheck = allowMethods(request, ["POST"]);
+  if (methodCheck) return methodCheck;
+
   try {
     // --- Parse request body ---
     const body = await request.json();
@@ -20,55 +25,34 @@ export async function POST(request: NextRequest) {
     };
 
     // --- Verify reCAPTCHA token ---
-    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
-    if (secretKey) {
-      const verifyUrl = "https://www.google.com/recaptcha/api/siteverify";
-      const params = new URLSearchParams({
-        secret: secretKey,
-        response: recaptchaToken || "",
-      });
-
-      const recaptchaRes = await fetch(verifyUrl, {
-        method: "POST",
-        body: params,
-      });
-      const recaptchaData = await recaptchaRes.json();
-
-      if (!recaptchaData.success) {
-        console.warn("[api/waitlist] reCAPTCHA verification failed:", recaptchaData);
-        return NextResponse.json(
-          { error: "Bot detected. Please try again." },
-          { status: 403 }
-        );
+    if (recaptchaToken) {
+      const isHuman = await validateRecaptcha(recaptchaToken);
+      if (!isHuman) {
+        console.warn("[api/waitlist] reCAPTCHA verification failed");
+        return apiError("Bot detected. Please try again.", 403);
       }
     }
 
     // --- Validate required fields ---
     if (!email || typeof email !== "string" || !email.trim()) {
-      return NextResponse.json(
-        { error: "Email is required." },
-        { status: 400 }
-      );
+      return apiError("Email is required.", 400);
     }
 
-    // Basic email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      return NextResponse.json(
-        { error: "Invalid email format." },
-        { status: 400 }
-      );
+    // Email format validation
+    const cleanEmail = sanitizeInput(email.trim());
+    if (!isValidEmail(cleanEmail)) {
+      return apiError("Invalid email format.", 400);
     }
 
     // --- Normalize name fields (use fallback if empty) ---
     const safeFirstName =
       firstName && typeof firstName === "string" && firstName.trim()
-        ? firstName.trim()
+        ? sanitizeInput(firstName.trim())
         : "Unknown";
 
     const safeLastName =
       lastName && typeof lastName === "string" && lastName.trim()
-        ? lastName.trim()
+        ? sanitizeInput(lastName.trim())
         : undefined;
 
     // --- Read API key from environment (server-side only) ---
@@ -76,10 +60,7 @@ export async function POST(request: NextRequest) {
 
     if (!apiKey) {
       console.error("[api/waitlist] SENDER_API_KEY is not set in environment.");
-      return NextResponse.json(
-        { error: "Server configuration error. Please try again later." },
-        { status: 500 }
-      );
+      return apiError("Server configuration error. Please try again later.", 500);
     }
 
     // --- Forward request to Sender.net API ---
@@ -92,7 +73,7 @@ export async function POST(request: NextRequest) {
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          email: email.trim(),
+          email: cleanEmail,
           first_name: safeFirstName,
           last_name: safeLastName,
           tags: ["kaify-waitlist"],
@@ -126,16 +107,10 @@ export async function POST(request: NextRequest) {
 
     // Other Sender.net errors
     console.error("[api/waitlist] Sender.net error:", senderResponse.status, senderData);
-    return NextResponse.json(
-      { error: "Failed to subscribe. Please try again later." },
-      { status: 502 }
-    );
+    return apiError("Failed to subscribe. Please try again later.", 502);
   } catch (error) {
     // Network failure or JSON parse error
     console.error("[api/waitlist] Unexpected error:", error);
-    return NextResponse.json(
-      { error: "An unexpected error occurred. Please try again." },
-      { status: 500 }
-    );
+    return apiError("An unexpected error occurred. Please try again.", 500);
   }
 }

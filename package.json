@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "lint:strict": "next lint --max-warnings 0",
+    "security:audit": "npm audit --audit-level=moderate",
+    "security:check": "npm audit fix"
   },
   "dependencies": {
     "lucide-react": "^0.511.0",
