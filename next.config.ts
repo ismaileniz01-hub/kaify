@@ -2,9 +2,9 @@ import type { NextConfig } from "next";
 
 const cspDirectives = [
   "default-src 'self'",
-  // Scripts: nonce ile güvence altına alınmış inline script'ler
-  "script-src 'self' 'unsafe-eval' 'nonce-{NONCE}' https://www.google.com https://www.gstatic.com https://cdn.sender.net",
-  // Styles: nonce ile
+  // TEMPORARY: nonce disabled — allow inline scripts for functionality
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://cdn.sender.net",
+  // Styles
   "style-src 'self' 'unsafe-inline'",
   // Images
   "img-src 'self' data: blob: https:",
