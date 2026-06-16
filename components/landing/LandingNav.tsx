@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 const LINKS = [
   { href: "#about", label: "About Us" },
-  { href: "#coaches", label: "AI Coaches" },
+  { href: "#coaches", label: "Coaches" },
   { href: "#features", label: "Features" },
   { href: "#streak", label: "Streak" },
   { href: "#kai", label: "Dragon Kai" },
