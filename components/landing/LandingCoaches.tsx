@@ -74,8 +74,8 @@ export function LandingCoaches() {
           </h2>
           <p className="mt-6 text-lg text-zinc-400">
             Hiring a trainer, nutritionist, and posture coach costs hundreds per
-            month. K.AIFY puts all four in your pocket — available 24/7, personalized
-            to you, at a fraction of the cost.
+            month. K.AIFY puts all four in your pocket — real coaches who know your
+            name, your goals, and your last workout, at a fraction of the cost.
           </p>
         </ScrollReveal>
 

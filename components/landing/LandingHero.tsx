@@ -44,7 +44,7 @@ export function LandingHero() {
             <ScrollReveal delay={240}>
               <p className="mt-6 max-w-lg text-lg leading-relaxed text-zinc-400">
                 Stop juggling five apps and guessing your macros. K.AIFY gives you
-                <strong className="text-zinc-200"> 4 expert AI coaches</strong>, real progress tracking,
+                <strong className="text-zinc-200"> 4 expert coaches</strong>, real progress tracking,
                 and <strong className="text-zinc-200">Kai</strong> — your dragon companion who keeps you
                 showing up every day. Whether you're 22 or 52, getting healthier
                 shouldn't feel overwhelming.

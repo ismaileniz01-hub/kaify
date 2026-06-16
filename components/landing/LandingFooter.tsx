@@ -32,7 +32,7 @@ export function LandingFooter() {
           </a>
         </nav>
 
-        <p className="text-xs text-zinc-600">Fitness · AI · Made enjoyable</p>
+        <p className="text-xs text-zinc-600">Fitness · Coaching · Made enjoyable</p>
       </div>
     </footer>
   );
