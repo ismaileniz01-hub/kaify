@@ -33,7 +33,7 @@ export function LandingCTA() {
               Plans starting from{" "}
               <span className="relative inline-block font-semibold text-zinc-300">
                 <span className="absolute -inset-x-1 -inset-y-0.5 rounded-md bg-emerald-500/10 blur-sm" />
-                <span className="relative">just $15/mo</span>
+                <span className="relative">just $14.99/mo</span>
               </span>{" "}
               {" "}&mdash; that's less than a coffee run for a whole month of personalized coaching.
             </p>
@@ -62,6 +62,40 @@ export function LandingCTA() {
             <p className="mx-auto mt-4 max-w-sm text-center text-xs text-zinc-600">
               Free to join. Early members get priority access and launch perks.
             </p>
+
+            {/* Güvenlik bildirimleri */}
+            <div className="mx-auto mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center">
+              <p className="text-[11px] text-zinc-600">
+                Protected by reCAPTCHA &mdash;{" "}
+                <a
+                  href="https://policies.google.com/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline transition hover:text-zinc-400"
+                >
+                  Privacy
+                </a>{" "}
+                &{" "}
+                <a
+                  href="https://policies.google.com/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline transition hover:text-zinc-400"
+                >
+                  Terms
+                </a>
+              </p>
+              <span className="hidden text-[11px] text-zinc-700 sm:inline" aria-hidden="true">·</span>
+              <p className="text-[11px] text-zinc-600">
+                <span className="inline-flex items-center gap-1">
+                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  SSL-secured connection
+                </span>
+              </p>
+            </div>
           </div>
         </ScrollReveal>
       </div>
