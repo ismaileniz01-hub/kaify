@@ -2594,16 +2594,15 @@ body:has(.landing-site) {
   border-radius: 0.25rem;
 }
 
-/* Global active state — tıklama anı */
-*:active {
-  transform: scale(0.97);
-  transition: transform 0.1s ease;
-}
-
-/* Butonlar için özel active state */
+/* Butonlar ve tıklanabilir öğeler için active state */
 button:active,
 a:active,
-[role="button"]:active {
+[role="button"]:active,
+.landing-btn:active,
+.landing-nav-link:active,
+.landing-footer-link:active,
+.landing-hero-cta:active,
+.landing-cta-button:active {
   transform: scale(0.95);
   transition: transform 0.08s ease;
 }
