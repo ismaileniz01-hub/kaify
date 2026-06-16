@@ -34,6 +34,23 @@ export function LandingCTA() {
               <WaitlistForm />
             </div>
 
+            {/* Discount badges — highlighted */}
+            <div className="mx-auto mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 sm:px-4 sm:py-2 shadow-[0_0_24px_rgba(16,185,129,0.25)]">
+                <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-400" />
+                <span className="text-xs sm:text-sm font-semibold text-emerald-300">
+                  <span className="text-emerald-200">10% OFF</span> for all subscribers
+                </span>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 sm:px-4 sm:py-2 shadow-[0_0_24px_rgba(245,158,11,0.25)]">
+                <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-400" />
+                <span className="text-xs sm:text-sm font-semibold text-amber-300">
+                  First <span className="text-amber-200">100</span> get{" "}
+                  <span className="text-amber-200">lifetime 2% OFF</span>
+                </span>
+              </div>
+            </div>
+
             <p className="mx-auto mt-4 max-w-sm text-center text-xs text-zinc-600">
               Free to join. Early members get priority access and launch perks.
             </p>
