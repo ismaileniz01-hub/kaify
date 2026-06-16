@@ -126,7 +126,8 @@ function CountryRow({
   return (
     <ScrollReveal delay={index * 80} direction="up">
       <div
-        className="landing-leaderboard-row group my-2 rounded-xl border border-white/[0.06] bg-white/[0.01]"
+        className="landing-leaderboard-row group my-2 rounded-xl border border-white/[0.06] bg-white/[0.01] focus-visible:outline-2 focus-visible:outline-purple-400 focus-visible:outline-offset-2"
+        tabIndex={0}
         style={
           {
             "--row-color": country.color,

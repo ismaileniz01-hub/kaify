@@ -64,7 +64,8 @@ export function LandingAbout() {
           {PILLARS.map((pillar, i) => (
             <ScrollReveal key={pillar.title} delay={i * 100} direction="up">
               <article
-                className="landing-pillar-card group"
+                className="landing-pillar-card group focus-visible:outline-2 focus-visible:outline-purple-400 focus-visible:outline-offset-4 focus-visible:ring-4 focus-visible:ring-purple-500/20"
+                tabIndex={0}
                 style={
                   {
                     "--pillar-color": pillar.color,

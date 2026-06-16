@@ -16,7 +16,7 @@ export function LandingKai() {
       />
 
       <div className="landing-container relative z-10">
-        <div className="landing-kai-panel">
+              <div className="landing-kai-panel focus-visible:outline-2 focus-visible:outline-purple-400 focus-visible:outline-offset-4" tabIndex={0}>
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_1.2fr]">
             <ScrollReveal direction="left">
               <div className="relative flex flex-col items-center justify-center">

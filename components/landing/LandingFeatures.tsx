@@ -100,7 +100,8 @@ export function LandingFeatures() {
           ].map((item, i) => (
             <ScrollReveal key={item.title} delay={i * 100}>
               <article
-                className="landing-mini-card"
+                className="landing-mini-card focus-visible:outline-2 focus-visible:outline-purple-400 focus-visible:outline-offset-4"
+                tabIndex={0}
                 style={{ "--accent": item.accent } as React.CSSProperties}
               >
                 <h4 className="text-lg font-bold text-white">{item.title}</h4>

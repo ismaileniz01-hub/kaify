@@ -38,14 +38,17 @@ export function LandingNav() {
             <a
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-white"
+              className="text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-white focus-visible:outline-2 focus-visible:outline-purple-400 focus-visible:outline-offset-4 rounded-sm"
             >
               {link.label}
             </a>
           ))}
         </nav>
 
-        <a href="#waitlist" className="landing-btn landing-btn--primary shrink-0 text-sm">
+        <a
+          href="#waitlist"
+          className="landing-btn landing-btn--primary shrink-0 text-sm active:scale-[0.97]"
+        >
           Join Waitlist
         </a>
       </div>

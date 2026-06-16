@@ -32,7 +32,7 @@ export function LandingStreak() {
           ref={ref}
           className={`landing-streak-evolution mt-12 sm:mt-16 ${visible ? "landing-streak-evolution--active" : ""}`}
         >
-          <div className="landing-streak-stage">
+          <div className="landing-streak-stage focus-visible:outline-2 focus-visible:outline-purple-400 focus-visible:outline-offset-4" tabIndex={0}>
             <div className="landing-streak-badge landing-streak-badge--lv1">
               <Flame className="h-4 w-4" />
               Level 1
@@ -57,7 +57,7 @@ export function LandingStreak() {
             <p className="landing-streak-days">31 days</p>
           </div>
 
-          <div className="landing-streak-stage landing-streak-stage--lv2">
+          <div className="landing-streak-stage landing-streak-stage--lv2 focus-visible:outline-2 focus-visible:outline-purple-400 focus-visible:outline-offset-4" tabIndex={0}>
             <div className="landing-streak-badge landing-streak-badge--lv2">
               <Flame className="h-4 w-4" />
               Level 2

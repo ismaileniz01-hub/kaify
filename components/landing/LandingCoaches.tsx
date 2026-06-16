@@ -90,6 +90,7 @@ export function LandingCoaches() {
               >
                 <article
                   className={`landing-coach-row ${reversed ? "landing-coach-row--reverse" : ""}`}
+                  tabIndex={0}
                 >
                   <div className="landing-coach-visual">
                     <div

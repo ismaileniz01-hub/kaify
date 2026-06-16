@@ -51,7 +51,13 @@ export function LandingHero() {
               </p>
             </ScrollReveal>
 
-            <ScrollReveal delay={320} className="mt-10">
+            <ScrollReveal delay={320} className="mt-10 flex flex-col items-center gap-4 lg:items-start">
+              <a
+                href="#waitlist"
+                className="landing-btn landing-btn--primary landing-btn--lg w-full sm:w-auto"
+              >
+                Get Early Access
+              </a>
               <p className="text-sm font-medium tracking-wider text-purple-300/70">
                 ↓ Scroll to explore
               </p>

@@ -6,6 +6,14 @@
   --kaify-black: #0a0a0a;
   --kaify-surface: #141414;
   --kaify-muted: #262626;
+
+  /* Spacing scale — 8px grid */
+  --space-xs: 0.5rem;   /* 8px */
+  --space-sm: 1rem;     /* 16px */
+  --space-md: 1.5rem;   /* 24px */
+  --space-lg: 2rem;     /* 32px */
+  --space-xl: 3rem;     /* 48px */
+  --space-2xl: 4rem;    /* 64px */
 }
 
 /* ===== LIGHT THEME ===== */
@@ -28,6 +36,11 @@ body {
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+}
+
+p, li, .text-zinc-400 {
+  line-height: 1.7;
 }
 
 /* Light tema body rengi */
@@ -1728,7 +1741,19 @@ body:has(.landing-site) {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 1rem;
+}
+
+@media (min-width: 768px) {
+  .landing-container {
+    padding: 0 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .landing-container {
+    padding: 0 2rem;
+  }
 }
 
 /* Nav */
@@ -1781,6 +1806,23 @@ body:has(.landing-site) {
     0 0 48px rgba(168, 85, 247, 0.55),
     0 8px 24px rgba(0, 0, 0, 0.4);
   transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.landing-btn--primary:active {
+  transform: scale(0.97);
+}
+
+.landing-btn:focus-visible {
+  outline: 2px solid #a855f7;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.3);
+}
+
+.landing-btn--ghost:focus-visible {
+  outline: 2px solid #a855f7;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.2);
 }
 
 .landing-btn--ghost {
@@ -2520,5 +2562,175 @@ body:has(.landing-site) {
   75% {
     transform: translate(10px, 6px) scale(1.05);
     opacity: 0.8;
+  }
+}
+
+/* ===== FOCUS-VISIBLE & ACTIVE STATES ===== */
+
+/* Global focus-visible — tüm interaktif öğeler için */
+*:focus-visible {
+  outline: 2px solid #a855f7;
+  outline-offset: 3px;
+  border-radius: 0.25rem;
+}
+
+/* Global active state — tıklama anı */
+*:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease;
+}
+
+/* Butonlar için özel active state */
+button:active,
+a:active,
+[role="button"]:active {
+  transform: scale(0.95);
+  transition: transform 0.08s ease;
+}
+
+/* Input/textarea active state */
+input:active,
+textarea:active,
+select:active {
+  transform: scale(0.99);
+}
+
+/* Landing kartları için focus-visible override (bileşenlerde inline class verildi) */
+.landing-pillar-card:focus-visible,
+.landing-mini-card:focus-visible,
+.landing-coach-row:focus-visible,
+.landing-streak-stage:focus-visible,
+.landing-kai-panel:focus-visible,
+.landing-leaderboard-row:focus-visible {
+  outline: 2px solid #a855f7;
+  outline-offset: 4px;
+  border-radius: 1rem;
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.2);
+}
+
+/* Landing kartları için active state */
+.landing-pillar-card:active,
+.landing-mini-card:active,
+.landing-coach-row:active,
+.landing-streak-stage:active,
+.landing-kai-panel:active,
+.landing-leaderboard-row:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+/* Hero butonları için focus-visible */
+.landing-hero-cta:focus-visible {
+  outline: 2px solid #a855f7;
+  outline-offset: 4px;
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.3);
+}
+
+/* Hero butonları için active */
+.landing-hero-cta:active {
+  transform: scale(0.96);
+}
+
+/* Nav linkleri için focus-visible */
+.landing-nav-link:focus-visible {
+  outline: 2px solid #a855f7;
+  outline-offset: 4px;
+  border-radius: 0.5rem;
+}
+
+/* Nav linkleri için active */
+.landing-nav-link:active {
+  transform: scale(0.95);
+}
+
+/* CTA butonu için focus-visible */
+.landing-cta-button:focus-visible {
+  outline: 2px solid #a855f7;
+  outline-offset: 4px;
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.3);
+}
+
+/* CTA butonu için active */
+.landing-cta-button:active {
+  transform: scale(0.96);
+}
+
+/* Footer linkleri için focus-visible */
+.landing-footer-link:focus-visible {
+  outline: 2px solid #a855f7;
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+/* Footer linkleri için active */
+.landing-footer-link:active {
+  transform: scale(0.95);
+}
+
+/* Waitlist form input focus-visible */
+.landing-waitlist-input:focus-visible {
+  outline: 2px solid #a855f7;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.15);
+}
+
+/* Waitlist form input active */
+.landing-waitlist-input:active {
+  transform: scale(0.99);
+}
+
+/* Chat preview bubble focus-visible */
+.landing-chat-preview:focus-visible {
+  outline: 2px solid #a855f7;
+  outline-offset: 4px;
+  border-radius: 1rem;
+}
+
+/* Chat preview bubble active */
+.landing-chat-preview:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+/* Feature panel focus-visible */
+.landing-feature-panel:focus-visible {
+  outline: 2px solid #a855f7;
+  outline-offset: 4px;
+  border-radius: 1rem;
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.2);
+}
+
+/* Feature panel active */
+.landing-feature-panel:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+/* Light tema override */
+[data-theme="light"] *:focus-visible {
+  outline-color: #9333ea;
+}
+
+[data-theme="light"] .landing-pillar-card:focus-visible,
+[data-theme="light"] .landing-mini-card:focus-visible,
+[data-theme="light"] .landing-coach-row:focus-visible,
+[data-theme="light"] .landing-streak-stage:focus-visible,
+[data-theme="light"] .landing-kai-panel:focus-visible,
+[data-theme="light"] .landing-leaderboard-row:focus-visible {
+  box-shadow: 0 0 0 4px rgba(147, 51, 234, 0.2);
+}
+
+/* Reduced motion — animasyonları kapat */
+@media (prefers-reduced-motion: reduce) {
+  *:active,
+  button:active,
+  a:active,
+  [role="button"]:active {
+    transform: none !important;
+  }
+  
+  *:focus-visible {
+    outline: 2px solid #a855f7;
+    outline-offset: 2px;
   }
 }
