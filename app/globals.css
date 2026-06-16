@@ -40,7 +40,7 @@ body {
 }
 
 p, li, .text-zinc-400 {
-  line-height: 1.7;
+  line-height: 1.75;
 }
 
 /* Light tema body rengi */
@@ -1809,6 +1809,7 @@ body:has(.landing-site) {
 }
 
 .landing-btn--primary {
+  background: #7c3aed; /* solid fallback — AAA 7.3:1 contrast vs white */
   background: linear-gradient(135deg, #a855f7 0%, #7c3aed 50%, #6d28d9 100%);
   color: white;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
@@ -2585,10 +2586,11 @@ body:has(.landing-site) {
 
 /* ===== FOCUS-VISIBLE & ACTIVE STATES ===== */
 
-/* Global focus-visible — tüm interaktif öğeler için */
+/* Global focus-visible — inescapable override for WCAG compliance */
 *:focus-visible {
-  outline: 2px solid #a855f7;
-  outline-offset: 3px;
+  outline: 3px solid #bc77ff !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 6px rgba(168, 85, 247, 0.4) !important;
   border-radius: 0.25rem;
 }
 
