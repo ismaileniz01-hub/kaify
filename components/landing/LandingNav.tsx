@@ -3,11 +3,11 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 const LINKS = [
-  { href: "#about", label: "About" },
-  { href: "#coaches", label: "Coaches" },
+  { href: "#about", label: "About Us" },
+  { href: "#coaches", label: "AI Coaches" },
   { href: "#features", label: "Features" },
   { href: "#streak", label: "Streak" },
-  { href: "#kai", label: "Kai" },
+  { href: "#kai", label: "Dragon Kai" },
 ];
 
 export function LandingNav() {
