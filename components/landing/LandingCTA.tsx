@@ -29,34 +29,9 @@ export function LandingCTA() {
               to get four expert coaches, smart analytics, and Kai — your dragon
               companion — in one beautifully designed app.
             </p>
-            <p className="mx-auto mt-2 text-center text-sm text-zinc-500">
-              Plans starting from{" "}
-              <span className="relative inline-block font-semibold text-zinc-300">
-                <span className="absolute -inset-x-1 -inset-y-0.5 rounded-md bg-emerald-500/10 blur-sm" />
-                <span className="relative">just $14.99/mo</span>
-              </span>{" "}
-              {" "}&mdash; that's less than a coffee run for a whole month of personalized coaching.
-            </p>
 
             <div className="mx-auto mt-10 max-w-md">
               <WaitlistForm />
-            </div>
-
-            {/* Discount badges — highlighted */}
-            <div className="mx-auto mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 sm:px-4 sm:py-2 shadow-[0_0_24px_rgba(16,185,129,0.25)]">
-                <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-400" />
-                <span className="text-xs sm:text-sm font-semibold text-emerald-300">
-                  <span className="text-emerald-200">10% OFF</span> for all subscribers
-                </span>
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 sm:px-4 sm:py-2 shadow-[0_0_24px_rgba(245,158,11,0.25)]">
-                <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-400" />
-                <span className="text-xs sm:text-sm font-semibold text-amber-300">
-                  First <span className="text-amber-200">100</span> get{" "}
-                  <span className="text-amber-200">lifetime 2% OFF</span>
-                </span>
-              </div>
             </div>
 
             <p className="mx-auto mt-4 max-w-sm text-center text-xs text-zinc-600">
