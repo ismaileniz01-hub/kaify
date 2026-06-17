@@ -629,8 +629,8 @@ p, li, .text-zinc-400 {
 }
 
 
-/* Smooth geçiş — tüm etkileşimli öğeler */
-* {
+/* Smooth geçiş — sadece etkileşimli öğeler (mobil performans için daraltıldı) */
+a, button, input, select, textarea, label {
   transition: all 0.2s ease;
 }
 
@@ -1731,7 +1731,12 @@ body:has(.landing-site) {
   color: #fafafa;
 }
 
-.landing-site * {
+.landing-site a,
+.landing-site button,
+.landing-site input,
+.landing-site select,
+.landing-site textarea,
+.landing-site label {
   transition-property: color, background-color, border-color, box-shadow, opacity, transform;
   transition-duration: 0.2s;
   transition-timing-function: ease;

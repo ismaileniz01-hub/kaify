@@ -33,14 +33,14 @@ export function LandingKai() {
                     className="landing-kai-float h-auto w-full max-w-xs drop-shadow-[0_32px_100px_rgba(168,85,247,0.5)]"
                   />
                 </div>
-                {/* Hero'daki Kai avatarı — görselin altında */}
-                <div className="relative -mt-12 h-48 w-48 overflow-hidden rounded-full border-[4px] border-purple-500/50 bg-zinc-900 shadow-[0_0_80px_rgba(168,85,247,0.8)]">
+                {/* Kai avatarı — şeffaf, çerçevesiz */}
+                <div className="relative -mt-12 h-48 w-48">
                   <Image
                     src="/kai-level-1.png"
                     alt="Kai avatar"
                     width={250}
                     height={250}
-                    className="h-full w-full object-contain p-2"
+                    className="h-full w-full object-contain drop-shadow-[0_0_40px_rgba(168,85,247,0.6)]"
                   />
                 </div>
               </div>
