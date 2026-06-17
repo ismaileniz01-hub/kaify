@@ -143,21 +143,26 @@ export function LandingAbout() {
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
               </div>
 
-              {/* Kaify fiyatı */}
-              <div className="group relative overflow-hidden rounded-2xl border border-purple-500/25 bg-gradient-to-br from-purple-500/10 via-purple-600/5 to-transparent p-6 transition-all duration-500 hover:border-purple-400/40 hover:shadow-[0_0_40px_rgba(168,85,247,0.15)]">
-                {/* Animasyonlu parıltı */}
+              {/* Kaify fiyatı — Kazanan Kartı */}
+              <div className="group relative overflow-hidden rounded-2xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-green-600/5 to-transparent p-6 transition-all duration-500 hover:border-emerald-400/50 hover:shadow-[0_0_50px_rgba(16,185,129,0.2)]">
+                {/* Animasyonlu yeşil parıltı */}
                 <div className="pointer-events-none absolute -inset-20 opacity-0 transition-opacity duration-700 group-hover:opacity-100">
-                  <div className="absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-400/20 blur-[60px]" />
+                  <div className="absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400/20 blur-[60px]" />
+                </div>
+
+                {/* BEST VALUE rozeti */}
+                <div className="absolute -right-8 top-4 z-20 rotate-45 bg-gradient-to-r from-emerald-500 to-green-600 px-8 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-white shadow-lg">
+                  Best Value
                 </div>
 
                 <div className="relative z-10 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 text-lg text-white shadow-[0_0_20px_rgba(168,85,247,0.3)]">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-green-700 text-lg text-white shadow-[0_0_20px_rgba(16,185,129,0.35)]">
                       ✓
                     </span>
                     <div>
                       <p className="text-lg font-bold text-white">Kaify</p>
-                      <p className="text-xs text-zinc-500">All-in-one fitness platform</p>
+                      <p className="text-xs text-emerald-400/70">All-in-one fitness platform</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -168,12 +173,13 @@ export function LandingAbout() {
                   </div>
                 </div>
 
-                {/* Tasarruf etiketi */}
-                <div className="mt-4 flex items-center gap-2 rounded-lg bg-green-500/10 px-3 py-2">
-                  <span className="text-sm text-green-400">💰</span>
-                  <span className="text-xs font-semibold text-green-400">
-                    Save up to <span className="text-sm">$125+/month</span> · <span className="text-sm">$1,500+/year</span> compared to hiring individual coaches
+                {/* Tasarruf etiketi — belirgin */}
+                <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/15 px-4 py-3">
+                  <span className="text-lg text-emerald-400">💰</span>
+                  <span className="text-sm font-bold text-emerald-400">
+                    Save up to <span className="text-base">$125+/month</span> · <span className="text-base">$1,500+/year</span>
                   </span>
+                  <span className="ml-auto text-[10px] font-medium text-emerald-400/60">compared to hiring individual coaches</span>
                 </div>
               </div>
             </div>
