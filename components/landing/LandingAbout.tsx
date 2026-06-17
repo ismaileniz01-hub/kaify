@@ -112,20 +112,21 @@ export function LandingAbout() {
               {/* Karşılaştırma satırları */}
               <div className="space-y-3">
                 {[
-                  { label: "Personal Trainer", price: "$50+", delay: 0 },
-                  { label: "Nutrition Coach", price: "$40+", delay: 100 },
-                  { label: "Calorie Tracking", price: "$10+", delay: 150 },
-                  { label: "Posture Coach", price: "$40+", delay: 200 },
+                  { label: "Personal Trainer", price: "$50+", delay: 0, icon: "🏋️" },
+                  { label: "Nutrition Coach", price: "$40+", delay: 100, icon: "🥗" },
+                  { label: "Calorie Tracking", price: "$10+", delay: 150, icon: "📊" },
+                  { label: "Posture Coach", price: "$40+", delay: 200, icon: "🧍" },
                 ].map((item, i) => (
                   <div
                     key={item.label}
-                    className="group flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] px-5 py-4 transition-all duration-500 hover:border-purple-500/20 hover:bg-white/[0.04]"
+                    className="group flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4 transition-all duration-500 hover:border-purple-500/30 hover:bg-white/[0.06] hover:shadow-[0_0_20px_rgba(168,85,247,0.08)]"
                     style={{ animation: `fade-in-up 0.5s ease-out ${item.delay}ms both` }}
                   >
                     <div className="flex items-center gap-3">
                       <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 text-sm text-red-400">
                         ✕
                       </span>
+                      <span className="text-sm">{item.icon}</span>
                       <span className="text-sm font-medium text-zinc-300">{item.label}</span>
                     </div>
                     <span className="text-lg font-bold text-red-400">{item.price}</span>
@@ -171,7 +172,7 @@ export function LandingAbout() {
                 <div className="mt-4 flex items-center gap-2 rounded-lg bg-green-500/10 px-3 py-2">
                   <span className="text-sm text-green-400">💰</span>
                   <span className="text-xs font-semibold text-green-400">
-                    Save up to <span className="text-sm">$125+/month</span> compared to hiring individual coaches
+                    Save up to <span className="text-sm">$125+/month</span> · <span className="text-sm">$1,500+/year</span> compared to hiring individual coaches
                   </span>
                 </div>
               </div>
