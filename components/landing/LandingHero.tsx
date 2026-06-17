@@ -23,7 +23,7 @@ export function LandingHero() {
       <FloatingOrbs />
       <div className="landing-hero-glow" aria-hidden />
 
-      <div className="landing-container relative z-10 flex min-h-screen flex-col items-center justify-center pb-24 pt-28 sm:pt-40">
+      <div className="landing-container relative z-10 flex min-h-screen flex-col items-center justify-center pb-24 pt-32 sm:pt-48">
         <div className="grid w-full items-center gap-8 lg:grid-cols-2 lg:gap-16">
           {/* Mobilde Kai önce gelsin — order ile sıralama */}
           <div className="relative flex items-center justify-center lg:order-2">
