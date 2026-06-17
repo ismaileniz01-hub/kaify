@@ -52,7 +52,7 @@ const COACHES = [
     avatar: "/kai-level-1.png",
     hero: "/kai-level-1.png",
     quote: "Hey! How are you feeling today?",
-    desc: "Fitness is emotional as much as physical. Kai is your dragon companion — always there to chat, celebrate wins, and remind you why you started. The friend who never judges, only encourages.",
+    desc: "Fitness is emotional as much as physical. Kai is your dragon companion — always there to chat, celebrate wins, and remind you why you started. Chat when you need encouragement, earn gems as you hit goals, and watch your dragon grow as your habits do. New dragon forms unlock as you level up — reach a 31-day streak to unlock Kai Level 2.",
     heading: "Never go alone with Kai",
     reply: "Doing okay — let's keep going!",
   },

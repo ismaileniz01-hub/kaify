@@ -16,7 +16,7 @@ export function LandingKai() {
       />
 
       <div className="landing-container relative z-10">
-              <div className="landing-kai-panel focus-visible:outline-2 focus-visible:outline-purple-400 focus-visible:outline-offset-4" tabIndex={0}>
+        <div className="landing-kai-panel focus-visible:outline-2 focus-visible:outline-purple-400 focus-visible:outline-offset-4" tabIndex={0}>
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_1.2fr]">
             <ScrollReveal direction="left">
               <div className="relative flex flex-col items-center justify-center">
@@ -33,33 +33,16 @@ export function LandingKai() {
                     className="landing-kai-float h-auto w-full max-w-xs drop-shadow-[0_32px_100px_rgba(168,85,247,0.5)]"
                   />
                 </div>
-                {/* Kai avatarı — şeffaf, çerçevesiz */}
-                <div className="relative -mt-12 h-48 w-48">
-                  <Image
-                    src="/kai-level-1.png"
-                    alt="Kai avatar"
-                    width={250}
-                    height={250}
-                    className="h-full w-full object-contain drop-shadow-[0_0_40px_rgba(168,85,247,0.6)]"
-                  />
-                </div>
               </div>
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={150}>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-purple-400">
-                Your dragon
+                Your companion never sleeps
               </p>
-              <h2 className="landing-section-title mt-4 text-left">
-                Meet Kai —{" "}
-                <span className="landing-gradient-text">Level 1</span>
-              </h2>
               <p className="mt-6 text-lg leading-relaxed text-zinc-400">
-                Kai isn&apos;t just cute — he&apos;s the emotional anchor that
-                keeps you coming back. Chat when you need encouragement, earn gems
-                as you hit goals, and watch your dragon grow as your habits do.
-                For the student who needs accountability and the parent who needs
-                a gentle nudge — Kai delivers both.
+                Always here to chat, celebrate your wins, and keep you going —
+                whether you need a gentle nudge or a full pep talk.
               </p>
 
               <ul className="mt-8 space-y-4">
