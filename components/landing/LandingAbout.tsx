@@ -114,6 +114,7 @@ export function LandingAbout() {
                 {[
                   { label: "Personal Trainer", price: "$50+", delay: 0 },
                   { label: "Nutrition Coach", price: "$40+", delay: 100 },
+                  { label: "Calorie Tracking", price: "$10+", delay: 150 },
                   { label: "Posture Coach", price: "$40+", delay: 200 },
                 ].map((item, i) => (
                   <div
