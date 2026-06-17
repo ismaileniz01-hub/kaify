@@ -839,6 +839,13 @@ a, button, input, select, textarea, label {
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+@media (max-width: 767px) {
+  .glass-input {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
 /* ── Welcome sayfası — modern ana ekran ── */
 
 /* Arka planı koyulaştır — FitnessWallpaper üzerine ek katman */
@@ -1961,6 +1968,15 @@ body:has(.landing-site) {
   opacity: 0.35;
 }
 
+@media (max-width: 767px) {
+  .landing-section-glow {
+    filter: blur(60px);
+    opacity: 0.15;
+    width: 300px;
+    height: 300px;
+  }
+}
+
 .landing-section-glow--purple {
   top: 10%;
   right: -10%;
@@ -2185,7 +2201,7 @@ body:has(.landing-site) {
   transform: translate(0) scale(1);
 }
 
-/* Floating orbs */
+/* Floating orbs — mobilde performans için kapat */
 .landing-orb {
   position: absolute;
   border-radius: 50%;
@@ -2197,6 +2213,13 @@ body:has(.landing-site) {
   0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
   33% { transform: translate(12px, -18px) scale(1.2); opacity: 0.9; }
   66% { transform: translate(-8px, -10px) scale(0.9); opacity: 0.6; }
+}
+
+@media (max-width: 767px) {
+  .landing-orb {
+    animation: none !important;
+    opacity: 0.3 !important;
+  }
 }
 
 /* Waitlist */
@@ -2586,6 +2609,15 @@ body:has(.landing-site) {
   75% {
     transform: translate(10px, 6px) scale(1.05);
     opacity: 0.8;
+  }
+}
+
+@media (max-width: 767px) {
+  .landing-flag-orb {
+    animation: none !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    opacity: 0.4;
   }
 }
 
