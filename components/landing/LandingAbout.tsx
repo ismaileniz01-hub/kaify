@@ -171,7 +171,7 @@ export function LandingAbout() {
                 <div className="mt-4 flex items-center gap-2 rounded-lg bg-green-500/10 px-3 py-2">
                   <span className="text-sm text-green-400">💰</span>
                   <span className="text-xs font-semibold text-green-400">
-                    Save up to <span className="text-sm">$115+/month</span> compared to hiring individual coaches
+                    Save up to <span className="text-sm">$125+/month</span> compared to hiring individual coaches
                   </span>
                 </div>
               </div>
