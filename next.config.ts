@@ -11,7 +11,7 @@ const cspDirectives = [
   // Fonts
   "font-src 'self'",
   // Connect
-  "connect-src 'self' https://api.sender.net https://www.google.com",
+  "connect-src 'self' https://api.sender.net https://cdn.sender.net https://www.google.com",
   // Frames (reCAPTCHA)
   "frame-src https://www.google.com https://recaptcha.google.com",
   // Objects

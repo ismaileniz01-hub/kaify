@@ -171,7 +171,7 @@ export function isAllowedOrigin(request: NextRequest): boolean {
   // ALLOWED_ORIGINS env'den veya varsayılan whitelist
   const allowedOrigins = (
     process.env.ALLOWED_ORIGINS ||
-    "https://kaify.org,https://www.kaify.org"
+    "https://kaify.org,https://www.kaify.org,https://kaifyai.org,https://www.kaifyai.org"
   )
     .split(",")
     .map((o) => o.trim())
