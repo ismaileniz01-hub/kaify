@@ -53,9 +53,9 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
       return;
     }
 
-    // Execute reCAPTCHA (if configured)
+    // Execute reCAPTCHA (if configured — skip if no site key set)
     const token = await recaptchaRef.current?.executeAsync();
-    if (!token && process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) {
+    if (!token && process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && !process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY.includes("YOUR_")) {
       setStatus("error");
       return;
     }

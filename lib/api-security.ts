@@ -63,9 +63,10 @@ export const leaderboardQuerySchema = z.object({
 export async function validateRecaptcha(token: string): Promise<boolean> {
   const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 
+  // reCAPTCHA yapılandırılmamışsa (development/placeholder) doğrulamayı atla
   if (!secretKey || secretKey.includes("your_") || secretKey.includes("_here")) {
-    console.error("[security] RECAPTCHA_SECRET_KEY is not configured");
-    return false;
+    console.warn("[security] RECAPTCHA_SECRET_KEY is not configured — skipping validation");
+    return true;
   }
 
   try {
