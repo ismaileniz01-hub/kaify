@@ -82,8 +82,8 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           email,
-          first_name: firstName,
-          last_name: lastName || undefined,
+          firstname: firstName,
+          lastname: lastName || undefined,
           tags: ["kaify-waitlist"],
           groups: ["dPGkyz"],
         }),
