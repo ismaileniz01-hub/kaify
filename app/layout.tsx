@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import "./light-theme.css";
+
 import { GemProvider } from "@/lib/gem-context";
 import { KaiProvider } from "@/lib/kai-context";
 import { ThemeProvider } from "@/lib/theme-context";

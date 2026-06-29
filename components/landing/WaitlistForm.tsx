@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { ArrowRight, Check, Loader2, AlertCircle } from "lucide-react";
 import ReCAPTCHA from "react-google-recaptcha";
+import { useLang } from "@/lib/lang-context";
 
 type FieldErrors = {
   firstName?: string;
@@ -11,6 +12,7 @@ type FieldErrors = {
 };
 
 export function WaitlistForm({ className = "" }: { className?: string }) {
+  const { t } = useLang();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");

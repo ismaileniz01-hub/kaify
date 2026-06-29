@@ -2,6 +2,7 @@
 
 import { BarChart3, Flame, MessageCircle, ShoppingCart } from "lucide-react";
 import { ScrollReveal } from "./ScrollReveal";
+import { useLang } from "@/lib/lang-context";
 
 const PILLARS = [
   {
@@ -39,6 +40,7 @@ const PILLARS = [
 ];
 
 export function LandingAbout() {
+  const { t } = useLang();
   return (
     <section id="about" className="landing-section relative">
       <div className="landing-container">

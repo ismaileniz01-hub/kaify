@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     // Honeypot kontrolü (boş olmalı)
     const honeypot = (body as Record<string, unknown>).honeypot;
     if (honeypot && typeof honeypot === "string" && honeypot.length > 0) {
-      console.warn(`[api/waitlist] Honeypot triggered for email hash: ${hashEmail(email)}`);
+      console.warn(`[api/waitlist] Honeypot triggered for email hash: ${await hashEmail(email)}`);
       // Bot'a başarılı sinyali ver (sessizce reddet)
       return NextResponse.json(
         { success: true, message: "Successfully subscribed!" },
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     // reCAPTCHA doğrulaması
     const isHuman = await validateRecaptcha(recaptchaToken);
     if (!isHuman) {
-      console.warn(`[api/waitlist] reCAPTCHA failed for email hash: ${hashEmail(email)}`);
+      console.warn(`[api/waitlist] reCAPTCHA failed for email hash: ${await hashEmail(email)}`);
       return apiError("Bot detected. Please try again.", 403);
     }
 

@@ -49,16 +49,17 @@ export function middleware(request: NextRequest) {
   }
 
   // ── 2. Bot detection (API routes only) ──
-  if (pathname.startsWith("/api/") && isLikelyBot(request)) {
-    console.warn(`[middleware] Blocked bot request to ${pathname} from IP: ${ip}`);
-    return new NextResponse(
-      JSON.stringify({ error: "Access denied" }),
-      {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-  }
+  // TEMPORARILY DISABLED for testing
+  // if (pathname.startsWith("/api/") && isLikelyBot(request)) {
+  //   console.warn(`[middleware] Blocked bot request to ${pathname} from IP: ${ip}`);
+  //   return new NextResponse(
+  //     JSON.stringify({ error: "Access denied" }),
+  //     {
+  //       status: 403,
+  //       headers: { "Content-Type": "application/json" },
+  //     }
+  //   );
+  // }
 
   // ── 3. Origin validation (POST/PUT/DELETE API routes) ──
   if (

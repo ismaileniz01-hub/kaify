@@ -9,8 +9,10 @@ import { LandingStreak } from "./LandingStreak";
 import { LandingLeaderboard } from "./LandingLeaderboard";
 import { LandingCTA } from "./LandingCTA";
 import { LandingFooter } from "./LandingFooter";
+import { useLang } from "@/lib/lang-context";
 
 export function LandingPage() {
+  const { t } = useLang();
   return (
     <div className="landing-site">
       <LandingNav />

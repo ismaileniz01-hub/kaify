@@ -7,6 +7,7 @@ import { useGem } from "@/lib/gem-context";
 import { useKai } from "@/lib/kai-context";
 import { useSound } from "@/lib/use-sound";
 import { getKaiLevel, KAI_LEVEL_THRESHOLDS, KAI_LEVEL_AVATARS, type KaiLevel } from "@/lib/kai-level";
+import { useLang } from "@/lib/lang-context";
 
 type StreakRoadProps = {
   currentStreak: number;
@@ -16,16 +17,16 @@ type StreakRoadProps = {
 type RoadSegment = {
   start: number;
   end: number;
-  label: string;
+  labelKey: string;
   milestone?: number;
   kaiLevel?: KaiLevel;
 };
 
 const SEGMENTS: RoadSegment[] = [
-  { start: 0, end: 7, label: "Başlangıç", milestone: 7 },
-  { start: 7, end: 31, label: "Acemi", milestone: 31, kaiLevel: 2 },
-  { start: 31, end: 61, label: "Kıdemli", milestone: 61, kaiLevel: 3 },
-  { start: 61, end: 120, label: "Efsane", milestone: 120, kaiLevel: 4 },
+  { start: 0, end: 7, labelKey: "streak.segment.beginner", milestone: 7 },
+  { start: 7, end: 31, labelKey: "streak.segment.novice", milestone: 31, kaiLevel: 2 },
+  { start: 31, end: 61, labelKey: "streak.segment.veteran", milestone: 61, kaiLevel: 3 },
+  { start: 61, end: 120, labelKey: "streak.segment.legend", milestone: 120, kaiLevel: 4 },
 ];
 
 const MILESTONE_GEM_REWARD = 10;
@@ -53,6 +54,7 @@ function getProgressInSegment(streak: number, segment: RoadSegment): number {
 }
 
 export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
+  const { t } = useLang();
   const { earn } = useGem();
   const { unlockLevel } = useKai();
   const { play } = useSound();
@@ -110,22 +112,24 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
   }, [currentStreak, hydrated]);
 
   // Claim butonuna tıklandığında evrim animasyonunu başlat
-  const handleClaimEvolution = () => {
+  const handleClaimEvolution = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!pendingKaiLevel) return;
     
     setShowEvolution(true);
     setEvolutionPhase("burning");
-    play("levelup");
+    play("whoosh"); // Modern enerji patlaması — ilk ses
     
     // Önce yanma efekti
     setTimeout(() => {
       setEvolutionPhase("evolving");
-      play("levelup");
+      play("levelup"); // Dönüşüm sesi — ikinci ses
       
       // Sonra dönüşüm
       setTimeout(() => {
         setEvolutionPhase("done");
-        play("levelup");
+        play("transform"); // Başarı/zafer sesi — üçüncü ses
         
         // Animasyon bitince state'i güncelle
         setTimeout(() => {
@@ -159,7 +163,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
         earnFn(
           "streak_milestone",
           MILESTONE_GEM_REWARD,
-          `${segment.milestone} gün streak! +${MILESTONE_GEM_REWARD} 💎`,
+          t("streak.day_streak_earn", { day: segment.milestone!, reward: MILESTONE_GEM_REWARD }),
         );
 
         const newClaimed = new Set(claimedMilestones);
@@ -181,7 +185,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
         earnFn(
           "streak_milestone",
           reward,
-          `${day}. gün! +${reward} 💎`,
+          t("streak.day_earn", { day, reward }),
         );
 
         const newClaimed = new Set(claimedStations);
@@ -207,7 +211,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
         </div>
         <div className="text-center">
           <p className="text-3xl font-bold text-white">{currentStreak}</p>
-          <p className="text-xs text-zinc-500">günlük streak</p>
+          <p className="text-xs text-zinc-500">{t("streak.daily")}</p>
         </div>
       </div>
 
@@ -258,10 +262,10 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                         isCompleted || isActive ? "text-orange-200" : "text-zinc-500"
                       }`}
                     >
-                      {segment.label}
+                      {t(segment.labelKey)}
                     </span>
                     <span className="text-[10px] text-zinc-600">
-                      {segment.start} - {segment.end} gün
+                      {segment.start} - {segment.end} {t("streak.day")}
                     </span>
                   </div>
 
@@ -274,14 +278,14 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                           className="flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-lg shadow-orange-500/30 transition-all hover:from-orange-400 hover:to-amber-400 active:scale-95"
                         >
                           <Flame className="h-3 w-3" />
-                          CLAIM Lv.{kaiLevel}
+                          {t("streak.claim")} Lv.{kaiLevel}
                         </button>
                       ) : isKaiUnlocked ? (
                         <div className="flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] text-amber-400">
                           <div className="relative h-4 w-4">
                             <Image
                               src={KAI_LEVEL_AVATARS[kaiLevel]}
-                              alt={`Kai Level ${kaiLevel}`}
+              alt={t("streak.kai_level", { level: kaiLevel })}
                               width={16}
                               height={16}
                               className="h-full w-full object-contain"
@@ -409,7 +413,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                       }`}>
                         <Image
                           src={KAI_LEVEL_AVATARS[kaiLevel]}
-                          alt={`Kai Level ${kaiLevel}`}
+                          alt={t("streak.kai_level", { level: kaiLevel })}
                           width={64}
                           height={64}
                           className="h-full w-full object-contain"
@@ -421,28 +425,28 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                         <div className="flex items-center gap-2">
                           {isKaiUnlocked && !pendingKaiLevel ? (
                             <span className="text-sm font-bold text-amber-300">
-                              ✓ Kai Level {kaiLevel}
+                              ✓ {t("streak.kai_level", { level: kaiLevel })}
                             </span>
                           ) : pendingKaiLevel === kaiLevel ? (
                             <span className="flex items-center gap-1.5 text-sm font-bold text-amber-400">
                               <Flame className="h-4 w-4 text-orange-400 animate-pulse" />
-                              Kai Level {kaiLevel} Hazır!
+                              {t("streak.kai_level_ready", { level: kaiLevel })}
                             </span>
                           ) : (
                             <span className="flex items-center gap-1.5 text-sm font-bold text-zinc-500">
                               <Lock className="h-4 w-4" />
-                              Kai Level {kaiLevel}
+                              {t("streak.kai_level", { level: kaiLevel })}
                             </span>
                           )}
                         </div>
                         <span className={`text-xs ${
                           isKaiUnlocked ? "text-amber-400/70" : "text-zinc-600"
                         }`}>
-                          {segment.milestone}. günde unlock olur
+                          {t("streak.unlock_at", { day: segment.milestone! })}
                         </span>
                         {isKaiUnlocked && !pendingKaiLevel && (
                           <span className="mt-1 text-[10px] text-amber-400/50">
-                            Yeni görünümünle tanış!
+                            {t("streak.meet_new_look")}
                           </span>
                         )}
                         {pendingKaiLevel === kaiLevel && (
@@ -451,7 +455,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                             className="mt-2 flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-lg shadow-orange-500/30 transition-all hover:from-orange-400 hover:to-amber-400 active:scale-95"
                           >
                             <Flame className="h-3.5 w-3.5" />
-                            CLAIM
+                            {t("streak.claim")}
                           </button>
                         )}
                       </div>
@@ -788,7 +792,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                     
                     <Image
                       src={KAI_LEVEL_AVATARS[prevLevel]}
-                      alt={`Kai Level ${prevLevel}`}
+                      alt={t("streak.kai_level", { level: prevLevel })}
                       width={128}
                       height={128}
                       className="h-32 w-32 object-contain"
@@ -809,7 +813,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                   animation: 'flicker 0.08s ease-in-out infinite',
                   textShadow: textShadowStyle
                 }}>
-                  EVRİLİYOR...
+                  {t("streak.evolving")}
                 </p>
                 
                 {/* Alev çubuğu */}
@@ -941,7 +945,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                       <div className={`absolute -inset-4 rounded-full bg-gradient-to-b ${meltGrad} blur-xl`} style={{ animation: 'meltGlow 1s ease-in-out infinite' }} />
                       <Image
                         src={KAI_LEVEL_AVATARS[prevLevel]}
-                        alt={`Kai Level ${prevLevel}`}
+                      alt={t("streak.kai_level", { level: prevLevel })}
                         width={96}
                         height={96}
                         className="h-24 w-24 object-contain"
@@ -956,7 +960,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                       <div className={`absolute -bottom-4 left-1/3 h-6 w-0.5 -translate-x-1/2 rounded-full bg-gradient-to-b ${dripColors.c2}`} style={{ animation: 'drip 1.1s ease-in-out infinite 0.3s' }} />
                       <div className={`absolute -bottom-5 right-1/3 h-8 w-0.5 translate-x-1/2 rounded-full bg-gradient-to-b ${dripColors.c3}`} style={{ animation: 'drip 0.9s ease-in-out infinite 0.6s' }} />
                     </div>
-                    <span className="text-xs text-zinc-600">Level {prevLevel}</span>
+                    <span className="text-xs text-zinc-600">{t("streak.level", { level: prevLevel })}</span>
                   </div>
 
                   {/* Dönüşüm enerjisi */}
@@ -979,7 +983,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                       
                       <Image
                         src={KAI_LEVEL_AVATARS[pendingKaiLevel]}
-                        alt={`Kai Level ${pendingKaiLevel}`}
+                        alt={t("streak.kai_level", { level: pendingKaiLevel })}
                         width={96}
                         height={96}
                         className="h-24 w-24 object-contain"
@@ -994,7 +998,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                       <div className={`absolute left-1/2 top-1/2 h-28 w-0.5 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-gradient-to-b ${beamGrad2}`} style={{ animation: 'lightBeam 0.8s ease-in-out infinite 0.4s' }} />
                       <div className={`absolute left-1/2 top-1/2 h-28 w-0.5 -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-gradient-to-b ${beamGrad2}`} style={{ animation: 'lightBeam 0.8s ease-in-out infinite 0.6s' }} />
                     </div>
-                    <span className="text-xs font-bold" style={{ color: colors.secondary, animation: 'fadeIn 1s ease-out forwards' }}>Level {pendingKaiLevel}</span>
+                    <span className="text-xs font-bold" style={{ color: colors.secondary, animation: 'fadeIn 1s ease-out forwards' }}>{t("streak.level", { level: pendingKaiLevel })}</span>
                   </div>
                 </div>
 
@@ -1002,7 +1006,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                   animation: 'glowPulse 0.4s ease-in-out infinite',
                   textShadow: textShadowStyle2
                 }}>
-                  DÖNÜŞÜYOR...
+                  {t("streak.transforming")}
                 </p>
               </div>
             )}
@@ -1059,7 +1063,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                   <div className="relative">
                     <Image
                       src={KAI_LEVEL_AVATARS[pendingKaiLevel]}
-                      alt={`Kai Level ${pendingKaiLevel}`}
+                      alt={t("streak.kai_level", { level: pendingKaiLevel })}
                       width={180}
                       height={180}
                       className="h-44 w-44 object-contain"
@@ -1086,7 +1090,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                     )}
                   </div>
                   <p className="text-3xl font-bold" style={{ color: colors.secondary, textShadow: textShadowStyle3 }}>
-                    Kai Level {pendingKaiLevel}!
+                    {t("streak.kai_level_up", { level: pendingKaiLevel })}
                   </p>
                   <p className="text-sm font-medium tracking-wider" style={{ color: colors.secondary.replace(')', '/80)') }}>
                     {KAI_LEVEL_THRESHOLDS.find((t) => t.level === pendingKaiLevel)?.label}
@@ -1112,10 +1116,10 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
             </p>
             <p className="text-xs text-purple-300/70">
               {justClaimed.type === "milestone"
-                ? `${justClaimed.value} gün streak!`
+                ? t("streak.day_streak", { day: justClaimed.value })
                 : justClaimed.value === SPECIAL_STATION_DAY
-                  ? `🎉 ${justClaimed.value}. gün mega ödülü!`
-                  : `${justClaimed.value}. gün ödülü!`}
+                  ? t("streak.mega_reward", { day: justClaimed.value })
+                  : t("streak.day_reward", { day: justClaimed.value })}
             </p>
           </div>
         </div>
@@ -1127,7 +1131,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
           <div className="animate-bounce rounded-2xl bg-gradient-to-br from-amber-500/30 to-orange-600/20 px-8 py-6 text-center backdrop-blur-sm ring-1 ring-amber-400/30">
             <Flame className="mx-auto h-10 w-10 text-orange-400" />
             <p className="mt-2 text-xl font-bold text-orange-200">
-              Kai Level {kaiLevelUp}!
+              {t("streak.kai_level_up", { level: kaiLevelUp })}
             </p>
             <p className="text-sm text-orange-300/70">
               {KAI_LEVEL_THRESHOLDS.find((t) => t.level === kaiLevelUp)?.label}

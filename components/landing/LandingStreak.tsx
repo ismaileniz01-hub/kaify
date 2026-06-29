@@ -4,8 +4,10 @@ import Image from "next/image";
 import { ArrowRight, Flame } from "lucide-react";
 import { ScrollReveal } from "./ScrollReveal";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { useLang } from "@/lib/lang-context";
 
 export function LandingStreak() {
+  const { t } = useLang();
   const { ref, visible } = useScrollReveal<HTMLDivElement>({ threshold: 0.3 });
 
   return (

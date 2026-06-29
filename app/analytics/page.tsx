@@ -5,20 +5,23 @@ import { Activity, ArrowLeft, Droplets, Dumbbell, Flame, Moon } from "lucide-rea
 import { MacroRing } from "@/components/analytics/MacroRing";
 import { StatCard } from "@/components/analytics/StatCard";
 import { WeeklyChart } from "@/components/analytics/WeeklyChart";
+import { useLang } from "@/lib/lang-context";
 
 export default function AnalyticsPage() {
+  const { t, unit } = useLang();
+
   return (
     <div className="phone-shell analytics-gradient relative flex flex-col">
       <header className="animate-in animate-in--1 flex items-center justify-between px-4 pb-2 pt-12">
         <Link
           href="/welcome"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
-          aria-label="Geri"
+          aria-label={t("nav.back")}
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <h1 className="flex-1 text-center text-sm font-medium text-white">
-          Analiz
+          {t("analytics.page_title")}
         </h1>
         <div className="h-9 w-9" />
       </header>
@@ -28,20 +31,21 @@ export default function AnalyticsPage() {
           <div className="animate-in animate-in--2">
             <StatCard
               icon={Activity}
-              label="Weight"
-              value="78.4 kg"
-              trend="▼ 1.2kg this week"
+              label={t("analytics.weight")}
+              value={unit === "metric" ? t("analytics.weight_value_metric") : t("analytics.weight_value_imperial")}
+              trend={unit === "metric" ? t("analytics.weight_trend_metric") : t("analytics.weight_trend_imperial")}
               barColor="#3b82f6"
               barPercent={62}
               gradient="blue"
             />
           </div>
+
           <div className="animate-in animate-in--3">
             <StatCard
               icon={Flame}
-              label="Calories"
-              value="1,840"
-              trend="▲ On target"
+              label={t("analytics.calories")}
+              value={t("analytics.calories_value")}
+              trend={t("analytics.calories_trend")}
               barColor="#f97316"
               barPercent={85}
               gradient="orange"
@@ -50,9 +54,9 @@ export default function AnalyticsPage() {
           <div className="animate-in animate-in--4">
             <StatCard
               icon={Dumbbell}
-              label="Workouts"
-              value="4 / 5"
-              trend="This week"
+              label={t("analytics.workouts")}
+              value={t("analytics.workouts_value")}
+              trend={t("analytics.workouts_trend")}
               trendPositive={false}
               barColor="#22c55e"
               barPercent={80}
@@ -62,9 +66,9 @@ export default function AnalyticsPage() {
           <div className="animate-in animate-in--5">
             <StatCard
               icon={Droplets}
-              label="Hydration"
-              value="2.1 L"
-              trend="▲ 82% of goal"
+              label={t("analytics.hydration")}
+              value={t("analytics.hydration_value")}
+              trend={t("analytics.hydration_trend")}
               barColor="#06b6d4"
               barPercent={82}
               gradient="water"
@@ -78,21 +82,21 @@ export default function AnalyticsPage() {
 
         <div className="animate-in animate-in--7 mt-3 grid grid-cols-3 gap-2.5">
           <MacroRing
-            label="Protein"
+            label={t("analytics.protein")}
             value="142g"
             percent={72}
             color="#3b82f6"
             gradient="blue"
           />
           <MacroRing
-            label="Carbs"
+            label={t("analytics.carbs")}
             value="210g"
             percent={55}
             color="#22c55e"
             gradient="green"
           />
           <MacroRing
-            label="Fat"
+            label={t("analytics.fat")}
             value="58g"
             percent={80}
             color="#f97316"

@@ -4,8 +4,10 @@ import Image from "next/image";
 import { ScrollReveal } from "./ScrollReveal";
 import { WaitlistForm } from "./WaitlistForm";
 import { Sparkles, Zap } from "lucide-react";
+import { useLang } from "@/lib/lang-context";
 
 export function LandingCTA() {
+  const { t } = useLang();
   return (
     <section id="waitlist" className="landing-section relative">
       <div className="landing-container">

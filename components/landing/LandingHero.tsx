@@ -6,8 +6,10 @@ import { useParallax } from "@/hooks/useParallax";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { ScrollReveal } from "./ScrollReveal";
 import { FloatingOrbs } from "./FloatingOrbs";
+import { useLang } from "@/lib/lang-context";
 
 export function LandingHero() {
+  const { t } = useLang();
   const parallaxSlow = useParallax(0.12);
   const parallaxFast = useParallax(0.28);
 

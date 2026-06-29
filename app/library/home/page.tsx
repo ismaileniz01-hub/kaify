@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { ArrowLeft, Home, ChevronRight } from "lucide-react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
+import { useLang } from "@/lib/lang-context";
 
 const EXERCISE_GROUPS = [
   {
     id: "chest",
-    name: "Chest",
+    nameKey: "library.home.group.chest",
     exercises: [
       "Wide Grip Push-ups",
       "Diamond Push-ups",
@@ -18,7 +19,7 @@ const EXERCISE_GROUPS = [
   },
   {
     id: "shoulders",
-    name: "Shoulders",
+    nameKey: "library.home.group.shoulders",
     exercises: [
       "Pike Push-ups",
       "Wall Walk",
@@ -29,7 +30,7 @@ const EXERCISE_GROUPS = [
   },
   {
     id: "back",
-    name: "Back",
+    nameKey: "library.home.group.back",
     exercises: [
       "Superman",
       "Reverse Snow Angels",
@@ -40,7 +41,7 @@ const EXERCISE_GROUPS = [
   },
   {
     id: "legs",
-    name: "Legs",
+    nameKey: "library.home.group.legs",
     exercises: [
       "Wall Sit",
       "Jump Squats",
@@ -51,7 +52,7 @@ const EXERCISE_GROUPS = [
   },
   {
     id: "arms",
-    name: "Arms",
+    nameKey: "library.home.group.arms",
     exercises: [
       "Triceps Dips",
       "Chair Push-ups",
@@ -61,7 +62,7 @@ const EXERCISE_GROUPS = [
   },
   {
     id: "core",
-    name: "Core",
+    nameKey: "library.home.group.core",
     exercises: [
       "Bicycle Crunches",
       "Leg Raises",
@@ -100,6 +101,7 @@ const groupIcons: Record<string, string> = {
 };
 
 export default function HomeLibraryPage() {
+  const { t } = useLang();
   return (
     <div className="phone-shell relative flex flex-col overflow-hidden">
       <FitnessWallpaper softVignette />
@@ -117,7 +119,7 @@ export default function HomeLibraryPage() {
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/20 ring-2 ring-amber-400/30">
             <Home className="h-3.5 w-3.5 text-amber-400" />
           </div>
-          <span className="text-sm font-bold text-white">Home</span>
+          <span className="text-sm font-bold text-white">{t("library.home")}</span>
         </div>
         <div className="h-8 w-8" />
       </header>
@@ -131,10 +133,10 @@ export default function HomeLibraryPage() {
               fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
             }}
           >
-            Home Exercises
+            {t("library.home.title")}
           </h1>
           <p className="mt-3 max-w-[280px] text-sm font-medium leading-relaxed text-amber-100/70">
-            No equipment needed, all bodyweight exercises
+            {t("library.home.subtitle")}
           </p>
         </section>
 
@@ -149,7 +151,7 @@ export default function HomeLibraryPage() {
               {/* Group header */}
               <div className={`flex items-center gap-3 border-b border-white/[0.06] px-4 py-3 ${groupColors[group.id]}`}>
                 <span className="text-lg">{groupIcons[group.id]}</span>
-                <h2 className="text-sm font-bold text-white">{group.name}</h2>
+                <h2 className="text-sm font-bold text-white">{t(group.nameKey)}</h2>
               </div>
 
               {/* Exercise list */}

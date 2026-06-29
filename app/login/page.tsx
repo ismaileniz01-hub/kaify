@@ -1,9 +1,13 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
+import { useLang } from "@/lib/lang-context";
 
 export default function LoginPage() {
+  const { t } = useLang();
   return (
     <div className="phone-shell relative flex flex-col overflow-hidden">
       <FitnessWallpaper />
@@ -30,10 +34,10 @@ export default function LoginPage() {
               className="text-6xl font-bold leading-none tracking-[0.08em] text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.5)]"
               style={{ fontFamily: "var(--font-geist-sans), system-ui, sans-serif" }}
             >
-              K.AIFY
+              {t("login.title")}
             </h1>
             <p className="max-w-[280px] text-base font-medium leading-snug tracking-wide text-purple-100/90">
-              4 coaches. One team. Designed for you.
+              {t("login.subtitle")}
             </p>
           </div>
         </div>
@@ -45,7 +49,7 @@ export default function LoginPage() {
             rel="noopener noreferrer"
             className="flex w-full items-center justify-center gap-3 rounded-full bg-white px-6 py-4 text-sm font-semibold text-zinc-900 shadow-xl shadow-black/30 transition active:scale-[0.98]"
           >
-            Sign Up
+            {t("login.sign_up")}
             <ArrowRight className="h-5 w-5" strokeWidth={2} />
           </a>
 
@@ -53,20 +57,13 @@ export default function LoginPage() {
             href="/welcome"
             className="flex w-full items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 py-4 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/15 active:scale-[0.98]"
           >
-            Preview Prototype
-          </Link>
-
-          <Link
-            href="/"
-            className="text-center text-xs text-purple-200/60 transition hover:text-purple-100"
-          >
-            ← Back to home
+            {t("login.preview")}
           </Link>
 
           <p className="text-center text-xs text-purple-200/50">
-            By continuing, you agree to our{" "}
+            {t("login.terms")}{" "}
             <span className="text-purple-100/70 underline-offset-2 hover:underline">
-              Terms of Service
+              {t("login.terms_link")}
             </span>
           </p>
         </div>

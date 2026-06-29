@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { ScrollReveal } from "./ScrollReveal";
+import { useLang } from "@/lib/lang-context";
 
 const COACHES = [
   {
@@ -59,6 +60,7 @@ const COACHES = [
 ];
 
 export function LandingCoaches() {
+  const { t } = useLang();
   return (
     <section id="coaches" className="landing-section landing-section--coaches relative overflow-hidden">
       <div className="landing-section-glow landing-section-glow--purple" aria-hidden />

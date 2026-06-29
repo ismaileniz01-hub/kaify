@@ -16,16 +16,8 @@
   --space-2xl: 4rem;    /* 64px */
 }
 
-/* ===== LIGHT THEME ===== */
-[data-theme="light"] {
-  --kaify-purple: #9333ea;
-  --kaify-purple-dim: #7c3aed;
-  --kaify-black: #f5f5f5;
-  --kaify-surface: #ffffff;
-  --kaify-muted: #e5e5e5;
-}
-
 html,
+
 body {
   height: 100%;
   background: var(--kaify-black);
@@ -43,85 +35,19 @@ p, li, .text-zinc-400 {
   line-height: 1.75;
 }
 
-/* Light tema body rengi */
-[data-theme="light"] body,
-[data-theme="light"] {
-  color: #1a1a2e;
-}
 
-/* Light tema — phone-shell */
-[data-theme="light"] .phone-shell {
-  background: #f5f5f5;
-}
 
-/* Light tema — analytics gradient */
-[data-theme="light"] .analytics-gradient {
-  background:
-    radial-gradient(ellipse 100% 60% at 50% -20%, rgba(147, 51, 234, 0.08), transparent),
-    linear-gradient(180deg, #f0ecf4 0%, #f5f5f5 45%, #f0ecf4 100%);
-}
 
-/* Light tema — chat gradient */
-[data-theme="light"] .chat-gradient {
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(147, 51, 234, 0.06), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(124, 58, 237, 0.04), transparent),
-    #f5f5f5;
-}
 
-/* Light tema — welcome gradient */
-[data-theme="light"] .welcome-gradient {
-  background:
-    radial-gradient(ellipse 90% 50% at 50% -10%, rgba(147, 51, 234, 0.08), transparent),
-    linear-gradient(180deg, #f0ecf4 0%, #f5f5f5 50%, #f0ecf4 100%);
-}
 
-/* Light tema — messages gradient */
-[data-theme="light"] .messages-gradient {
-  background:
-    radial-gradient(ellipse 90% 45% at 50% -8%, rgba(147, 51, 234, 0.06), transparent),
-    radial-gradient(ellipse 60% 35% at 20% 100%, rgba(124, 58, 237, 0.03), transparent),
-    radial-gradient(ellipse 50% 30% at 80% 100%, rgba(168, 85, 247, 0.02), transparent),
-    linear-gradient(180deg, #f0ecf4 0%, #f5f5f5 50%, #f0ecf4 100%);
-}
 
-/* Light tema — welcome title */
-[data-theme="light"] .welcome-title {
-  background: linear-gradient(135deg, #1a1a2e 0%, #6d28d9 50%, #9333ea 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
 
-/* Light tema — header text */
-[data-theme="light"] h1,
-[data-theme="light"] h2,
-[data-theme="light"] h3,
-[data-theme="light"] .text-white {
-  color: #1a1a2e;
-}
 
-/* Light tema — muted text */
-[data-theme="light"] .text-zinc-400,
-[data-theme="light"] .text-zinc-500,
-[data-theme="light"] .text-zinc-600 {
-  color: #71717a;
-}
 
 [data-theme="light"] .text-zinc-700 {
   color: #a1a1aa;
 }
 
-/* Light tema — welcome card backgrounds */
-[data-theme="light"] .welcome-card--purple {
-  border: 1px solid rgba(147, 51, 234, 0.2);
-  background: linear-gradient(
-    160deg,
-    rgba(147, 51, 234, 0.08) 0%,
-    rgba(255, 255, 255, 0.95) 60%,
-    #f5f5f5 100%
-  );
-}
 
 [data-theme="light"] .welcome-card--blue {
   border: 1px solid rgba(59, 130, 246, 0.2);
@@ -163,15 +89,6 @@ p, li, .text-zinc-400 {
   );
 }
 
-/* Light tema — analytics cards */
-[data-theme="light"] .analytics-card {
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: #ffffff;
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.06),
-    0 1px 2px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-}
 
 [data-theme="light"] .analytics-card--blue {
   border-color: rgba(59, 130, 246, 0.3);
@@ -203,36 +120,8 @@ p, li, .text-zinc-400 {
   box-shadow: 0 2px 8px rgba(251, 191, 36, 0.08);
 }
 
-/* Light tema — message card */
-[data-theme="light"] .message-card {
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  background: linear-gradient(
-    to top,
-    rgba(147, 51, 234, 0.04) 0%,
-    rgba(255, 255, 255, 0.95) 50%,
-    #ffffff 100%
-  );
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
 
-/* Light tema — glass input */
-[data-theme="light"] .glass-input {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-}
 
-/* Light tema — gem card */
-[data-theme="light"] .gem-card {
-  border: 1px solid rgba(251, 191, 36, 0.15);
-  background: linear-gradient(
-    to top,
-    rgba(251, 191, 36, 0.04) 0%,
-    rgba(255, 255, 255, 0.95) 50%,
-    #ffffff 100%
-  );
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
 
 [data-theme="light"] .gem-card--earn {
   border-color: rgba(34, 197, 94, 0.2);
@@ -254,10 +143,6 @@ p, li, .text-zinc-400 {
   );
 }
 
-/* Light tema — settings */
-[data-theme="light"] .border-white\/5 {
-  border-color: rgba(0, 0, 0, 0.06);
-}
 
 [data-theme="light"] .bg-white\/\[0\.03\] {
   background: rgba(0, 0, 0, 0.02);
@@ -279,10 +164,6 @@ p, li, .text-zinc-400 {
   background: #d4d4d8;
 }
 
-/* Light tema — desktop frame */
-[data-theme="light"] body {
-  background: #e8e4ec;
-}
 
 [data-theme="light"] .phone-shell {
   border-color: rgba(0, 0, 0, 0.06);
@@ -2762,10 +2643,6 @@ select:active {
   transition: transform 0.1s ease;
 }
 
-/* Light tema override */
-[data-theme="light"] *:focus-visible {
-  outline-color: #9333ea;
-}
 
 [data-theme="light"] .landing-pillar-card:focus-visible,
 [data-theme="light"] .landing-mini-card:focus-visible,
@@ -2790,3 +2667,118 @@ select:active {
     outline-offset: 2px;
   }
 }
+
+/* ===== STREAK CARD ANIMASYONLARI ===== */
+
+@keyframes streakPulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes streakFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes streakFlameDance {
+  0%, 100% { transform: scale(1) rotate(-3deg); }
+  25% { transform: scale(1.05) rotate(0deg); }
+  50% { transform: scale(1) rotate(3deg); }
+  75% { transform: scale(1.05) rotate(0deg); }
+}
+
+@keyframes streakGlowPulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.3); }
+}
+
+@keyframes streakFlameBar {
+  0%, 100% { transform: scaleY(1); opacity: 0.8; }
+  50% { transform: scaleY(1.5); opacity: 1; }
+}
+
+@keyframes streakParticleRise {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  20% { opacity: 0.8; }
+  80% { opacity: 0.6; }
+  100% { transform: translateY(-400px) translateX(20px); opacity: 0; }
+}
+
+@keyframes streakSparkle {
+  0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1) rotate(180deg); }
+}
+
+@keyframes streakRingExpand {
+  0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+  20% { opacity: 0.6; }
+  80% { opacity: 0.3; }
+  100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
+}
+
+@keyframes streakSpin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* YENİ: Dönen geometrik şekiller */
+@keyframes streakShapeSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* YENİ: Işık tarama çizgisi */
+@keyframes streakScanLine {
+  0% { transform: translateX(-100%); opacity: 0; }
+  20% { opacity: 0.6; }
+  80% { opacity: 0.6; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+/* YENİ: Yükselen baloncuk */
+@keyframes streakBubbleRise {
+  0% { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+  10% { opacity: 0.5; }
+  50% { opacity: 0.3; }
+  90% { opacity: 0.1; }
+  100% { transform: translateY(-500px) translateX(20px) scale(0.5); opacity: 0; }
+}
+
+/* YENİ: KAIFY logosu parıltısı */
+@keyframes streakKaifyGlow {
+  0%, 100% { filter: drop-shadow(0 0 15px rgba(168,85,247,0.5)) drop-shadow(0 0 30px rgba(168,85,247,0.3)); }
+  50% { filter: drop-shadow(0 0 25px rgba(168,85,247,0.7)) drop-shadow(0 0 50px rgba(168,85,247,0.4)); }
+}
+
+/* YENİ: Neon border efekti */
+@keyframes streakNeonBorder {
+  0%, 100% { box-shadow: inset 0 0 30px var(--glow, rgba(251,191,36,0.2)), inset 0 0 60px var(--glow, rgba(251,191,36,0.1)); }
+  50% { box-shadow: inset 0 0 40px var(--glow, rgba(251,191,36,0.3)), inset 0 0 80px var(--glow, rgba(251,191,36,0.15)); }
+}
+
+/* YENİ: Enerji dalgası - sayının arkasında patlama */
+@keyframes streakEnergyBurst {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  20% { opacity: 0.6; }
+  80% { opacity: 0.3; }
+  100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+}
+
+/* YENİ: Işın ışınları - sayıdan dışarı yayılan */
+@keyframes streakLightRay {
+  0% { opacity: 0; }
+  20% { opacity: 0.7; }
+  50% { opacity: 0.4; }
+  80% { opacity: 0.2; }
+  100% { opacity: 0; }
+}
+
+/* YENİ: Fitness ikonları yumuşak süzülme */
+@keyframes streakFitnessFloat {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  25% { transform: translateY(-8px) rotate(5deg); }
+  50% { transform: translateY(4px) rotate(-3deg); }
+  75% { transform: translateY(-4px) rotate(2deg); }
+}
+
+

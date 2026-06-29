@@ -5,6 +5,7 @@ import { AnimatedStatGrid } from "./AnimatedStatGrid";
 import { WeeklyChart } from "@/components/analytics/WeeklyChart";
 import { MacroRing } from "@/components/analytics/MacroRing";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { useLang } from "@/lib/lang-context";
 
 function AnimatedMacros() {
   const { ref, visible } = useScrollReveal<HTMLDivElement>({ threshold: 0.3 });
@@ -19,6 +20,7 @@ function AnimatedMacros() {
 }
 
 export function LandingFeatures() {
+  const { t } = useLang();
   return (
     <section id="features" className="landing-section relative overflow-hidden">
       <div className="landing-section-glow landing-section-glow--cyan" aria-hidden />

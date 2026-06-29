@@ -2,6 +2,7 @@
 
 import { Globe, Trophy, X, Crown, Medal, Award, Flame } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useLang } from "@/lib/lang-context";
 
 type CountryEntry = {
   countryCode: string;
@@ -40,6 +41,7 @@ function FlagImage({ flagCode, size = 32 }: { flagCode: string; size?: number })
 }
 
 export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const { t } = useLang();
   const [data, setData] = useState<CountryLeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
 

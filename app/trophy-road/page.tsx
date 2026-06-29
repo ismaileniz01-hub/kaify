@@ -6,10 +6,11 @@ import { useState } from "react";
 import { GemBalance } from "@/components/GemBalance";
 import { useGem } from "@/lib/gem-context";
 import { useKai, type AuraColor } from "@/lib/kai-context";
+import { useLang } from "@/lib/lang-context";
 
 type EffectColor = {
   id: AuraColor;
-  name: string;
+  nameKey: string;
   price: number;
   gradient: string;
   borderColor: string;
@@ -22,7 +23,7 @@ type EffectColor = {
 const EFFECTS: EffectColor[] = [
   {
     id: "blue",
-    name: "Neon Mavi",
+    nameKey: "market.effect.blue",
     price: 300,
     gradient: "from-cyan-400 to-blue-500",
     borderColor: "border-cyan-400/50",
@@ -33,7 +34,7 @@ const EFFECTS: EffectColor[] = [
   },
   {
     id: "red",
-    name: "Alev Kırmızı",
+    nameKey: "market.effect.red",
     price: 300,
     gradient: "from-red-500 to-orange-500",
     borderColor: "border-red-400/50",
@@ -44,7 +45,7 @@ const EFFECTS: EffectColor[] = [
   },
   {
     id: "green",
-    name: "Zümrüt Yeşil",
+    nameKey: "market.effect.green",
     price: 300,
     gradient: "from-emerald-400 to-green-500",
     borderColor: "border-emerald-400/50",
@@ -55,7 +56,7 @@ const EFFECTS: EffectColor[] = [
   },
   {
     id: "pink",
-    name: "Pembe Işın",
+    nameKey: "market.effect.pink",
     price: 300,
     gradient: "from-pink-400 to-rose-500",
     borderColor: "border-pink-400/50",
@@ -66,7 +67,7 @@ const EFFECTS: EffectColor[] = [
   },
   {
     id: "purple",
-    name: "Mor Efsane",
+    nameKey: "market.effect.purple",
     price: 300,
     gradient: "from-purple-400 to-violet-500",
     borderColor: "border-purple-400/50",
@@ -77,7 +78,7 @@ const EFFECTS: EffectColor[] = [
   },
   {
     id: "gold",
-    name: "Altın İhtişam",
+    nameKey: "market.effect.gold",
     price: 300,
     gradient: "from-yellow-400 to-amber-500",
     borderColor: "border-yellow-400/50",
@@ -88,7 +89,7 @@ const EFFECTS: EffectColor[] = [
   },
   {
     id: "white",
-    name: "Kutsal Parıltı",
+    nameKey: "market.effect.white",
     price: 300,
     gradient: "from-white/80 to-zinc-300",
     borderColor: "border-white/30",
@@ -99,7 +100,7 @@ const EFFECTS: EffectColor[] = [
   },
   {
     id: "orange",
-    name: "Turuncu Ateş",
+    nameKey: "market.effect.orange",
     price: 300,
     gradient: "from-orange-400 to-red-500",
     borderColor: "border-orange-400/50",
@@ -110,7 +111,7 @@ const EFFECTS: EffectColor[] = [
   },
   {
     id: "indigo",
-    name: "Derin Lacivert",
+    nameKey: "market.effect.indigo",
     price: 300,
     gradient: "from-indigo-400 to-blue-600",
     borderColor: "border-indigo-400/50",
@@ -121,7 +122,7 @@ const EFFECTS: EffectColor[] = [
   },
   {
     id: "electric",
-    name: "Elektrik Çarpması",
+    nameKey: "market.effect.electric",
     price: 400,
     gradient: "from-sky-400 to-cyan-500",
     borderColor: "border-sky-400/50",
@@ -133,6 +134,7 @@ const EFFECTS: EffectColor[] = [
 ];
 
 export default function MarketPage() {
+  const { t } = useLang();
   const { gemState, spend } = useGem();
   const { ownedEffects, purchaseEffect, setAuraColor, auraColor } = useKai();
   const [purchasing, setPurchasing] = useState<string | null>(null);
@@ -146,7 +148,7 @@ export default function MarketPage() {
 
     // Satın alma animasyonu
     setTimeout(() => {
-      const success = spend(effect.price, `${effect.name} efekti satın alındı`);
+      const success = spend(effect.price, `${t(effect.nameKey)} efekti satın alındı`);
       if (success) {
         purchaseEffect(effect.id);
         setSuccessEffect(effect);
@@ -166,12 +168,12 @@ export default function MarketPage() {
         <Link
           href="/welcome"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
-          aria-label="Geri"
+          aria-label={t("nav.back")}
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <h1 className="flex-1 text-center text-sm font-medium text-white">
-          Market
+          {t("market.title")}
         </h1>
         <GemBalance balance={gemState.balance} size="sm" animate />
       </header>
@@ -180,10 +182,9 @@ export default function MarketPage() {
         {/* Banner */}
         <div className="rounded-2xl border border-purple-400/30 bg-gradient-to-r from-purple-900/40 to-violet-900/30 px-5 py-4 text-center">
           <Sparkles className="mx-auto mb-2 h-6 w-6 text-purple-300" />
-          <h2 className="text-sm font-semibold text-white">Efekt Kataloğu</h2>
+          <h2 className="text-sm font-semibold text-white">{t("market.catalog")}</h2>
           <p className="mt-1 text-xs text-purple-200/60">
-            {/* eslint-disable-next-line react/no-unescaped-entities */}
-            Kai'nin aurasını kişiselleştir! 300 - 400 💎
+            {t("market.catalog.desc")}
           </p>
         </div>
 
@@ -200,13 +201,13 @@ export default function MarketPage() {
 
             <PartyPopper className="relative mx-auto mb-3 h-8 w-8 text-emerald-400" />
             <h3 className="relative text-base font-bold text-emerald-300">
-              Satın Alma Başarılı! 🎉
+              {t("market.purchase_success")}
             </h3>
             <p className="relative mt-1 text-sm text-emerald-200/70">
               <span className={`bg-gradient-to-r ${successEffect.gradient} bg-clip-text font-semibold text-transparent`}>
-                {successEffect.name}
+                {t(successEffect.nameKey)}
               </span>{" "}
-              efektini kazandın!
+              {t("market.earned_effect", { name: "" })}
             </p>
 
             {/* Uygula butonu */}
@@ -215,7 +216,7 @@ export default function MarketPage() {
               className={`relative mx-auto mt-4 flex items-center gap-2 rounded-xl bg-gradient-to-r ${successEffect.gradient} px-6 py-2.5 text-sm font-semibold text-white shadow-lg ${successEffect.glowColor} transition active:scale-95 hover:opacity-90`}
             >
               <Sparkles className="h-4 w-4" />
-              Uygula
+              {t("market.apply")}
             </button>
           </div>
         )}
@@ -293,11 +294,11 @@ export default function MarketPage() {
 
                 {/* İsim ve fiyat */}
                 <div className="relative px-3 pb-4 text-center">
-                  <h3 className="text-sm font-semibold text-white">{effect.name}</h3>
+                  <h3 className="text-sm font-semibold text-white">{t(effect.nameKey)}</h3>
                   <p className="mt-1 text-xs text-zinc-400">{effect.price} 💎</p>
                   {isActive && (
                     <span className="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/60">
-                      Aktif
+                      {t("market.active")}
                     </span>
                   )}
                 </div>
@@ -308,7 +309,7 @@ export default function MarketPage() {
                     isActive ? (
                       <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-2.5 text-sm font-medium text-emerald-400">
                         <Check className="h-4 w-4" />
-                        Kullanılıyor
+                        {t("market.in_use")}
                       </div>
                     ) : (
                       <button
@@ -316,7 +317,7 @@ export default function MarketPage() {
                         className={`flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r ${effect.gradient} py-2.5 text-sm font-medium text-white shadow-lg ${effect.glowColor} transition active:scale-95 hover:opacity-90`}
                       >
                         <Sparkles className="h-4 w-4" />
-                        Uygula
+                        {t("market.apply")}
                       </button>
                     )
                   ) : (
@@ -332,12 +333,12 @@ export default function MarketPage() {
                       {isBuying ? (
                         <>
                           <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                          Satın alınıyor...
+                          {t("market.buying")}
                         </>
                       ) : (
                         <>
                           <ShoppingCart className="h-4 w-4" />
-                          {canAfford ? "Satın Al" : "Yetersiz Bakiye"}
+                          {canAfford ? t("market.buy") : t("market.insufficient")}
                         </>
                       )}
                     </button>

@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Bell, Globe, LogOut, Shield, User, Volume2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { ArrowLeft, Bell, Globe, LogOut, Search, Shield, User, Volume2, Check } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import { useTheme } from "@/lib/theme-context";
-import { useLang, type LangCode } from "@/lib/lang-context";
+import { useLang, type LangCode, LANG_OPTIONS } from "@/lib/lang-context";
 
 type SettingItem = {
   icon: typeof Bell;
@@ -18,38 +18,38 @@ type SettingItem = {
 
 const SETTINGS_GROUPS: { title: string; items: SettingItem[] }[] = [
   {
-    title: "Profil & Hesap",
+    title: "settings.profile",
     items: [
-      { icon: User, label: "Kişisel Bilgiler", description: "Ad, boy, kilo, cinsiyet", type: "link", value: "Düzenle", href: "/welcome?profile=1" },
-      { icon: Shield, label: "Gizlilik", description: "Profil görünürlüğü, veri paylaşımı", type: "link", value: "Yönet" },
+      { icon: User, label: "settings.personal", description: "settings.personal.desc", type: "link", value: "settings.personal.action", href: "/welcome?profile=1" },
+      { icon: Shield, label: "settings.privacy", description: "settings.privacy.desc", type: "link", value: "settings.privacy.action" },
     ],
   },
   {
-    title: "Bildirimler",
+    title: "settings.notifications",
     items: [
-      { icon: Bell, label: "Push Bildirimleri", description: "Hatırlatma ve güncellemeler", type: "toggle" },
-      { icon: Bell, label: "Antrenman Hatırlatıcıları", description: "Günlük egzersiz zamanı", type: "toggle" },
-      { icon: Bell, label: "Su İçme Hatırlatıcısı", description: "Saat başı su molası", type: "toggle" },
+      { icon: Bell, label: "settings.push", description: "settings.push.desc", type: "toggle" },
+      { icon: Bell, label: "settings.workout", description: "settings.workout.desc", type: "toggle" },
+      { icon: Bell, label: "settings.water", description: "settings.water.desc", type: "toggle" },
     ],
   },
   {
-    title: "Dil & Bölge",
+    title: "settings.language",
     items: [
-      { icon: Globe, label: "Dil", description: "Uygulama dili", type: "select", value: "Türkçe", options: ["Türkçe", "English", "Deutsch", "Français"] },
-      { icon: Globe, label: "Birim Sistemi", description: "Metrik / Imperial", type: "select", value: "Metrik (kg, cm)", options: ["Metrik (kg, cm)", "Imperial (lb, ft)"] },
+      { icon: Globe, label: "settings.lang", description: "settings.lang.desc", type: "select", value: "Türkçe" },
+      { icon: Globe, label: "settings.unit", description: "settings.unit.desc", type: "select", value: "settings.unit.metric", options: ["settings.unit.metric", "settings.unit.imperial"] },
     ],
   },
   {
-    title: "Ses",
+    title: "settings.sound",
     items: [
-      { icon: Volume2, label: "Ses Efektleri", description: "Uygulama geneli ses efektleri (mesajlaşma hariç)", type: "toggle" },
-      { icon: Volume2, label: "Mesajlaşma Sesi", description: "Mesaj gönderme/alma sesleri", type: "toggle" },
+      { icon: Volume2, label: "settings.sfx", description: "settings.sfx.desc", type: "toggle" },
+      { icon: Volume2, label: "settings.chat.sfx", description: "settings.chat.sfx.desc", type: "toggle" },
     ],
   },
   {
-    title: "Hesap",
+    title: "settings.account",
     items: [
-      { icon: LogOut, label: "Çıkış Yap", description: "Hesabından çıkış yap", type: "link", value: "Çıkış", href: "/" },
+      { icon: LogOut, label: "settings.logout", description: "settings.logout.desc", type: "link", value: "settings.logout.action", href: "/login" },
     ],
   },
 ];
@@ -70,33 +70,44 @@ function saveBoolean(key: string, value: boolean) {
   localStorage.setItem(key, value ? "true" : "false");
 }
 
-const LANG_OPTIONS: { code: LangCode; label: string }[] = [
-  { code: "tr", label: "Türkçe" },
-  { code: "en", label: "English" },
-];
-
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
-  const { lang, setLang } = useLang();
+  const { lang, setLang, unit, setUnit, t } = useLang();
+
+
+  // Dil seçici state
+  const [langPickerOpen, setLangPickerOpen] = useState(false);
+  const [langSearch, setLangSearch] = useState("");
+
+  // Filtrelenmiş diller
+  const filteredLangs = useMemo(() => {
+    if (!langSearch.trim()) return LANG_OPTIONS;
+    const q = langSearch.toLowerCase();
+    return LANG_OPTIONS.filter(
+      (opt) =>
+        opt.label.toLowerCase().includes(q) ||
+        opt.code.toLowerCase().includes(q)
+    );
+  }, [langSearch]);
 
   const [toggles, setToggles] = useState<Record<string, boolean>>({
-    "Push Bildirimleri": true,
-    "Antrenman Hatırlatıcıları": true,
-    "Su İçme Hatırlatıcısı": false,
-    "Karanlık Mod": theme === "dark",
-    "Animasyonlar": true,
-    "Sadece Wi-Fi": false,
-    "Ses Efektleri": loadBoolean(SFX_KEY, true),
-    "Mesajlaşma Sesi": loadBoolean(CHAT_SFX_KEY, true),
+    "settings.push": true,
+    "settings.workout": true,
+    "settings.water": false,
+    "settings.dark_mode": theme === "dark",
+    "settings.animations": true,
+    "settings.wifi_only": false,
+    "settings.sfx": loadBoolean(SFX_KEY, true),
+    "settings.chat.sfx": loadBoolean(CHAT_SFX_KEY, true),
   });
 
   // Theme değişince toggle'ı senkronize et
   useEffect(() => {
-    setToggles((prev) => ({ ...prev, "Karanlık Mod": theme === "dark" }));
+    setToggles((prev) => ({ ...prev, "settings.dark_mode": theme === "dark" }));
   }, [theme]);
 
   const toggleSwitch = (label: string) => {
-    if (label === "Karanlık Mod") {
+    if (label === "settings.dark_mode") {
       toggleTheme();
       return;
     }
@@ -105,12 +116,15 @@ export default function SettingsPage() {
     setToggles((prev) => ({ ...prev, [label]: newVal }));
 
     // Ses ayarlarını localStorage'a kaydet
-    if (label === "Ses Efektleri") {
+    if (label === "settings.sfx") {
       saveBoolean(SFX_KEY, newVal);
-    } else if (label === "Mesajlaşma Sesi") {
+    } else if (label === "settings.chat.sfx") {
       saveBoolean(CHAT_SFX_KEY, newVal);
     }
   };
+
+  // Seçili dilin etiketini bul
+  const currentLangLabel = LANG_OPTIONS.find((o) => o.code === lang)?.label ?? lang;
 
   return (
     <div className="phone-shell analytics-gradient relative flex flex-col">
@@ -118,12 +132,12 @@ export default function SettingsPage() {
         <Link
           href="/welcome"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
-          aria-label="Geri"
+          aria-label={t("nav.back")}
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <h1 className="flex-1 text-center text-sm font-medium text-white">
-          Ayarlar
+          {t("settings.title")}
         </h1>
         <div className="h-9 w-9" />
       </header>
@@ -132,7 +146,7 @@ export default function SettingsPage() {
         {SETTINGS_GROUPS.map((group, gi) => (
           <section key={gi} className="animate-in mt-5 first:mt-2" style={{ animationDelay: `${0.1 + gi * 0.05}s` }}>
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
-              {group.title}
+              {t(group.title)}
             </h2>
             <div className="overflow-hidden rounded-2xl border border-white/5 bg-white/[0.03]">
               {group.items.map((item, ii) => (
@@ -149,8 +163,8 @@ export default function SettingsPage() {
 
                   {/* Label + description */}
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="text-sm font-medium text-white">{item.label}</span>
-                    <span className="text-[11px] text-zinc-500">{item.description}</span>
+                    <span className="text-sm font-medium text-white">{t(item.label)}</span>
+                    <span className="text-[11px] text-zinc-500">{t(item.description)}</span>
                   </div>
 
                   {/* Kontrol */}
@@ -170,38 +184,115 @@ export default function SettingsPage() {
                         />
                       </button>
                     )}
-                    {item.type === "select" && item.label === "Dil" && (
+                    {item.type === "select" && item.label === "settings.lang" && (
+                      <div className="relative">
+                        {/* Seçili dili göster - tıklandığında picker açılır */}
+                        <button
+                          type="button"
+                          onClick={() => setLangPickerOpen(!langPickerOpen)}
+                          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-zinc-200 transition-all hover:border-white/20 hover:bg-white/[0.06]"
+                        >
+                          <span className="truncate max-w-[130px]">{currentLangLabel}</span>
+                          <svg
+                            className={`h-3.5 w-3.5 text-zinc-500 transition-transform ${langPickerOpen ? "rotate-180" : ""}`}
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+
+                        {/* Açılır picker */}
+                        {langPickerOpen && (
+                          <>
+                            {/* Overlay - dışarı tıklayınca kapat */}
+                            <div
+                              className="fixed inset-0 z-40"
+                              onClick={() => { setLangPickerOpen(false); setLangSearch(""); }}
+                            />
+
+                            {/* Picker kartı - fixed konum, her zaman görünür */}
+                            <div className="fixed left-1/2 top-1/2 z-50 w-[320px] -translate-x-1/2 -translate-y-1/2 animate-in rounded-2xl border border-white/10 bg-zinc-900/95 backdrop-blur-xl shadow-2xl shadow-black/50 max-h-[70vh] overflow-hidden">
+                              {/* Arama çubuğu */}
+                              <div className="relative border-b border-white/5 px-3 py-2.5">
+                                <Search className="absolute left-5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
+                                <input
+                                  type="text"
+                                  value={langSearch}
+                                  onChange={(e) => setLangSearch(e.target.value)}
+                                  placeholder={t("settings.lang") + "..."}
+                                  autoFocus
+                                  className="w-full rounded-lg border border-white/5 bg-white/[0.03] py-1.5 pl-7 pr-2 text-xs text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-purple-500/40"
+                                />
+                              </div>
+
+                              {/* Dil listesi */}
+                              <div className="max-h-[280px] overflow-y-auto overscroll-contain py-1">
+                                {filteredLangs.length === 0 ? (
+                                  <div className="px-4 py-6 text-center text-xs text-zinc-600">
+                                    {t("settings.lang")} not found
+                                  </div>
+                                ) : (
+                                  filteredLangs.map((opt) => {
+                                    const isActive = lang === opt.code;
+                                    return (
+                                      <button
+                                        key={opt.code}
+                                        type="button"
+                                        onClick={() => {
+                                          setLang(opt.code);
+                                          setLangPickerOpen(false);
+                                          setLangSearch("");
+                                        }}
+                                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-xs transition ${
+                                          isActive
+                                            ? "bg-purple-500/10 text-purple-300"
+                                            : "text-zinc-300 hover:bg-white/[0.04] hover:text-white"
+                                        }`}
+                                      >
+                                        <span className="flex-1 truncate">{opt.label}</span>
+                                        {isActive && (
+                                          <Check className="h-3.5 w-3.5 shrink-0 text-purple-400" strokeWidth={2.5} />
+                                        )}
+                                      </button>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                    {item.type === "select" && item.label === "settings.unit" && (
                       <select
-                        value={lang}
-                        onChange={(e) => setLang(e.target.value as LangCode)}
+                        value={unit === "metric" ? "settings.unit.metric" : "settings.unit.imperial"}
+                        onChange={(e) => setUnit(e.target.value === "settings.unit.metric" ? "metric" : "imperial")}
                         className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-zinc-300 outline-none transition focus:border-purple-500/50"
                       >
-                        {LANG_OPTIONS.map((opt) => (
-                          <option key={opt.code} value={opt.code} className="bg-zinc-900">
-                            {opt.label}
-                          </option>
-                        ))}
+                        <option value="settings.unit.metric" className="bg-zinc-900">{t("settings.unit.metric")}</option>
+                        <option value="settings.unit.imperial" className="bg-zinc-900">{t("settings.unit.imperial")}</option>
                       </select>
                     )}
-                    {item.type === "select" && item.label !== "Dil" && (
+                    {item.type === "select" && item.label !== "settings.lang" && item.label !== "settings.unit" && (
                       <select
                         defaultValue={item.value}
                         className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-zinc-300 outline-none transition focus:border-purple-500/50"
                       >
                         {item.options?.map((opt) => (
                           <option key={opt} value={opt} className="bg-zinc-900">
-                            {opt}
+                            {t(opt)}
                           </option>
                         ))}
                       </select>
                     )}
+
                     {item.type === "link" && (
                       item.href ? (
                         <Link href={item.href} className="text-xs font-medium text-purple-400 hover:text-purple-300 transition">
-                          {item.value}
+                          {t(item.value || "")}
                         </Link>
                       ) : (
-                        <span className="text-xs font-medium text-purple-400">{item.value}</span>
+                        <span className="text-xs font-medium text-purple-400">{t(item.value || "")}</span>
                       )
                     )}
                   </div>
@@ -213,7 +304,7 @@ export default function SettingsPage() {
 
         {/* Versiyon bilgisi */}
         <div className="mt-8 mb-4 text-center">
-          <p className="text-[11px] text-zinc-600">K.AIFY v1.0.0</p>
+          <p className="text-[11px] text-zinc-600">{t("settings.version")}</p>
         </div>
       </main>
     </div>

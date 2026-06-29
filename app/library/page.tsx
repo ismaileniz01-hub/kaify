@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { ArrowLeft, Dumbbell, Home, BookOpen } from "lucide-react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
+import { useLang } from "@/lib/lang-context";
 
 export default function LibraryPage() {
+  const { t } = useLang();
   return (
     <div className="phone-shell relative flex flex-col overflow-hidden">
       <FitnessWallpaper softVignette />
@@ -22,7 +24,7 @@ export default function LibraryPage() {
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/20 ring-2 ring-emerald-400/30">
             <BookOpen className="h-3.5 w-3.5 text-emerald-400" />
           </div>
-          <span className="text-sm font-bold text-white">Library</span>
+          <span className="text-sm font-bold text-white">{t("library.title")}</span>
         </div>
         <div className="h-8 w-8" />
       </header>
@@ -36,10 +38,10 @@ export default function LibraryPage() {
               fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
             }}
           >
-            Exercise Library
+            {t("library.title")}
           </h1>
           <p className="mt-3 max-w-[280px] text-sm font-medium leading-relaxed text-emerald-100/70">
-            Where do you work out?
+            {t("library.subtitle")}
           </p>
         </section>
 
@@ -60,10 +62,10 @@ export default function LibraryPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-white transition-colors duration-300 group-hover:text-emerald-200">
-                    Gym
+                    {t("library.gym")}
                   </h2>
                   <p className="mt-1 text-sm text-zinc-400">
-                    Exercises with gym equipment
+                    {t("library.gym.desc")}
                   </p>
                 </div>
               </div>
@@ -83,10 +85,10 @@ export default function LibraryPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-white transition-colors duration-300 group-hover:text-amber-200">
-                    Home
+                    {t("library.home")}
                   </h2>
                   <p className="mt-1 text-sm text-zinc-400">
-                    Bodyweight exercises at home
+                    {t("library.home.desc")}
                   </p>
                 </div>
               </div>

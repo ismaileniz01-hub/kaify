@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useLang } from "@/lib/lang-context";
 const LINKS = [
   { href: "#about", label: "About Us" },
   { href: "#coaches", label: "Coaches" },
@@ -11,6 +12,7 @@ const LINKS = [
 ];
 
 export function LandingNav() {
+  const { t } = useLang();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {

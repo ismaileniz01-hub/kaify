@@ -10,11 +10,13 @@ import { ProfileModal } from "@/components/ProfileModal";
 import { DEMO_USER_NAME, DEMO_USER_PROFILE } from "@/lib/user";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { useLang } from "@/lib/lang-context";
 
 function WelcomeContent() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [userProfile, setUserProfile] = useState(DEMO_USER_PROFILE);
   const searchParams = useSearchParams();
+  const { t } = useLang();
 
   // ?profile=1 query param'ı ile gelindiyse profil modal'ını otomatik aç
   useEffect(() => {
@@ -33,7 +35,7 @@ function WelcomeContent() {
           <Link
             href="/login"
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition-all duration-300 hover:bg-white/20 hover:text-white hover:scale-110"
-            aria-label="Back"
+            aria-label={t("nav.back")}
           >
             <ArrowLeft className="h-4 w-4" strokeWidth={2} />
           </Link>
@@ -41,7 +43,7 @@ function WelcomeContent() {
             type="button"
             onClick={() => setProfileOpen(true)}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500/20 text-purple-300 ring-2 ring-purple-400/30 transition-all duration-300 hover:bg-purple-500/30 hover:text-purple-200 hover:scale-110"
-            aria-label="Profile"
+            aria-label={t("profile.title")}
           >
             <User className="h-4 w-4" strokeWidth={2} />
           </button>
@@ -51,10 +53,10 @@ function WelcomeContent() {
         <Link
           href="/leaderboard"
           className="flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1.5 text-amber-400 ring-2 ring-amber-400/30 transition-all duration-300 hover:bg-amber-500/25 hover:text-amber-300 hover:scale-105"
-          aria-label="Leaderboard"
+          aria-label={t("nav.leaderboard")}
         >
           <Globe className="h-3.5 w-3.5" />
-          <span className="text-[11px] font-semibold">Leaderboard</span>
+          <span className="text-[11px] font-semibold">{t("nav.leaderboard")}</span>
         </Link>
 
         <div className="flex items-center gap-2">
@@ -62,7 +64,7 @@ function WelcomeContent() {
           <Link
             href="/settings"
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition-all duration-300 hover:bg-white/20 hover:text-white hover:scale-110"
-            aria-label="Settings"
+            aria-label={t("nav.settings")}
           >
             <Settings className="h-4 w-4" strokeWidth={2} />
           </Link>
@@ -78,12 +80,10 @@ function WelcomeContent() {
               fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
             }}
           >
-            Welcome, {DEMO_USER_NAME}
+            {t("welcome.title", { name: DEMO_USER_NAME })}
           </h1>
           <p className="mt-4 max-w-[280px] text-sm font-medium leading-relaxed text-purple-100/80">
-            Small steps today, big wins tomorrow.
-            <br />
-            Your team is ready.
+            {t("welcome.subtitle")}
           </p>
         </section>
 
@@ -93,8 +93,8 @@ function WelcomeContent() {
             <div className="animate-in animate-in--3">
               <WelcomeCard
                 href="/analytics"
-                title="Analytics"
-                subtitle="Track your progress"
+                title={t("welcome.analytics")}
+                subtitle={t("welcome.analytics.sub")}
                 icon={BarChart3}
                 gradient="green"
               />
@@ -102,8 +102,8 @@ function WelcomeContent() {
             <div className="animate-in animate-in--4">
               <WelcomeCard
                 href="/messages"
-                title="Messages"
-                subtitle="Chat with coaches"
+                title={t("welcome.messages")}
+                subtitle={t("welcome.messages.sub")}
                 icon={MessageCircle}
                 gradient="blue"
               />
@@ -111,8 +111,8 @@ function WelcomeContent() {
             <div className="animate-in animate-in--5">
               <WelcomeCard
                 href="/streak"
-                title="Streak"
-                subtitle="Keep your streak"
+                title={t("welcome.streak")}
+                subtitle={t("welcome.streak.sub")}
                 icon={Flame}
                 gradient="orange"
               />
@@ -120,8 +120,8 @@ function WelcomeContent() {
             <div className="animate-in animate-in--6">
               <WelcomeCard
                 href="/trophy-road"
-                title="Market"
-                subtitle="Start shopping"
+                title={t("welcome.market")}
+                subtitle={t("welcome.market.sub")}
                 icon={ShoppingCart}
                 gradient="gold"
               />

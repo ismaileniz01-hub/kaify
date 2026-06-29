@@ -3,6 +3,7 @@
 import { Trophy, Flame, ChevronRight, Globe, Crown, Medal, Award } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DEMO_USER_NAME } from "@/lib/user";
+import { useLang } from "@/lib/lang-context";
 
 type LeaderboardEntry = {
   userId: string;
@@ -40,6 +41,7 @@ function FlagImage({ flagCode, size = 24 }: { flagCode: string; size?: number })
 }
 
 export function WelcomeLeaderboard() {
+  const { t } = useLang();
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);

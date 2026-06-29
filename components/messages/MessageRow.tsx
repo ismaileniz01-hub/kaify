@@ -11,49 +11,18 @@ type MessageRowProps = {
   tag?: string;
   href: string;
   index?: number;
-  /** Neon border rengi (Tailwind veya hex) */
+  /** Hex renk kodu (örn: #ef4444) */
   color?: string;
-  /** Glow rengi (rgba) */
-  glow?: string;
 };
 
-const COLORS: Record<string, { border: string; glow: string; bg: string }> = {
-  purple: {
-    border: "border-purple-500/60",
-    glow: "rgba(168, 85, 247, 0.2)",
-    bg: "#1a0a2e",
-  },
-  blue: {
-    border: "border-blue-500/60",
-    glow: "rgba(59, 130, 246, 0.2)",
-    bg: "#0a162e",
-  },
-  green: {
-    border: "border-emerald-500/60",
-    glow: "rgba(16, 185, 129, 0.2)",
-    bg: "#0a1a12",
-  },
-  orange: {
-    border: "border-orange-500/60",
-    glow: "rgba(249, 115, 22, 0.2)",
-    bg: "#1a0e0a",
-  },
-  pink: {
-    border: "border-pink-500/60",
-    glow: "rgba(236, 72, 153, 0.2)",
-    bg: "#1a0a14",
-  },
-  gold: {
-    border: "border-amber-500/60",
-    glow: "rgba(251, 191, 36, 0.2)",
-    bg: "#1a140a",
-  },
-  red: {
-    border: "border-red-500/60",
-    glow: "rgba(239, 68, 68, 0.2)",
-    bg: "#1a0a0a",
-  },
-};
+/** Hex rengi rgba'ya çevir */
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace("#", "");
+  const r = parseInt(clean.substring(0, 2), 16);
+  const g = parseInt(clean.substring(2, 4), 16);
+  const b = parseInt(clean.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 export function MessageRow({
   name,
@@ -65,22 +34,20 @@ export function MessageRow({
   tag,
   href,
   index = 0,
-  color = "purple",
-  glow,
+  color = "#a855f7",
 }: MessageRowProps) {
   const delay = Math.min(index + 3, 8);
-  const c = COLORS[color] ?? COLORS.purple;
-  const glowColor = glow ?? c.glow;
+  const glowColor = hexToRgba(color, 0.2);
+  const bgColor = hexToRgba(color, 0.06);
 
   return (
     <Link
       href={href}
-      className={`animate-in animate-in--${delay} group flex items-center gap-3 rounded-xl border-2 ${c.border} px-3.5 py-3.5 shadow-lg transition hover:brightness-110 active:scale-[0.99]`}
-
-
+      className={`animate-in animate-in--${delay} group flex items-center gap-3 rounded-xl border-2 px-3.5 py-3.5 shadow-lg transition hover:brightness-110 active:scale-[0.99]`}
       style={{
-        background: c.bg,
-        boxShadow: `0 0 10px ${glowColor}, inset 0 0 6px ${glowColor.replace("0.2", "0.06")}`,
+        borderColor: hexToRgba(color, 0.6),
+        background: bgColor,
+        boxShadow: `0 0 10px ${glowColor}, inset 0 0 6px ${hexToRgba(color, 0.06)}`,
         animation: `color-shift 4s ease-in-out infinite`,
       }}
     >
@@ -109,7 +76,7 @@ export function MessageRow({
         {badge !== undefined && (
           <span
             className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold text-white"
-            style={{ background: glowColor.replace("0.2", "0.8") }}
+            style={{ background: hexToRgba(color, 0.8) }}
           >
             {badge}
           </span>

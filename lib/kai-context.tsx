@@ -98,9 +98,9 @@ export function KaiProvider({ children, initialStreak = 0 }: { children: ReactNo
   }, []);
 
   const currentLevel = getKaiLevel(streak);
-  // Avatar her zaman mevcut streak level'ına göre gösterilir
-  // unlockedLevel sadece CLAIM animasyonu için kullanılır
-  const avatar = KAI_LEVEL_AVATARS[currentLevel];
+  // Avatar unlock edilmiş en yüksek level'a göre gösterilir
+  // unlockedLevel, StreakRoad'daki CLAIM sonrası güncellenir
+  const avatar = KAI_LEVEL_AVATARS[unlockedLevel];
 
   if (!mounted) {
     return (

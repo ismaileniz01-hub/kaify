@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
+import { useLang } from "@/lib/lang-context";
 
 type GradientVariant = "blue" | "orange" | "green" | "purple" | "water";
 
@@ -26,17 +27,8 @@ function parseValue(v: string): [number, string] {
   return [isNaN(num) ? 0 : num, match[2]];
 }
 
-export function StatCard({
-  icon: Icon,
-  label,
-  value,
-  trend,
-  trendPositive = true,
-  barColor,
-  barPercent,
-  gradient,
-  animate = true,
-}: StatCardProps) {
+export function StatCard({ icon: Icon, label, value, trend, trendPositive = true, barColor, barPercent, gradient, animate = true }: StatCardProps) {
+  const { t } = useLang();
   const [displayNum, setDisplayNum] = useState(0);
   const [displayBar, setDisplayBar] = useState(0);
   const [targetNum, unit] = parseValue(value);

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
+import { useLang } from "@/lib/lang-context";
 
 type CountryEntry = {
   countryCode: string;
@@ -174,6 +175,7 @@ function PodiumStep({
 }
 
 export default function LeaderboardPage() {
+  const { t } = useLang();
   const [data, setData] = useState<CountryLeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -205,7 +207,7 @@ export default function LeaderboardPage() {
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/20 ring-2 ring-amber-400/30">
             <Globe className="h-3.5 w-3.5 text-amber-400" />
           </div>
-          <span className="text-sm font-bold text-white">Leaderboard</span>
+          <span className="text-sm font-bold text-white">{t("nav.leaderboard")}</span>
         </div>
         <div className="h-8 w-8" />
       </header>

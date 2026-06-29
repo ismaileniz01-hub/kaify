@@ -8,10 +8,12 @@ import { useState, useRef } from "react";
 import { ChatBubbles } from "@/components/ChatBubbles";
 import { ContactAvatar } from "@/components/ContactAvatar";
 import { ImagePickerModal } from "@/components/ImagePickerModal";
-import { getContact, type ContactId } from "@/lib/contacts";
+import { getContact, CONTACTS, type ContactId } from "@/lib/contacts";
 import { useKai } from "@/lib/kai-context";
+import { useLang } from "@/lib/lang-context";
 
 export default function ChatPage() {
+  const { t } = useLang();
   const params = useParams();
   const id = params.id as string;
   const contact = getContact(id);
@@ -23,6 +25,8 @@ export default function ChatPage() {
   const contactId = contact.id as ContactId;
   const [avatarState, setAvatarState] = useState<"idle" | "typing" | "sent">("idle");
   const [showImagePicker, setShowImagePicker] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+  const [userMessages, setUserMessages] = useState<{ text: string; time: string }[]>([]);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const patternClass = `chat-pattern chat-pattern--${contactId}`;
@@ -92,6 +96,14 @@ export default function ChatPage() {
     }, 1000);
   };
 
+  const handleSend = () => {
+    if (!inputValue.trim()) return;
+    const time = new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+    setUserMessages((prev) => [...prev, { text: inputValue.trim(), time }]);
+    setInputValue("");
+  };
+
+  const { primary, primaryLight, secondary, text: coachText, ring, shadow } = contact.color;
 
   return (
     <div className={`phone-shell chat-gradient ${patternClass} relative flex flex-col`}>
@@ -100,7 +112,7 @@ export default function ChatPage() {
         <Link
           href="/messages"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
-          aria-label="Geri"
+          aria-label={t("nav.back")}
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
@@ -113,21 +125,26 @@ export default function ChatPage() {
             auraColor={contactId === "kai" ? auraColor : "default"}
           />
           <div className="flex flex-col items-start">
-            <span className="text-sm font-semibold text-white">
+            <span className="text-sm font-semibold" style={{ color: primaryLight }}>
               {contact.name}
             </span>
-            <span className="flex items-center gap-1 text-xs text-purple-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
+            <span className="flex items-center gap-1 text-xs" style={{ color: primaryLight }}>
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: primary }} />
               {contact.role}
             </span>
           </div>
         </div>
         <div className="h-9 w-9" />
-        <div className="absolute bottom-0 left-3 right-3 h-px bg-gradient-to-r from-transparent via-purple-400/30 to-transparent" />
+        <div
+          className="absolute bottom-0 left-3 right-3 h-px"
+          style={{
+            background: `linear-gradient(to right, transparent, ${primary}60, transparent)`,
+          }}
+        />
       </header>
 
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
-        <ChatBubbles contactId={contactId} onTypingChange={handleTypingChange} onUserTyping={handleUserTyping} onConversationEnd={handleConversationEnd} />
+        <ChatBubbles contactId={contactId} onTypingChange={handleTypingChange} onUserTyping={handleUserTyping} onConversationEnd={handleConversationEnd} userMessages={userMessages} />
       </div>
 
       <div className="pointer-events-none absolute bottom-32 left-3 z-20">
@@ -157,28 +174,32 @@ export default function ChatPage() {
               type="button"
               onClick={() => setShowImagePicker(true)}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:bg-white/5 hover:text-purple-400"
-              aria-label="Fotoğraf ekle"
+              aria-label={t("chat.aria.photo")}
             >
               <Camera className="h-5 w-5" />
             </button>
           )}
           <input
             type="text"
-            placeholder="Mesajını yaz..."
-            readOnly
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            placeholder={t("chat.placeholder.chat")}
             className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none"
           />
           <button
             type="button"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:bg-white/5 hover:text-purple-400"
-            aria-label="Sesli mesaj"
+            aria-label={t("chat.aria.voice")}
           >
             <Mic className="h-5 w-5" />
           </button>
           <button
             type="button"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-500 text-white shadow-md shadow-purple-500/40 transition active:scale-95"
-            aria-label="Gönder"
+            onClick={handleSend}
+            disabled={!inputValue.trim()}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-500 text-white shadow-md shadow-purple-500/40 transition active:scale-95 disabled:opacity-40"
+            aria-label={t("chat.aria.send")}
           >
             <Send className="h-4 w-4" />
           </button>

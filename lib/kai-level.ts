@@ -9,11 +9,11 @@ export const KAI_LEVEL_AVATARS: Record<KaiLevel, string> = {
   4: "/avatars/kai-level-4.png",
 };
 
-export const KAI_LEVEL_THRESHOLDS: { level: KaiLevel; minStreak: number; label: string }[] = [
-  { level: 1, minStreak: 0, label: "Başlangıç" },
-  { level: 2, minStreak: 31, label: "Kıdemli" },
-  { level: 3, minStreak: 61, label: "Efsane" },
-  { level: 4, minStreak: 120, label: "Hedef" },
+export const KAI_LEVEL_THRESHOLDS: { level: KaiLevel; minStreak: number; label: string; labelKey: string }[] = [
+  { level: 1, minStreak: 0, label: "Beginner", labelKey: "streak.segment.beginner" },
+  { level: 2, minStreak: 31, label: "Veteran", labelKey: "streak.segment.veteran" },
+  { level: 3, minStreak: 61, label: "Legend", labelKey: "streak.segment.legend" },
+  { level: 4, minStreak: 120, label: "Goal", labelKey: "streak.segment.goal" },
 ];
 
 /** Streak gün sayısına göre Kai'nin level'ını hesaplar */
@@ -39,6 +39,7 @@ export function getKaiLevelInfo(streak: number) {
   return {
     level,
     label: current.label,
+    labelKey: current.labelKey,
     avatar: KAI_LEVEL_AVATARS[level],
     nextLevelAt: next?.minStreak ?? null,
     nextLevelLabel: next?.label ?? null,

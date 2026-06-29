@@ -11,7 +11,7 @@ import { useCallback, useRef } from "react";
  * - "kaify-chat-sfx-enabled": mesajlaşma sesleri
  */
 
-export type SoundType = "send" | "receive" | "typing" | "scan" | "levelup";
+export type SoundType = "send" | "receive" | "typing" | "scan" | "levelup" | "whoosh" | "transform";
 
 const AUDIO_CTX_KEY = "kaify-audio-ctx";
 const SFX_KEY = "kaify-sfx-enabled";
@@ -115,6 +115,31 @@ export function useSound() {
           playTone(ctx, 659, 0.2, "sine", 0.07, 0.15);
           playTone(ctx, 784, 0.3, "sine", 0.06, 0.3);
           playTone(ctx, 1047, 0.4, "sine", 0.08, 0.5);
+          break;
+        }
+        case "whoosh": {
+          // Modern enerji patlaması — yumuşak başlangıç, güçlü vuruş
+          // Derin bas vuruşu (sine ile yumuşak)
+          playTone(ctx, 100, 0.3, "sine", 0.1);
+          playTone(ctx, 150, 0.25, "sine", 0.07, 0.05);
+          // Yükselen enerji
+          playTone(ctx, 400, 0.12, "triangle", 0.06, 0.08);
+          playTone(ctx, 600, 0.1, "triangle", 0.05, 0.12);
+          // Parlak patlama
+          playTone(ctx, 1200, 0.06, "sine", 0.04, 0.15);
+          playTone(ctx, 1600, 0.04, "sine", 0.03, 0.17);
+          break;
+        }
+        case "transform": {
+          // Dönüşüm tamamlanma sesi — yükselen parlak tonlar
+          playTone(ctx, 440, 0.15, "sine", 0.07);
+          playTone(ctx, 554, 0.15, "sine", 0.06, 0.1);
+          playTone(ctx, 659, 0.15, "sine", 0.06, 0.2);
+          playTone(ctx, 880, 0.2, "sine", 0.07, 0.3);
+          playTone(ctx, 1108, 0.25, "sine", 0.06, 0.4);
+          playTone(ctx, 1320, 0.3, "sine", 0.05, 0.5);
+          // Parlak bitiş
+          playTone(ctx, 1760, 0.4, "triangle", 0.04, 0.65);
           break;
         }
       }

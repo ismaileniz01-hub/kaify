@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Camera, Image, X, ScanLine, Check } from "lucide-react";
 import { useSound } from "@/lib/use-sound";
+import { useLang } from "@/lib/lang-context";
 
 type ImagePickerModalProps = {
   isOpen: boolean;
@@ -11,6 +12,7 @@ type ImagePickerModalProps = {
 };
 
 export function ImagePickerModal({ isOpen, onClose, onImageSelect }: ImagePickerModalProps) {
+  const { t } = useLang();
   const { play } = useSound();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);

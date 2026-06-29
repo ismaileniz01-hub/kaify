@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useLang } from "@/lib/lang-context";
 
 type Period = "W" | "M" | "3M";
 
@@ -37,6 +38,7 @@ function toPoints(values: number[]) {
 }
 
 export function WeeklyChart() {
+  const { t } = useLang();
   const [period, setPeriod] = useState<Period>("W");
   const polylineRef = useRef<SVGPolylineElement>(null);
   const polygonRef = useRef<SVGPolygonElement>(null);
@@ -107,7 +109,7 @@ export function WeeklyChart() {
   return (
     <div className="analytics-card analytics-card--purple p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-white">Weekly activity</h2>
+        <h2 className="text-sm font-medium text-white">{t("analytics.weekly_chart")}</h2>
         <div className="flex gap-1 rounded-full bg-black/30 p-0.5">
           {(["W", "M", "3M"] as const).map((p) => (
             <button
@@ -128,14 +130,14 @@ export function WeeklyChart() {
 
       <div className="mb-3 flex items-baseline justify-between text-[10px]">
         <span className="text-zinc-500">
-          Avg.{" "}
+          {t("analytics.avg_steps")}{" "}
           <span className="font-semibold text-purple-300">
             {Math.round(displayAvg).toLocaleString()}
           </span>{" "}
-          steps
+          {t("analytics.steps")}
         </span>
         <span className="text-emerald-400 font-medium">
-          ▲ {Math.round(displayPct)}% vs. last {period === "W" ? "week" : period === "M" ? "month" : "quarter"}
+          {period === "W" ? t("analytics.vs_week", { percent: Math.round(displayPct) }) : period === "M" ? t("analytics.vs_month", { percent: Math.round(displayPct) }) : t("analytics.vs_quarter", { percent: Math.round(displayPct) })}
         </span>
       </div>
 

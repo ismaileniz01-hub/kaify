@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { ArrowLeft, Dumbbell, ChevronRight } from "lucide-react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
+import { useLang } from "@/lib/lang-context";
 
 const EXERCISE_GROUPS = [
   {
     id: "chest",
-    name: "Chest",
+    nameKey: "library.gym.group.chest",
     exercises: [
       "Bench Press (Barbell or Dumbbell)",
       "Incline Bench Press",
@@ -20,7 +21,7 @@ const EXERCISE_GROUPS = [
   },
   {
     id: "back",
-    name: "Back",
+    nameKey: "library.gym.group.back",
     exercises: [
       "Deadlift",
       "Pull-up (Barfiks)",
@@ -34,7 +35,7 @@ const EXERCISE_GROUPS = [
   },
   {
     id: "shoulders",
-    name: "Shoulders",
+    nameKey: "library.gym.group.shoulders",
     exercises: [
       "Overhead Press / Military Press",
       "Dumbbell Shoulder Press",
@@ -48,7 +49,7 @@ const EXERCISE_GROUPS = [
   },
   {
     id: "arms",
-    name: "Arms",
+    nameKey: "library.gym.group.arms",
     exercises: [
       "Barbell Curl",
       "Dumbbell Curl",
@@ -63,7 +64,7 @@ const EXERCISE_GROUPS = [
   },
   {
     id: "legs",
-    name: "Legs",
+    nameKey: "library.gym.group.legs",
     exercises: [
       "Barbell Squat",
       "Leg Press",
@@ -79,7 +80,7 @@ const EXERCISE_GROUPS = [
   },
   {
     id: "core",
-    name: "Core",
+    nameKey: "library.gym.group.core",
     exercises: [
       "Weighted Crunch",
       "Hanging Leg Raise",
@@ -119,6 +120,7 @@ const groupIcons: Record<string, string> = {
 };
 
 export default function GymLibraryPage() {
+  const { t } = useLang();
   return (
     <div className="phone-shell relative flex flex-col overflow-hidden">
       <FitnessWallpaper softVignette />
@@ -136,7 +138,7 @@ export default function GymLibraryPage() {
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/20 ring-2 ring-emerald-400/30">
             <Dumbbell className="h-3.5 w-3.5 text-emerald-400" />
           </div>
-          <span className="text-sm font-bold text-white">Fitness</span>
+          <span className="text-sm font-bold text-white">{t("library.gym")}</span>
         </div>
         <div className="h-8 w-8" />
       </header>
@@ -150,10 +152,10 @@ export default function GymLibraryPage() {
               fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
             }}
           >
-            Gym Exercises
+            {t("library.gym.title")}
           </h1>
           <p className="mt-3 max-w-[280px] text-sm font-medium leading-relaxed text-emerald-100/70">
-            All exercises grouped by muscle group
+            {t("library.gym.subtitle")}
           </p>
         </section>
 
@@ -168,7 +170,7 @@ export default function GymLibraryPage() {
               {/* Group header */}
               <div className={`flex items-center gap-3 border-b border-white/[0.06] px-4 py-3 ${groupColors[group.id]}`}>
                 <span className="text-lg">{groupIcons[group.id]}</span>
-                <h2 className="text-sm font-bold text-white">{group.name}</h2>
+                <h2 className="text-sm font-bold text-white">{t(group.nameKey)}</h2>
               </div>
 
               {/* Exercise list */}
