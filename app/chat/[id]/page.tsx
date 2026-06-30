@@ -143,7 +143,7 @@ export default function ChatPage() {
         />
       </header>
 
-      <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
+      <div className="relative z-10 flex flex-1 flex-col overflow-y-auto">
         <ChatBubbles contactId={contactId} onTypingChange={handleTypingChange} onUserTyping={handleUserTyping} onConversationEnd={handleConversationEnd} userMessages={userMessages} />
       </div>
 

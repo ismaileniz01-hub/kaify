@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getClientIP, isLikelyBot, isAllowedOrigin } from "@/lib/api-security";
+import { updateSupabaseSession } from "@/lib/supabase/middleware";
 
 // ──────────────────────────────────────────────
 // In-memory rate limiter (Vercel Edge Runtime)
@@ -37,7 +38,7 @@ const SUSPICIOUS_PATHS = [
   "/.well-known/security.txt",
 ];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const ip = getClientIP(request);
   const now = Date.now();
@@ -60,6 +61,7 @@ export function middleware(request: NextRequest) {
   //     }
   //   );
   // }
+  void isLikelyBot;
 
   // ── 3. Origin validation (POST/PUT/DELETE API routes) ──
   if (
@@ -107,8 +109,12 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // ── 5. Add security headers ──
-  const response = NextResponse.next();
+  // ── 5. Supabase session refresh (auth cookie sync) ──
+  // Tum guvenlik kontrollerinden gectikten sonra oturum yenilenir ve auth
+  // cookie'leri bu response uzerinde senkronize edilir.
+  const { response } = await updateSupabaseSession(request);
+
+  // ── 6. Add security headers ──
   response.headers.set("X-Request-ID", crypto.randomUUID());
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");

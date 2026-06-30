@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Flame, Gem, Lock } from "lucide-react";
+import { Flame, Gem, Lock, Snowflake } from "lucide-react";
 import Image from "next/image";
 import { useGem } from "@/lib/gem-context";
 import { useKai } from "@/lib/kai-context";
@@ -204,13 +204,15 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6">
-      {/* Başlık */}
-      <div className="flex items-center justify-center gap-3">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500/20 to-amber-600/10 ring-1 ring-orange-500/30">
-          <Flame className="h-7 w-7 text-orange-300" />
+      {/* Başlık - glow efektli */}
+      <div className="relative flex items-center justify-center gap-3">
+        {/* Glow efekti */}
+        <div className="absolute w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: `radial-gradient(circle, rgba(251,146,60,0.8), transparent 70%)`, animation: "pulse 3s ease-in-out infinite" }} />
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500/20 to-amber-600/10 ring-1 ring-orange-500/30" style={{ boxShadow: "0 0 30px rgba(251,146,60,0.3), inset 0 0 20px rgba(251,146,60,0.1)" }}>
+          <Flame className="h-7 w-7 text-orange-300" style={{ filter: "drop-shadow(0 0 10px rgba(251,146,60,0.6))", animation: "streakFlameDance 2s ease-in-out infinite" }} />
         </div>
         <div className="text-center">
-          <p className="text-3xl font-bold text-white">{currentStreak}</p>
+          <p className="text-3xl font-bold text-white" style={{ textShadow: "0 0 20px rgba(251,146,60,0.5), 0 0 40px rgba(251,146,60,0.3)" }}>{currentStreak}</p>
           <p className="text-xs text-zinc-500">{t("streak.daily")}</p>
         </div>
       </div>
@@ -376,7 +378,12 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                                 : "text-zinc-600"
                             } ${isCurrent ? "font-bold text-orange-200" : ""} ${isMilestoneDot ? "font-bold" : ""} ${isSpecialStation ? "font-bold text-purple-300" : ""}`}
                           >
-                            {dotStreak}
+                            {dotStreak % 7 === 0 ? (
+                              <span className="inline-flex items-center gap-0.5">
+                                {dotStreak}
+                                <Snowflake className="h-2.5 w-2.5" style={{ color: "#38bdf8", filter: "drop-shadow(0 0 3px rgba(56,189,248,0.5))" }} />
+                              </span>
+                            ) : dotStreak}
                             {isReached && (
                               <span className="inline-flex items-center">
                                 {isStationClaimed ? (

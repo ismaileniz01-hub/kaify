@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Bell, Globe, LogOut, Search, Shield, User, Volume2, Check } from "lucide-react";
+import { ArrowLeft, Bell, Globe, LogOut, Search, Shield, User, Volume2, Check, Copy, Share2, Gift } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useTheme } from "@/lib/theme-context";
 import { useLang, type LangCode, LANG_OPTIONS } from "@/lib/lang-context";
@@ -73,6 +73,27 @@ function saveBoolean(key: string, value: boolean) {
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { lang, setLang, unit, setUnit, t } = useLang();
+
+  // Referral kodu
+  const [referralCode, setReferralCode] = useState("");
+  const [referralCopied, setReferralCopied] = useState(false);
+  useEffect(() => {
+    import("@/lib/referral").then((m) => setReferralCode(m.getReferralCode()));
+  }, []);
+
+  const handleCopyReferral = async () => {
+    const { copyReferralCode } = await import("@/lib/referral");
+    const success = await copyReferralCode();
+    if (success) {
+      setReferralCopied(true);
+      setTimeout(() => setReferralCopied(false), 2000);
+    }
+  };
+
+  const handleShareReferral = async () => {
+    const { shareReferralCode } = await import("@/lib/referral");
+    await shareReferralCode();
+  };
 
 
   // Dil seçici state
@@ -301,6 +322,35 @@ export default function SettingsPage() {
             </div>
           </section>
         ))}
+
+        {/* Referral Code - sadə */}
+        <section className="animate-in mt-5" style={{ animationDelay: "0.5s" }}>
+          <div className="rounded-2xl border border-white/5 bg-white/[0.03]">
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5">
+                <Gift className="h-4 w-4 text-zinc-400" strokeWidth={1.5} />
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="text-sm font-medium text-white">{t("settings.referral")}</span>
+                <span className="text-[11px] text-zinc-500">{t("settings.referral.desc")}</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between border-t border-white/5 px-4 py-3">
+              <span className="font-mono text-base font-bold tracking-wider text-purple-400">
+                {referralCode || "......"}
+              </span>
+              <div className="flex items-center gap-3">
+                <button onClick={handleCopyReferral} className="text-xs text-purple-400 hover:text-purple-300">
+                  {referralCopied ? t("settings.referral.copied") : t("settings.referral.copy")}
+                </button>
+                <span className="text-xs text-zinc-600">·</span>
+                <button onClick={handleShareReferral} className="text-xs text-purple-400 hover:text-purple-300">
+                  {t("settings.referral.share")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* Versiyon bilgisi */}
         <div className="mt-8 mb-4 text-center">
