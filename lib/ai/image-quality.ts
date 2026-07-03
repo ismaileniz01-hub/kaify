@@ -8,8 +8,15 @@ import {
 } from "@/lib/validations/analysis.schema";
 import type { ImageInput } from "@/lib/ai/types";
 
-/** Minimum acceptable quality score; below this the analysis is rejected. */
-export const MIN_QUALITY_SCORE = 6;
+/**
+ * Minimum acceptable PHOTO quality (lighting/angle/sharpness — NOT physique)
+ * before analysis runs. Kept low so only genuinely unusable photos (very
+ * blurry/dark) are rejected; env-tunable without a redeploy.
+ */
+export const MIN_QUALITY_SCORE = (() => {
+  const raw = Number.parseInt(process.env.AI_MIN_QUALITY_SCORE ?? "", 10);
+  return Number.isFinite(raw) && raw >= 1 && raw <= 10 ? raw : 3;
+})();
 
 /**
  * Pre-analysis quality gate. Returns a 1-10 score plus issues and "golden

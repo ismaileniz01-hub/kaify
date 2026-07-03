@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Camera } from "lucide-react";
-import { streamChatMessage, apiGet, apiPost } from "@/lib/api/client";
+import { streamChatMessage, apiGet, apiPost, ApiClientError } from "@/lib/api/client";
 import type { ChatMessageDTO } from "@/lib/types/domain.types";
 import type { MessageType } from "@/lib/types/database.types";
 import type { ContactId } from "@/lib/contacts";
@@ -234,7 +234,16 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           ),
         );
       } catch (err) {
-        setError(errorToMessage(err, t));
+        // Photo-analysis server messages (e.g. "photo not clear enough, try
+        // these tips", quota limits) are already localized and actionable, so
+        // surface them verbatim. Fall back to the generic code map otherwise.
+        const friendly =
+          err instanceof ApiClientError &&
+          (err.code === "VALIDATION_ERROR" || err.code === "FORBIDDEN") &&
+          err.message.trim().length > 0
+            ? err.message
+            : errorToMessage(err, t);
+        setError(friendly);
         setMessages((prev) =>
           prev.filter((msg) => msg.id !== coachPlaceholderId),
         );
