@@ -12,7 +12,7 @@ import { ChatRichCard } from "@/components/chat/ChatRichCard";
 import { useLang } from "@/lib/lang-context";
 import { useKai } from "@/lib/kai-context";
 import { useSession } from "@/lib/session-context";
-import { apiErrorMessage } from "@/lib/i18n/api-error";
+import { apiErrorMessage, errorToMessage } from "@/lib/i18n/api-error";
 
 type LiveMessage = {
   id: string;
@@ -157,10 +157,53 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
 
   const handlePhoto = async (file: File) => {
     if (!VISION_COACHES.has(coachId) || sending) return;
+
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      setError(t("chat.error.photoFormat"));
+      return;
+    }
+    if (file.size > 9 * 1024 * 1024) {
+      setError(t("chat.error.photoSize"));
+      return;
+    }
+
     setSending(true);
     setError(null);
+    onCoachTyping?.(true);
+
+    // Optimistic feedback: show the photo bubble + a typing placeholder
+    // immediately so the upload never looks "stuck" during the AI pipeline.
+    const photoUserId = `photo-user-${Date.now()}`;
+    const coachPlaceholderId = `photo-coach-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: photoUserId,
+        from: "user",
+        text: "📷 Fotoğraf gönderildi",
+        time: formatTime(),
+      },
+      {
+        id: coachPlaceholderId,
+        from: "coach",
+        text: "",
+        time: formatTime(),
+        streaming: true,
+      },
+    ]);
+
+    const clearTyping = () => {
+      onCoachTyping?.(false);
+      setSending(false);
+    };
 
     const reader = new FileReader();
+    reader.onerror = () => {
+      setError(t("chat.error.photo"));
+      setMessages((prev) => prev.filter((msg) => msg.id !== coachPlaceholderId));
+      clearTyping();
+    };
     reader.onload = async () => {
       try {
         const result = reader.result as string;
@@ -176,27 +219,27 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           mimeType,
         });
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `photo-user-${Date.now()}`,
-            from: "user",
-            text: "📷 Fotoğraf gönderildi",
-            time: formatTime(),
-          },
-          {
-            id: analysis.messageId ?? `photo-coach-${Date.now()}`,
-            from: "coach",
-            text: analysis.summary,
-            time: formatTime(),
-            messageType: coachId === "leo" ? "score" : "analysis",
-            payload: { analysis: analysis.analysis },
-          },
-        ]);
-      } catch {
-        setError(t("chat.error.photo"));
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === coachPlaceholderId
+              ? {
+                  ...msg,
+                  id: analysis.messageId ?? coachPlaceholderId,
+                  text: analysis.summary,
+                  streaming: false,
+                  messageType: coachId === "leo" ? "score" : "analysis",
+                  payload: { analysis: analysis.analysis },
+                }
+              : msg,
+          ),
+        );
+      } catch (err) {
+        setError(errorToMessage(err, t));
+        setMessages((prev) =>
+          prev.filter((msg) => msg.id !== coachPlaceholderId),
+        );
       } finally {
-        setSending(false);
+        clearTyping();
       }
     };
     reader.readAsDataURL(file);

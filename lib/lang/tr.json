@@ -329,6 +329,8 @@
   "chat.error.history": "Sohbet geçmişi yüklenemedi.",
   "chat.error.send": "Mesaj gönderilemedi.",
   "chat.error.photo": "Fotoğraf analizi başarısız.",
+  "chat.error.photoFormat": "Bu format desteklenmiyor. JPEG, PNG veya WEBP kullan (iPhone HEIC değil).",
+  "chat.error.photoSize": "Fotoğraf çok büyük (en fazla ~9MB).",
   "team.error.load": "Takım sohbeti yüklenemedi.",
   "team.generating": "Toplantı oluşturuluyor…",
   "team.start": "Haftalık takım toplantısını başlat",

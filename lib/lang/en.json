@@ -366,6 +366,8 @@
   "chat.error.history": "Couldn't load chat history.",
   "chat.error.send": "Couldn't send your message.",
   "chat.error.photo": "Photo analysis failed.",
+  "chat.error.photoFormat": "This format isn't supported. Use JPEG, PNG or WEBP (not iPhone HEIC).",
+  "chat.error.photoSize": "Photo is too large (max ~9MB).",
   "team.error.load": "Couldn't load team chat.",
   "team.generating": "Creating meeting…",
   "team.start": "Start the weekly team meeting",
