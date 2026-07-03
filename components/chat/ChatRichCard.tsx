@@ -41,7 +41,67 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
   if (!payload || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
 
-  if (messageType === "score" || messageType === "analysis") {
+  // Food analysis (Maya) — macro/calorie card. Kept separate from the body
+  // score card so a meal photo never renders an empty "Body Analysis Score".
+  if (messageType === "analysis") {
+    const analysis = (p.analysis ?? p) as Record<string, unknown>;
+    const food = analysis.food_analysis as
+      | { calories?: number; protein?: number; carb?: number; fat?: number }
+      | null
+      | undefined;
+    if (!food) return null;
+
+    const cal = Math.round(food.calories ?? 0);
+    const macros: { key: string; label: string; grams: number; color: string }[] = [
+      { key: "protein", label: t("analysis.protein"), grams: Math.round(food.protein ?? 0), color: "#22c55e" },
+      { key: "carb", label: t("analysis.carb"), grams: Math.round(food.carb ?? 0), color: "#f59e0b" },
+      { key: "fat", label: t("analysis.fat"), grams: Math.round(food.fat ?? 0), color: "#ef4444" },
+    ];
+    const totalG = macros.reduce((sum, m) => sum + m.grams, 0) || 1;
+
+    return (
+      <div
+        className="animate-message mt-2 overflow-hidden rounded-2xl"
+        style={{
+          backgroundColor: `${primary}10`,
+          border: `1px solid ${ring}`,
+          boxShadow: `0 0 20px ${ring}`,
+        }}
+      >
+        <div className="flex items-center gap-3 p-3" style={{ borderBottom: `1px solid ${ring}` }}>
+          <div
+            className="flex h-14 w-14 flex-col items-center justify-center rounded-full text-white"
+            style={{ background: `linear-gradient(135deg, ${primary}, ${primaryLight})` }}
+          >
+            <span className="text-base font-black leading-none">{cal}</span>
+            <span className="text-[9px] leading-none opacity-80">kcal</span>
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white">{t("analysis.calories")}</p>
+            <p className="text-xs text-zinc-400">{t("analysis.macros")}</p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 p-3">
+          {macros.map((m) => (
+            <div key={m.key} className="flex items-center gap-2">
+              <span className="w-24 truncate text-[11px] text-zinc-400">{m.label}</span>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800">
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${(m.grams / totalG) * 100}%`, backgroundColor: m.color }}
+                />
+              </div>
+              <span className="w-10 text-right text-[11px] font-bold" style={{ color: m.color }}>
+                {m.grams}g
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (messageType === "score") {
     const a = scorePayloadToAnalysis(p);
     return (
       <div
