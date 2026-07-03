@@ -36,12 +36,26 @@ export const foodAnalysisSchema = z.object({
 export type FoodAnalysis = z.infer<typeof foodAnalysisSchema>;
 
 export const technicalAnalysisSchema = z.object({
-  visible_muscles: z.array(muscleGroupSchema).default([]),
+  // Tolerate LLM drift: models sometimes emit non-muscle keys (e.g. food
+  // returns "protein_quality") or invalid muscle names. Drop unknown/invalid
+  // entries instead of rejecting the whole response so a good analysis with a
+  // stray score key still succeeds.
+  visible_muscles: z
+    .array(z.string())
+    .default([])
+    .transform((arr) => arr.filter((m): m is MuscleGroup => muscleGroupSet.has(m))),
   scores: z
-    .record(z.string(), scoreSchema)
+    .record(z.string(), z.unknown())
     .default({})
-    .refine((obj) => Object.keys(obj).every((key) => muscleGroupSet.has(key)), {
-      message: "Unknown muscle group in scores",
+    .transform((obj) => {
+      const filtered: MuscleScores = {};
+      for (const [key, value] of Object.entries(obj)) {
+        if (muscleGroupSet.has(key) && typeof value === "number") {
+          const clamped = Math.min(100, Math.max(0, value));
+          filtered[key as MuscleGroup] = clamped;
+        }
+      }
+      return filtered;
     }),
   overall_score: scoreSchema.default(0),
   food_analysis: foodAnalysisSchema.nullable().default(null),

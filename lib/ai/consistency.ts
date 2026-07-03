@@ -17,7 +17,7 @@ export const DRIFT_THRESHOLD_PERCENT = 20;
 
 export function computeScoreDrift(
   previous: MuscleScores | null | undefined,
-  current: Record<string, number>,
+  current: MuscleScores,
 ): ScoreDrift[] {
   if (!previous) {
     return [];
