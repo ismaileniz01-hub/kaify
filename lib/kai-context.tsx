@@ -24,6 +24,8 @@ interface KaiContextType {
   ownedEffects: AuraColor[];
   /** Efekt satın al (markette kullan) */
   purchaseEffect: (color: AuraColor) => void;
+  /** Sunucudan owned + aura senkronize et */
+  syncFromServer: (ownedIds: string[], activeAura: string) => void;
 }
 
 const KaiContext = createContext<KaiContextType | null>(null);
@@ -97,6 +99,15 @@ export function KaiProvider({ children, initialStreak = 0 }: { children: ReactNo
     });
   }, []);
 
+  const syncFromServer = useCallback((ownedIds: string[], activeAura: string) => {
+    const owned = ownedIds.filter((id) => id !== "default") as AuraColor[];
+    setOwnedEffects(owned);
+    localStorage.setItem(OWNED_EFFECTS_KEY, JSON.stringify(owned));
+    const aura = (activeAura === "default" ? "default" : activeAura) as AuraColor;
+    setAuraColorState(aura);
+    localStorage.setItem(AURA_STORAGE_KEY, aura);
+  }, []);
+
   const currentLevel = getKaiLevel(streak);
   // Avatar unlock edilmiş en yüksek level'a göre gösterilir
   // unlockedLevel, StreakRoad'daki CLAIM sonrası güncellenir
@@ -115,6 +126,7 @@ export function KaiProvider({ children, initialStreak = 0 }: { children: ReactNo
           setAuraColor,
           ownedEffects: [],
           purchaseEffect,
+          syncFromServer,
         }}
       >
         {children}
@@ -134,6 +146,7 @@ export function KaiProvider({ children, initialStreak = 0 }: { children: ReactNo
         setAuraColor,
         ownedEffects,
         purchaseEffect,
+        syncFromServer,
       }}
     >
       {children}

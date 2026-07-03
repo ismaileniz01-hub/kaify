@@ -1,8 +1,9 @@
 "use client";
 
-import { Trophy, Flame, ChevronRight, Globe, Crown, Medal, Award } from "lucide-react";
+import { Trophy, Flame, ChevronRight, Crown, Medal, Award } from "lucide-react";
 import { useEffect, useState } from "react";
-import { DEMO_USER_NAME } from "@/lib/user";
+import { useSession } from "@/lib/session-context";
+import type { LeaderboardEntryDTO } from "@/lib/types/domain.types";
 import { useLang } from "@/lib/lang-context";
 
 type LeaderboardEntry = {
@@ -42,19 +43,43 @@ function FlagImage({ flagCode, size = 24 }: { flagCode: string; size?: number })
 
 export function WelcomeLeaderboard() {
   const { t } = useLang();
+  const { isAuthenticated } = useSession();
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    fetch("/api/leaderboard?userId=user_001")
-      .then((res) => res.json())
-      .then((json) => {
-        setData(json);
+    const path = isAuthenticated
+      ? "/api/leaderboard/global?limit=10"
+      : "/api/leaderboard";
+
+    fetch(path, { credentials: "include" })
+      .then(async (res) => {
+        const json = await res.json();
+        if (isAuthenticated && json.success) {
+          const lb = json.data as {
+            leaderboard: LeaderboardEntryDTO[];
+            myRank: number | null;
+            totalRanked: number;
+          };
+          setData({
+            leaderboard: lb.leaderboard.map((e) => ({
+              userId: e.userId,
+              name: e.name,
+              flagCode: e.flagCode,
+              streak: e.streak,
+              avatar: e.avatar || "/kaify-logo.png",
+            })),
+            userRank: lb.myRank,
+            totalUsers: lb.totalRanked,
+          });
+        } else {
+          setData(json);
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [isAuthenticated]);
 
   if (loading) {
     return (

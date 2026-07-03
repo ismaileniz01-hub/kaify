@@ -2,12 +2,47 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Mail } from "lucide-react";
+import { useState } from "react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { useLang } from "@/lib/lang-context";
+import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const { t } = useLang();
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleMagicLink = async () => {
+    const trimmed = email.trim();
+    if (!trimmed) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const supabase = tryCreateBrowserSupabaseClient();
+      if (!supabase) {
+        setError(t("login.error.failed"));
+        return;
+      }
+      const redirectTo = `${window.location.origin}/api/auth/callback?next=/welcome`;
+      const { error: authError } = await supabase.auth.signInWithOtp({
+        email: trimmed,
+        options: { emailRedirectTo: redirectTo },
+      });
+      if (authError) {
+        setError(authError.message);
+        return;
+      }
+      setSent(true);
+    } catch {
+      setError(t("login.error.failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="phone-shell relative flex flex-col overflow-hidden">
       <FitnessWallpaper />
@@ -30,10 +65,7 @@ export default function LoginPage() {
           </div>
 
           <div className="flex flex-col items-center gap-3 text-center">
-            <h1
-              className="text-6xl font-bold leading-none tracking-[0.08em] text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.5)]"
-              style={{ fontFamily: "var(--font-geist-sans), system-ui, sans-serif" }}
-            >
+            <h1 className="text-6xl font-bold leading-none tracking-[0.08em] text-white">
               {t("login.title")}
             </h1>
             <p className="max-w-[280px] text-base font-medium leading-snug tracking-wide text-purple-100/90">
@@ -43,29 +75,53 @@ export default function LoginPage() {
         </div>
 
         <div className="flex w-full max-w-xs flex-col gap-4">
+          {sent ? (
+            <p className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-center text-sm text-emerald-200">
+              E-postana giriş bağlantısı gönderildi. Linke tıklayarak devam et.
+            </p>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-3">
+                <Mail className="h-4 w-4 text-zinc-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="E-posta adresin"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleMagicLink()}
+                disabled={loading || !email.trim()}
+                className="flex w-full items-center justify-center gap-3 rounded-full bg-white px-6 py-4 text-sm font-semibold text-zinc-900 shadow-xl disabled:opacity-50"
+              >
+                {loading ? "Gönderiliyor…" : "Magic Link ile Giriş"}
+                <ArrowRight className="h-5 w-5" />
+              </button>
+            </>
+          )}
+
+          {error && (
+            <p className="text-center text-xs text-red-300">{error}</p>
+          )}
+
           <a
             href="https://kaifyai.org/"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-full items-center justify-center gap-3 rounded-full bg-white px-6 py-4 text-sm font-semibold text-zinc-900 shadow-xl shadow-black/30 transition active:scale-[0.98]"
+            className="text-center text-xs text-purple-200/70 underline"
           >
-            {t("login.sign_up")}
-            <ArrowRight className="h-5 w-5" strokeWidth={2} />
+            {t("login.sign_up")} (Web sitesi)
           </a>
 
           <Link
             href="/welcome"
-            className="flex w-full items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 py-4 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/15 active:scale-[0.98]"
+            className="flex w-full items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 py-4 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/15"
           >
             {t("login.preview")}
           </Link>
-
-          <p className="text-center text-xs text-purple-200/50">
-            {t("login.terms")}{" "}
-            <span className="text-purple-100/70 underline-offset-2 hover:underline">
-              {t("login.terms_link")}
-            </span>
-          </p>
         </div>
       </main>
     </div>

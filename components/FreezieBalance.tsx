@@ -9,24 +9,36 @@ type FreezieBalanceProps = {
   size?: "sm" | "md";
   animate?: boolean;
   refreshKey?: number;
+  /** When set, overrides localStorage demo balance. */
+  balance?: number;
 };
 
-export function FreezieBalance({ size = "sm", animate = true, refreshKey = 0 }: FreezieBalanceProps) {
+export function FreezieBalance({
+  size = "sm",
+  animate = true,
+  refreshKey = 0,
+  balance: balanceProp,
+}: FreezieBalanceProps) {
   const { t } = useLang();
   const [balance, setBalance] = useState(0);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    setBalance(getFreezieBalance());
-  }, [refreshKey]);
+    if (balanceProp !== undefined) {
+      setBalance(balanceProp);
+    } else {
+      setBalance(getFreezieBalance());
+    }
+  }, [refreshKey, balanceProp]);
 
   useEffect(() => {
+    if (balanceProp !== undefined) return;
     const interval = setInterval(() => {
       setBalance(getFreezieBalance());
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [balanceProp]);
 
   if (!mounted) return null;
 

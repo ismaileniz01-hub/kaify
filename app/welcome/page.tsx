@@ -7,16 +7,26 @@ import { WelcomeCard } from "@/components/welcome/WelcomeCard";
 import { WelcomeExtras } from "@/components/welcome/WelcomeExtras";
 import { GemBalance } from "@/components/GemBalance";
 import { ProfileModal } from "@/components/ProfileModal";
-import { DEMO_USER_NAME, DEMO_USER_PROFILE } from "@/lib/user";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
+import { useSession } from "@/lib/session-context";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { useLang } from "@/lib/lang-context";
+import { useLang, LANG_OPTIONS } from "@/lib/lang-context";
 
 function WelcomeContent() {
   const [profileOpen, setProfileOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState(DEMO_USER_PROFILE);
   const searchParams = useSearchParams();
-  const { t } = useLang();
+  const { t, setLang } = useLang();
+  const {
+    displayName,
+    userProfile,
+    home,
+    gemBalance,
+    isPreviewMode,
+    updateProfile,
+    profile,
+    isAuthenticated,
+  } = useSession();
 
   // ?profile=1 query param'ı ile gelindiyse profil modal'ını otomatik aç
   useEffect(() => {
@@ -24,6 +34,13 @@ function WelcomeContent() {
       setProfileOpen(true);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !profile?.locale) return;
+    const base = profile.locale.split("-")[0].toLowerCase();
+    const match = LANG_OPTIONS.find((opt) => opt.code === base);
+    if (match) setLang(match.code);
+  }, [isAuthenticated, profile?.locale, setLang]);
 
   return (
     <div className="phone-shell welcome-page relative flex flex-col overflow-hidden">
@@ -60,7 +77,8 @@ function WelcomeContent() {
         </Link>
 
         <div className="flex items-center gap-2">
-          <GemBalance balance={1000} size="sm" animate />
+          <GemBalance balance={gemBalance.balance} size="sm" animate />
+          <NotificationCenter />
           <Link
             href="/settings"
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition-all duration-300 hover:bg-white/20 hover:text-white hover:scale-110"
@@ -80,11 +98,16 @@ function WelcomeContent() {
               fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
             }}
           >
-            {t("welcome.title", { name: DEMO_USER_NAME })}
+            {t("welcome.title", { name: displayName })}
           </h1>
           <p className="mt-4 max-w-[280px] text-sm font-medium leading-relaxed text-purple-100/80">
-            {t("welcome.subtitle")}
+            {home?.motivation ?? t("welcome.subtitle")}
           </p>
+          {isPreviewMode && (
+            <p className="mt-2 text-[10px] text-amber-400/80">
+              Demo modu — giriş yapınca verileriniz yüklenecek.
+            </p>
+          )}
         </section>
 
         {/* Main cards — opaque with 3D shadows */}
@@ -140,7 +163,7 @@ function WelcomeContent() {
         isOpen={profileOpen}
         onClose={() => setProfileOpen(false)}
         profile={userProfile}
-        onSave={(updated) => setUserProfile(updated)}
+        onSave={(updated) => void updateProfile(updated)}
       />
     </div>
   );

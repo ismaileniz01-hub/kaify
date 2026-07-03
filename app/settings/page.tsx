@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Bell, Globe, LogOut, Search, Shield, User, Volume2, Check, Copy, Share2, Gift } from "lucide-react";
+import { ArrowLeft, Bell, Globe, LogOut, Search, Shield, User, Volume2, Check, Gift } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useTheme } from "@/lib/theme-context";
-import { useLang, type LangCode, LANG_OPTIONS } from "@/lib/lang-context";
+import { useLang, LANG_OPTIONS } from "@/lib/lang-context";
+import { useSession } from "@/lib/session-context";
+import { apiGet, apiPatch } from "@/lib/api/client";
+import type { UserSettingsDTO } from "@/lib/services/settings.service";
+import { UsageQuotaSection } from "@/components/settings/UsageQuotaSection";
 
 type SettingItem = {
   icon: typeof Bell;
@@ -21,7 +25,7 @@ const SETTINGS_GROUPS: { title: string; items: SettingItem[] }[] = [
     title: "settings.profile",
     items: [
       { icon: User, label: "settings.personal", description: "settings.personal.desc", type: "link", value: "settings.personal.action", href: "/welcome?profile=1" },
-      { icon: Shield, label: "settings.privacy", description: "settings.privacy.desc", type: "link", value: "settings.privacy.action" },
+      { icon: Shield, label: "settings.privacy", description: "settings.privacy.desc", type: "link", value: "settings.privacy.action", href: "/settings/security" },
     ],
   },
   {
@@ -73,44 +77,12 @@ function saveBoolean(key: string, value: boolean) {
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { lang, setLang, unit, setUnit, t } = useLang();
+  const { referralCode: sessionReferralCode, isAuthenticated, profile } = useSession();
 
-  // Referral kodu
   const [referralCode, setReferralCode] = useState("");
   const [referralCopied, setReferralCopied] = useState(false);
-  useEffect(() => {
-    import("@/lib/referral").then((m) => setReferralCode(m.getReferralCode()));
-  }, []);
-
-  const handleCopyReferral = async () => {
-    const { copyReferralCode } = await import("@/lib/referral");
-    const success = await copyReferralCode();
-    if (success) {
-      setReferralCopied(true);
-      setTimeout(() => setReferralCopied(false), 2000);
-    }
-  };
-
-  const handleShareReferral = async () => {
-    const { shareReferralCode } = await import("@/lib/referral");
-    await shareReferralCode();
-  };
-
-
-  // Dil seçici state
   const [langPickerOpen, setLangPickerOpen] = useState(false);
   const [langSearch, setLangSearch] = useState("");
-
-  // Filtrelenmiş diller
-  const filteredLangs = useMemo(() => {
-    if (!langSearch.trim()) return LANG_OPTIONS;
-    const q = langSearch.toLowerCase();
-    return LANG_OPTIONS.filter(
-      (opt) =>
-        opt.label.toLowerCase().includes(q) ||
-        opt.code.toLowerCase().includes(q)
-    );
-  }, [langSearch]);
-
   const [toggles, setToggles] = useState<Record<string, boolean>>({
     "settings.push": true,
     "settings.workout": true,
@@ -121,6 +93,85 @@ export default function SettingsPage() {
     "settings.sfx": loadBoolean(SFX_KEY, true),
     "settings.chat.sfx": loadBoolean(CHAT_SFX_KEY, true),
   });
+
+  useEffect(() => {
+    if (isAuthenticated && sessionReferralCode) {
+      setReferralCode(sessionReferralCode);
+      return;
+    }
+    if (!isAuthenticated) {
+      import("@/lib/referral").then((m) => setReferralCode(m.getReferralCode()));
+    }
+  }, [isAuthenticated, sessionReferralCode]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    apiGet<UserSettingsDTO>("/api/settings")
+      .then((s) => {
+        setToggles((prev) => ({
+          ...prev,
+          "settings.workout": s.workoutReminders,
+          "settings.water": s.waterReminder,
+          "settings.sfx": s.soundEffects,
+          "settings.chat.sfx": s.chatSounds,
+        }));
+        setUnit(s.unitSystem);
+      })
+      .catch(() => undefined);
+  }, [isAuthenticated, setUnit]);
+
+  useEffect(() => {
+    if (isAuthenticated && profile?.locale) {
+      const base = profile.locale.split("-")[0].toLowerCase();
+      const match = LANG_OPTIONS.find((o) => o.code === base || o.code === profile.locale);
+      if (match) setLang(match.code);
+    }
+  }, [isAuthenticated, profile?.locale, setLang]);
+
+  const handleCopyReferral = async () => {
+    try {
+      await navigator.clipboard.writeText(referralCode);
+      setReferralCopied(true);
+      setTimeout(() => setReferralCopied(false), 2000);
+    } catch {
+      if (!isAuthenticated) {
+        const { copyReferralCode } = await import("@/lib/referral");
+        const success = await copyReferralCode();
+        if (success) {
+          setReferralCopied(true);
+          setTimeout(() => setReferralCopied(false), 2000);
+        }
+      }
+    }
+  };
+
+  const handleShareReferral = async () => {
+    const text = `Join me on Kaify! Use my referral code: ${referralCode}\n\nhttps://kaify.app`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Kaify Referral", text });
+        return;
+      }
+    } catch {
+      // fall through
+    }
+    if (!isAuthenticated) {
+      const { shareReferralCode } = await import("@/lib/referral");
+      await shareReferralCode();
+    }
+  };
+
+
+  // Dil seçici state
+  const filteredLangs = useMemo(() => {
+    if (!langSearch.trim()) return LANG_OPTIONS;
+    const q = langSearch.toLowerCase();
+    return LANG_OPTIONS.filter(
+      (opt) =>
+        opt.label.toLowerCase().includes(q) ||
+        opt.code.toLowerCase().includes(q)
+    );
+  }, [langSearch]);
 
   // Theme değişince toggle'ı senkronize et
   useEffect(() => {
@@ -136,11 +187,21 @@ export default function SettingsPage() {
     const newVal = !toggles[label];
     setToggles((prev) => ({ ...prev, [label]: newVal }));
 
-    // Ses ayarlarını localStorage'a kaydet
     if (label === "settings.sfx") {
       saveBoolean(SFX_KEY, newVal);
     } else if (label === "settings.chat.sfx") {
       saveBoolean(CHAT_SFX_KEY, newVal);
+    }
+
+    if (isAuthenticated) {
+      const patch: Partial<UserSettingsDTO> = {};
+      if (label === "settings.workout") patch.workoutReminders = newVal;
+      if (label === "settings.water") patch.waterReminder = newVal;
+      if (label === "settings.sfx") patch.soundEffects = newVal;
+      if (label === "settings.chat.sfx") patch.chatSounds = newVal;
+      if (Object.keys(patch).length > 0) {
+        void apiPatch("/api/settings", patch).catch(() => undefined);
+      }
     }
   };
 
@@ -164,6 +225,7 @@ export default function SettingsPage() {
       </header>
 
       <main className="flex-1 overflow-y-auto px-4 pb-8">
+        {isAuthenticated && <UsageQuotaSection />}
         {SETTINGS_GROUPS.map((group, gi) => (
           <section key={gi} className="animate-in mt-5 first:mt-2" style={{ animationDelay: `${0.1 + gi * 0.05}s` }}>
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
@@ -287,7 +349,13 @@ export default function SettingsPage() {
                     {item.type === "select" && item.label === "settings.unit" && (
                       <select
                         value={unit === "metric" ? "settings.unit.metric" : "settings.unit.imperial"}
-                        onChange={(e) => setUnit(e.target.value === "settings.unit.metric" ? "metric" : "imperial")}
+                        onChange={(e) => {
+                          const next = e.target.value === "settings.unit.metric" ? "metric" : "imperial";
+                          setUnit(next);
+                          if (isAuthenticated) {
+                            void apiPatch("/api/settings", { unitSystem: next }).catch(() => undefined);
+                          }
+                        }}
                         className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-zinc-300 outline-none transition focus:border-purple-500/50"
                       >
                         <option value="settings.unit.metric" className="bg-zinc-900">{t("settings.unit.metric")}</option>

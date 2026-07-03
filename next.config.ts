@@ -1,76 +1,23 @@
 import type { NextConfig } from "next";
-
-const cspDirectives = [
-  "default-src 'self'",
-  // TEMPORARY: nonce disabled — allow inline scripts for functionality
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://cdn.sender.net",
-  // Styles
-  "style-src 'self' 'unsafe-inline'",
-  // Images
-  "img-src 'self' data: blob: https:",
-  // Fonts
-  "font-src 'self'",
-  // Connect
-  "connect-src 'self' https://api.sender.net https://cdn.sender.net https://www.google.com",
-  // Frames (reCAPTCHA)
-  "frame-src https://www.google.com https://recaptcha.google.com",
-  // Objects
-  "object-src 'none'",
-  // Base
-  "base-uri 'self'",
-  // Form actions
-  "form-action 'self'",
-  // Upgrade insecure requests
-  "upgrade-insecure-requests",
-].join("; ");
+import { withSentryConfig } from "@sentry/nextjs";
 
 const securityHeaders = [
-  {
-    key: "X-DNS-Prefetch-Control",
-    value: "on",
-  },
+  { key: "X-DNS-Prefetch-Control", value: "on" },
   {
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
   },
-  {
-    key: "X-Frame-Options",
-    value: "DENY",
-  },
-  {
-    key: "X-Content-Type-Options",
-    value: "nosniff",
-  },
-  {
-    key: "X-XSS-Protection",
-    value: "1; mode=block",
-  },
-  {
-    key: "Referrer-Policy",
-    value: "strict-origin-when-cross-origin",
-  },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-XSS-Protection", value: "1; mode=block" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
     value:
       "camera=(), microphone=(), geolocation=(), browsing-topics=(), interest-cohort=()",
   },
-  {
-    key: "Cross-Origin-Opener-Policy",
-    value: "same-origin",
-  },
-  {
-    key: "Cross-Origin-Resource-Policy",
-    value: "same-origin",
-  },
-  // COEP devre dışı: flagcdn.com gibi üçüncü parti kaynakları blokluyor
-  // {
-  //   key: "Cross-Origin-Embedder-Policy",
-  //   value: "require-corp",
-  // },
-  {
-    key: "Content-Security-Policy",
-    value: cspDirectives,
-  },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
 ];
 
 const nextConfig: NextConfig = {
@@ -89,8 +36,43 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // Server-side only modules
-  serverExternalPackages: ["@upstash/redis"],
+  serverExternalPackages: ["@upstash/redis", "firebase-admin"],
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // For all available options, see:
+  // https://www.npmjs.com/package/@sentry/webpack-plugin#options
+
+  org: "kaify-mm",
+
+  project: "javascript-nextjs",
+
+  // Only print logs for uploading source maps in CI
+  silent: !process.env.CI,
+
+  // For all available options, see:
+  // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+
+  // Upload a larger set of source maps for prettier stack traces (increases build time)
+  widenClientFileUpload: true,
+
+  // Uncomment to route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
+  // This can increase your server load as well as your hosting bill.
+  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
+  // side errors will fail.
+  // tunnelRoute: "/monitoring",
+
+  webpack: {
+    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
+    // See the following for more information:
+    // https://docs.sentry.io/product/crons/
+    // https://vercel.com/docs/cron-jobs
+    automaticVercelMonitors: true,
+
+    // Tree-shaking options for reducing bundle size
+    treeshake: {
+      // Automatically tree-shake Sentry logger statements to reduce bundle size
+      removeDebugLogging: true,
+    },
+  },
+});

@@ -16,6 +16,32 @@ export type Json =
 
 export type OnboardingStatus = "PAID" | "FORMS_COMPLETED" | "ACTIVE";
 export type SubscriptionTier = "essential" | "pro" | "premium_max";
+export type UsageResource = "text_tokens" | "maya_photo" | "leo_photo";
+export type WarningTrigger = "LIMIT_80" | "LIMIT_100";
+export type BillingCycle = "monthly" | "yearly";
+export type MessageSender = "user" | "coach" | "system";
+export type MessageType =
+  | "text"
+  | "analysis"
+  | "score"
+  | "meal_plan"
+  | "workout_plan"
+  | "daily_summary"
+  | "photo_analysis"
+  | "team_meeting";
+export type CoachId = "alex" | "maya" | "leo" | "kai";
+export type ThreadType = "direct" | "team";
+export type ProfileRole = "user" | "admin";
+export type NotificationType =
+  | "streak_risk"
+  | "streak_milestone"
+  | "kai_level_up"
+  | "freezie_earned"
+  | "badge"
+  | "weekly_summary"
+  | "water_reminder"
+  | "praise"
+  | "system";
 export type GemTransactionType =
   | "welcome_bonus"
   | "daily_check_in"
@@ -30,6 +56,7 @@ export type GemTransactionType =
 
 type ProfileRow = {
   id: string;
+  role: ProfileRole;
   display_name: string;
   avatar_url: string | null;
   gender: string | null;
@@ -39,9 +66,12 @@ type ProfileRow = {
   is_natural: boolean;
   bio: string | null;
   country_code: string;
+  city_name: string | null;
   locale: string;
+  timezone: string;
   onboarding_status: OnboardingStatus;
   tier: SubscriptionTier;
+  billing_cycle: BillingCycle;
   tier_started_at: string | null;
   tier_expires_at: string | null;
   referral_code: string;
@@ -55,6 +85,7 @@ type ProfileRow = {
 type ProfileInsert = {
   id: string;
   referral_code: string;
+  role?: ProfileRole;
   display_name?: string;
   avatar_url?: string | null;
   gender?: string | null;
@@ -64,9 +95,12 @@ type ProfileInsert = {
   is_natural?: boolean;
   bio?: string | null;
   country_code?: string;
+  city_name?: string | null;
   locale?: string;
+  timezone?: string;
   onboarding_status?: OnboardingStatus;
   tier?: SubscriptionTier;
+  billing_cycle?: BillingCycle;
   tier_started_at?: string | null;
   tier_expires_at?: string | null;
   referred_by_code?: string | null;
@@ -77,6 +111,7 @@ type ProfileInsert = {
 };
 
 type ProfileUpdate = {
+  role?: ProfileRole;
   display_name?: string;
   avatar_url?: string | null;
   gender?: string | null;
@@ -86,9 +121,12 @@ type ProfileUpdate = {
   is_natural?: boolean;
   bio?: string | null;
   country_code?: string;
+  city_name?: string | null;
   locale?: string;
+  timezone?: string;
   onboarding_status?: OnboardingStatus;
   tier?: SubscriptionTier;
+  billing_cycle?: BillingCycle;
   tier_started_at?: string | null;
   tier_expires_at?: string | null;
   referred_by_code?: string | null;
@@ -185,6 +223,225 @@ type GemMutationArgs = {
   p_metadata?: Json | null;
 };
 
+type TierLimitsRow = {
+  tier: SubscriptionTier;
+  monthly_text_tokens: number;
+  maya_photos_daily: number;
+  leo_photos_weekly: number;
+};
+
+type UserUsageCounterRow = {
+  user_id: string;
+  text_tokens_used: number;
+  text_period_start: string;
+  maya_photos_used: number;
+  maya_period_date: string;
+  leo_photos_used: number;
+  leo_week_start: string;
+  updated_at: string;
+};
+
+type UsageEventRow = {
+  id: string;
+  user_id: string;
+  resource: UsageResource;
+  event_type: string;
+  usage_percent: number | null;
+  used: number | null;
+  limit_value: number | null;
+  metadata: Json | null;
+  created_at: string;
+};
+
+type AiProvider = "deepseek" | "gemini";
+
+type AiUsageLedgerRow = {
+  id: string;
+  user_id: string | null;
+  provider: AiProvider;
+  operation: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  estimated_usd_micro: number;
+  metadata: Json | null;
+  created_at: string;
+};
+
+type CostAlertRow = {
+  id: string;
+  alert_type: string;
+  severity: string;
+  message: string;
+  metadata: Json | null;
+  acknowledged: boolean;
+  created_at: string;
+};
+
+export type UsageCheckResult = {
+  allowed: boolean;
+  warning_trigger: WarningTrigger | null;
+  resource: UsageResource;
+  tier: SubscriptionTier;
+  used: number;
+  limit: number;
+  remaining: number;
+  percent: number;
+};
+
+export type UsageNode = {
+  used: number;
+  limit: number;
+  remaining: number;
+  percent: number;
+  warning: WarningTrigger | null;
+};
+
+export type UsageStatusResult = {
+  tier: SubscriptionTier;
+  text_tokens: UsageNode;
+  maya_photo: UsageNode;
+  leo_photo: UsageNode;
+};
+
+type CoachRow = {
+  id: string;
+  name: string;
+  role: string;
+  personality: string;
+  avatar_url: string;
+  theme: Json;
+  supports_vision: boolean;
+  ai_model: string;
+  vision_model: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+type ChatMessageRow = {
+  id: string;
+  user_id: string;
+  coach_id: string | null;
+  thread_type: ThreadType;
+  sender: MessageSender;
+  message_type: MessageType;
+  content: string | null;
+  payload: Json | null;
+  tokens_used: number;
+  locale: string;
+  created_at: string;
+};
+
+type ChatMessageInsert = {
+  id?: string;
+  user_id: string;
+  coach_id?: string | null;
+  thread_type?: ThreadType;
+  sender: MessageSender;
+  message_type?: MessageType;
+  content?: string | null;
+  payload?: Json | null;
+  tokens_used?: number;
+  locale?: string;
+  created_at?: string;
+};
+
+type UserCoachingStateRow = {
+  user_id: string;
+  motivation_style: string | null;
+  training_focus: string[];
+  nutrition_prefs: Json | null;
+  injury_notes: string | null;
+  posture_flags: Json | null;
+  last_workout_summary: string | null;
+  weekly_goals: Json | null;
+  deepseek_cache_key: string | null;
+  message_count_since_condense: number;
+  updated_at: string;
+};
+
+type CoachingMemoryRow = {
+  id: string;
+  user_id: string;
+  coach_id: string | null;
+  summary: string;
+  key_facts: Json;
+  source_range: Json | null;
+  token_saved: number | null;
+  created_at: string;
+};
+
+type CoachingMemoryInsert = {
+  id?: string;
+  user_id: string;
+  coach_id?: string | null;
+  summary: string;
+  key_facts?: Json;
+  source_range?: Json | null;
+  token_saved?: number | null;
+  created_at?: string;
+};
+
+type ApplySubscriptionArgs = {
+  p_user_id: string;
+  p_tier: SubscriptionTier;
+  p_billing_cycle: BillingCycle;
+};
+
+type ReferralRow = {
+  id: string;
+  referrer_id: string;
+  referred_id: string;
+  code: string;
+  discount_applied: boolean;
+  created_at: string;
+};
+
+type ReferralEventRow = {
+  id: string;
+  referral_id: string | null;
+  referrer_id: string;
+  referred_id: string;
+  event_type: string;
+  metadata: Json | null;
+  created_at: string;
+};
+
+export type ProcessReferralResult = {
+  applied: boolean;
+  duplicate: boolean;
+  referrer_id: string;
+  referral_id?: string;
+  discount_applied?: boolean;
+  bonus?: number;
+};
+
+export type GlobalLeaderboardEntry = {
+  rank: number;
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  country_code: string;
+  current_streak: number;
+  longest_streak: number;
+};
+
+export type CountryLeaderboardEntry = {
+  rank: number;
+  country_code: string;
+  total_streak: number;
+  user_count: number;
+  avg_streak: number;
+};
+
+export type UserRankResult = {
+  rank: number | null;
+  current_streak: number;
+  total_ranked: number;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -210,6 +467,299 @@ export type Database = {
         Row: UserKaiStateRow;
         Insert: { user_id: string } & Partial<Omit<UserKaiStateRow, "user_id">>;
         Update: Partial<UserKaiStateRow>;
+        Relationships: [];
+      };
+      tier_limits: {
+        Row: TierLimitsRow;
+        Insert: TierLimitsRow;
+        Update: Partial<TierLimitsRow>;
+        Relationships: [];
+      };
+      user_usage_counters: {
+        Row: UserUsageCounterRow;
+        Insert: { user_id: string } & Partial<Omit<UserUsageCounterRow, "user_id">>;
+        Update: Partial<UserUsageCounterRow>;
+        Relationships: [];
+      };
+      usage_events: {
+        Row: UsageEventRow;
+        Insert: { user_id: string } & Partial<Omit<UsageEventRow, "id" | "user_id">>;
+        Update: Partial<UsageEventRow>;
+        Relationships: [];
+      };
+      ai_usage_ledger: {
+        Row: AiUsageLedgerRow;
+        Insert: {
+          provider: AiProvider;
+          operation: string;
+        } & Partial<Omit<AiUsageLedgerRow, "id" | "provider" | "operation">>;
+        Update: Partial<AiUsageLedgerRow>;
+        Relationships: [];
+      };
+      cost_alerts: {
+        Row: CostAlertRow;
+        Insert: {
+          alert_type: string;
+          message: string;
+        } & Partial<Omit<CostAlertRow, "id" | "alert_type" | "message">>;
+        Update: Partial<CostAlertRow>;
+        Relationships: [];
+      };
+      coaches: {
+        Row: CoachRow;
+        Insert: CoachRow;
+        Update: Partial<CoachRow>;
+        Relationships: [];
+      };
+      chat_messages: {
+        Row: ChatMessageRow;
+        Insert: ChatMessageInsert;
+        Update: Partial<ChatMessageInsert>;
+        Relationships: [];
+      };
+      user_coaching_state: {
+        Row: UserCoachingStateRow;
+        Insert: { user_id: string } & Partial<Omit<UserCoachingStateRow, "user_id">>;
+        Update: Partial<UserCoachingStateRow>;
+        Relationships: [];
+      };
+      coaching_memory: {
+        Row: CoachingMemoryRow;
+        Insert: CoachingMemoryInsert;
+        Update: Partial<CoachingMemoryInsert>;
+        Relationships: [];
+      };
+      referrals: {
+        Row: ReferralRow;
+        Insert: { referrer_id: string; referred_id: string; code: string } & Partial<
+          Omit<ReferralRow, "referrer_id" | "referred_id" | "code">
+        >;
+        Update: Partial<ReferralRow>;
+        Relationships: [];
+      };
+      referral_events: {
+        Row: ReferralEventRow;
+        Insert: {
+          referrer_id: string;
+          referred_id: string;
+          event_type: string;
+        } & Partial<Omit<ReferralEventRow, "referrer_id" | "referred_id" | "event_type">>;
+        Update: Partial<ReferralEventRow>;
+        Relationships: [];
+      };
+      analytics_daily: {
+        Row: {
+          user_id: string;
+          entry_date: string;
+          weight_kg: number | null;
+          calories_consumed: number;
+          calories_burned: number;
+          calorie_goal: number;
+          workouts_completed: number;
+          workouts_target: number;
+          water_liters: number;
+          water_goal_liters: number;
+          steps: number;
+          protein_g: number;
+          carbs_g: number;
+          fat_g: number;
+          protein_goal_g: number;
+          carbs_goal_g: number;
+          fat_goal_g: number;
+          updated_at: string;
+        };
+        Insert: { user_id: string; entry_date?: string } & Partial<
+          Omit<Database["public"]["Tables"]["analytics_daily"]["Row"], "user_id" | "entry_date">
+        >;
+        Update: Partial<Database["public"]["Tables"]["analytics_daily"]["Row"]>;
+        Relationships: [];
+      };
+      health_steps: {
+        Row: {
+          id: string;
+          user_id: string;
+          entry_date: string;
+          steps: number;
+          source: string;
+          synced_at: string;
+        };
+        Insert: {
+          user_id: string;
+          entry_date: string;
+          steps: number;
+          source?: string;
+          synced_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["health_steps"]["Row"]>;
+        Relationships: [];
+      };
+      market_items: {
+        Row: {
+          id: string;
+          name_key: string;
+          price: number;
+          color_hex: string;
+          sort_order: number;
+        };
+        Insert: Database["public"]["Tables"]["market_items"]["Row"];
+        Update: Partial<Database["public"]["Tables"]["market_items"]["Row"]>;
+        Relationships: [];
+      };
+      user_market_inventory: {
+        Row: { user_id: string; item_id: string; purchased_at: string };
+        Insert: { user_id: string; item_id: string };
+        Update: Partial<Database["public"]["Tables"]["user_market_inventory"]["Row"]>;
+        Relationships: [];
+      };
+      user_settings: {
+        Row: {
+          user_id: string;
+          workout_reminders: boolean;
+          water_reminder: boolean;
+          sound_effects: boolean;
+          chat_sounds: boolean;
+          unit_system: string;
+          updated_at: string;
+        };
+        Insert: { user_id: string } & Partial<
+          Omit<Database["public"]["Tables"]["user_settings"]["Row"], "user_id">
+        >;
+        Update: Partial<Database["public"]["Tables"]["user_settings"]["Row"]>;
+        Relationships: [];
+      };
+      influencer_codes: {
+        Row: {
+          id: string;
+          code: string;
+          influencer_name: string;
+          discount_pct: number;
+          commission_pct: number;
+          wallet_balance: number;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          code: string;
+          influencer_name: string;
+          discount_pct?: number;
+          commission_pct?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["influencer_codes"]["Row"]>;
+        Relationships: [];
+      };
+      idempotency_keys: {
+        Row: {
+          id: string;
+          user_id: string;
+          endpoint: string;
+          idempotency_key: string;
+          request_hash: string;
+          status: "in_progress" | "completed";
+          response_status: number | null;
+          response_body: Json | null;
+          created_at: string;
+          expires_at: string;
+        };
+        Insert: {
+          user_id: string;
+          endpoint: string;
+          idempotency_key: string;
+          request_hash: string;
+          status?: "in_progress" | "completed";
+          response_status?: number | null;
+          response_body?: Json | null;
+          expires_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["idempotency_keys"]["Row"]>;
+        Relationships: [];
+      };
+      admin_audit_log: {
+        Row: {
+          id: string;
+          admin_id: string | null;
+          action: string;
+          target_type: string | null;
+          target_id: string | null;
+          metadata: Json | null;
+          ip: string | null;
+          created_at: string;
+        };
+        Insert: {
+          admin_id?: string | null;
+          action: string;
+          target_type?: string | null;
+          target_id?: string | null;
+          metadata?: Json | null;
+          ip?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["admin_audit_log"]["Row"]>;
+        Relationships: [];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: NotificationType;
+          title: string | null;
+          body: string | null;
+          title_key: string | null;
+          body_key: string | null;
+          params: Json | null;
+          read: boolean;
+          dedup_key: string | null;
+          created_at: string;
+          read_at: string | null;
+        };
+        Insert: {
+          user_id: string;
+          type: NotificationType;
+          title?: string | null;
+          body?: string | null;
+          title_key?: string | null;
+          body_key?: string | null;
+          params?: Json | null;
+          read?: boolean;
+          dedup_key?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["notifications"]["Row"]>;
+        Relationships: [];
+      };
+      push_subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["push_subscriptions"]["Row"]>;
+        Relationships: [];
+      };
+      native_push_tokens: {
+        Row: {
+          id: string;
+          user_id: string;
+          platform: "ios" | "android";
+          token: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          platform: "ios" | "android";
+          token: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["native_push_tokens"]["Row"]>;
         Relationships: [];
       };
     };
@@ -240,11 +790,110 @@ export type Database = {
         Args: GemMutationArgs;
         Returns: GemMutationResult;
       };
+      check_and_increment_usage: {
+        Args: {
+          p_user_id: string;
+          p_resource: UsageResource;
+          p_amount?: number;
+        };
+        Returns: UsageCheckResult;
+      };
+      refund_usage: {
+        Args: {
+          p_user_id: string;
+          p_resource: UsageResource;
+          p_amount: number;
+        };
+        Returns: undefined;
+      };
+      get_usage_status: {
+        Args: Record<string, never>;
+        Returns: UsageStatusResult;
+      };
+      apply_subscription: {
+        Args: ApplySubscriptionArgs;
+        Returns: ProfileRow;
+      };
+      increment_condense_counter: {
+        Args: { p_user_id: string; p_delta?: number };
+        Returns: number;
+      };
+      is_admin: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+      is_valid_timezone: {
+        Args: { p_tz: string };
+        Returns: boolean;
+      };
+      mark_notifications_read: {
+        Args: { p_ids?: string[] | null };
+        Returns: number;
+      };
+      get_inbox_previews: {
+        Args: { p_coach_ids: string[] };
+        Returns: {
+          coach_id: string;
+          content: string | null;
+          created_at: string;
+          sender: MessageSender;
+          message_type: MessageType;
+        }[];
+      };
+      process_referral: {
+        Args: { p_referred_id: string; p_code: string };
+        Returns: ProcessReferralResult;
+      };
+      get_global_leaderboard: {
+        Args: { p_limit?: number; p_offset?: number };
+        Returns: GlobalLeaderboardEntry[];
+      };
+      get_country_leaderboard: {
+        Args: { p_limit?: number };
+        Returns: CountryLeaderboardEntry[];
+      };
+      get_user_rank: {
+        Args: Record<string, never>;
+        Returns: UserRankResult;
+      };
+      upsert_analytics_daily: {
+        Args: { p_user_id: string; p_entry_date: string; p_patch: Json };
+        Returns: Database["public"]["Tables"]["analytics_daily"]["Row"];
+      };
+      purchase_market_item: {
+        Args: {
+          p_user_id: string;
+          p_item_id: string;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
+      };
+      admin_get_ai_cost_summary: {
+        Args: { p_days?: number };
+        Returns: Json;
+      };
+      admin_get_ai_cost_by_user: {
+        Args: { p_days?: number; p_limit?: number };
+        Returns: Json;
+      };
+      admin_get_quota_events: {
+        Args: { p_days?: number; p_limit?: number };
+        Returns: Json;
+      };
+      admin_get_overview_stats: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
     };
     Enums: {
       onboarding_status: OnboardingStatus;
       subscription_tier: SubscriptionTier;
       gem_transaction_type: GemTransactionType;
+      usage_resource: UsageResource;
+      message_sender: MessageSender;
+      message_type: MessageType;
+      notification_type: NotificationType;
+      ai_provider: AiProvider;
     };
     CompositeTypes: Record<string, never>;
   };

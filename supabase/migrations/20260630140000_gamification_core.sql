@@ -15,6 +15,22 @@
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
+-- 0. Bagimlilik guvencesi: updated_at yardimcisi (idempotent)
+-- ---------------------------------------------------------------------------
+-- Normalde migration 001'de olusturulur. Bu migration'in tek basina da
+-- calisabilmesi icin burada CREATE OR REPLACE ile garanti altina aliniyor.
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
 -- 1. Tablolar
 -- ---------------------------------------------------------------------------
 

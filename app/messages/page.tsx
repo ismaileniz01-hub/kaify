@@ -3,14 +3,44 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
 import { MessageRow } from "@/components/messages/MessageRow";
-import { CONTACT_LIST, CONTACTS, type ContactId } from "@/lib/contacts";
+import { type ContactId } from "@/lib/contacts";
 import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
+import { useSession } from "@/lib/session-context";
+import { apiGet } from "@/lib/api/client";
+import type { InboxCoachDTO } from "@/lib/services/messages.service";
+import { CONTACTS, CONTACT_LIST } from "@/lib/contacts";
 
 export default function MessagesPage() {
   const { t } = useLang();
   const { avatar: kaiAvatar } = useKai();
+  const { isAuthenticated, profile } = useSession();
+  const [inbox, setInbox] = useState<InboxCoachDTO[] | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    apiGet<{ inbox: InboxCoachDTO[] }>("/api/messages")
+      .then((res) => setInbox(res.inbox))
+      .catch(() => setInbox(null));
+  }, [isAuthenticated]);
+
+  const rows =
+    inbox ??
+    CONTACT_LIST.map((id) => {
+      const c = CONTACTS[id];
+      return {
+        coachId: id,
+        name: c.name,
+        role: c.role,
+        avatarUrl: c.avatar,
+        preview: c.preview,
+        time: c.time,
+        unreadCount: c.badge ?? 0,
+      };
+    });
+
   return (
     <div className="phone-shell messages-gradient messages-pattern relative flex flex-col">
       <header className="animate-in animate-in--1 relative flex items-center justify-between px-4 pb-3 pt-16">
@@ -26,62 +56,63 @@ export default function MessagesPage() {
           <div className="mt-0.5 h-px w-16 bg-gradient-to-r from-transparent via-purple-400/50 to-transparent" />
         </div>
         <span className="text-[11px] font-medium text-zinc-500">{t("messages.date")}</span>
-        {/* İnce çizgi — header altı */}
         <div className="absolute bottom-0 left-3 right-3 h-px bg-gradient-to-r from-transparent via-purple-400/30 to-transparent" />
       </header>
 
       <main className="flex-1 space-y-2.5 overflow-y-auto px-4 pb-8">
-        {CONTACT_LIST.map((id, i) => {
+        {rows.map((row, i) => {
+          const id = row.coachId as ContactId;
           const c = CONTACTS[id];
           return (
             <MessageRow
               key={id}
               index={i}
-              name={c.name}
-              role={c.role}
-              preview={c.preview}
-              time={c.time}
+              name={row.name}
+              role={row.role}
+              preview={row.preview}
+              time={row.time}
               href={`/chat/${id}`}
-              avatarSrc={id === "kai" ? kaiAvatar : c.avatar}
-              badge={c.badge}
+              avatarSrc={id === "kai" ? kaiAvatar : row.avatarUrl || c.avatar}
+              badge={row.unreadCount > 0 ? row.unreadCount : undefined}
               color={c.color.primary}
             />
           );
         })}
 
-        {/* All coaches — dikdörtgen buton, en altta */}
-        <div className="animate-in animate-in--8 pt-4">
-          <Link
-            href="/chat/team"
-            className="group flex w-full items-center justify-center gap-6 rounded-2xl border-2 border-purple-500/70 bg-[#1a0a2e] px-9 py-7 shadow-lg shadow-purple-500/20 transition hover:border-purple-400 hover:shadow-purple-500/40 active:scale-[0.98]"
-            style={{
-              boxShadow: "0 0 12px rgba(168, 85, 247, 0.25), inset 0 0 8px rgba(168, 85, 247, 0.08)",
-              animation: "color-shift 4s ease-in-out infinite",
-            }}
-          >
-            <div className="flex shrink-0 -space-x-3">
-              {CONTACT_LIST.map((id) => (
-                <div
-                  key={id}
-                  className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-purple-500/40 bg-zinc-900 shadow-md"
-                >
-                  <Image
-                    src={id === "kai" ? kaiAvatar : CONTACTS[id].avatar}
-                    alt={CONTACTS[id].name}
-                    width={56}
-                    height={56}
-                    className="h-full w-full object-contain p-0.5"
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="text-left">
-              <p className="text-xl font-semibold text-white">{t("messages.all_coaches")}</p>
-              <p className="text-base text-purple-300">{t("messages.team_chat")}</p>
-            </div>
-            <ChevronRight className="ml-auto h-6 w-6 shrink-0 text-purple-400/80 transition group-hover:text-purple-300" />
-          </Link>
-        </div>
+        <Link
+          href="/chat/team"
+          className={`animate-in mt-4 flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition ${
+            profile?.teamChatUnlocked || !isAuthenticated
+              ? "border-purple-500/20 bg-purple-500/10 hover:bg-purple-500/15"
+              : "border-zinc-700/50 bg-zinc-900/50 opacity-60"
+          }`}
+        >
+          <div className="flex -space-x-2">
+            {(["alex", "maya", "leo", "kai"] as ContactId[]).map((id) => (
+              <div
+                key={id}
+                className="relative h-8 w-8 overflow-hidden rounded-full border-2 border-zinc-900"
+              >
+                <Image
+                  src={id === "kai" ? kaiAvatar : CONTACTS[id].avatar}
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-white">{t("messages.team_title")}</p>
+            <p className="text-[11px] text-zinc-400">
+              {profile?.teamChatUnlocked || !isAuthenticated
+                ? t("messages.team_sub")
+                : "7 günlük seriden sonra açılır"}
+            </p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-zinc-500" />
+        </Link>
       </main>
     </div>
   );

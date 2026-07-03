@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
   type ReactNode,
 } from "react";
 import {
@@ -16,6 +17,9 @@ import {
   getTodayEarned,
 } from "./gems";
 import { DEMO_GEM_STATE } from "./user";
+import { useSession } from "./session-context";
+import { apiGet } from "./api/client";
+import type { GemBalanceDTO } from "./services/gem-balance.service";
 
 type GemContextValue = {
   gemState: GemState;
@@ -31,14 +35,28 @@ type GemContextValue = {
   lastTransaction: GemTransaction | null;
   /** Bugün kazanılan toplam */
   todayEarned: number;
+  /** API'den bakiye yenile */
+  refreshBalance?: () => Promise<void>;
 };
 
 const GemContext = createContext<GemContextValue | null>(null);
 
 export function GemProvider({ children }: { children: ReactNode }) {
+  const session = useSession();
   const [gemState, setGemState] = useState<GemState>(DEMO_GEM_STATE);
   const [lastTransaction, setLastTransaction] =
     useState<GemTransaction | null>(null);
+
+  useEffect(() => {
+    if (session.isAuthenticated) {
+      setGemState((prev) => ({
+        ...prev,
+        balance: session.gemBalance.balance,
+        totalEarned: session.gemBalance.totalEarned,
+        totalSpent: session.gemBalance.totalSpent,
+      }));
+    }
+  }, [session.isAuthenticated, session.gemBalance]);
 
   const earn = useCallback(
     (
@@ -70,6 +88,17 @@ export function GemProvider({ children }: { children: ReactNode }) {
 
   const todayEarned = getTodayEarned(gemState.history);
 
+  const refreshBalance = useCallback(async () => {
+    if (!session.isAuthenticated) return;
+    const balance = await apiGet<GemBalanceDTO>("/api/gems");
+    setGemState((prev) => ({
+      ...prev,
+      balance: balance.balance,
+      totalEarned: balance.totalEarned,
+      totalSpent: balance.totalSpent,
+    }));
+  }, [session.isAuthenticated]);
+
   return (
     <GemContext.Provider
       value={{
@@ -78,6 +107,7 @@ export function GemProvider({ children }: { children: ReactNode }) {
         spend,
         lastTransaction,
         todayEarned,
+        refreshBalance,
       }}
     >
       {children}

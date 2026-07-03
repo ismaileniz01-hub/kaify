@@ -25,6 +25,7 @@
 .env.local
 .env*.local
 .env.production
+.env.sentry-build-plugin
 .vercel
 
 # local avatars (not used in app, duplicates of public/avatars/)
@@ -36,3 +37,8 @@
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Capacitor / Firebase (download locally, do not commit)
+android/app/google-services.json
+ios/App/GoogleService-Info.plist
+.env*

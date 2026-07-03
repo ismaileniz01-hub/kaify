@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, Trophy, X, Crown, Medal, Award, Flame } from "lucide-react";
+import { Globe, X, Crown, Medal, Award, Flame } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLang } from "@/lib/lang-context";
 
@@ -48,7 +48,7 @@ export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClo
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
-    fetch("/api/country-leaderboard?userId=user_001")
+    fetch("/api/country-leaderboard")
       .then((res) => res.json())
       .then((json) => {
         setData(json);

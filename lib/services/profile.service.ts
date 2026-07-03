@@ -1,8 +1,10 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
+import { logger } from "@/lib/logger";
 import type { Database } from "@/lib/types/database.types";
 import { mapProfileRow, type ProfileDTO } from "@/lib/types/domain.types";
 import type { ProfileUpdateInput } from "@/lib/validations/profile.schema";
+import { applyLegacyProfileWrites } from "@/lib/supabase/profile-compat";
 
 type ProfileUpdateColumns = Database["public"]["Tables"]["profiles"]["Update"];
 
@@ -48,22 +50,27 @@ export async function updateOwnProfile(
   if (patch.isNatural !== undefined) updates.is_natural = patch.isNatural;
   if (patch.bio !== undefined) updates.bio = patch.bio === "" ? null : patch.bio;
   if (patch.countryCode !== undefined) updates.country_code = patch.countryCode;
+  if (patch.cityName !== undefined) updates.city_name = patch.cityName === "" ? null : patch.cityName;
   if (patch.locale !== undefined) updates.locale = patch.locale;
+  if (patch.timezone !== undefined) updates.timezone = patch.timezone;
+
+  const payload = applyLegacyProfileWrites(
+    updates as Record<string, unknown>,
+  ) as ProfileUpdateColumns;
 
   const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from("profiles")
-    .update(updates)
+    .update(payload)
     .eq("id", userId)
     .select("*")
     .single();
 
   if (error || !data) {
-    console.error(
-      "[profile.service:update] error:",
-      error?.message ?? "no row returned",
-    );
+    logger.error("[profile.service:update] error", {
+      error: error?.message ?? "no row returned",
+    });
     throw new ApiError("INTERNAL_ERROR", "Profil güncellenemedi.");
   }
 

@@ -1,0 +1,3 @@
+{
+  "_comment": "Download from Firebase Console → Project settings → Your apps → Android (org.kaify.app) → google-services.json. Save as android/app/google-services.json (do not commit secrets to public repos)."
+}

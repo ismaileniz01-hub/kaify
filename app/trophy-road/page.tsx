@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { ArrowLeft, Check, ShoppingCart, Sparkles, PartyPopper } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSession } from "@/lib/session-context";
+import { apiGet, apiPost, apiPatch } from "@/lib/api/client";
 import { GemBalance } from "@/components/GemBalance";
 import { useGem } from "@/lib/gem-context";
 import { useKai, type AuraColor } from "@/lib/kai-context";
@@ -135,18 +137,41 @@ const EFFECTS: EffectColor[] = [
 
 export default function MarketPage() {
   const { t } = useLang();
-  const { gemState, spend } = useGem();
-  const { ownedEffects, purchaseEffect, setAuraColor, auraColor } = useKai();
+  const { gemState, spend, refreshBalance } = useGem();
+  const { ownedEffects, purchaseEffect, setAuraColor, auraColor, syncFromServer } = useKai();
+  const { isAuthenticated } = useSession();
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [successEffect, setSuccessEffect] = useState<EffectColor | null>(null);
 
-  const handleBuy = (effect: EffectColor) => {
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    apiGet<{ ownedIds: string[]; activeAura: string }>("/api/market")
+      .then((state) => {
+        syncFromServer(state.ownedIds, state.activeAura);
+      })
+      .catch(() => undefined);
+  }, [isAuthenticated, syncFromServer]);
+
+  const handleBuy = async (effect: EffectColor) => {
     if (ownedEffects.includes(effect.id)) return;
     if (gemState.balance < effect.price) return;
 
     setPurchasing(effect.id);
 
-    // Satın alma animasyonu
+    if (isAuthenticated) {
+      try {
+        await apiPost("/api/market/purchase", { itemId: effect.id });
+        purchaseEffect(effect.id);
+        await refreshBalance?.();
+        setSuccessEffect(effect);
+      } catch {
+        // insufficient gems etc.
+      } finally {
+        setPurchasing(null);
+      }
+      return;
+    }
+
     setTimeout(() => {
       const success = spend(effect.price, `${t(effect.nameKey)} efekti satın alındı`);
       if (success) {
@@ -157,7 +182,14 @@ export default function MarketPage() {
     }, 800);
   };
 
-  const handleApply = (effect: EffectColor) => {
+  const handleApply = async (effect: EffectColor) => {
+    if (isAuthenticated) {
+      try {
+        await apiPatch("/api/market/purchase", { itemId: effect.id });
+      } catch {
+        return;
+      }
+    }
     setAuraColor(effect.id);
     setSuccessEffect(null);
   };

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Anti-MITM network policy.
+
+  - Production: NO cleartext (HTTPS only) and trust ONLY the system CA store.
+    Excluding user-added CAs blocks traffic interception via a user-installed
+    proxy certificate (Burp/Charles) on non-rooted devices.
+  - Local dev: cleartext is permitted ONLY for the emulator/localhost hosts.
+
+  SSL pinning (optional, stronger anti-MITM) is templated below — fill in real
+  SHA-256 pins and uncomment before enabling. Keep a backup pin and an
+  expiration so a cert rotation cannot brick the app.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Local development only. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+
+    <!--
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">kaify.org</domain>
+        <pin-set expiration="2027-06-01">
+            <pin digest="SHA-256">REPLACE_WITH_LEAF_OR_INTERMEDIATE_PIN=</pin>
+            <pin digest="SHA-256">REPLACE_WITH_BACKUP_PIN=</pin>
+        </pin-set>
+    </domain-config>
+    -->
+</network-security-config>

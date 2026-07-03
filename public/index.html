@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <title>K.AIFY</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <style>
+      body {
+        margin: 0;
+        background: #0a0a0a;
+        color: #a1a1aa;
+        font-family: system-ui, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <p>Loading K.AIFY…</p>
+    <script>
+      // Fallback when Capacitor server.url is unreachable (offline boot).
+      window.location.replace("/welcome");
+    </script>
+  </body>
+</html>

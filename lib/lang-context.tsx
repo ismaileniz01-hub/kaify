@@ -82,6 +82,35 @@ export type UnitSystem = "metric" | "imperial";
 
 type LangDict = Record<string, string>;
 
+/** Right-to-left languages — the document direction must flip for these. */
+const RTL_LANGS: ReadonlySet<LangCode> = new Set<LangCode>([
+  "ar",
+  "he",
+  "fa",
+  "ur",
+]);
+
+export function isRtlLang(code: LangCode): boolean {
+  return RTL_LANGS.has(code);
+}
+
+/**
+ * Persists the chosen language to the user's profile so the BACKEND
+ * (push notifications, AI coach replies) speaks the same language as the UI.
+ * Fire-and-forget: anonymous users (401) and offline failures are ignored.
+ */
+function persistLocaleToProfile(code: LangCode): void {
+  if (typeof window === "undefined") return;
+  void fetch("/api/profile", {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ locale: code }),
+  }).catch(() => {
+    // Non-fatal: language still applies locally via localStorage.
+  });
+}
+
 interface LangContextType {
   /** Mevcut dil kodu */
   lang: LangCode;
@@ -105,8 +134,14 @@ const UNIT_STORAGE_KEY = "kaify-unit";
 
 function detectBrowserLang(): LangCode {
   if (typeof window === "undefined") return "en";
-  const navLang = navigator.language?.toLowerCase() || "";
+  const navLang = (navigator.language ?? "en").toLowerCase();
+  const base = navLang.split("-")[0];
+  const exact = LANG_OPTIONS.find((o) => o.code === navLang || o.code === base);
+  if (exact) return exact.code;
   if (navLang.startsWith("tr")) return "tr";
+  if (navLang.startsWith("de")) return "de";
+  if (navLang.startsWith("fr")) return "fr";
+  if (navLang.startsWith("es")) return "es";
   return "en";
 }
 
@@ -215,8 +250,11 @@ export function LangProvider({ children }: { children: ReactNode }) {
   const setLang = useCallback((code: LangCode) => {
     localStorage.setItem(STORAGE_KEY, code);
     setLangState(code);
-    // html lang attribute'unu güncelle
+    // html lang + dir attribute'larını güncelle (RTL diller için)
     document.documentElement.lang = code;
+    document.documentElement.dir = isRtlLang(code) ? "rtl" : "ltr";
+    // Dili backend profiline yaz (push/AI aynı dili konuşsun)
+    persistLocaleToProfile(code);
   }, []);
 
   const setUnit = useCallback((newUnit: UnitSystem) => {
@@ -229,6 +267,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (mounted) {
       document.documentElement.lang = lang;
+      document.documentElement.dir = isRtlLang(lang) ? "rtl" : "ltr";
     }
   }, [mounted, lang]);
 

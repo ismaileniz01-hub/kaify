@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDisposableRisk } from "./disposable-domains";
+import { logger } from "@/lib/logger";
 
 // ──────────────────────────────────────────────
 // 1. Zod Schemas — Tüm API route'ları için
@@ -62,10 +63,14 @@ export const leaderboardQuerySchema = z.object({
 
 export async function validateRecaptcha(token: string): Promise<boolean> {
   const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+  const isProduction = process.env.NODE_ENV === "production";
 
-  // reCAPTCHA yapılandırılmamışsa (development/placeholder) doğrulamayı atla
   if (!secretKey || secretKey.includes("your_") || secretKey.includes("_here")) {
-    console.warn("[security] RECAPTCHA_SECRET_KEY is not configured — skipping validation");
+    if (isProduction) {
+      logger.error("[security] RECAPTCHA_SECRET_KEY is missing in production");
+      return false;
+    }
+    logger.warn("[security] RECAPTCHA_SECRET_KEY is not configured — skipping validation");
     return true;
   }
 
@@ -82,7 +87,9 @@ export async function validateRecaptcha(token: string): Promise<boolean> {
     const data = await response.json();
     return data.success === true;
   } catch (error) {
-    console.error("[security] reCAPTCHA validation error:", error);
+    logger.error("[security] reCAPTCHA validation error", {
+      error: error instanceof Error ? error.message : "unknown",
+    });
     return false;
   }
 }
@@ -121,15 +128,15 @@ export function checkDisposableEmail(email: string): {
 // ──────────────────────────────────────────────
 
 export function getClientIP(request: NextRequest): string {
-  // Cloudflare'dan gelip gelmediğini kontrol et
-  const isCloudflare = request.headers.get("cf-ray") !== null;
-
-  if (isCloudflare) {
-    // Cloudflare arkasındaysak CF-Connecting-IP güvenilir
+  if (request.headers.get("cf-ray")) {
     return request.headers.get("cf-connecting-ip") || "unknown";
   }
 
-  // Local development, Vercel Preview, test ortamları
+  // Vercel sets x-real-ip at the edge; do not trust client-supplied x-forwarded-for.
+  if (process.env.VERCEL) {
+    return request.headers.get("x-real-ip") || "unknown";
+  }
+
   return (
     request.headers.get("x-real-ip") ||
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -148,9 +155,10 @@ export async function parseBodyWithLimit(
 ): Promise<unknown | null> {
   const text = await request.text();
   if (text.length > MAX_BODY_SIZE) {
-    console.warn(
-      `[security] Body too large: ${text.length} bytes (max ${MAX_BODY_SIZE})`
-    );
+    logger.warn("[security] Body too large", {
+      bytes: text.length,
+      max: MAX_BODY_SIZE,
+    });
     return null;
   }
   try {

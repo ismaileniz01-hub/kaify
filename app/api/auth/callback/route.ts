@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -52,16 +53,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
-      console.error("[api/auth/callback] exchange failed:", error.message);
+      logger.error("[api/auth/callback] exchange failed", { error: error.message });
       return redirectTo("/login?error=auth_callback_failed");
     }
 
     return redirectTo(safeNext);
   } catch (error) {
-    console.error(
-      "[api/auth/callback] unexpected error:",
-      error instanceof Error ? error.message : "unknown",
-    );
+    logger.error("[api/auth/callback] unexpected error", {
+      error: error instanceof Error ? error.message : "unknown",
+    });
     return redirectTo("/login?error=auth_callback_failed");
   }
 }

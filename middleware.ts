@@ -1,29 +1,14 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { getClientIP, isLikelyBot, isAllowedOrigin } from "@/lib/api-security";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { buildContentSecurityPolicy, generateCspNonce } from "@/lib/security/csp";
+import { logger } from "@/lib/logger";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
-
-// ──────────────────────────────────────────────
-// In-memory rate limiter (Vercel Edge Runtime)
-// Production'da Upstash Redis ile değiştirilmeli
-// ──────────────────────────────────────────────
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-
 const RATE_LIMIT_CONFIG = {
-  "/api/": { requests: 20, windowMs: 60 * 1000 },   // 20 req/min for API
-  "/": { requests: 100, windowMs: 60 * 1000 },       // 100 req/min for pages
+  api: { requests: 60, windowMs: 60 * 1000 },
+  page: { requests: 120, windowMs: 60 * 1000 },
 };
 
-function getRateLimit(pathname: string) {
-  for (const [path, config] of Object.entries(RATE_LIMIT_CONFIG)) {
-    if (pathname.startsWith(path)) return config;
-  }
-  return RATE_LIMIT_CONFIG["/"];
-}
-
-// ──────────────────────────────────────────────
-// Suspicious path patterns (bots/scanners)
-// ──────────────────────────────────────────────
 const SUSPICIOUS_PATHS = [
   "/wp-admin", "/wp-login", "/.env", "/config.php",
   "/phpinfo", "/.git", "/admin.php", "/shell.php",
@@ -38,87 +23,87 @@ const SUSPICIOUS_PATHS = [
   "/.well-known/security.txt",
 ];
 
+function getRateLimitBucket(pathname: string) {
+  return pathname.startsWith("/api/") ? "api" : "page";
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const ip = getClientIP(request);
-  const now = Date.now();
-
-  // ── 1. Block suspicious paths ──
+  const nonce = generateCspNonce();
+  const requestId = crypto.randomUUID();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("x-request-id", requestId);
+  const forwardedRequest = new NextRequest(request.url, {
+    headers: requestHeaders,
+    method: request.method,
+  });
   if (SUSPICIOUS_PATHS.some((p) => pathname.toLowerCase().includes(p))) {
-    console.warn(`[middleware] Blocked suspicious path: ${pathname} from IP: ${ip}`);
+    logger.warn("middleware blocked suspicious path", { requestId, pathname, ip });
     return new NextResponse(null, { status: 404 });
   }
 
-  // ── 2. Bot detection (API routes only) ──
-  // TEMPORARILY DISABLED for testing
-  // if (pathname.startsWith("/api/") && isLikelyBot(request)) {
-  //   console.warn(`[middleware] Blocked bot request to ${pathname} from IP: ${ip}`);
-  //   return new NextResponse(
-  //     JSON.stringify({ error: "Access denied" }),
-  //     {
-  //       status: 403,
-  //       headers: { "Content-Type": "application/json" },
-  //     }
-  //   );
-  // }
-  void isLikelyBot;
-
-  // ── 3. Origin validation (POST/PUT/DELETE API routes) ──
-  if (
-    pathname.startsWith("/api/") &&
-    ["POST", "PUT", "DELETE"].includes(request.method) &&
-    !isAllowedOrigin(request)
-  ) {
-    console.warn(
-      `[middleware] Blocked cross-origin request: ${request.method} ${pathname} from IP: ${ip}`
-    );
+  if (pathname.startsWith("/api/") && isLikelyBot(request)) {
+    logger.warn("middleware blocked bot request", { requestId, pathname, ip });
     return new NextResponse(
       JSON.stringify({ error: "Access denied" }),
-      {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      }
+      { status: 403, headers: { "Content-Type": "application/json" } },
     );
   }
 
-  // ── 4. Rate limiting ──
-  const key = `${ip}:${pathname}`;
-  const config = getRateLimit(pathname);
-  const record = rateLimitMap.get(key);
-
-  if (!record || now > record.resetTime) {
-    rateLimitMap.set(key, { count: 1, resetTime: now + config.windowMs });
-  } else {
-    record.count++;
-    if (record.count > config.requests) {
-      console.warn(
-        `[middleware] Rate limit exceeded for ${pathname} from IP: ${ip}`
-      );
-      return new NextResponse(
-        JSON.stringify({ error: "Too many requests. Please try again later." }),
-        {
-          status: 429,
-          headers: {
-            "Content-Type": "application/json",
-            "Retry-After": "60",
-            "X-RateLimit-Limit": String(config.requests),
-            "X-RateLimit-Remaining": "0",
-          },
-        }
-      );
-    }
+  if (
+    pathname.startsWith("/api/") &&
+    ["POST", "PUT", "DELETE", "PATCH"].includes(request.method) &&
+    !isAllowedOrigin(request)
+  ) {
+    logger.warn("middleware blocked cross-origin request", {
+      requestId,
+      method: request.method,
+      pathname,
+      ip,
+    });
+    return new NextResponse(
+      JSON.stringify({ error: "Access denied" }),
+      { status: 403, headers: { "Content-Type": "application/json" } },
+    );
   }
 
-  // ── 5. Supabase session refresh (auth cookie sync) ──
-  // Tum guvenlik kontrollerinden gectikten sonra oturum yenilenir ve auth
-  // cookie'leri bu response uzerinde senkronize edilir.
-  const { response } = await updateSupabaseSession(request);
+  if (pathname === "/api/health" || pathname.startsWith("/api/cron/")) {
+    const { response } = await updateSupabaseSession(forwardedRequest);
+    response.headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce));
+    response.headers.set("X-Request-ID", requestId);
+    return response;
+  }
+  const bucket = getRateLimitBucket(pathname);
+  const config = RATE_LIMIT_CONFIG[bucket];
+  const rateLimit = await checkRateLimit(`${bucket}:${ip}`, config);
 
-  // ── 6. Add security headers ──
-  response.headers.set("X-Request-ID", crypto.randomUUID());
+  if (!rateLimit.allowed) {
+    logger.warn("middleware rate limit exceeded", { requestId, bucket, ip });
+    return new NextResponse(
+      JSON.stringify({ error: "Too many requests. Please try again later." }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(Math.ceil(rateLimit.resetMs / 1000)),
+          "X-RateLimit-Limit": String(rateLimit.limit),
+          "X-RateLimit-Remaining": String(rateLimit.remaining),
+        },
+      },
+    );
+  }
+
+  const { response } = await updateSupabaseSession(forwardedRequest);
+
+  response.headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce));
+  response.headers.set("X-Request-ID", requestId);
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-XSS-Protection", "1; mode=block");
+  response.headers.set("X-RateLimit-Limit", String(rateLimit.limit));
+  response.headers.set("X-RateLimit-Remaining", String(rateLimit.remaining));
 
   return response;
 }

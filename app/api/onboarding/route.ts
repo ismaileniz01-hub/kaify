@@ -34,6 +34,6 @@ export async function POST(request: NextRequest) {
     const profile = await completeOnboarding(parsed.data);
     return ok(profile);
   } catch (error) {
-    return handleApiError(error);
+    return handleApiError(error, { route: "/api/onboarding" });
   }
 }

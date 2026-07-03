@@ -5,6 +5,17 @@ import {
   localeSchema,
 } from "@/lib/validations/onboarding.schema";
 
+/** True when `tz` is a valid IANA timezone the runtime recognizes. */
+export function isValidTimezone(tz: string): boolean {
+  if (!tz || tz.length > 64) return false;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * PATCH /api/profile body schema.
  *
@@ -29,7 +40,13 @@ export const profileUpdateSchema = z
       .length(2, "Country code must be 2 letters")
       .regex(/^[A-Za-z]{2}$/, "Invalid country code")
       .transform((value) => value.toUpperCase()),
+    cityName: z.string().trim().min(1).max(100),
     locale: localeSchema,
+    timezone: z
+      .string()
+      .trim()
+      .max(64)
+      .refine(isValidTimezone, "Invalid IANA timezone"),
   })
   .partial()
   .strict()

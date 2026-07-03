@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
+import { logger } from "@/lib/logger";
 import { mapProfileRow, type ProfileDTO } from "@/lib/types/domain.types";
 import type { OnboardingInput } from "@/lib/validations/onboarding.schema";
 
@@ -19,7 +20,7 @@ function mapRpcError(
   if (error.code === "P0002") {
     return new ApiError("NOT_FOUND", "Profil bulunamadı.");
   }
-  console.error(`[${context}] rpc error:`, error.message);
+  logger.error(`[${context}] rpc error`, { error: error.message });
   return new ApiError("INTERNAL_ERROR", "İşlem tamamlanamadı.");
 }
 

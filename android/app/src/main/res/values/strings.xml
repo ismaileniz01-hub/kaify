@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">K.AIFY</string>
+    <string name="title_activity_main">K.AIFY</string>
+    <string name="package_name">org.kaify.app</string>
+    <string name="custom_url_scheme">org.kaify.app</string>
+</resources>

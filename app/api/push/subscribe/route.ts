@@ -1,0 +1,62 @@
+import { type NextRequest } from "next/server";
+import { z } from "zod";
+import { requireUser } from "@/lib/api/auth-guard";
+import { ApiError } from "@/lib/api/errors";
+import { handleApiError, ok } from "@/lib/api/response";
+import {
+  deleteSubscription,
+  saveSubscription,
+} from "@/lib/services/push.service";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const subscriptionSchema = z.object({
+  endpoint: z.string().url().max(2048),
+  keys: z.object({
+    p256dh: z.string().min(1).max(512),
+    auth: z.string().min(1).max(512),
+  }),
+});
+
+/** POST /api/push/subscribe — register this device for Web Push. */
+export async function POST(request: NextRequest) {
+  try {
+    const user = await requireUser();
+
+    const raw = await request.json().catch(() => null);
+    const parsed = subscriptionSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new ApiError("VALIDATION_ERROR", "Geçersiz abonelik.", parsed.error.issues);
+    }
+
+    const userAgent = request.headers.get("user-agent");
+    await saveSubscription(user.id, parsed.data, userAgent);
+
+    return ok({ subscribed: true });
+  } catch (error) {
+    return handleApiError(error, { route: "/api/push/subscribe" });
+  }
+}
+
+const unsubscribeSchema = z.object({
+  endpoint: z.string().url().max(2048),
+});
+
+/** DELETE /api/push/subscribe — remove this device's subscription. */
+export async function DELETE(request: NextRequest) {
+  try {
+    const user = await requireUser();
+
+    const raw = await request.json().catch(() => null);
+    const parsed = unsubscribeSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new ApiError("VALIDATION_ERROR", "Geçersiz istek.", parsed.error.issues);
+    }
+
+    await deleteSubscription(user.id, parsed.data.endpoint);
+    return ok({ unsubscribed: true });
+  } catch (error) {
+    return handleApiError(error, { route: "/api/push/subscribe" });
+  }
+}

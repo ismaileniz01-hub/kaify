@@ -1,4 +1,18 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron/cleanup",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/cost-check",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/self-recovery",
+      "schedule": "*/15 * * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -15,7 +29,10 @@
     }
   ],
   "functions": {
-    "app/api/**": {
+    "app/api/chat/**/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/**/route.ts": {
       "maxDuration": 10
     }
   }

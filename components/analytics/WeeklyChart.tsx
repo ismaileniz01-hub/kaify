@@ -5,6 +5,10 @@ import { useLang } from "@/lib/lang-context";
 
 type Period = "W" | "M" | "3M";
 
+type StepsPoint = { date: string; steps: number };
+
+const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+
 const PERIOD_DATA: Record<Period, { labels: string[]; values: number[] }> = {
   W: {
     labels: ["M", "T", "W", "T", "F", "S", "S"],
@@ -37,7 +41,7 @@ function toPoints(values: number[]) {
     .join(" ");
 }
 
-export function WeeklyChart() {
+export function WeeklyChart({ stepsData }: { stepsData?: StepsPoint[] }) {
   const { t } = useLang();
   const [period, setPeriod] = useState<Period>("W");
   const polylineRef = useRef<SVGPolylineElement>(null);
@@ -48,7 +52,18 @@ export function WeeklyChart() {
   const [visibleDots, setVisibleDots] = useState(0);
   const [animatedPoints, setAnimatedPoints] = useState("");
 
-  const data = PERIOD_DATA[period];
+  const liveWeek =
+    stepsData && stepsData.length > 0
+      ? {
+          labels: stepsData.map((d) => {
+            const day = new Date(`${d.date}T12:00:00`).getDay();
+            return DAY_LABELS[day] ?? "D";
+          }),
+          values: stepsData.map((d) => d.steps),
+        }
+      : null;
+
+  const data = period === "W" && liveWeek ? liveWeek : PERIOD_DATA[period];
   const max = Math.max(...data.values);
   const min = Math.min(...data.values);
   const range = max - min || 1;

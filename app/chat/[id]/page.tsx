@@ -8,12 +8,15 @@ import { useState, useRef } from "react";
 import { ChatBubbles } from "@/components/ChatBubbles";
 import { ContactAvatar } from "@/components/ContactAvatar";
 import { ImagePickerModal } from "@/components/ImagePickerModal";
-import { getContact, CONTACTS, type ContactId } from "@/lib/contacts";
+import { getContact, type ContactId } from "@/lib/contacts";
 import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
+import { useSession } from "@/lib/session-context";
+import { LiveChatPanel } from "@/components/chat/LiveChatPanel";
 
 export default function ChatPage() {
   const { t } = useLang();
+  const { isAuthenticated } = useSession();
   const params = useParams();
   const id = params.id as string;
   const contact = getContact(id);
@@ -143,68 +146,103 @@ export default function ChatPage() {
         />
       </header>
 
-      <div className="relative z-10 flex flex-1 flex-col overflow-y-auto">
-        <ChatBubbles contactId={contactId} onTypingChange={handleTypingChange} onUserTyping={handleUserTyping} onConversationEnd={handleConversationEnd} userMessages={userMessages} />
-      </div>
-
-      <div className="pointer-events-none absolute bottom-32 left-3 z-20">
-        <ContactAvatar
-          src={
-            contactId === "alex" && avatarState === "typing" ? "/avatars/alex 1.png" :
-            contactId === "alex" && avatarState === "sent" ? "/avatars/alex 2.png" :
-            contactId === "maya" && avatarState === "typing" ? "/avatars/dr maya 1.png" :
-            contactId === "maya" && avatarState === "sent" ? "/avatars/dr maya 2.png" :
-            contactId === "leo" && avatarState === "typing" ? "/avatars/leo-1.png" :
-            contactId === "leo" && avatarState === "sent" ? "/avatars/leo-2.png" :
-            contactId === "kai" ? kaiAvatar :
-            contact.avatar
-          }
-          alt={contact.name}
-          size="xl"
-          pulse={false}
-          effect={getEffect()}
-          auraColor={contactId === "kai" ? auraColor : "default"}
-        />
-      </div>
-
-      <footer className="relative z-30 px-3 pb-8 pt-2">
-        <div className="glass-input flex items-center gap-2 rounded-full px-2 py-2">
-          {contactId !== "kai" && contactId !== "alex" && (
-            <button
-              type="button"
-              onClick={() => setShowImagePicker(true)}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:bg-white/5 hover:text-purple-400"
-              aria-label={t("chat.aria.photo")}
-            >
-              <Camera className="h-5 w-5" />
-            </button>
-          )}
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder={t("chat.placeholder.chat")}
-            className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+      <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
+        {isAuthenticated ? (
+          <LiveChatPanel
+            coachId={contactId}
+            onCoachTyping={(typing) => {
+              if (typing) {
+                if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+                setAvatarState("typing");
+              } else {
+                setAvatarState("sent");
+                if (contactId === "kai") {
+                  idleTimerRef.current = setTimeout(() => setAvatarState("idle"), 2000);
+                }
+              }
+            }}
           />
-          <button
-            type="button"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:bg-white/5 hover:text-purple-400"
-            aria-label={t("chat.aria.voice")}
-          >
-            <Mic className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={!inputValue.trim()}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-500 text-white shadow-md shadow-purple-500/40 transition active:scale-95 disabled:opacity-40"
-            aria-label={t("chat.aria.send")}
-          >
-            <Send className="h-4 w-4" />
-          </button>
+        ) : (
+          <>
+            <div className="flex-1 overflow-y-auto">
+              <ChatBubbles
+                contactId={contactId}
+                onTypingChange={handleTypingChange}
+                onUserTyping={handleUserTyping}
+                onConversationEnd={handleConversationEnd}
+                userMessages={userMessages}
+              />
+            </div>
+            <footer className="relative z-30 px-3 pb-8 pt-2">
+              <div className="glass-input flex items-center gap-2 rounded-full px-2 py-2">
+                {contactId !== "kai" && contactId !== "alex" && (
+                  <button
+                    type="button"
+                    onClick={() => setShowImagePicker(true)}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:bg-white/5 hover:text-purple-400"
+                    aria-label={t("chat.aria.photo")}
+                  >
+                    <Camera className="h-5 w-5" />
+                  </button>
+                )}
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                  placeholder={t("chat.placeholder.chat")}
+                  className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:bg-white/5 hover:text-purple-400"
+                  aria-label={t("chat.aria.voice")}
+                >
+                  <Mic className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSend}
+                  disabled={!inputValue.trim()}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-500 text-white shadow-md shadow-purple-500/40 transition active:scale-95 disabled:opacity-40"
+                  aria-label={t("chat.aria.send")}
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
+            </footer>
+          </>
+        )}
+      </div>
+
+      {!isAuthenticated && (
+        <div className="pointer-events-none absolute bottom-32 left-3 z-20">
+          <ContactAvatar
+            src={
+              contactId === "alex" && avatarState === "typing"
+                ? "/avatars/alex 1.png"
+                : contactId === "alex" && avatarState === "sent"
+                  ? "/avatars/alex 2.png"
+                  : contactId === "maya" && avatarState === "typing"
+                    ? "/avatars/dr maya 1.png"
+                    : contactId === "maya" && avatarState === "sent"
+                      ? "/avatars/dr maya 2.png"
+                      : contactId === "leo" && avatarState === "typing"
+                        ? "/avatars/leo-1.png"
+                        : contactId === "leo" && avatarState === "sent"
+                          ? "/avatars/leo-2.png"
+                          : contactId === "kai"
+                            ? kaiAvatar
+                            : contact.avatar
+            }
+            alt={contact.name}
+            size="xl"
+            pulse={false}
+            effect={getEffect()}
+            auraColor={contactId === "kai" ? auraColor : "default"}
+          />
         </div>
-      </footer>
+      )}
 
       <ImagePickerModal
         isOpen={showImagePicker}

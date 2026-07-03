@@ -1,0 +1,47 @@
+/**
+ * Central AI cost controls — SERVER ONLY.
+ *
+ * One place to tune provider spend WITHOUT degrading quality. Every value is a
+ * completion (output) token ceiling unless noted, and each can be overridden in
+ * production via an env var for live tuning with no code change.
+ *
+ * Why caps improve quality *and* cost: a coach that texts like a human sends
+ * short, warm messages — an uncapped model tends to ramble, which is both more
+ * expensive and less human. The ceilings below are generous enough that normal
+ * replies are never truncated.
+ */
+
+function envInt(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+export const TOKEN_BUDGET = {
+  /** Main coach chat reply (DeepSeek stream). */
+  chatReply: envInt("AI_MAX_CHAT_TOKENS", 800),
+  /** Image analysis → personalized summary (DeepSeek synthesis). */
+  synthesis: envInt("AI_MAX_SYNTHESIS_TOKENS", 700),
+  /** Structured card JSON (workout / meal / daily summary). */
+  structuredCard: envInt("AI_MAX_CARD_TOKENS", 900),
+  /** Analytics extraction JSON (small). */
+  analytics: envInt("AI_MAX_ANALYTICS_TOKENS", 120),
+  /** Memory condensation summary. */
+  memory: envInt("AI_MAX_MEMORY_TOKENS", 350),
+  /** Team meeting turn. */
+  teamChat: envInt("AI_MAX_TEAM_TOKENS", 700),
+  /** Home screen motivational copy. */
+  homeCopy: envInt("AI_MAX_HOME_TOKENS", 160),
+} as const;
+
+export const CONTEXT_BUDGET = {
+  /**
+   * Recent chat turns sent as context on each message. Older facts are carried
+   * by condensed memory, so a smaller window trims input cost without the coach
+   * "forgetting" the conversation.
+   */
+  historyTurns: envInt("AI_CONTEXT_TURNS", 14),
+  /** Max characters of condensed memory injected per request. */
+  memoryChars: envInt("AI_MEMORY_CHARS", 2000),
+} as const;

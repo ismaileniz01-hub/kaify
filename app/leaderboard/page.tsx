@@ -17,6 +17,10 @@ import {
 import { useEffect, useState, useRef } from "react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { useLang } from "@/lib/lang-context";
+import { useSession } from "@/lib/session-context";
+import { apiGet, ApiClientError } from "@/lib/api/client";
+import { getCountryName } from "@/lib/country-names";
+import type { CountryLeaderboardDTO } from "@/lib/types/domain.types";
 
 type CountryEntry = {
   countryCode: string;
@@ -176,19 +180,50 @@ function PodiumStep({
 
 export default function LeaderboardPage() {
   const { t } = useLang();
+  const { profile, isAuthenticated } = useSession();
   const [data, setData] = useState<CountryLeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const userId = "user_001";
-    fetch(`/api/country-leaderboard?userId=${userId}`)
-      .then((res) => res.json())
-      .then((json) => {
-        setData(json);
+    if (!isAuthenticated) {
+      fetch("/api/country-leaderboard")
+        .then((res) => res.json())
+        .then((json) => {
+          setData(json);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+      return;
+    }
+
+    apiGet<{ leaderboard: CountryLeaderboardDTO[] }>("/api/leaderboard/country?limit=100")
+      .then((result) => {
+        const userCountry = profile?.countryCode.toLowerCase() ?? null;
+        const leaderboard: CountryEntry[] = result.leaderboard.map((row) => ({
+          countryCode: row.countryCode,
+          countryName: getCountryName(row.countryCode),
+          flagCode: row.flagCode,
+          totalStreak: row.totalStreak,
+          userCount: row.userCount,
+        }));
+        const userCountryRank = userCountry
+          ? leaderboard.findIndex((c) => c.countryCode === userCountry) + 1
+          : null;
+        setData({
+          leaderboard,
+          userCountry,
+          userCountryRank: userCountryRank && userCountryRank > 0 ? userCountryRank : null,
+          totalCountries: leaderboard.length,
+        });
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, []);
+      .catch((error) => {
+        if (error instanceof ApiClientError) {
+          console.error("[leaderboard]", error.message);
+        }
+        setLoading(false);
+      });
+  }, [isAuthenticated, profile?.countryCode]);
 
   return (
     <div className="phone-shell relative flex flex-col overflow-hidden">

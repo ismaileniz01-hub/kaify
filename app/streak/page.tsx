@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Image as ImageIcon, Snowflake } from "lucide-react";
+import { ArrowLeft, Image as ImageIcon } from "lucide-react";
 import { StreakRoad } from "@/components/StreakRoad";
 import { StreakCard } from "@/components/StreakCard";
 import { GemBalance } from "@/components/GemBalance";
@@ -9,66 +9,82 @@ import { FreezieBalance } from "@/components/FreezieBalance";
 import { useGem } from "@/lib/gem-context";
 import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
-import { useEffect, useState, useMemo } from "react";
-import { getFreezieBalance, claimFreezie, autoProtectStreak, updateLastVisit } from "@/lib/freezie";
+import { useSession } from "@/lib/session-context";
+import { useEffect, useState } from "react";
 
 export default function StreakPage() {
   const { gemState } = useGem();
   const { unlockedLevel, unlockLevel } = useKai();
   const { t } = useLang();
+  const { streak, isAuthenticated, checkIn } = useSession();
   const [showCard, setShowCard] = useState(false);
-  const [freezieKey, setFreezieKey] = useState(0);
+  const [checkingIn, setCheckingIn] = useState(false);
 
-  // Test için streak 28'den başlasın (7'nin katı → freezie kazanılır)
   useEffect(() => {
-    localStorage.setItem("kai_level", "1");
-    unlockLevel(1);
-    localStorage.setItem("streak_claimed_milestones", "[]");
-    localStorage.setItem("streak_claimed_stations", "[]");
-    localStorage.setItem("kaify-freezie-claimed-days", "[]");
-    localStorage.removeItem("kaify-freezie-balance");
-    // Tüm 7'nin katı günler için freezie claim et
-    const freezieDays = [7, 14, 21, 28];
-    freezieDays.forEach((day) => {
-      const result = claimFreezie(day);
-      console.log(`Freezie claimed for day ${day}:`, result);
-    });
-    updateLastVisit();
-    setFreezieKey((k) => k + 1);
-  }, [unlockLevel]);
+    if (streak.kaiUnlockedLevel > unlockedLevel) {
+      unlockLevel(streak.kaiUnlockedLevel as 1 | 2 | 3 | 4);
+    }
+  }, [streak.kaiUnlockedLevel, unlockedLevel, unlockLevel]);
 
-  const currentStreak = 31;
+  const handleCheckIn = async () => {
+    if (!isAuthenticated || checkingIn) return;
+    setCheckingIn(true);
+    try {
+      await checkIn();
+    } catch (error) {
+      console.error("[streak] check-in failed:", error);
+    } finally {
+      setCheckingIn(false);
+    }
+  };
 
-  const [particles, setParticles] = useState<{left: number; top: number; color: string; shadow: string; duration: number; delay: number}[]>([]);
+  const [particles, setParticles] = useState<
+    { left: number; top: number; color: string; shadow: string; duration: number; delay: number }[]
+  >([]);
 
   useEffect(() => {
     setParticles(
       [...Array(20)].map((_, i) => ({
         left: 5 + Math.random() * 90,
         top: 5 + Math.random() * 90,
-        color: i % 3 === 0 ? "rgba(251,146,60,0.4)" : i % 3 === 1 ? "rgba(168,85,247,0.3)" : "rgba(251,191,36,0.3)",
-        shadow: i % 3 === 0 ? "rgba(251,146,60,0.3)" : i % 3 === 1 ? "rgba(168,85,247,0.3)" : "rgba(251,191,36,0.3)",
+        color:
+          i % 3 === 0
+            ? "rgba(251,146,60,0.4)"
+            : i % 3 === 1
+              ? "rgba(168,85,247,0.3)"
+              : "rgba(251,191,36,0.3)",
+        shadow:
+          i % 3 === 0
+            ? "rgba(251,146,60,0.3)"
+            : i % 3 === 1
+              ? "rgba(168,85,247,0.3)"
+              : "rgba(251,191,36,0.3)",
         duration: 3 + Math.random() * 4,
         delay: Math.random() * 5,
-      }))
+      })),
     );
   }, []);
 
+  const currentStreak = streak.currentStreak;
+
   return (
-    <div className="phone-shell relative flex flex-col" style={{
-      background: `
+    <div
+      className="phone-shell relative flex flex-col"
+      style={{
+        background: `
         radial-gradient(ellipse 100% 60% at 50% -10%, rgba(251,146,60,0.25), transparent),
         radial-gradient(ellipse 60% 40% at 80% 100%, rgba(168,85,247,0.15), transparent),
         radial-gradient(ellipse 50% 30% at 20% 100%, rgba(251,191,36,0.1), transparent),
         linear-gradient(180deg, #0c0614 0%, #0a0a0a 50%, #08060f 100%)
       `,
-    }}>
+      }}
+    >
       {particles.length > 0 && (
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           {particles.map((p, i) => (
             <div
               key={i}
-              className="absolute w-1 h-1 rounded-full"
+              className="absolute h-1 w-1 rounded-full"
               style={{
                 left: `${p.left}%`,
                 top: `${p.top}%`,
@@ -92,7 +108,6 @@ export default function StreakPage() {
           {t("nav.streak")}
         </h1>
         <div className="flex items-center gap-2">
-          {/* Kart Al butonu - sağ üstte küçük ikon */}
           <button
             onClick={() => setShowCard(true)}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500/20 to-amber-600/10 text-orange-300 ring-1 ring-orange-500/30 transition-all hover:from-orange-500/30 hover:to-amber-600/20 hover:text-orange-200 active:scale-90"
@@ -101,14 +116,31 @@ export default function StreakPage() {
             <ImageIcon className="h-4 w-4" />
           </button>
           <GemBalance balance={gemState.balance} size="sm" animate />
-          <FreezieBalance size="sm" animate refreshKey={freezieKey} />
+          <FreezieBalance
+            size="sm"
+            animate
+            balance={isAuthenticated ? streak.freezieBalance : undefined}
+          />
         </div>
       </header>
+
+      {isAuthenticated && (
+        <div className="px-4 pb-2">
+          <button
+            type="button"
+            onClick={() => void handleCheckIn()}
+            disabled={checkingIn}
+            className="w-full rounded-xl bg-orange-500/20 py-2.5 text-sm font-semibold text-orange-200 ring-1 ring-orange-400/30 transition hover:bg-orange-500/30 disabled:opacity-50"
+          >
+            {checkingIn ? "…" : "Günlük Giriş Yap (+1 streak, +10 💎)"}
+          </button>
+        </div>
+      )}
+
       <main className="flex flex-1 flex-col overflow-y-auto pb-8">
         <StreakRoad currentStreak={currentStreak} />
       </main>
 
-      {/* Story Kartı Modalı */}
       {showCard && (
         <StreakCard
           streak={currentStreak}
@@ -119,6 +151,3 @@ export default function StreakPage() {
     </div>
   );
 }
-
-
-
