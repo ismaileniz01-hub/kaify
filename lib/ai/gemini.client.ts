@@ -1,5 +1,6 @@
 import { getGeminiConfig } from "@/lib/ai/env";
 import { AiError } from "@/lib/ai/errors";
+import { logger as geminiLogger } from "@/lib/logger";
 import { resilient, classifyStatus, UpstreamHttpError } from "@/lib/resilience";
 import type { ImageInput } from "@/lib/ai/types";
 import type { UsageContext } from "@/lib/ai/usage-ledger";
@@ -143,6 +144,9 @@ export async function generateGeminiJson(
     const json = (await response.json()) as GeminiResponse;
 
     if (json.promptFeedback?.blockReason) {
+      geminiLogger.error("[gemini] request blocked", {
+        blockReason: json.promptFeedback.blockReason,
+      });
       throw new AiError(
         "AI_BAD_OUTPUT",
         `Gemini blocked the request: ${json.promptFeedback.blockReason}`,
@@ -155,12 +159,16 @@ export async function generateGeminiJson(
       .trim();
 
     if (!text) {
+      geminiLogger.error("[gemini] empty content", {
+        response: JSON.stringify(json).slice(0, 600),
+      });
       throw new AiError("AI_BAD_OUTPUT", "Gemini returned empty content");
     }
 
     try {
       return JSON.parse(stripCodeFences(text)) as unknown;
     } catch {
+      geminiLogger.error("[gemini] invalid JSON", { text: text.slice(0, 600) });
       throw new AiError("AI_BAD_OUTPUT", "Gemini did not return valid JSON");
     } finally {
       if (params.usageContext) {

@@ -1,6 +1,7 @@
 import { generateGeminiJson } from "@/lib/ai/gemini.client";
 import { buildImageQualityPrompt } from "@/lib/ai/personas";
 import { AiError } from "@/lib/ai/errors";
+import { logger } from "@/lib/logger";
 import {
   imageQualitySchema,
   type ImageQuality,
@@ -32,6 +33,10 @@ export async function assessImageQuality(
 
   const parsed = imageQualitySchema.safeParse(raw);
   if (!parsed.success) {
+    logger.error("[image-quality] gemini output failed schema", {
+      raw: JSON.stringify(raw).slice(0, 600),
+      issues: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+    });
     throw new AiError("AI_BAD_OUTPUT", "Image quality result was malformed");
   }
   return parsed.data;

@@ -7,6 +7,7 @@ import { generateGeminiJson } from "@/lib/ai/gemini.client";
 import { assessImageQuality, MIN_QUALITY_SCORE } from "@/lib/ai/image-quality";
 import { computeScoreDrift, type ScoreDrift } from "@/lib/ai/consistency";
 import { AiError } from "@/lib/ai/errors";
+import { logger as aiLogger } from "@/lib/logger";
 import {
   ANALYSIS_PERSONAS,
   buildSynthesisMessages,
@@ -109,6 +110,11 @@ export const ModelRouter = {
 
     const parsed = technicalAnalysisSchema.safeParse(raw);
     if (!parsed.success) {
+      aiLogger.error("[model-router] vision output failed schema", {
+        kind: profile.kind,
+        raw: JSON.stringify(raw).slice(0, 600),
+        issues: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+      });
       throw new AiError("AI_BAD_OUTPUT", "Analiz çıktısı doğrulanamadı.");
     }
     const analysis = parsed.data;
