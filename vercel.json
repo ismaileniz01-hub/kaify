@@ -6,11 +6,7 @@
     },
     {
       "path": "/api/cron/cost-check",
-      "schedule": "0 */6 * * *"
-    },
-    {
-      "path": "/api/cron/self-recovery",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 4 * * *"
     }
   ],
   "headers": [
