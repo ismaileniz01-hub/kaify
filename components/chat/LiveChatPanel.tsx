@@ -203,8 +203,8 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   };
 
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
         {loadingHistory && (
           <p className="text-center text-xs text-zinc-500">Yükleniyor…</p>
         )}

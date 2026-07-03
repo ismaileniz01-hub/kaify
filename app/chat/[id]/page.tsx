@@ -109,7 +109,7 @@ export default function ChatPage() {
   const { primary, primaryLight, secondary, text: coachText, ring, shadow } = contact.color;
 
   return (
-    <div className={`phone-shell chat-gradient ${patternClass} relative flex flex-col`}>
+    <div className={`phone-shell chat-gradient ${patternClass} relative flex h-[100dvh] flex-col`}>
 
       <header className="relative z-20 flex items-center gap-3 px-4 pb-2 pt-16">
         <Link
