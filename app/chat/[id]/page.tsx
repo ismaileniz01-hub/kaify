@@ -215,34 +215,32 @@ export default function ChatPage() {
         )}
       </div>
 
-      {!isAuthenticated && (
-        <div className="pointer-events-none absolute bottom-32 left-3 z-20">
-          <ContactAvatar
-            src={
-              contactId === "alex" && avatarState === "typing"
-                ? "/avatars/alex 1.png"
-                : contactId === "alex" && avatarState === "sent"
-                  ? "/avatars/alex 2.png"
-                  : contactId === "maya" && avatarState === "typing"
-                    ? "/avatars/dr maya 1.png"
-                    : contactId === "maya" && avatarState === "sent"
-                      ? "/avatars/dr maya 2.png"
-                      : contactId === "leo" && avatarState === "typing"
-                        ? "/avatars/leo-1.png"
-                        : contactId === "leo" && avatarState === "sent"
-                          ? "/avatars/leo-2.png"
-                          : contactId === "kai"
-                            ? kaiAvatar
-                            : contact.avatar
-            }
-            alt={contact.name}
-            size="xl"
-            pulse={false}
-            effect={getEffect()}
-            auraColor={contactId === "kai" ? auraColor : "default"}
-          />
-        </div>
-      )}
+      <div className="pointer-events-none absolute bottom-32 left-3 z-20">
+        <ContactAvatar
+          src={
+            contactId === "alex" && avatarState === "typing"
+              ? "/avatars/alex 1.png"
+              : contactId === "alex" && avatarState === "sent"
+                ? "/avatars/alex 2.png"
+                : contactId === "maya" && avatarState === "typing"
+                  ? "/avatars/dr maya 1.png"
+                  : contactId === "maya" && avatarState === "sent"
+                    ? "/avatars/dr maya 2.png"
+                    : contactId === "leo" && avatarState === "typing"
+                      ? "/avatars/leo-1.png"
+                      : contactId === "leo" && avatarState === "sent"
+                        ? "/avatars/leo-2.png"
+                        : contactId === "kai"
+                          ? kaiAvatar
+                          : contact.avatar
+          }
+          alt={contact.name}
+          size="xl"
+          pulse={false}
+          effect={getEffect()}
+          auraColor={contactId === "kai" ? auraColor : "default"}
+        />
+      </div>
 
       <ImagePickerModal
         isOpen={showImagePicker}

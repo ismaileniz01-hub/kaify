@@ -14,6 +14,7 @@ import { NotificationProvider } from "@/lib/notification-context";
 import { KaiSync } from "@/components/KaiSync";
 import { CapacitorShell } from "@/components/CapacitorShell";
 import { MfaGate } from "@/components/auth/MfaGate";
+import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
 import { ThemeProvider } from "@/lib/theme-context";
 import { LangProvider } from "@/lib/lang-context";
 
@@ -103,6 +104,7 @@ export default async function RootLayout({
                   <NotificationProvider>
                     <CapacitorShell />
                     <MfaGate />
+                    <OnboardingGate />
                     <KaiSync />
                     {children}
                     <Analytics />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { Camera } from "lucide-react";
 import { streamChatMessage, apiGet, apiPost } from "@/lib/api/client";
 import type { ChatMessageDTO } from "@/lib/types/domain.types";
@@ -9,6 +10,8 @@ import type { ContactId } from "@/lib/contacts";
 import { CONTACTS } from "@/lib/contacts";
 import { ChatRichCard } from "@/components/chat/ChatRichCard";
 import { useLang } from "@/lib/lang-context";
+import { useKai } from "@/lib/kai-context";
+import { useSession } from "@/lib/session-context";
 import { apiErrorMessage } from "@/lib/i18n/api-error";
 
 type LiveMessage = {
@@ -36,7 +39,11 @@ const VISION_COACHES = new Set<ContactId>(["maya", "leo"]);
 export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const contact = CONTACTS[coachId];
   const { t } = useLang();
-  const { primary, primaryLight, ring } = contact.color;
+  const { avatar: kaiAvatar } = useKai();
+  const { userProfile } = useSession();
+  const { primary, primaryLight, secondary, ring, shadow } = contact.color;
+  const coachAvatar = coachId === "kai" ? kaiAvatar : contact.avatar;
+  const userAvatar = userProfile?.avatar ?? "/kaify-logo.png";
   const [messages, setMessages] = useState<LiveMessage[]>([]);
   const [input, setInput] = useState("");
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -206,39 +213,87 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             {error}
           </p>
         )}
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div className="max-w-[90%]">
-              <div
-                className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                  msg.from === "user" ? "bg-purple-500/25 text-white" : "text-zinc-100"
-                }`}
-                style={
-                  msg.from === "coach"
-                    ? {
-                        backgroundColor: `${primary}15`,
-                        border: `1px solid ${ring}`,
-                        color: primaryLight,
+        {messages.map((msg) => {
+          const isCoach = msg.from === "coach";
+          const isTyping = isCoach && msg.streaming && msg.text === "";
+          return (
+            <div
+              key={msg.id}
+              className={`flex items-end gap-2 ${isCoach ? "justify-start" : "justify-end"}`}
+            >
+              {isCoach && (
+                <div className="relative h-8 w-8 shrink-0">
+                  <Image
+                    src={coachAvatar}
+                    alt={contact.name}
+                    width={32}
+                    height={32}
+                    unoptimized
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+              )}
+              <div className="max-w-[82%]">
+                {isTyping ? (
+                  <div
+                    className="flex items-center gap-1.5 px-5 py-3.5"
+                    style={{
+                      backgroundColor: `${primary}22`,
+                      borderRadius: "18px 18px 18px 4px",
+                      boxShadow: `0 0 20px ${ring}`,
+                    }}
+                  >
+                    <span className="typing-dot" style={{ backgroundColor: primaryLight }} />
+                    <span className="typing-dot" style={{ backgroundColor: primaryLight }} />
+                    <span className="typing-dot" style={{ backgroundColor: primaryLight }} />
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      className="animate-message rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed"
+                      style={
+                        isCoach
+                          ? {
+                              backgroundColor: `${primary}18`,
+                              border: `1px solid ${ring}`,
+                              color: "#fff",
+                              boxShadow: `0 0 15px ${ring}`,
+                            }
+                          : {
+                              background: `linear-gradient(135deg, ${primary}, ${secondary})`,
+                              color: "#fff",
+                              boxShadow: `0 4px 15px ${shadow}`,
+                            }
                       }
-                    : undefined
-                }
-              >
-                <p className="whitespace-pre-wrap">{msg.text || (msg.streaming ? "…" : "")}</p>
-                <p className="mt-1 text-[10px] opacity-60">{msg.time}</p>
+                    >
+                      <p className="whitespace-pre-wrap">{msg.text}</p>
+                      <p className="mt-1 text-[10px] opacity-60">{msg.time}</p>
+                    </div>
+                    {isCoach && msg.messageType && msg.payload != null ? (
+                      <ChatRichCard
+                        contactId={coachId}
+                        messageType={msg.messageType}
+                        payload={msg.payload}
+                      />
+                    ) : null}
+                  </>
+                )}
               </div>
-              {msg.from === "coach" && msg.messageType && msg.payload != null ? (
-                <ChatRichCard
-                  contactId={coachId}
-                  messageType={msg.messageType}
-                  payload={msg.payload}
-                />
-              ) : null}
+              {!isCoach && (
+                <div className="relative h-8 w-8 shrink-0">
+                  <Image
+                    src={userAvatar}
+                    alt={userProfile?.name ?? "Me"}
+                    width={32}
+                    height={32}
+                    unoptimized
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
         <div ref={bottomRef} />
       </div>
 
