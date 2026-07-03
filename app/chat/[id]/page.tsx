@@ -215,7 +215,7 @@ export default function ChatPage() {
         )}
       </div>
 
-      <div className="pointer-events-none absolute bottom-32 -left-16 z-20">
+      <div className="pointer-events-none absolute bottom-32 -left-8 z-20">
         <ContactAvatar
           src={
             contactId === "alex" && avatarState === "typing"
