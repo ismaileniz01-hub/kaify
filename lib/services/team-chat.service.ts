@@ -104,7 +104,20 @@ export async function generateWeeklyTeamMeeting(
   let parsed: { coachId: string; text: string }[] = [];
   try {
     const jsonMatch = content.match(/\[[\s\S]*\]/);
-    parsed = JSON.parse(jsonMatch?.[0] ?? content) as { coachId: string; text: string }[];
+    const raw = JSON.parse(jsonMatch?.[0] ?? content) as unknown;
+    // Guard against the model returning a non-array (object/string): a later
+    // `.map` outside this try would otherwise throw and 500 the route.
+    if (
+      Array.isArray(raw) &&
+      raw.every(
+        (m) =>
+          m && typeof m === "object" && "coachId" in m && "text" in m,
+      )
+    ) {
+      parsed = raw as { coachId: string; text: string }[];
+    } else {
+      throw new Error("team chat: non-array model output");
+    }
   } catch {
     parsed = COACH_VOICES.map((c) => ({
       coachId: c.id,

@@ -24,13 +24,30 @@ const muscleGroupSet = new Set<string>(MUSCLE_GROUPS);
 
 export const muscleGroupSchema = z.enum(MUSCLE_GROUPS);
 
-export const scoreSchema = z.number().min(0).max(100);
+/**
+ * Coerces an LLM-provided number that may arrive as a string ("245",
+ * "245 kcal"), null, or out of range. Falls back to `fallback` and clamps to
+ * [min, max]. Keeps a single stray/garbage field from 500ing the whole
+ * analysis response.
+ */
+function lenientNumber(min: number, max: number, fallback: number) {
+  return z.preprocess((value) => {
+    let n: number;
+    if (typeof value === "number") n = value;
+    else if (typeof value === "string") n = Number.parseFloat(value);
+    else return fallback;
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(max, Math.max(min, n));
+  }, z.number());
+}
+
+export const scoreSchema = lenientNumber(0, 100, 0);
 
 export const foodAnalysisSchema = z.object({
-  calories: z.number().nonnegative(),
-  protein: z.number().nonnegative(),
-  carb: z.number().nonnegative(),
-  fat: z.number().nonnegative(),
+  calories: lenientNumber(0, 100_000, 0),
+  protein: lenientNumber(0, 100_000, 0),
+  carb: lenientNumber(0, 100_000, 0),
+  fat: lenientNumber(0, 100_000, 0),
 });
 
 export type FoodAnalysis = z.infer<typeof foodAnalysisSchema>;
@@ -70,10 +87,23 @@ export type MuscleScores = Partial<Record<MuscleGroup, number>>;
 // Pre-analysis image quality gate (Gemini output)
 // ---------------------------------------------------------------------------
 
+/** Tolerates non-array or mixed-type entries; keeps only non-empty strings. */
+const stringListSchema = z.preprocess(
+  (value) => (Array.isArray(value) ? value : []),
+  z.array(z.unknown()).transform((arr) =>
+    arr
+      .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+      .slice(0, 10),
+  ),
+);
+
 export const imageQualitySchema = z.object({
-  score: z.number().min(1).max(10),
-  issues: z.array(z.string()).default([]),
-  tips: z.array(z.string()).default([]),
+  // Default to a PASSING score (7) when the model returns a malformed score, so
+  // a formatting glitch never blocks a legitimate photo with a false "low
+  // quality" rejection. A genuinely low score still gates the analysis.
+  score: lenientNumber(1, 10, 7),
+  issues: stringListSchema,
+  tips: stringListSchema,
 });
 
 export type ImageQuality = z.infer<typeof imageQualitySchema>;

@@ -9,10 +9,27 @@ export type StructuredChatResult = {
   payload: Json;
 } | null;
 
+/**
+ * Card generation is a SECOND (expensive, ~900 output-token) model call, so it
+ * only fires on a genuine PLAN/SUMMARY request — not on any casual mention of a
+ * keyword. Casual food/workout talk still gets a normal text reply and is still
+ * logged by the (cheap) analytics extractor; it just won't spawn a card.
+ */
 const CARD_TRIGGERS: Record<string, RegExp[]> = {
-  alex: [/program|plan|antrenman|workout|egzersiz|split/i],
-  maya: [/öğün|meal|makro|macro|beslenme|nutrition|kalori|diet|diyet/i],
-  kai: [/özet|summary|günlük|daily|bugün|today|rapor|report/i],
+  alex: [
+    /\b(program|split|rutin|routine)\b/i,
+    /(antrenman|workout|egzersiz|program|plan)\s*\w*\s*(program|plan|öner|hazırla|oluştur|çıkar|ver|yap|list)/i,
+    /(hazırla|oluştur|öner|ver).*(antrenman|workout|egzersiz|program|plan)/i,
+  ],
+  maya: [
+    /\b(meal\s*plan|diyet\s*listesi|beslenme\s*plan|öğün\s*plan)\w*/i,
+    /(öğün|meal|diyet|diet|beslenme|nutrition|makro|macro)\s*\w*\s*(plan|program|liste|list|öner|hazırla|oluştur|çıkar)/i,
+    /(hazırla|oluştur|öner|ver).*(öğün|diyet|beslenme|meal|plan)/i,
+  ],
+  kai: [
+    /\b(özet|summary|rapor|report)\b/i,
+    /(günlük|daily|haftalık|weekly)\s*\w*\s*(özet|plan|rapor|summary|report)/i,
+  ],
 };
 
 function coachCardType(coachId: string): MessageType | null {

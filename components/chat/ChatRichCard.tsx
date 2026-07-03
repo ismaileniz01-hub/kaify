@@ -12,20 +12,29 @@ type ChatRichCardProps = {
   payload: unknown;
 };
 
+const SCORE_COLORS = ["#ef4444", "#f59e0b", "#3b82f6", "#22c55e", "#a855f7", "#ec4899"];
+
 function scorePayloadToAnalysis(payload: Record<string, unknown>) {
   const analysis = (payload.analysis ?? payload) as Record<string, unknown>;
-  const scores = (analysis.scores ?? {}) as Record<string, number>;
-  const categories = Object.entries(scores).map(([key, score], i) => ({
-    key: `analysis.${key}`,
-    score,
-    maxScore: 10,
-    color: ["#ef4444", "#f59e0b", "#3b82f6", "#22c55e", "#a855f7", "#ec4899"][i % 6],
-  }));
-  const values = Object.values(scores);
+  const rawScores = (analysis.scores ?? {}) as Record<string, unknown>;
+  // Muscle scores are on a 0-100 scale (see vision prompt). Keep only numeric
+  // entries and clamp defensively so a stray value never breaks the bars.
+  const categories = Object.entries(rawScores)
+    .filter(([, v]) => typeof v === "number" && Number.isFinite(v))
+    .map(([key, score], i) => ({
+      key: `analysis.${key}`,
+      score: Math.min(100, Math.max(0, score as number)),
+      maxScore: 100,
+      color: SCORE_COLORS[i % SCORE_COLORS.length],
+    }));
+  const overallRaw = analysis.overall_score;
+  const values = categories.map((c) => c.score);
   const overallScore =
-    values.length > 0
-      ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10
-      : 8;
+    typeof overallRaw === "number" && Number.isFinite(overallRaw)
+      ? Math.round(Math.min(100, Math.max(0, overallRaw)))
+      : values.length > 0
+        ? Math.round(values.reduce((a, b) => a + b, 0) / values.length)
+        : 0;
   return {
     overallScore,
     categories,
@@ -116,7 +125,7 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
           <div
             className="flex h-14 w-14 items-center justify-center rounded-full text-lg font-black text-white"
             style={{
-              background: `conic-gradient(${primary} ${a.overallScore * 10}%, #1a1a2e ${a.overallScore * 10}%)`,
+              background: `conic-gradient(${primary} ${a.overallScore}%, #1a1a2e ${a.overallScore}%)`,
             }}
           >
             {a.overallScore}
@@ -129,7 +138,7 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
         <div className="flex flex-col gap-2 p-3">
           {a.categories.map((cat, i) => (
             <div key={i} className="flex items-center gap-2">
-              <span className="w-24 truncate text-[11px] text-zinc-400">{cat.key}</span>
+              <span className="w-24 truncate text-[11px] text-zinc-400">{t(cat.key)}</span>
               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800">
                 <div
                   className="h-full rounded-full"

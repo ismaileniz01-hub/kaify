@@ -39,9 +39,11 @@ export const CONTEXT_BUDGET = {
   /**
    * Recent chat turns sent as context on each message. Older facts are carried
    * by condensed memory, so a smaller window trims input cost without the coach
-   * "forgetting" the conversation.
+   * "forgetting" the conversation. History is resent every turn, so this is the
+   * dominant per-message input cost — 8 turns (~4 exchanges) + condensed memory
+   * keeps continuity while roughly halving that cost versus 14.
    */
-  historyTurns: envInt("AI_CONTEXT_TURNS", 14),
+  historyTurns: envInt("AI_CONTEXT_TURNS", 8),
   /** Max characters of condensed memory injected per request. */
-  memoryChars: envInt("AI_MEMORY_CHARS", 2000),
+  memoryChars: envInt("AI_MEMORY_CHARS", 1200),
 } as const;
