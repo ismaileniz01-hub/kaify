@@ -12,6 +12,8 @@ export type TokenUsageInput = {
   prompt_tokens?: number;
   completion_tokens?: number;
   total_tokens?: number;
+  /** Prefix-cache hits (DeepSeek) — billed far cheaper than fresh input. */
+  prompt_cache_hit_tokens?: number;
 };
 
 const MICRO = 1_000_000;
@@ -39,6 +41,18 @@ export function outputRatePer1M(provider: AiProvider): number {
   return envRate("AI_COST_GEMINI_OUTPUT_PER_1M", 0.3);
 }
 
+/**
+ * USD per 1M prefix-cache-HIT input tokens. DeepSeek bills cached prefixes at a
+ * large discount (~10% of fresh input), so a stable system+history prefix makes
+ * repeat turns much cheaper. Other providers fall back to the normal input rate.
+ */
+export function cacheHitRatePer1M(provider: AiProvider): number {
+  if (provider === "deepseek") {
+    return envRate("AI_COST_DEEPSEEK_CACHE_HIT_PER_1M", 0.014);
+  }
+  return inputRatePer1M(provider);
+}
+
 /** Default vision call estimate when Gemini omits usage metadata. */
 export function geminiVisionTokenEstimate(): number {
   const raw = Number.parseInt(process.env.AI_COST_GEMINI_VISION_EST_TOKENS ?? "", 10);
@@ -62,7 +76,13 @@ export function estimateCostMicroUsd(
     completion = total - prompt;
   }
 
-  const inputUsd = (prompt / MICRO) * inputRatePer1M(provider);
+  // Split prompt tokens into cheap cache-hits and full-price fresh tokens.
+  const cacheHit = Math.min(Math.max(usage.prompt_cache_hit_tokens ?? 0, 0), prompt);
+  const freshInput = prompt - cacheHit;
+
+  const inputUsd =
+    (freshInput / MICRO) * inputRatePer1M(provider) +
+    (cacheHit / MICRO) * cacheHitRatePer1M(provider);
   const outputUsd = (completion / MICRO) * outputRatePer1M(provider);
   const usdMicro = Math.round((inputUsd + outputUsd) * MICRO);
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiGet, apiPatch } from "@/lib/api/client";
 import type {
+  CacheHitStatsDTO,
   CostAlertRow,
   CostByUserRow,
   CostSummaryDTO,
@@ -15,6 +16,7 @@ type CostsResponse = {
   byUser: CostByUserRow[];
   quotaEvents: QuotaEventRow[];
   alerts: CostAlertRow[];
+  cacheStats: CacheHitStatsDTO;
 };
 
 export default function AdminCostsPage() {
@@ -92,6 +94,25 @@ export default function AdminCostsPage() {
                 value={s.period.calls.toLocaleString()}
               />
             </section>
+
+            {data?.cacheStats && data.cacheStats.calls_with_cache > 0 && (
+              <section className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm">
+                <h2 className="mb-2 font-semibold text-emerald-200">
+                  Prefix önbellek (DeepSeek)
+                </h2>
+                <p className="text-zinc-300">
+                  Son {days} günde{" "}
+                  <span className="font-semibold text-white">
+                    %{data.cacheStats.cache_ratio_percent}
+                  </span>{" "}
+                  girdi token önbellekten geldi (
+                  {data.cacheStats.cache_hit_tokens.toLocaleString()} /{" "}
+                  {data.cacheStats.prompt_tokens.toLocaleString()} prompt tok ·{" "}
+                  {data.cacheStats.calls_with_cache} çağrı). Yüksek oran =
+                  düşük gerçek fatura.
+                </p>
+              </section>
+            )}
 
             <section className="rounded-xl border border-white/10 p-4">
               <h2 className="mb-3 font-semibold">Sağlayıcıya göre</h2>

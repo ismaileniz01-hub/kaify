@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildCanaryReminder,
   buildSecurityPreamble,
   containsCanary,
   createCanary,
@@ -7,6 +8,7 @@ import {
   sanitizeUserText,
   scrubModelOutput,
   wrapUntrustedInput,
+  wrapUntrustedInputStable,
 } from "@/lib/ai/prompt-safety";
 
 describe("sanitizeUserText", () => {
@@ -71,6 +73,27 @@ describe("wrapUntrustedInput", () => {
   });
 });
 
+describe("wrapUntrustedInputStable", () => {
+  it("wraps text in matching begin/end delimiters", () => {
+    const wrapped = wrapUntrustedInputStable("USER_MESSAGE", "hello");
+    expect(wrapped).toMatch(/<<<BEGIN_USER_MESSAGE_[0-9a-f]{12}>>>/);
+    expect(wrapped).toMatch(/<<<END_USER_MESSAGE_[0-9a-f]{12}>>>/);
+    expect(wrapped).toContain("hello");
+  });
+
+  it("is deterministic for identical content (cacheable prefix)", () => {
+    const a = wrapUntrustedInputStable("X", "same text");
+    const b = wrapUntrustedInputStable("X", "same text");
+    expect(a).toBe(b);
+  });
+
+  it("changes the id when content changes", () => {
+    const a = wrapUntrustedInputStable("X", "one");
+    const b = wrapUntrustedInputStable("X", "two");
+    expect(a).not.toBe(b);
+  });
+});
+
 describe("canary", () => {
   it("creates a prefixed random canary", () => {
     const canary = createCanary();
@@ -87,9 +110,16 @@ describe("canary", () => {
     expect(containsCanary("anything", "")).toBe(false);
   });
 
-  it("embeds the canary in the preamble", () => {
+  it("keeps the security preamble stable and canary-free (cacheable)", () => {
+    const preamble = buildSecurityPreamble();
+    expect(preamble).toBe(buildSecurityPreamble());
+    expect(preamble).not.toContain("KFY-");
+    expect(preamble).toContain("SECURITY & SCOPE RULES");
+  });
+
+  it("embeds the canary in the standalone reminder", () => {
     const canary = createCanary();
-    expect(buildSecurityPreamble(canary)).toContain(canary);
+    expect(buildCanaryReminder(canary)).toContain(canary);
   });
 });
 

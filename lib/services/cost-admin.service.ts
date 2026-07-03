@@ -194,4 +194,62 @@ export async function createCostAlert(params: {
   }
 }
 
+export type CacheHitStatsDTO = {
+  /** Sum of prompt_cache_hit_tokens from ledger metadata (DeepSeek). */
+  cache_hit_tokens: number;
+  /** Sum of prompt_tokens on the same rows. */
+  prompt_tokens: number;
+  /** cache_hit / prompt * 100, 0 when no data. */
+  cache_ratio_percent: number;
+  /** Rows with cache metadata in the period. */
+  calls_with_cache: number;
+};
+
+/** Aggregates prefix-cache hits from ai_usage_ledger metadata (admin only). */
+export async function getCacheHitStats(days = 7): Promise<CacheHitStatsDTO> {
+  const admin = createAdminSupabaseClient();
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+
+  const { data, error } = await admin
+    .from("ai_usage_ledger")
+    .select("prompt_tokens, metadata")
+    .eq("provider", "deepseek")
+    .gte("created_at", since)
+    .limit(10_000);
+
+  if (error) {
+    logger.error("[cost-admin] cache stats error", { error: error.message });
+    return {
+      cache_hit_tokens: 0,
+      prompt_tokens: 0,
+      cache_ratio_percent: 0,
+      calls_with_cache: 0,
+    };
+  }
+
+  let cacheHit = 0;
+  let promptTotal = 0;
+  let callsWithCache = 0;
+
+  for (const row of data ?? []) {
+    const meta = row.metadata as Record<string, unknown> | null;
+    const hit =
+      typeof meta?.prompt_cache_hit_tokens === "number"
+        ? meta.prompt_cache_hit_tokens
+        : 0;
+    if (hit <= 0) continue;
+    callsWithCache += 1;
+    cacheHit += hit;
+    promptTotal += row.prompt_tokens ?? 0;
+  }
+
+  return {
+    cache_hit_tokens: cacheHit,
+    prompt_tokens: promptTotal,
+    cache_ratio_percent:
+      promptTotal > 0 ? Math.round((cacheHit / promptTotal) * 100) : 0,
+    calls_with_cache: callsWithCache,
+  };
+}
+
 export { microToUsd };

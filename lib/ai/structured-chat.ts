@@ -1,5 +1,5 @@
 import { ModelRouter } from "@/lib/ai/model-router";
-import { TOKEN_BUDGET } from "@/lib/ai/budget";
+import { TOKEN_BUDGET, AI_FEATURES } from "@/lib/ai/budget";
 import { sanitizeUserText, wrapUntrustedInput } from "@/lib/ai/prompt-safety";
 import type { MessageType, Json } from "@/lib/types/database.types";
 import type { ChatTurn } from "@/lib/ai/types";
@@ -52,6 +52,8 @@ export async function maybeGenerateStructuredCard(params: {
   coachReply: string;
   locale: string;
 }): Promise<StructuredChatResult> {
+  if (!AI_FEATURES.structuredCards) return null;
+
   const triggers = CARD_TRIGGERS[params.coachId];
   const messageType = coachCardType(params.coachId);
   if (!triggers || !messageType) return null;

@@ -60,6 +60,14 @@ async function recordAiUsageAsync(params: RecordUsageParams): Promise<void> {
 
   const cost = estimateCostMicroUsd(params.provider, usageInput);
 
+  const metadata: Record<string, unknown> = { ...(params.metadata ?? {}) };
+  if (
+    params.usage?.prompt_cache_hit_tokens &&
+    params.usage.prompt_cache_hit_tokens > 0
+  ) {
+    metadata.prompt_cache_hit_tokens = params.usage.prompt_cache_hit_tokens;
+  }
+
   const admin = createAdminSupabaseClient();
   const { error } = await admin.from("ai_usage_ledger").insert({
     user_id: params.context.userId ?? null,
@@ -69,7 +77,7 @@ async function recordAiUsageAsync(params: RecordUsageParams): Promise<void> {
     completion_tokens: cost.completionTokens,
     total_tokens: cost.totalTokens,
     estimated_usd_micro: cost.usdMicro,
-    metadata: (params.metadata ?? null) as never,
+    metadata: (Object.keys(metadata).length > 0 ? metadata : null) as never,
   });
 
   if (error) {

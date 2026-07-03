@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api/errors";
 import { handleApiError, ok } from "@/lib/api/response";
 import {
   acknowledgeCostAlert,
+  getCacheHitStats,
   getCostByUser,
   getCostSummary,
   getQuotaEvents,
@@ -19,14 +20,15 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const days = Number.parseInt(url.searchParams.get("days") ?? "7", 10);
 
-    const [summary, byUser, quotaEvents, alerts] = await Promise.all([
+    const [summary, byUser, quotaEvents, alerts, cacheStats] = await Promise.all([
       getCostSummary(Number.isFinite(days) ? days : 7),
       getCostByUser(Number.isFinite(days) ? days : 7, 25),
       getQuotaEvents(Number.isFinite(days) ? days : 7, 40),
       listCostAlerts(15),
+      getCacheHitStats(Number.isFinite(days) ? days : 7),
     ]);
 
-    return ok({ summary, byUser, quotaEvents, alerts });
+    return ok({ summary, byUser, quotaEvents, alerts, cacheStats });
   } catch (error) {
     return handleApiError(error, { route: "/api/admin/costs" });
   }

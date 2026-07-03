@@ -1,5 +1,5 @@
 import { ModelRouter } from "@/lib/ai/model-router";
-import { TOKEN_BUDGET } from "@/lib/ai/budget";
+import { TOKEN_BUDGET, AI_FEATURES } from "@/lib/ai/budget";
 import { patchAnalyticsDaily } from "@/lib/services/analytics.service";
 import { sanitizeUserText, wrapUntrustedInput } from "@/lib/ai/prompt-safety";
 import type { ChatTurn } from "@/lib/ai/types";
@@ -35,6 +35,8 @@ export async function applyCoachAnalyticsFromChat(params: {
   userMessage: string;
   coachReply: string;
 }): Promise<void> {
+  if (!AI_FEATURES.chatAnalytics) return;
+
   const allowed = COACH_FIELDS[params.coachId];
   if (!allowed || allowed.length === 0) return;
 

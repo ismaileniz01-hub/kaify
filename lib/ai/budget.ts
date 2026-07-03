@@ -18,6 +18,12 @@ function envInt(name: string, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+function envBool(name: string, fallback: boolean): boolean {
+  const raw = process.env[name]?.trim().toLowerCase();
+  if (!raw) return fallback;
+  return raw === "1" || raw === "true" || raw === "yes";
+}
+
 export const TOKEN_BUDGET = {
   /** Main coach chat reply (DeepSeek stream). */
   chatReply: envInt("AI_MAX_CHAT_TOKENS", 800),
@@ -46,4 +52,24 @@ export const CONTEXT_BUDGET = {
   historyTurns: envInt("AI_CONTEXT_TURNS", 8),
   /** Max characters of condensed memory injected per request. */
   memoryChars: envInt("AI_MEMORY_CHARS", 1200),
+  /**
+   * Cap each historical user/coach message when building context. Long past
+   * replies (Markdown essays) are the silent token killer — trim the tail only.
+   */
+  historyUserChars: envInt("AI_HISTORY_USER_CHARS", 400),
+  historyCoachChars: envInt("AI_HISTORY_COACH_CHARS", 600),
+} as const;
+
+/** Runtime feature toggles — tune in Vercel without redeploying logic. */
+export const AI_FEATURES = {
+  /**
+   * Second model call that renders workout/meal/daily cards (~900 output tokens).
+   * Set AI_STRUCTURED_CARDS=false to disable entirely (biggest optional save).
+   */
+  structuredCards: envBool("AI_STRUCTURED_CARDS", true),
+  /**
+   * Cheap post-reply extraction that logs workouts/macros to analytics.
+   * Set AI_CHAT_ANALYTICS=false to skip.
+   */
+  chatAnalytics: envBool("AI_CHAT_ANALYTICS", true),
 } as const;
