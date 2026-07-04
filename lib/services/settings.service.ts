@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
 
 export type UserSettingsDTO = {
@@ -7,6 +8,7 @@ export type UserSettingsDTO = {
   soundEffects: boolean;
   chatSounds: boolean;
   unitSystem: "metric" | "imperial";
+  leaderboardOptOut: boolean;
 };
 
 function mapRow(row: {
@@ -15,7 +17,7 @@ function mapRow(row: {
   sound_effects: boolean;
   chat_sounds: boolean;
   unit_system: string;
-}): UserSettingsDTO {
+}): Omit<UserSettingsDTO, "leaderboardOptOut"> {
   return {
     workoutReminders: row.workout_reminders,
     waterReminder: row.water_reminder,
@@ -27,11 +29,18 @@ function mapRow(row: {
 
 export async function getUserSettings(userId: string): Promise<UserSettingsDTO> {
   const supabase = await createServerSupabaseClient();
-  const { data } = await supabase
-    .from("user_settings")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const admin = createAdminSupabaseClient();
+
+  const [{ data }, { data: profile }] = await Promise.all([
+    supabase.from("user_settings").select("*").eq("user_id", userId).maybeSingle(),
+    admin
+      .from("profiles")
+      .select("leaderboard_opt_out")
+      .eq("id", userId)
+      .maybeSingle(),
+  ]);
+
+  const leaderboardOptOut = profile?.leaderboard_opt_out ?? false;
 
   if (!data) {
     return {
@@ -40,10 +49,11 @@ export async function getUserSettings(userId: string): Promise<UserSettingsDTO> 
       soundEffects: true,
       chatSounds: true,
       unitSystem: "metric",
+      leaderboardOptOut,
     };
   }
 
-  return mapRow(data);
+  return { ...mapRow(data), leaderboardOptOut };
 }
 
 export async function upsertUserSettings(
@@ -51,23 +61,46 @@ export async function upsertUserSettings(
   patch: Partial<UserSettingsDTO>,
 ): Promise<UserSettingsDTO> {
   const supabase = await createServerSupabaseClient();
+  const admin = createAdminSupabaseClient();
+
+  if (patch.leaderboardOptOut !== undefined) {
+    const { error: profileError } = await admin
+      .from("profiles")
+      .update({ leaderboard_opt_out: patch.leaderboardOptOut })
+      .eq("id", userId);
+
+    if (profileError) {
+      throw new ApiError("INTERNAL_ERROR", "Liderlik tablosu ayarı kaydedilemedi.");
+    }
+  }
+
+  const settingsPatch = { ...patch };
+  delete settingsPatch.leaderboardOptOut;
+
+  if (Object.keys(settingsPatch).length === 0) {
+    return getUserSettings(userId);
+  }
 
   const { data, error } = await supabase
     .from("user_settings")
     .upsert(
       {
         user_id: userId,
-        ...(patch.workoutReminders !== undefined
-          ? { workout_reminders: patch.workoutReminders }
+        ...(settingsPatch.workoutReminders !== undefined
+          ? { workout_reminders: settingsPatch.workoutReminders }
           : {}),
-        ...(patch.waterReminder !== undefined
-          ? { water_reminder: patch.waterReminder }
+        ...(settingsPatch.waterReminder !== undefined
+          ? { water_reminder: settingsPatch.waterReminder }
           : {}),
-        ...(patch.soundEffects !== undefined
-          ? { sound_effects: patch.soundEffects }
+        ...(settingsPatch.soundEffects !== undefined
+          ? { sound_effects: settingsPatch.soundEffects }
           : {}),
-        ...(patch.chatSounds !== undefined ? { chat_sounds: patch.chatSounds } : {}),
-        ...(patch.unitSystem !== undefined ? { unit_system: patch.unitSystem } : {}),
+        ...(settingsPatch.chatSounds !== undefined
+          ? { chat_sounds: settingsPatch.chatSounds }
+          : {}),
+        ...(settingsPatch.unitSystem !== undefined
+          ? { unit_system: settingsPatch.unitSystem }
+          : {}),
       },
       { onConflict: "user_id" },
     )
@@ -78,5 +111,14 @@ export async function upsertUserSettings(
     throw new ApiError("INTERNAL_ERROR", "Ayarlar kaydedilemedi.");
   }
 
-  return mapRow(data);
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("leaderboard_opt_out")
+    .eq("id", userId)
+    .maybeSingle();
+
+  return {
+    ...mapRow(data),
+    leaderboardOptOut: profile?.leaderboard_opt_out ?? false,
+  };
 }

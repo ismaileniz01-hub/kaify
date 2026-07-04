@@ -9,6 +9,7 @@ import { StreakAtRiskBanner } from "@/components/streak/StreakAtRiskBanner";
 import { GemBalance } from "@/components/GemBalance";
 import { ProfileModal } from "@/components/ProfileModal";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
+import { WelcomeSkeleton } from "@/components/welcome/WelcomeSkeleton";
 import { useSession } from "@/lib/session-context";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -25,10 +26,15 @@ function WelcomeContent() {
     gemBalance,
     streak,
     isPreviewMode,
+    isLoading,
     updateProfile,
     profile,
     isAuthenticated,
   } = useSession();
+
+  if (isLoading && isAuthenticated) {
+    return <WelcomeSkeleton />;
+  }
 
   // ?profile=1 query param'ı ile gelindiyse profil modal'ını otomatik aç
   useEffect(() => {
@@ -110,7 +116,7 @@ function WelcomeContent() {
           </p>
           {isPreviewMode && (
             <p className="mt-2 text-[10px] text-amber-400/80">
-              Demo modu — giriş yapınca verileriniz yüklenecek.
+              {t("welcome.preview_mode")}
             </p>
           )}
         </section>
@@ -175,15 +181,24 @@ function WelcomeContent() {
         isOpen={profileOpen}
         onClose={() => setProfileOpen(false)}
         profile={userProfile}
-        onSave={(updated) => void updateProfile(updated)}
+        onSave={updateProfile}
       />
+    </div>
+  );
+}
+
+function WelcomeSuspenseFallback() {
+  const { t } = useLang();
+  return (
+    <div className="phone-shell flex items-center justify-center">
+      <p className="text-zinc-400">{t("welcome.loading")}</p>
     </div>
   );
 }
 
 export default function WelcomePage() {
   return (
-    <Suspense fallback={<div className="phone-shell flex items-center justify-center"><p className="text-zinc-400">Loading...</p></div>}>
+    <Suspense fallback={<WelcomeSuspenseFallback />}>
       <WelcomeContent />
     </Suspense>
   );

@@ -10,7 +10,7 @@ type ProfileModalProps = {
   isOpen: boolean;
   onClose: () => void;
   profile: UserProfile;
-  onSave?: (updated: UserProfile) => void;
+  onSave?: (updated: UserProfile) => Promise<void>;
 };
 
 export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalProps) {
@@ -18,6 +18,9 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<UserProfile>({ ...profile });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -26,14 +29,27 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
-    onSave?.(form);
-    setEditing(false);
+  const handleSave = async () => {
+    if (!onSave || saving) return;
+    setSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+    try {
+      await onSave(form);
+      setSaveSuccess(true);
+      setEditing(false);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch {
+      setSaveError(t("profile.save_error"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
     setForm({ ...profile });
     setEditing(false);
+    setSaveError(null);
   };
 
   // Görüntüleme modu
@@ -147,6 +163,9 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
             </div>
 
             {/* Düzenle butonu */}
+            {saveSuccess && (
+              <p className="mb-3 text-center text-xs text-emerald-400">{t("profile.save_success")}</p>
+            )}
             <button
               onClick={() => { setForm({ ...profile }); setEditing(true); }}
               className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-500 py-3 text-sm font-medium text-white transition hover:bg-purple-400 active:scale-95"
@@ -332,19 +351,24 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
           </div>
 
           {/* Butonlar */}
+          {saveError && (
+            <p className="text-center text-xs text-red-300">{saveError}</p>
+          )}
           <div className="mt-2 flex gap-3">
             <button
               onClick={handleCancel}
-              className="flex flex-1 items-center justify-center rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-medium text-zinc-300 transition hover:bg-white/10 active:scale-95"
+              disabled={saving}
+              className="flex flex-1 items-center justify-center rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-medium text-zinc-300 transition hover:bg-white/10 active:scale-95 disabled:opacity-50"
             >
               {t("profile.cancel_button")}
             </button>
             <button
-              onClick={handleSave}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-purple-500 py-3 text-sm font-medium text-white transition hover:bg-purple-400 active:scale-95"
+              onClick={() => void handleSave()}
+              disabled={saving}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-purple-500 py-3 text-sm font-medium text-white transition hover:bg-purple-400 active:scale-95 disabled:opacity-50"
             >
               <Check className="h-4 w-4" />
-              {t("profile.save_button")}
+              {saving ? t("profile.saving") : t("profile.save_button")}
             </button>
           </div>
         </div>

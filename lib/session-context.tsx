@@ -33,6 +33,8 @@ type SessionContextValue = {
   isLoading: boolean;
   isAuthenticated: boolean;
   isPreviewMode: boolean;
+  sessionError: boolean;
+  clearSessionError: () => void;
   profile: ProfileDTO | null;
   userProfile: UserProfile;
   displayName: string;
@@ -87,12 +89,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [streak, setStreak] = useState<StreakStatusDTO>(DEFAULT_STREAK);
   const [home, setHome] = useState<HomeDTO | null>(null);
   const [referralCode, setReferralCode] = useState("");
+  const [sessionError, setSessionError] = useState(false);
+
+  const clearSessionError = useCallback(() => setSessionError(false), []);
 
   const refreshSession = useCallback(async () => {
     const isBackgroundRefresh = hasHydrated && isAuthenticated;
     if (!isBackgroundRefresh) {
       setIsLoading(true);
     }
+    setSessionError(false);
     try {
       const supabase = tryCreateBrowserSupabaseClient();
       if (!supabase) {
@@ -137,7 +143,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setIsAuthenticated(false);
         setIsPreviewMode(true);
       } else {
-        console.error("[SessionProvider] refresh failed:", error);
+        setSessionError(true);
       }
     } finally {
       setIsLoading(false);
@@ -208,6 +214,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isLoading,
       isAuthenticated,
       isPreviewMode,
+      sessionError,
+      clearSessionError,
       profile,
       userProfile,
       displayName,
@@ -223,6 +231,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isLoading,
       isAuthenticated,
       isPreviewMode,
+      sessionError,
+      clearSessionError,
       profile,
       userProfile,
       displayName,

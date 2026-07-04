@@ -12,6 +12,7 @@ import { GemProvider } from "@/lib/gem-context";
 import { KaiProvider } from "@/lib/kai-context";
 import { NotificationProvider } from "@/lib/notification-context";
 import { KaiSync } from "@/components/KaiSync";
+import { SessionErrorBanner } from "@/components/SessionErrorBanner";
 import { CapacitorShell } from "@/components/CapacitorShell";
 import { MfaGate } from "@/components/auth/MfaGate";
 import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
@@ -106,6 +107,7 @@ export default async function RootLayout({
                     <MfaGate />
                     <OnboardingGate />
                     <KaiSync />
+                    <SessionErrorBanner />
                     {children}
                     <Analytics />
                     <SpeedInsights />

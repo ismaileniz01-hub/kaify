@@ -76,8 +76,8 @@ export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClo
               <Globe className="h-4 w-4 text-amber-400" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white">Country Leaderboard</h2>
-              <p className="text-[10px] text-zinc-500">Global streak rankings</p>
+              <h2 className="text-sm font-bold text-white">{t("leaderboard.country_title")}</h2>
+              <p className="text-[10px] text-zinc-500">{t("leaderboard.country_subtitle")}</p>
             </div>
           </div>
           <button
@@ -156,11 +156,11 @@ export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClo
                           {entry.countryName}
                           {isUser && (
                             <span className="ml-1.5 rounded-full bg-purple-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-purple-300">
-                              YOU
+                              {t("leaderboard.you")}
                             </span>
                           )}
                         </span>
-                        <p className="text-[10px] text-zinc-500">{entry.userCount} users</p>
+                        <p className="text-[10px] text-zinc-500">{t("leaderboard.users_count", { count: entry.userCount })}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 text-sm text-orange-400/80">
@@ -173,11 +173,11 @@ export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClo
             </div>
 
             <p className="mt-3 text-center text-[10px] text-zinc-600">
-              {data.totalCountries} countries competing
+              {t("leaderboard.countries_competing", { count: data.totalCountries })}
             </p>
           </>
         ) : (
-          <p className="py-8 text-center text-sm text-zinc-500">Could not load leaderboard.</p>
+          <p className="py-8 text-center text-sm text-zinc-500">{t("leaderboard.error.load")}</p>
         )}
       </div>
     </div>

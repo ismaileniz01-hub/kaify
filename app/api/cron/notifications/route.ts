@@ -3,6 +3,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { handleApiError, ok } from "@/lib/api/response";
 import { logger } from "@/lib/logger";
 import { verifyCronSecret } from "@/lib/api/cron-auth";
+import { recordCronRun } from "@/lib/services/cron-monitor.service";
 import {
   createNotificationsBatch,
   type CreateNotificationInput,
@@ -186,12 +187,19 @@ export async function GET(request: NextRequest) {
       created: totalCreated,
     });
 
-    return ok({
+    const payload = {
       ranAt: now.toISOString(),
       candidates: totalCandidates,
       created: totalCreated,
-    });
+    };
+
+    await recordCronRun("notifications", "ok", payload);
+
+    return ok(payload);
   } catch (error) {
+    await recordCronRun("notifications", "error", {
+      message: error instanceof Error ? error.message : "unknown",
+    });
     logger.error("cron notifications failed", {
       error: error instanceof Error ? error.message : "unknown",
     });

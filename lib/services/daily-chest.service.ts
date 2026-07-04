@@ -2,9 +2,10 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
-import { earnGems } from "@/lib/services/gem.service";
+import { mapRpcError } from "@/lib/supabase/rpc-errors";
 import {
   buildLoopingReel,
+  CHEST_REEL_CYCLE,
   rollChestReward,
   type ChestRewardDTO,
   type ChestReelSlot,
@@ -28,11 +29,11 @@ export type DailyChestClaimDTO = {
   alreadyClaimed: boolean;
 };
 
-/** Temporary: set env DAILY_CHEST_LIMIT_ENABLED=true to restore one claim per UTC day. */
+/** One claim per UTC day unless explicitly disabled via env. */
 const DAILY_CHEST_LIMIT_ENABLED =
-  process.env.DAILY_CHEST_LIMIT_ENABLED === "true";
+  process.env.DAILY_CHEST_LIMIT_ENABLED !== "false";
 
-function utcToday(): string {
+function utcTodayKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
@@ -66,10 +67,18 @@ function readStoredClaim(raw: unknown): StoredChestClaim | null {
   };
 }
 
-async function readClaimState(userId: string): Promise<{
-  weeklyGoals: Record<string, unknown>;
-  stored: StoredChestClaim | null;
-}> {
+async function readClaimRow(userId: string, utcDate: string) {
+  const admin = createAdminSupabaseClient();
+  const { data } = await admin
+    .from("daily_chest_claims")
+    .select("reward_kind, reward_amount, reward_rarity")
+    .eq("user_id", userId)
+    .eq("utc_date", utcDate)
+    .maybeSingle();
+  return data;
+}
+
+async function readReelState(userId: string): Promise<StoredChestClaim | null> {
   const admin = createAdminSupabaseClient();
   const { data } = await admin
     .from("user_coaching_state")
@@ -78,19 +87,33 @@ async function readClaimState(userId: string): Promise<{
     .maybeSingle();
 
   const weeklyGoals =
-    typeof data?.weekly_goals === "object" && data?.weekly_goals !== null && !Array.isArray(data.weekly_goals)
+    typeof data?.weekly_goals === "object" &&
+    data?.weekly_goals !== null &&
+    !Array.isArray(data.weekly_goals)
       ? (data.weekly_goals as Record<string, unknown>)
       : {};
 
-  return { weeklyGoals, stored: readStoredClaim(weeklyGoals) };
+  return readStoredClaim(weeklyGoals);
 }
 
-async function saveClaimState(
+async function saveReelState(
   userId: string,
-  weeklyGoals: Record<string, unknown>,
   claim: StoredChestClaim,
 ): Promise<void> {
   const admin = createAdminSupabaseClient();
+  const { data } = await admin
+    .from("user_coaching_state")
+    .select("weekly_goals")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const weeklyGoals =
+    typeof data?.weekly_goals === "object" &&
+    data?.weekly_goals !== null &&
+    !Array.isArray(data.weekly_goals)
+      ? (data.weekly_goals as Record<string, unknown>)
+      : {};
+
   const next = { ...weeklyGoals, dailyChest: claim };
 
   const { error: updateError } = await admin
@@ -108,23 +131,44 @@ async function saveClaimState(
     );
 
   if (upsertError) {
-    logger.error("[daily-chest] save claim state failed", {
+    logger.warn("[daily-chest] reel state save failed (non-fatal)", {
       userId,
       error: upsertError.message,
     });
-    throw new ApiError("INTERNAL_ERROR", "Sandık durumu kaydedilemedi.");
   }
 }
 
+function rowToReward(row: {
+  reward_kind: string;
+  reward_amount: number;
+  reward_rarity: string | null;
+}): ChestRewardDTO {
+  const match = CHEST_REEL_CYCLE.find(
+    (r) =>
+      r.kind === row.reward_kind &&
+      r.amount === row.reward_amount &&
+      (row.reward_kind === "freezie" || r.rarity === row.reward_rarity),
+  );
+  if (match) return match;
+
+  if (row.reward_kind === "freezie") {
+    return CHEST_REEL_CYCLE[6];
+  }
+  return (
+    CHEST_REEL_CYCLE.find((r) => r.kind === "gems" && r.amount === row.reward_amount) ??
+    CHEST_REEL_CYCLE[0]
+  );
+}
+
 export async function getDailyChestStatus(userId: string): Promise<DailyChestStatusDTO> {
-  const today = utcToday();
+  const today = utcTodayKey();
 
   if (!DAILY_CHEST_LIMIT_ENABLED) {
     return { canClaim: true, nextClaimAt: null, utcDate: today };
   }
 
-  const { stored } = await readClaimState(userId);
-  const claimedToday = stored?.date === today;
+  const claimRow = await readClaimRow(userId, today);
+  const claimedToday = claimRow !== null;
 
   return {
     canClaim: !claimedToday,
@@ -134,79 +178,89 @@ export async function getDailyChestStatus(userId: string): Promise<DailyChestSta
 }
 
 export async function claimDailyChest(userId: string): Promise<DailyChestClaimDTO> {
-  const today = utcToday();
-  const { weeklyGoals, stored } = await readClaimState(userId);
+  const today = utcTodayKey();
+  const idempotencyKey = `daily_chest:${userId}:${today}`;
 
-  if (DAILY_CHEST_LIMIT_ENABLED && stored?.date === today) {
-    const [gems, streak] = await Promise.all([
-      readGemBalance(userId),
-      readFreezieBalance(userId),
-    ]);
-    const fallback = buildLoopingReel(stored.reward);
-    return {
-      reward: stored.reward,
-      reel: stored.reel.length > 0 ? stored.reel : fallback.reel,
-      winningIndex: stored.winningIndex,
-      gemBalance: gems,
-      freezieBalance: streak,
-      alreadyClaimed: true,
-    };
+  if (DAILY_CHEST_LIMIT_ENABLED) {
+    const existing = await readClaimRow(userId, today);
+    if (existing) {
+      const reward = rowToReward(existing);
+      const reelState = await readReelState(userId);
+      const fallback = buildLoopingReel(reward);
+      const [gems, streak] = await Promise.all([
+        readGemBalance(userId),
+        readFreezieBalance(userId),
+      ]);
+      return {
+        reward,
+        reel:
+          reelState?.date === today && reelState.reel.length > 0
+            ? reelState.reel
+            : fallback.reel,
+        winningIndex: reelState?.winningIndex ?? fallback.stopIndex,
+        gemBalance: gems,
+        freezieBalance: streak,
+        alreadyClaimed: true,
+      };
+    }
   }
 
   const reward = rollChestReward();
   const { reel, stopIndex: winningIndex } = buildLoopingReel(reward);
 
-  let gemBalance = await readGemBalance(userId);
-  let freezieBalance = await readFreezieBalance(userId);
+  const admin = createAdminSupabaseClient();
+  const { data, error } = await admin.rpc("apply_daily_chest_reward", {
+    p_user_id: userId,
+    p_utc_date: today,
+    p_idempotency_key: DAILY_CHEST_LIMIT_ENABLED
+      ? idempotencyKey
+      : `${idempotencyKey}:${Date.now()}`,
+    p_reward_kind: reward.kind,
+    p_reward_amount: reward.amount,
+    p_reward_rarity: reward.kind === "gems" ? reward.rarity : null,
+  });
 
-  if (reward.kind === "gems") {
-    const idempotencyKey = DAILY_CHEST_LIMIT_ENABLED
-      ? `daily_chest:${userId}:${today}`
-      : `daily_chest:${userId}:${Date.now()}`;
-    try {
-      const result = await earnGems({
-        userId,
-        amount: reward.amount,
-        type: "daily_chest",
-        description: `Daily Kai chest +${reward.amount}`,
-        idempotencyKey,
-        metadata: { rarity: reward.rarity },
-      });
-      gemBalance = result.balance ?? gemBalance;
-    } catch (error) {
-      if (error instanceof ApiError && error.code === "VALIDATION_ERROR") {
-        logger.warn("[daily-chest] duplicate gem claim", { userId });
-      } else {
-        throw error;
-      }
-    }
-  } else if (reward.kind === "freezie") {
-    const admin = createAdminSupabaseClient();
-    const { data: row } = await admin
-      .from("user_streaks")
-      .select("freezie_balance")
-      .eq("user_id", userId)
-      .maybeSingle();
-    freezieBalance = (row?.freezie_balance ?? 0) + reward.amount;
-    await admin
-      .from("user_streaks")
-      .update({ freezie_balance: freezieBalance })
-      .eq("user_id", userId);
+  if (error) {
+    mapRpcError(error, "[daily-chest] apply_daily_chest_reward");
   }
 
-  await saveClaimState(userId, weeklyGoals, {
-    date: today,
-    reward,
-    reel,
-    winningIndex,
-  });
+  const payload = data as {
+    applied?: boolean;
+    duplicate?: boolean;
+    gem_balance?: number;
+    freezie_balance?: number;
+  } | null;
+
+  if (!payload) {
+    throw new ApiError("INTERNAL_ERROR", "Sandık ödülü uygulanamadı.");
+  }
+
+  if (payload.duplicate) {
+    const existing = await readClaimRow(userId, today);
+    const resolvedReward = existing ? rowToReward(existing) : reward;
+    const reelState = await readReelState(userId);
+    const fallback = buildLoopingReel(resolvedReward);
+    return {
+      reward: resolvedReward,
+      reel:
+        reelState?.date === today && reelState.reel.length > 0
+          ? reelState.reel
+          : fallback.reel,
+      winningIndex: reelState?.winningIndex ?? fallback.stopIndex,
+      gemBalance: Number(payload.gem_balance ?? 0),
+      freezieBalance: Number(payload.freezie_balance ?? 0),
+      alreadyClaimed: true,
+    };
+  }
+
+  await saveReelState(userId, { date: today, reward, reel, winningIndex });
 
   return {
     reward,
     reel,
     winningIndex,
-    gemBalance,
-    freezieBalance,
+    gemBalance: Number(payload.gem_balance ?? 0),
+    freezieBalance: Number(payload.freezie_balance ?? 0),
     alreadyClaimed: false,
   };
 }

@@ -19,6 +19,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:smoke": "node scripts/backend-smoke-test.mjs",
+    "db:types": "npx supabase gen types typescript --project-id urnetodzvszmddzdazdj > lib/types/database.types.ts",
     "i18n:fill": "node scripts/i18n-fill.mjs",
     "i18n:check": "node scripts/i18n-fill.mjs --dry",
     "icons:generate": "node scripts/generate-icons.mjs",

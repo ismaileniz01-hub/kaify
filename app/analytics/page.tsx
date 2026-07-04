@@ -10,6 +10,8 @@ import { WeeklyScoreCard } from "@/components/analytics/WeeklyScoreCard";
 import { readAnalyticsCache, writeAnalyticsCache } from "@/lib/analytics-client-cache";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
+import { InlineAlert } from "@/components/InlineAlert";
+import { errorToMessage } from "@/lib/i18n/api-error";
 import { apiGet } from "@/lib/api/client";
 import type { AnalyticsBundleDTO } from "@/lib/services/analytics.service";
 
@@ -17,16 +19,21 @@ export default function AnalyticsPage() {
   const { t, unit } = useLang();
   const { isAuthenticated } = useSession();
   const [data, setData] = useState<AnalyticsBundleDTO | null>(() => readAnalyticsCache());
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadAnalytics = useCallback(() => {
     if (!isAuthenticated) return;
+    setLoadError(null);
     void apiGet<AnalyticsBundleDTO>("/api/analytics")
       .then((bundle) => {
         setData(bundle);
         writeAnalyticsCache(bundle);
       })
-      .catch(() => setData(null));
-  }, [isAuthenticated]);
+      .catch((err) => {
+        setData(null);
+        setLoadError(errorToMessage(err, t) || t("analytics.error.load"));
+      });
+  }, [isAuthenticated, t]);
 
   useEffect(() => {
     loadAnalytics();
@@ -83,6 +90,15 @@ export default function AnalyticsPage() {
       </header>
 
       <main className="flex-1 overflow-y-auto px-4 pb-8">
+        {loadError && (
+          <InlineAlert
+            className="mb-4"
+            message={loadError}
+            onRetry={loadAnalytics}
+            retryLabel={t("common.retry")}
+            onDismiss={() => setLoadError(null)}
+          />
+        )}
         <div className="grid grid-cols-2 gap-3">
           <StatCard
             icon={Activity}

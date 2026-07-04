@@ -1,6 +1,7 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
+import { mapRpcError } from "@/lib/supabase/rpc-errors";
 import { logger } from "@/lib/logger";
 import { cached } from "@/lib/cache";
 
@@ -52,8 +53,14 @@ export async function getMarketState(userId: string): Promise<MarketStateDTO> {
         .maybeSingle(),
     ]);
 
-  if (ownedError) logger.error("[market.service] inventory read error", { error: ownedError.message });
-  if (kaiError) logger.error("[market.service] kai read error", { error: kaiError.message });
+  if (ownedError) {
+    logger.error("[market.service] inventory read error", { error: ownedError.message });
+    throw new ApiError("INTERNAL_ERROR", "Market envanteri yüklenemedi.");
+  }
+  if (kaiError) {
+    logger.error("[market.service] kai read error", { error: kaiError.message });
+    throw new ApiError("INTERNAL_ERROR", "Kai durumu yüklenemedi.");
+  }
 
   const ownedSet = new Set((owned ?? []).map((r) => r.item_id));
 
@@ -73,7 +80,7 @@ export async function getMarketState(userId: string): Promise<MarketStateDTO> {
 export async function purchaseMarketItem(
   userId: string,
   itemId: string,
-): Promise<{ balance: number; itemId: string }> {
+): Promise<{ balance: number; itemId: string; activeAura: string }> {
   const admin = createAdminSupabaseClient();
   const idempotencyKey = `market:${userId}:${itemId}`;
 
@@ -84,30 +91,19 @@ export async function purchaseMarketItem(
   });
 
   if (error) {
-    if (error.code === "P0001") {
-      const msg = error.message.toLowerCase();
-      if (msg.includes("not found")) {
-        throw new ApiError("NOT_FOUND", "Market ürünü bulunamadı.");
-      }
-      if (msg.includes("already owned") || msg.includes("insufficient")) {
-        throw new ApiError("CONFLICT", error.message);
-      }
-      throw new ApiError("VALIDATION_ERROR", error.message);
-    }
-
-    logger.error("[market.service] purchase rpc error", { error: error.message });
-    throw new ApiError("INTERNAL_ERROR", "Satın alma işlemi başarısız.");
+    mapRpcError(error, "[market.service] purchase", "Satın alma işlemi başarısız.");
   }
 
   if (!data || typeof data !== "object") {
     throw new ApiError("INTERNAL_ERROR", "Satın alma işlemi başarısız.");
   }
 
-  const result = data as { balance?: number; item_id?: string };
+  const result = data as { balance?: number; item_id?: string; active_aura?: string };
 
   return {
     balance: result.balance ?? 0,
     itemId: result.item_id ?? itemId,
+    activeAura: result.active_aura ?? itemId,
   };
 }
 
@@ -128,13 +124,19 @@ export async function applyMarketAura(
     throw new ApiError("FORBIDDEN", "Bu efekte sahip değilsiniz.");
   }
 
-  const { error } = await admin
-    .from("user_kai_state")
-    .upsert({ user_id: userId, active_aura: itemId }, { onConflict: "user_id" });
+  const { data, error } = await admin.rpc("set_active_aura", {
+    p_user_id: userId,
+    p_item_id: itemId,
+  });
 
   if (error) {
-    throw new ApiError("INTERNAL_ERROR", "Aura uygulanamadı.");
+    mapRpcError(error, "[market.service] set_active_aura", "Aura uygulanamadı.");
   }
 
-  return { activeAura: itemId };
+  const activeAura =
+    data && typeof data === "object" && "active_aura" in data
+      ? String((data as { active_aura: string }).active_aura)
+      : itemId;
+
+  return { activeAura };
 }

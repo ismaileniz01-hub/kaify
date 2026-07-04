@@ -1,6 +1,7 @@
 import { requireUser, type AuthedUser } from "@/lib/api/auth-guard";
 import { ApiError } from "@/lib/api/errors";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 
 /**
@@ -25,6 +26,21 @@ export async function requireAdmin(): Promise<AuthedUser> {
 
   if (data?.role !== "admin") {
     throw new ApiError("FORBIDDEN", "Bu işlem için yönetici yetkisi gerekir.");
+  }
+
+  const supabase = await createServerSupabaseClient();
+  const { data: aal, error: aalError } =
+    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+  if (aalError) {
+    logger.warn("[admin-guard] MFA assurance lookup failed", {
+      error: aalError.message,
+    });
+  } else if (aal?.nextLevel === "aal2" && aal?.currentLevel !== "aal2") {
+    throw new ApiError(
+      "FORBIDDEN",
+      "Yönetici işlemleri için MFA doğrulaması gerekir.",
+    );
   }
 
   return user;

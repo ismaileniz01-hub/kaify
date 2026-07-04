@@ -19,7 +19,9 @@ describe("enforceUserRateLimit", () => {
   it("scopes the key by action and user, using the action's config", async () => {
     checkRateLimit.mockResolvedValue({ allowed: true, remaining: 1, limit: 10, resetMs: 0 });
     await enforceUserRateLimit("u42", "analyze");
-    expect(checkRateLimit).toHaveBeenCalledWith("ai:analyze:u42", AI_RATE_LIMITS.analyze);
+    expect(checkRateLimit).toHaveBeenCalledWith("ai:analyze:u42", AI_RATE_LIMITS.analyze, {
+      failClosedInProduction: true,
+    });
   });
 
   it("throws RATE_LIMITED when the limit is exceeded", async () => {

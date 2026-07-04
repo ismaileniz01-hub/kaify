@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
@@ -54,8 +54,7 @@ describe("checkRateLimit (in-memory fallback)", () => {
   });
 
   it("failClosedInProduction denies when Upstash is missing in production", async () => {
-    const prevEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
 
     const result = await checkRateLimit(
       `test:failclosed:${Math.random()}`,
@@ -63,7 +62,7 @@ describe("checkRateLimit (in-memory fallback)", () => {
       { failClosedInProduction: true },
     );
 
-    process.env.NODE_ENV = prevEnv;
+    vi.unstubAllEnvs();
     expect(result.allowed).toBe(false);
   });
 });

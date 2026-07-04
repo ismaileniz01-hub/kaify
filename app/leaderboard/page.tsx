@@ -234,7 +234,7 @@ export default function LeaderboardPage() {
         <Link
           href="/welcome"
           className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition-all duration-300 hover:bg-white/20 hover:text-white hover:scale-110"
-          aria-label="Back"
+          aria-label={t("nav.back")}
         >
           <ArrowLeft className="h-4 w-4" strokeWidth={2} />
         </Link>
@@ -255,7 +255,7 @@ export default function LeaderboardPage() {
                 <div className="absolute inset-0 animate-spin rounded-full border-2 border-amber-400/20 border-t-amber-400" />
                 <div className="absolute inset-1 animate-spin rounded-full border-2 border-amber-400/10 border-b-amber-400" style={{ animationDirection: "reverse", animationDuration: "1.5s" }} />
               </div>
-              <p className="text-sm font-medium text-zinc-500 animate-pulse">Loading rankings...</p>
+              <p className="text-sm font-medium text-zinc-500 animate-pulse">{t("leaderboard.loading")}</p>
             </div>
           </div>
         ) : data ? (
@@ -270,7 +270,7 @@ export default function LeaderboardPage() {
                 <div className="relative mb-4 flex items-center justify-center gap-2">
                   <Trophy className="h-5 w-5 text-amber-400" />
                   <h2 className="text-sm font-bold tracking-widest text-zinc-400">
-                    Top Countries
+                    {t("leaderboard.top_countries")}
                   </h2>
                   <Sparkles className="h-4 w-4 text-amber-400/60" />
                 </div>
@@ -298,13 +298,13 @@ export default function LeaderboardPage() {
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-3.5 w-3.5 text-zinc-500" />
                     <span className="text-[10px] font-semibold tracking-wider text-zinc-500">
-                      All Countries
+                      {t("leaderboard.all_countries")}
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Zap className="h-3 w-3 text-orange-400/60" />
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                      Streak
+                      {t("leaderboard.streak_column")}
                     </span>
                   </div>
                 </div>
@@ -345,11 +345,11 @@ export default function LeaderboardPage() {
                                 </span>
                                 {isUser && (
                                   <span className="rounded-full bg-purple-500/20 px-1.5 py-0.5 text-[9px] font-bold text-purple-300 ring-1 ring-purple-400/20">
-                                    YOU
+                                    {t("leaderboard.you")}
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[10px] text-zinc-500">{entry.userCount} active users</p>
+                              <p className="text-[10px] text-zinc-500">{t("leaderboard.country_users", { count: entry.userCount })}</p>
                             </div>
                           </div>
 
@@ -370,12 +370,12 @@ export default function LeaderboardPage() {
                 <div className="mt-4 flex items-center justify-center gap-2 border-t border-white/[0.08] pt-3">
                   <Globe className="h-3 w-3 text-zinc-600" />
                   <p className="text-[10px] text-zinc-600">
-                    {data.totalCountries} countries competing
+                    {t("leaderboard.countries_competing", { count: data.totalCountries })}
                   </p>
                   <span className="text-zinc-700">·</span>
                   <ChevronUp className="h-3 w-3 text-zinc-600" />
                   <p className="text-[10px] font-medium text-zinc-500">
-                    Your rank: #{data.userCountryRank}
+                    {t("leaderboard.your_rank", { rank: data.userCountryRank ?? "—" })}
                   </p>
                 </div>
               </div>
@@ -385,7 +385,7 @@ export default function LeaderboardPage() {
           <div className="flex flex-1 items-center justify-center">
             <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-white/[0.08] bg-zinc-900/80 px-8 py-12 backdrop-blur-md">
               <Globe className="h-8 w-8 text-zinc-600" />
-              <p className="text-sm text-zinc-500">Could not load leaderboard.</p>
+              <p className="text-sm text-zinc-500">{t("leaderboard.error.load")}</p>
             </div>
           </div>
         )}

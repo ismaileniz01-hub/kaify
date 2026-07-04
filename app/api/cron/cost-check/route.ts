@@ -5,6 +5,7 @@ import { createCostAlert } from "@/lib/services/cost-admin.service";
 import { getCronCostSnapshot } from "@/lib/services/cost-cron.service";
 import { dailyAnomalyMultiplier, userDailyTokenAlertThreshold } from "@/lib/ai/cost";
 import { verifyCronSecret } from "@/lib/api/cron-auth";
+import { getCronSnapshots, recordCronRun } from "@/lib/services/cron-monitor.service";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -73,14 +74,44 @@ export async function GET(request: NextRequest) {
       alerts.push(msg);
     }
 
-    return ok({
+    const cronSnapshots = await getCronSnapshots();
+    for (const job of cronSnapshots) {
+      if (job.stale) {
+        const msg = `Cron job stale: ${job.jobName} last ran ${job.staleHours}h ago (${job.lastStatus})`;
+        await createCostAlert({
+          alertType: "cron_stale",
+          severity: "warn",
+          message: msg,
+          metadata: {
+            jobName: job.jobName,
+            lastRunAt: job.lastRunAt,
+            staleHours: job.staleHours,
+          },
+        });
+        alerts.push(msg);
+        logger.warn("cost-check stale cron", { job: job.jobName, staleHours: job.staleHours });
+      }
+    }
+
+    const payload = {
       ranAt: new Date().toISOString(),
       todayUsd,
       avgDailyUsd,
       alertsCreated: alerts.length,
       alerts,
+      cronJobs: cronSnapshots,
+    };
+
+    await recordCronRun("cost-check", "ok", {
+      alertsCreated: alerts.length,
+      todayUsd,
     });
+
+    return ok(payload);
   } catch (error) {
+    await recordCronRun("cost-check", "error", {
+      message: error instanceof Error ? error.message : "unknown",
+    });
     return handleApiError(error, { route: "/api/cron/cost-check" });
   }
 }

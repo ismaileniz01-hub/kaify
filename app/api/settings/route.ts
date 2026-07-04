@@ -17,6 +17,7 @@ const patchSchema = z
     soundEffects: z.boolean(),
     chatSounds: z.boolean(),
     unitSystem: z.enum(["metric", "imperial"]),
+    leaderboardOptOut: z.boolean(),
   })
   .partial()
   .strict();

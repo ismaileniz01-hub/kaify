@@ -1,5 +1,6 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
+import { mapRpcError } from "@/lib/supabase/rpc-errors";
 import { logger } from "@/lib/logger";
 import type {
   Database,
@@ -42,11 +43,7 @@ export async function earnGems(
   });
 
   if (error) {
-    if (error.code === "P0001") {
-      throw new ApiError("VALIDATION_ERROR", error.message);
-    }
-    logger.error("[gem.service:earn] rpc error", { error: error.message });
-    throw new ApiError("INTERNAL_ERROR", "Gem kazanç işlemi başarısız.");
+    mapRpcError(error, "[gem.service:earn]", "Gem kazanç işlemi başarısız.");
   }
   if (!data) {
     throw new ApiError("INTERNAL_ERROR", "Gem kazanç işlemi başarısız.");
@@ -77,11 +74,7 @@ export async function spendGems(
   });
 
   if (error) {
-    if (error.code === "P0001") {
-      throw new ApiError("CONFLICT", error.message);
-    }
-    logger.error("[gem.service:spend] rpc error", { error: error.message });
-    throw new ApiError("INTERNAL_ERROR", "Gem harcama işlemi başarısız.");
+    mapRpcError(error, "[gem.service:spend]", "Gem harcama işlemi başarısız.");
   }
   if (!data) {
     throw new ApiError("INTERNAL_ERROR", "Gem harcama işlemi başarısız.");

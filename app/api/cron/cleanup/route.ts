@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { handleApiError, ok } from "@/lib/api/response";
 import { verifyCronSecret } from "@/lib/api/cron-auth";
+import { recordCronRun } from "@/lib/services/cron-monitor.service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -52,15 +53,22 @@ export async function GET(request: NextRequest) {
       .lt("expires_at", new Date().toISOString())
       .select("id");
 
-    return ok({
+    const payload = {
       ranAt: new Date().toISOString(),
       results: {
         teamChatUnlocked,
         oldHealthStepsDeleted: deletedSteps?.length ?? 0,
         expiredIdempotencyKeysDeleted: deletedKeys?.length ?? 0,
       },
-    });
+    };
+
+    await recordCronRun("cleanup", "ok", payload.results);
+
+    return ok(payload);
   } catch (error) {
+    await recordCronRun("cleanup", "error", {
+      message: error instanceof Error ? error.message : "unknown",
+    });
     return handleApiError(error, { route: "/api/cron/cleanup" });
   }
 }

@@ -1,8 +1,10 @@
 import { NextRequest } from "next/server";
+import { assertAiAvailable } from "@/lib/api/ai-guard";
 import { requireUser } from "@/lib/api/auth-guard";
 import { ApiError } from "@/lib/api/errors";
 import { handleApiError, ok } from "@/lib/api/response";
 import { enforceUserRateLimit } from "@/lib/api/rate-guard";
+import { assertUserDailyAiBudget } from "@/lib/ai/daily-cost-cap";
 import { analyzePhoto } from "@/lib/services/analysis.service";
 import {
   MAX_JSON_BODY_ANALYZE,
@@ -36,6 +38,8 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     }
 
     await enforceUserRateLimit(user.id, "analyze");
+    await assertAiAvailable();
+    await assertUserDailyAiBudget(user.id);
 
     const body = await parseJsonWithLimit(request, MAX_JSON_BODY_ANALYZE);
     const parsed = analyzeImageInputSchema.safeParse(body);

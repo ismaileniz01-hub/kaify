@@ -4,6 +4,7 @@ import { getCircuitSnapshots, resetCircuit } from "@/lib/resilience/circuit";
 import { exitDegradedMode, getDegradedState } from "@/lib/resilience/degraded-mode";
 import { handleApiError, ok } from "@/lib/api/response";
 import { verifyCronSecret } from "@/lib/api/cron-auth";
+import { recordCronRun } from "@/lib/services/cron-monitor.service";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -53,15 +54,22 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return ok({
+    const payload = {
       ranAt: new Date().toISOString(),
       database: dbOk ? "ok" : "down",
       degradedBefore: degradedBefore.active,
       openCircuits: openCircuits.map((c) => c.name),
       recovered,
       degradedAfter: (await getDegradedState()).active,
-    });
+    };
+
+    await recordCronRun("self-recovery", dbOk ? "ok" : "error", payload);
+
+    return ok(payload);
   } catch (error) {
+    await recordCronRun("self-recovery", "error", {
+      message: error instanceof Error ? error.message : "unknown",
+    });
     return handleApiError(error, { route: "/api/cron/self-recovery" });
   }
 }

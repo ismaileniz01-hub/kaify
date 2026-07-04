@@ -1,9 +1,11 @@
 import { NextRequest } from "next/server";
+import { assertAiAvailable } from "@/lib/api/ai-guard";
 import { requireUser } from "@/lib/api/auth-guard";
 import { ApiError } from "@/lib/api/errors";
 import { handleApiError, ok } from "@/lib/api/response";
 import { createSseResponse } from "@/lib/api/sse";
 import { enforceUserRateLimit } from "@/lib/api/rate-guard";
+import { assertUserDailyAiBudget } from "@/lib/ai/daily-cost-cap";
 import { CHAT_TOKEN_RESERVE, reserveQuota } from "@/lib/ai/quota-guard";
 import { getHistory, streamCoachReply } from "@/lib/services/chat.service";
 import {
@@ -77,6 +79,9 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     if (!parsed.success) {
       throw new ApiError("VALIDATION_ERROR", "Geçersiz istek.", parsed.error.issues);
     }
+
+    await assertAiAvailable();
+    await assertUserDailyAiBudget(user.id);
 
     await reserveQuota({
       userId: user.id,

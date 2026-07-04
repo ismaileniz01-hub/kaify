@@ -80,6 +80,7 @@ type ProfileRow = {
   referred_by_code: string | null;
   team_chat_unlocked: boolean;
   team_chat_unlocked_at: string | null;
+  leaderboard_opt_out: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -109,6 +110,7 @@ type ProfileInsert = {
   referred_by_code?: string | null;
   team_chat_unlocked?: boolean;
   team_chat_unlocked_at?: string | null;
+  leaderboard_opt_out?: boolean;
   created_at?: string;
   updated_at?: string;
 };
@@ -136,6 +138,7 @@ type ProfileUpdate = {
   referred_by_code?: string | null;
   team_chat_unlocked?: boolean;
   team_chat_unlocked_at?: string | null;
+  leaderboard_opt_out?: boolean;
   updated_at?: string;
 };
 
@@ -651,6 +654,46 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["influencer_codes"]["Row"]>;
         Relationships: [];
       };
+      daily_chest_claims: {
+        Row: {
+          user_id: string;
+          utc_date: string;
+          reward_kind: "gems" | "freezie";
+          reward_amount: number;
+          reward_rarity: string | null;
+          idempotency_key: string;
+          claimed_at: string;
+        };
+        Insert: {
+          user_id: string;
+          utc_date: string;
+          reward_kind: "gems" | "freezie";
+          reward_amount: number;
+          reward_rarity?: string | null;
+          idempotency_key: string;
+          claimed_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["daily_chest_claims"]["Row"]>;
+        Relationships: [];
+      };
+      cron_job_runs: {
+        Row: {
+          job_name: string;
+          last_run_at: string;
+          last_status: "ok" | "error";
+          last_detail: Json | null;
+          updated_at: string;
+        };
+        Insert: {
+          job_name: string;
+          last_run_at?: string;
+          last_status: "ok" | "error";
+          last_detail?: Json | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["cron_job_runs"]["Row"]>;
+        Relationships: [];
+      };
       idempotency_keys: {
         Row: {
           id: string;
@@ -886,6 +929,29 @@ export type Database = {
       };
       admin_get_overview_stats: {
         Args: Record<string, never>;
+        Returns: Json;
+      };
+      apply_daily_chest_reward: {
+        Args: {
+          p_user_id: string;
+          p_utc_date: string;
+          p_idempotency_key: string;
+          p_reward_kind: string;
+          p_reward_amount: number;
+          p_reward_rarity?: string | null;
+        };
+        Returns: Json;
+      };
+      record_cron_run: {
+        Args: {
+          p_job_name: string;
+          p_status: string;
+          p_detail?: Json | null;
+        };
+        Returns: undefined;
+      };
+      set_active_aura: {
+        Args: { p_user_id: string; p_item_id: string };
         Returns: Json;
       };
     };

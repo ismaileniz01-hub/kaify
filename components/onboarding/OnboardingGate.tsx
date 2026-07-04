@@ -5,6 +5,7 @@ import { Leaf, Sparkles, ArrowRight } from "lucide-react";
 import { apiPost, ApiClientError } from "@/lib/api/client";
 import { useSession } from "@/lib/session-context";
 import { useLang } from "@/lib/lang-context";
+import { errorToMessage } from "@/lib/i18n/api-error";
 import type { ProfileDTO } from "@/lib/types/domain.types";
 import {
   GENDERS,
@@ -12,19 +13,6 @@ import {
   type Gender,
   type ExperienceLevel,
 } from "@/lib/validations/onboarding.schema";
-
-const GENDER_LABEL: Record<Gender, string> = {
-  male: "Erkek",
-  female: "Kadın",
-  other: "Diğer",
-  prefer_not_to_say: "Belirtmek istemiyorum",
-};
-
-const EXPERIENCE_LABEL: Record<ExperienceLevel, string> = {
-  beginner: "Başlangıç",
-  intermediate: "Orta",
-  advanced: "İleri",
-};
 
 /**
  * First-run onboarding gate. When an authenticated user's profile is still in
@@ -34,7 +22,7 @@ const EXPERIENCE_LABEL: Record<ExperienceLevel, string> = {
  */
 export function OnboardingGate() {
   const { isAuthenticated, isLoading, profile, refreshSession } = useSession();
-  const { lang } = useLang();
+  const { lang, t } = useLang();
 
   const [displayName, setDisplayName] = useState("");
   const [gender, setGender] = useState<Gender>("prefer_not_to_say");
@@ -47,10 +35,13 @@ export function OnboardingGate() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const genderLabel = (g: Gender) => t(`onboarding.gender.${g}` as "onboarding.gender.male");
+  const experienceLabel = (level: ExperienceLevel) =>
+    t(`onboarding.experience.${level}` as "onboarding.experience.beginner");
+
   const needsOnboarding =
     isAuthenticated && !isLoading && profile?.onboardingStatus === "PAID";
 
-  // Prefill the name from whatever the signup captured.
   useEffect(() => {
     if (needsOnboarding && profile) {
       setDisplayName((prev) => prev || profile.displayName || "");
@@ -92,9 +83,9 @@ export function OnboardingGate() {
       await refreshSession();
     } catch (err) {
       if (err instanceof ApiClientError) {
-        setError(err.message);
+        setError(errorToMessage(err, t));
       } else {
-        setError("Bir hata oluştu. Lütfen tekrar dene.");
+        setError(t("onboarding.error"));
       }
       setSubmitting(false);
     }
@@ -104,18 +95,14 @@ export function OnboardingGate() {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm">
       <div className="relative mx-4 max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-3xl border border-white/10 bg-zinc-900 shadow-2xl">
         <div className="border-b border-white/5 px-6 py-5">
-          <h2 className="text-lg font-bold text-white">Profilini tamamla</h2>
-          <p className="mt-1 text-xs text-zinc-400">
-            Koçlarının sana özel plan hazırlayabilmesi için birkaç bilgiye
-            ihtiyacımız var.
-          </p>
+          <h2 className="text-lg font-bold text-white">{t("onboarding.title")}</h2>
+          <p className="mt-1 text-xs text-zinc-400">{t("onboarding.subtitle")}</p>
         </div>
 
         <div className="flex flex-col gap-4 px-6 py-6">
-          {/* İsim */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-              İsim
+              {t("onboarding.name")}
             </label>
             <input
               type="text"
@@ -123,14 +110,13 @@ export function OnboardingGate() {
               onChange={(e) => setDisplayName(e.target.value)}
               maxLength={80}
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-purple-500/50 focus:bg-purple-500/5"
-              placeholder="Adın"
+              placeholder={t("onboarding.name_placeholder")}
             />
           </div>
 
-          {/* Cinsiyet */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-              Cinsiyet
+              {t("onboarding.gender")}
             </label>
             <select
               value={gender}
@@ -139,17 +125,16 @@ export function OnboardingGate() {
             >
               {GENDERS.map((g) => (
                 <option key={g} value={g} className="bg-zinc-900">
-                  {GENDER_LABEL[g]}
+                  {genderLabel(g)}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Boy & Kilo */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                Boy (cm)
+                {t("onboarding.height")}
               </label>
               <input
                 type="number"
@@ -157,12 +142,12 @@ export function OnboardingGate() {
                 value={heightCm}
                 onChange={(e) => setHeightCm(e.target.value)}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-purple-500/50 focus:bg-purple-500/5"
-                placeholder="178"
+                placeholder={t("onboarding.height_placeholder")}
               />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                Kilo (kg)
+                {t("onboarding.weight")}
               </label>
               <input
                 type="number"
@@ -170,15 +155,14 @@ export function OnboardingGate() {
                 value={weightKg}
                 onChange={(e) => setWeightKg(e.target.value)}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-purple-500/50 focus:bg-purple-500/5"
-                placeholder="75"
+                placeholder={t("onboarding.weight_placeholder")}
               />
             </div>
           </div>
 
-          {/* Deneyim */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-              Deneyim seviyesi
+              {t("onboarding.experience")}
             </label>
             <div className="grid grid-cols-3 gap-2">
               {EXPERIENCE_LEVELS.map((level) => (
@@ -192,16 +176,15 @@ export function OnboardingGate() {
                       : "border-white/10 bg-white/5 text-zinc-400 hover:border-white/20"
                   }`}
                 >
-                  {EXPERIENCE_LABEL[level]}
+                  {experienceLabel(level)}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Natural / Destekli */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-              Durum
+              {t("onboarding.status")}
             </label>
             <div className="flex gap-2">
               <button
@@ -214,7 +197,7 @@ export function OnboardingGate() {
                 }`}
               >
                 <Leaf className="h-4 w-4" />
-                Natural
+                {t("onboarding.natural")}
               </button>
               <button
                 type="button"
@@ -226,15 +209,14 @@ export function OnboardingGate() {
                 }`}
               >
                 <Sparkles className="h-4 w-4" />
-                Destekli
+                {t("onboarding.enhanced")}
               </button>
             </div>
           </div>
 
-          {/* Bio (opsiyonel) */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-              Hakkında (opsiyonel)
+              {t("onboarding.bio")}
             </label>
             <textarea
               value={bio}
@@ -242,7 +224,7 @@ export function OnboardingGate() {
               rows={2}
               maxLength={1000}
               className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-purple-500/50 focus:bg-purple-500/5"
-              placeholder="Hedeflerin, motivasyonun…"
+              placeholder={t("onboarding.bio_placeholder")}
             />
           </div>
 
@@ -254,7 +236,7 @@ export function OnboardingGate() {
             disabled={!valid || submitting}
             className="mt-1 flex w-full items-center justify-center gap-2 rounded-full bg-purple-500 py-3.5 text-sm font-semibold text-white shadow-xl transition hover:bg-purple-400 active:scale-95 disabled:opacity-40"
           >
-            {submitting ? "Kaydediliyor…" : "Devam et"}
+            {submitting ? t("onboarding.submitting") : t("onboarding.submit")}
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>

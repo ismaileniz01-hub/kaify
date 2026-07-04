@@ -43,6 +43,12 @@ export function validateEnvAtBoot(): void {
     logger.error("env validation failed (critical)", { problems });
   }
   if (missingSoft.length > 0) {
+    const isProd = process.env.NODE_ENV === "production";
+    const hasUpstash =
+      process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (isProd && !hasUpstash) {
+      problems.push("UPSTASH_REDIS_REST_URL/TOKEN missing in production (rate limits fail-closed)");
+    }
     logger.warn("env validation: optional vars missing/placeholder", {
       missing: missingSoft,
     });

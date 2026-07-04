@@ -2,6 +2,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ModelRouter } from "@/lib/ai/model-router";
 import { TOKEN_BUDGET } from "@/lib/ai/budget";
 import { AiError } from "@/lib/ai/errors";
+import { reserveQuota, refundQuota, settleQuota } from "@/lib/ai/quota-guard";
 import { logger } from "@/lib/logger";
 import { getOwnProfile } from "@/lib/services/profile.service";
 import { getStreakStatus } from "@/lib/services/streak-status.service";
@@ -89,6 +90,13 @@ async function generateDailyCopy(params: {
   isNatural: boolean;
 }): Promise<{ motivation: string; dailyTip: string }> {
   const fallback = fallbackHome(params.displayName, params.streak, params.locale);
+  const tokenReserve = TOKEN_BUDGET.homeCopy;
+
+  await reserveQuota({
+    userId: params.userId,
+    resource: "text_tokens",
+    amount: tokenReserve,
+  });
 
   try {
     const messages: ChatTurn[] = [
@@ -106,11 +114,27 @@ async function generateDailyCopy(params: {
       },
     ];
 
-    const { content } = await ModelRouter.completeText(messages, {
+    const { content, usage } = await ModelRouter.completeText(messages, {
       temperature: 0.7,
       maxTokens: TOKEN_BUDGET.homeCopy,
       usageContext: { userId: params.userId, operation: "home_copy" },
     });
+
+    const tokens = usage?.total_tokens ?? tokenReserve;
+    const extra = tokens - tokenReserve;
+    if (extra > 0) {
+      await settleQuota({
+        userId: params.userId,
+        resource: "text_tokens",
+        amount: extra,
+      });
+    } else if (extra < 0) {
+      await refundQuota({
+        userId: params.userId,
+        resource: "text_tokens",
+        amount: -extra,
+      });
+    }
 
     const lines = content
       .split("\n")
@@ -124,6 +148,11 @@ async function generateDailyCopy(params: {
       return { motivation: lines[0], dailyTip: fallback.dailyTip };
     }
   } catch (error) {
+    await refundQuota({
+      userId: params.userId,
+      resource: "text_tokens",
+      amount: tokenReserve,
+    });
     if (!(error instanceof AiError)) {
       logger.error("[home.service] AI copy error", {
         error: error instanceof Error ? error.message : "unknown",

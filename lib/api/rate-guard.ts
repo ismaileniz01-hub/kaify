@@ -17,6 +17,7 @@ export const AI_RATE_LIMITS = {
   avatar: { requests: 5, windowMs: 60 * 1000 },
   checkin: { requests: 10, windowMs: 60 * 1000 },
   steps: { requests: 30, windowMs: 60 * 1000 },
+  chest: { requests: 5, windowMs: 60 * 1000 },
 } as const;
 
 export type AiRateAction = keyof typeof AI_RATE_LIMITS;

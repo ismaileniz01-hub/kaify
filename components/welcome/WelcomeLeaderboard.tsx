@@ -108,7 +108,7 @@ export function WelcomeLeaderboard() {
               <Trophy className="h-3.5 w-3.5 text-amber-400" />
             </div>
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-              Leaderboard
+              {t("leaderboard.title")}
             </span>
             {data.userRank && (
               <span className="rounded-full bg-purple-500/15 px-2 py-0.5 text-[10px] font-medium text-purple-300">
@@ -175,7 +175,7 @@ export function WelcomeLeaderboard() {
               </div>
             ))}
             <p className="pt-1 text-center text-[10px] text-zinc-600">
-              {data.totalUsers} active users worldwide
+              {t("leaderboard.active_users", { count: data.totalUsers })}
             </p>
           </div>
         )}

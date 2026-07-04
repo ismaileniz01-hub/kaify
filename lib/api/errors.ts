@@ -12,6 +12,7 @@ export const API_ERROR_STATUS = {
   CONFLICT: 409,
   RATE_LIMITED: 429,
   INTERNAL_ERROR: 500,
+  SERVICE_UNAVAILABLE: 503,
 } as const;
 
 export type ApiErrorCode = keyof typeof API_ERROR_STATUS;

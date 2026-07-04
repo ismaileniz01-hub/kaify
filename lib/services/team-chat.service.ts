@@ -2,7 +2,12 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
 import { ModelRouter } from "@/lib/ai/model-router";
 import { TOKEN_BUDGET } from "@/lib/ai/budget";
-import { consumeQuota } from "@/lib/ai/quota-guard";
+import {
+  checkQuotaGuard,
+  refundQuota,
+  reserveQuota,
+  settleQuota,
+} from "@/lib/ai/quota-guard";
 import { sanitizeUserText, wrapUntrustedInput } from "@/lib/ai/prompt-safety";
 import type { ChatTurn } from "@/lib/ai/types";
 import { mapChatMessageRow, type ChatMessageDTO } from "@/lib/types/domain.types";
@@ -87,6 +92,13 @@ export async function generateWeeklyTeamMeeting(
 
   const context = `User: ${name}. Streak: ${streak.currentStreak}. Workouts: ${analytics.today.workoutsCompleted}/${analytics.today.workoutsTarget}. Water: ${analytics.today.waterLiters}L. Calories: ${analytics.today.caloriesConsumed}/${analytics.today.calorieGoal}. Protein: ${analytics.today.proteinG}g. Steps today: ${analytics.today.steps}.`;
 
+  const tokenReserve = TOKEN_BUDGET.teamChat;
+  await reserveQuota({
+    userId,
+    resource: "text_tokens",
+    amount: tokenReserve,
+  });
+
   const messages: ChatTurn[] = [
     {
       role: "system",
@@ -95,11 +107,25 @@ export async function generateWeeklyTeamMeeting(
     { role: "user", content: wrapUntrustedInput("USER_DATA", context) },
   ];
 
-  const { content, usage } = await ModelRouter.completeText(messages, {
-    temperature: 0.8,
-    maxTokens: TOKEN_BUDGET.teamChat,
-    usageContext: { userId, operation: "team_chat" },
-  });
+  let content: string;
+  let usage: { total_tokens?: number } | null | undefined;
+
+  try {
+    const result = await ModelRouter.completeText(messages, {
+      temperature: 0.8,
+      maxTokens: TOKEN_BUDGET.teamChat,
+      usageContext: { userId, operation: "team_chat" },
+    });
+    content = result.content;
+    usage = result.usage;
+  } catch (error) {
+    await refundQuota({
+      userId,
+      resource: "text_tokens",
+      amount: tokenReserve,
+    });
+    throw error;
+  }
 
   let parsed: { coachId: string; text: string }[] = [];
   try {
@@ -144,13 +170,33 @@ export async function generateWeeklyTeamMeeting(
     .select("*");
 
   if (insertError) {
+    await refundQuota({
+      userId,
+      resource: "text_tokens",
+      amount: tokenReserve,
+    });
     throw new ApiError("INTERNAL_ERROR", "Takım toplantısı kaydedilemedi.");
   }
 
   const inserted: ChatMessageDTO[] = (rows ?? []).map(mapChatMessageRow);
 
-  const tokens = usage?.total_tokens ?? 400;
-  await consumeQuota({ userId, resource: "text_tokens", amount: tokens });
+  const tokens = usage?.total_tokens ?? tokenReserve;
+  const extraTokens = tokens - tokenReserve;
+  if (extraTokens > 0) {
+    await settleQuota({
+      userId,
+      resource: "text_tokens",
+      amount: extraTokens,
+    });
+  } else if (extraTokens < 0) {
+    await refundQuota({
+      userId,
+      resource: "text_tokens",
+      amount: -extraTokens,
+    });
+  } else {
+    await checkQuotaGuard({ userId, resource: "text_tokens" });
+  }
 
   return inserted;
 }

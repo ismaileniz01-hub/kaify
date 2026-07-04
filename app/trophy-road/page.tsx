@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { ArrowLeft, Check, ShoppingCart, Sparkles, PartyPopper } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { InlineAlert } from "@/components/InlineAlert";
 import { useSession } from "@/lib/session-context";
-import { apiGet, apiPost, apiPatch } from "@/lib/api/client";
+import { apiPost, apiPatch } from "@/lib/api/client";
 import { GemBalance } from "@/components/GemBalance";
 import { GemIcon } from "@/components/GemIcon";
 import { useGem } from "@/lib/gem-context";
 import { useKai, type AuraColor } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
+import { errorToMessage } from "@/lib/i18n/api-error";
 import { DailyChestBanner } from "@/components/market/DailyChestBanner";
 
 type EffectColor = {
@@ -140,34 +142,32 @@ const EFFECTS: EffectColor[] = [
 export default function MarketPage() {
   const { t } = useLang();
   const { gemState, spend, refreshBalance } = useGem();
-  const { ownedEffects, purchaseEffect, setAuraColor, auraColor, syncFromServer } = useKai();
-  const { isAuthenticated, refreshSession } = useSession();
+  const { ownedEffects, purchaseEffect, setAuraColor, auraColor } = useKai();
+  const { isAuthenticated, isLoading, refreshSession } = useSession();
   const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [applying, setApplying] = useState<string | null>(null);
   const [successEffect, setSuccessEffect] = useState<EffectColor | null>(null);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    apiGet<{ ownedIds: string[]; activeAura: string }>("/api/market")
-      .then((state) => {
-        syncFromServer(state.ownedIds, state.activeAura);
-      })
-      .catch(() => undefined);
-  }, [isAuthenticated, syncFromServer]);
+  const [error, setError] = useState<string | null>(null);
 
   const handleBuy = async (effect: EffectColor) => {
     if (ownedEffects.includes(effect.id)) return;
     if (gemState.balance < effect.price) return;
 
     setPurchasing(effect.id);
+    setError(null);
 
     if (isAuthenticated) {
       try {
-        await apiPost("/api/market/purchase", { itemId: effect.id });
+        const result = await apiPost<{ balance: number; itemId: string; activeAura: string }>(
+          "/api/market/purchase",
+          { itemId: effect.id },
+        );
         purchaseEffect(effect.id);
+        setAuraColor(result.activeAura as typeof effect.id);
         await refreshBalance?.();
         setSuccessEffect(effect);
-      } catch {
-        // insufficient gems etc.
+      } catch (err) {
+        setError(errorToMessage(err, t) || t("market.error.purchase"));
       } finally {
         setPurchasing(null);
       }
@@ -175,26 +175,39 @@ export default function MarketPage() {
     }
 
     setTimeout(() => {
-      const success = spend(effect.price, `${t(effect.nameKey)} efekti satın alındı`);
+      const success = spend(effect.price, t("market.guest_purchase", { name: t(effect.nameKey) }));
       if (success) {
         purchaseEffect(effect.id);
         setSuccessEffect(effect);
+      } else {
+        setError(t("market.insufficient"));
       }
       setPurchasing(null);
     }, 800);
   };
 
   const handleApply = async (effect: EffectColor) => {
+    setError(null);
     if (isAuthenticated) {
+      setApplying(effect.id);
       try {
-        await apiPatch("/api/market/purchase", { itemId: effect.id });
-      } catch {
+        const result = await apiPatch<{ activeAura: string }>("/api/market/purchase", {
+          itemId: effect.id,
+        });
+        setAuraColor(result.activeAura as typeof effect.id);
+      } catch (err) {
+        setError(errorToMessage(err, t) || t("market.error.apply"));
+        setApplying(null);
         return;
       }
+      setApplying(null);
+    } else {
+      setAuraColor(effect.id);
     }
-    setAuraColor(effect.id);
     setSuccessEffect(null);
   };
+
+  const showGridSkeleton = isAuthenticated && isLoading;
 
   return (
     <div className="phone-shell welcome-gradient relative flex flex-col">
@@ -228,6 +241,14 @@ export default function MarketPage() {
             {t("market.catalog.desc")}
           </p>
         </div>
+
+        {error && (
+          <InlineAlert
+            message={error}
+            onDismiss={() => setError(null)}
+            retryLabel={t("common.retry")}
+          />
+        )}
 
         {/* Başarılı ekranı */}
         {successEffect && (
@@ -263,11 +284,19 @@ export default function MarketPage() {
         )}
 
         {/* Efekt Grid */}
+        {showGridSkeleton ? (
+          <div className="grid grid-cols-2 gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-52 animate-pulse rounded-2xl bg-white/[0.06]" />
+            ))}
+          </div>
+        ) : (
         <div className="grid grid-cols-2 gap-3">
           {EFFECTS.map((effect) => {
             const isOwned = ownedEffects.includes(effect.id);
             const isActive = auraColor === effect.id;
             const isBuying = purchasing === effect.id;
+            const isApplying = applying === effect.id;
             const canAfford = gemState.balance >= effect.price;
 
             return (
@@ -357,11 +386,21 @@ export default function MarketPage() {
                       </div>
                     ) : (
                       <button
-                        onClick={() => setAuraColor(effect.id)}
-                        className={`flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r ${effect.gradient} py-2.5 text-sm font-medium text-white shadow-lg ${effect.glowColor} transition active:scale-95 hover:opacity-90`}
+                        onClick={() => void handleApply(effect)}
+                        disabled={isApplying}
+                        className={`flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r ${effect.gradient} py-2.5 text-sm font-medium text-white shadow-lg ${effect.glowColor} transition active:scale-95 hover:opacity-90 disabled:opacity-60`}
                       >
-                        <Sparkles className="h-4 w-4" />
-                        {t("market.apply")}
+                        {isApplying ? (
+                          <>
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                            {t("market.applying")}
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4" />
+                            {t("market.apply")}
+                          </>
+                        )}
                       </button>
                     )
                   ) : (
@@ -392,6 +431,7 @@ export default function MarketPage() {
             );
           })}
         </div>
+        )}
       </main>
     </div>
   );

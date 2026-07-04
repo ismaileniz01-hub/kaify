@@ -96,13 +96,9 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
     const savedLevel = localStorage.getItem("kai_level");
     const prevLevel = savedLevel ? (Number(savedLevel) as KaiLevel) : 1;
 
-    console.log('Kai level check:', { currentStreak, level, prevLevel, savedLevel });
-
     // Eğer level 1'den büyükse ve prevLevel geçerli değilse veya level > prevLevel ise pending'e ekle
     if (level > 1 && (!savedLevel || level > prevLevel)) {
-      // pendingKaiLevel'i ref olarak kontrol et (stale closure sorununu önle)
       setPendingKaiLevel((prev) => {
-        console.log('Setting pendingKaiLevel:', { prev, level });
         if (prev === null || level > prev) {
           return level;
         }
