@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Gift, Snowflake } from "lucide-react";
 import { GemIcon } from "@/components/GemIcon";
 import { ChromaKeyVideo } from "@/components/market/ChromaKeyVideo";
+import { ChestReelDecor } from "@/components/market/ChestReelDecor";
 import { useLang } from "@/lib/lang-context";
 import { useSound } from "@/lib/use-sound";
 import {
@@ -165,6 +166,13 @@ export function DailyChestOpening({ claim, onClose }: Props) {
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-20 top-20 h-64 w-64 rounded-full bg-purple-600/20 blur-3xl" />
         <div className="absolute -right-16 bottom-32 h-56 w-56 rounded-full bg-amber-500/10 blur-3xl" />
+        {(phase === "spin" || phase === "reveal" || phase === "done") && (
+          <>
+            <div className="absolute left-1/2 top-1/3 h-72 w-72 -translate-x-1/2 rounded-full bg-violet-600/15 blur-3xl" />
+            <div className="absolute bottom-1/4 left-8 h-40 w-40 rounded-full bg-amber-500/12 blur-2xl" />
+            <div className="absolute bottom-1/3 right-6 h-32 w-32 rounded-full bg-cyan-500/10 blur-2xl" />
+          </>
+        )}
       </div>
 
       <header className="relative z-10 px-6 pt-14 text-center">
@@ -191,6 +199,7 @@ export function DailyChestOpening({ claim, onClose }: Props) {
         {(phase === "spin" || phase === "reveal" || phase === "done") && (
           <div className="w-full max-w-sm">
             <div className="chest-reel-stage py-7">
+              <ChestReelDecor />
               <div className="chest-reel-vignette-left" />
               <div className="chest-reel-vignette-right" />
               <div className="pointer-events-none absolute inset-y-0 left-1/2 z-20 w-0.5 -translate-x-1/2 bg-gradient-to-b from-transparent via-amber-300 to-transparent shadow-[0_0_12px_rgba(251,191,36,0.8)]" />
@@ -198,7 +207,7 @@ export function DailyChestOpening({ claim, onClose }: Props) {
 
               <div
                 ref={reelRef}
-                className="flex pl-[50%] will-change-transform"
+                className="relative z-[5] flex pl-[50%] will-change-transform"
                 style={{
                   gap: CARD_GAP,
                   transform: `translate3d(-${spinOffset}px, 0, 0)`,
