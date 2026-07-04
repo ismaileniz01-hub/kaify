@@ -34,7 +34,7 @@ export async function getMarketState(userId: string): Promise<MarketStateDTO> {
   // The user's owned items and active aura are per-user → always live.
   const [items, { data: owned, error: ownedError }, { data: kai, error: kaiError }] =
     await Promise.all([
-      cached<MarketItemRow[]>("market:items:v1", 300, async () => {
+      cached<MarketItemRow[]>("market:items:v2", 300, async () => {
         const { data, error } = await supabase
           .from("market_items")
           .select("id, name_key, price, color_hex, sort_order")
