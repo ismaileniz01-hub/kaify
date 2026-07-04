@@ -190,9 +190,11 @@ export function DailyChestOpening({ claim, onClose }: Props) {
 
         {(phase === "spin" || phase === "reveal" || phase === "done") && (
           <div className="w-full max-w-sm">
-            <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-black/30 py-6">
+            <div className="chest-reel-stage py-7">
+              <div className="chest-reel-vignette-left" />
+              <div className="chest-reel-vignette-right" />
               <div className="pointer-events-none absolute inset-y-0 left-1/2 z-20 w-0.5 -translate-x-1/2 bg-gradient-to-b from-transparent via-amber-300 to-transparent shadow-[0_0_12px_rgba(251,191,36,0.8)]" />
-              <div className="pointer-events-none absolute inset-y-2 left-1/2 z-10 w-[96px] -translate-x-1/2 rounded-xl border border-amber-400/20 bg-amber-400/5" />
+              <div className="pointer-events-none absolute inset-y-3 left-1/2 z-10 h-[calc(100%-1.5rem)] w-[96px] -translate-x-1/2 rounded-xl border border-amber-400/25 bg-amber-400/[0.07] shadow-[inset_0_0_24px_rgba(251,191,36,0.08)]" />
 
               <div
                 ref={reelRef}

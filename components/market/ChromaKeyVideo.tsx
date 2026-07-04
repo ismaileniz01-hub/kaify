@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { applyGreenScreenKey } from "@/lib/chroma-key";
 
 type Props = {
   src: string;
@@ -71,27 +72,7 @@ export function ChromaKeyVideo({
 
       offCtx.drawImage(video, 0, 0, w, h);
       const frame = offCtx.getImageData(0, 0, w, h);
-      const d = frame.data;
-
-      for (let i = 0; i < d.length; i += 4) {
-        const r = d[i];
-        const g = d[i + 1];
-        const b = d[i + 2];
-        const maxRB = Math.max(r, b);
-        const greenExcess = g - maxRB;
-
-        if (g > 55 && greenExcess > 16) {
-          const spill = Math.min(255, greenExcess * 4.5);
-          const alpha = Math.max(0, 255 - spill);
-          d[i + 3] = Math.min(d[i + 3], alpha);
-          if (alpha < 220) {
-            d[i + 1] = Math.min(g, Math.max(r, b));
-          }
-        }
-        if (g > 95 && r < 85 && b < 85 && greenExcess > 35) {
-          d[i + 3] = 0;
-        }
-      }
+      applyGreenScreenKey(frame.data, w, h);
 
       ctx.clearRect(0, 0, w, h);
       ctx.putImageData(frame, 0, 0);
@@ -146,6 +127,14 @@ export function ChromaKeyVideo({
         preload="auto"
       />
       <canvas ref={canvasRef} className="mx-auto h-auto max-h-[280px] w-full max-w-[320px]" />
+      {/* Fade any residual floor green into the modal background */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[22%] max-h-[64px]"
+        style={{
+          background:
+            "linear-gradient(to top, rgba(15, 7, 32, 0.95) 0%, rgba(15, 7, 32, 0.55) 55%, transparent 100%)",
+        }}
+      />
     </div>
   );
 }
