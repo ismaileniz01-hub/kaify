@@ -99,7 +99,7 @@ export function DailyChestBanner({ onClaimed }: Props) {
 
   const buttonLabel = (() => {
     if (!isAuthenticated) return t("chest.login_required");
-    if statusLoading || claimLoading) return t("chest.loading");
+    if (statusLoading || claimLoading) return t("chest.loading");
     if (statusError && !status) return t("chest.retry");
     if (showClaimed) return t("chest.claimed");
     return t("chest.claim");
