@@ -4,6 +4,7 @@ export type MarketEffect = {
   id: AuraColor;
   nameKey: string;
   price: number;
+  premium?: boolean;
   gradient: string;
   borderColor: string;
   glowColor: string;
@@ -123,5 +124,65 @@ export const MARKET_EFFECTS: MarketEffect[] = [
     ringColor: "bg-sky-400",
     sparkColor: "text-sky-300",
     bgGradient: "from-sky-900/30 via-transparent to-cyan-900/20",
+  },
+  {
+    id: "phoenix",
+    nameKey: "market.effect.phoenix",
+    price: 650,
+    premium: true,
+    gradient: "from-orange-500 via-amber-400 to-yellow-300",
+    borderColor: "border-orange-400/60",
+    glowColor: "shadow-orange-500/50",
+    ringColor: "bg-orange-500",
+    sparkColor: "text-amber-300",
+    bgGradient: "from-orange-950/50 via-red-950/30 to-amber-900/20",
+  },
+  {
+    id: "nebula",
+    nameKey: "market.effect.nebula",
+    price: 650,
+    premium: true,
+    gradient: "from-fuchsia-500 via-purple-500 to-indigo-600",
+    borderColor: "border-fuchsia-400/60",
+    glowColor: "shadow-fuchsia-500/50",
+    ringColor: "bg-fuchsia-500",
+    sparkColor: "text-fuchsia-300",
+    bgGradient: "from-purple-950/50 via-indigo-950/30 to-fuchsia-900/20",
+  },
+  {
+    id: "thunder",
+    nameKey: "market.effect.thunder",
+    price: 650,
+    premium: true,
+    gradient: "from-sky-300 via-blue-400 to-indigo-500",
+    borderColor: "border-sky-300/60",
+    glowColor: "shadow-sky-400/60",
+    ringColor: "bg-sky-300",
+    sparkColor: "text-sky-100",
+    bgGradient: "from-slate-950/60 via-blue-950/40 to-sky-900/20",
+  },
+  {
+    id: "eclipse",
+    nameKey: "market.effect.eclipse",
+    price: 650,
+    premium: true,
+    gradient: "from-amber-400 via-purple-900 to-black",
+    borderColor: "border-amber-400/50",
+    glowColor: "shadow-amber-500/40",
+    ringColor: "bg-purple-950",
+    sparkColor: "text-amber-300",
+    bgGradient: "from-black/60 via-purple-950/40 to-amber-950/20",
+  },
+  {
+    id: "prism",
+    nameKey: "market.effect.prism",
+    price: 650,
+    premium: true,
+    gradient: "from-cyan-400 via-fuchsia-400 to-yellow-300",
+    borderColor: "border-white/30",
+    glowColor: "shadow-cyan-400/40",
+    ringColor: "bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-yellow-400",
+    sparkColor: "text-white",
+    bgGradient: "from-indigo-950/40 via-purple-950/30 to-cyan-950/20",
   },
 ];

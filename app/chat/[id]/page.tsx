@@ -9,6 +9,7 @@ import { ChatBubbles } from "@/components/ChatBubbles";
 import { ContactAvatar } from "@/components/ContactAvatar";
 import { ImagePickerModal } from "@/components/ImagePickerModal";
 import { getContact, type ContactId } from "@/lib/contacts";
+import { resolveAvatarEffect } from "@/lib/aura-effects";
 import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
@@ -86,9 +87,8 @@ export default function ChatPage() {
 
   // Aura rengine göre efekt tipini belirle
   const getEffect = () => {
-    if (contactId !== "kai" || auraColor === "default") return "none" as const;
-    if (auraColor === "electric") return "electric" as const;
-    return "fire" as const;
+    if (contactId !== "kai") return "none" as const;
+    return resolveAvatarEffect(auraColor);
   };
 
   // Konuşma tamamen bittiğinde -> 1 saniye sonra normal avatar (efekt dursun)

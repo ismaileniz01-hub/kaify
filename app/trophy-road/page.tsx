@@ -13,11 +13,14 @@ import { useKai, type AuraColor } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import { DailyChestBanner } from "@/components/market/DailyChestBanner";
+import { MarketAuraPreview } from "@/components/market/MarketAuraPreview";
 import { MARKET_EFFECTS, type MarketEffect } from "@/lib/market-catalog";
 
 type EffectColor = MarketEffect;
 
 const EFFECTS = MARKET_EFFECTS;
+const STANDARD_EFFECTS = EFFECTS.filter((e) => !e.premium);
+const PREMIUM_EFFECTS = EFFECTS.filter((e) => e.premium);
 
 export default function MarketPage() {
   const { t } = useLang();
@@ -98,6 +101,99 @@ export default function MarketPage() {
   };
 
   const showGridSkeleton = isAuthenticated && isLoading;
+
+  const renderEffectCard = (effect: EffectColor) => {
+    const isOwned = ownedEffects.includes(effect.id);
+    const isActive = auraColor === effect.id;
+    const isBuying = purchasing === effect.id;
+    const isApplying = applying === effect.id;
+    const canAfford = gemState.balance >= effect.price;
+
+    return (
+      <div
+        key={effect.id}
+        className={`relative overflow-hidden rounded-2xl border ${effect.borderColor} ${effect.glowColor} shadow-lg transition-all duration-300 ${
+          isBuying ? "scale-95 opacity-70" : ""
+        } ${isActive ? "ring-2 ring-white/30" : ""} ${effect.premium ? "border-amber-400/40" : ""}`}
+      >
+        {effect.premium && (
+          <span className="absolute right-2 top-2 z-10 rounded-full border border-amber-400/40 bg-amber-500/20 px-2 py-0.5 text-[9px] font-bold tracking-wide text-amber-200">
+            {t("market.premium_badge")}
+          </span>
+        )}
+
+        <div className={`absolute inset-0 bg-gradient-to-b ${effect.bgGradient} opacity-60`} />
+
+        <div className="relative flex items-center justify-center pt-6 pb-3">
+          <MarketAuraPreview auraId={effect.id} />
+        </div>
+
+        <div className="relative px-3 pb-4 text-center">
+          <h3 className="text-sm font-semibold text-white">{t(effect.nameKey)}</h3>
+          <p className="mt-1 flex items-center justify-center gap-1 text-xs text-zinc-400">
+            <span>{effect.price}</span>
+            <GemIcon size={12} />
+          </p>
+          {isActive && (
+            <span className="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/60">
+              {t("market.active")}
+            </span>
+          )}
+        </div>
+
+        <div className="relative px-3 pb-4">
+          {isOwned ? (
+            isActive ? (
+              <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-2.5 text-sm font-medium text-emerald-400">
+                <Check className="h-4 w-4" />
+                {t("market.in_use")}
+              </div>
+            ) : (
+              <button
+                onClick={() => void handleApply(effect)}
+                disabled={isApplying}
+                className={`flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r ${effect.gradient} py-2.5 text-sm font-medium text-white shadow-lg ${effect.glowColor} transition active:scale-95 hover:opacity-90 disabled:opacity-60`}
+              >
+                {isApplying ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    {t("market.applying")}
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    {t("market.apply")}
+                  </>
+                )}
+              </button>
+            )
+          ) : (
+            <button
+              onClick={() => handleBuy(effect)}
+              disabled={!canAfford || isBuying}
+              className={`flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition active:scale-95 ${
+                canAfford
+                  ? `bg-gradient-to-r ${effect.gradient} text-white shadow-lg ${effect.glowColor} hover:opacity-90`
+                  : "cursor-not-allowed border border-zinc-700 bg-zinc-800/50 text-zinc-500"
+              }`}
+            >
+              {isBuying ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  {t("market.buying")}
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="h-4 w-4" />
+                  {canAfford ? t("market.buy") : t("market.insufficient")}
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="phone-shell welcome-gradient relative flex flex-col">
@@ -181,146 +277,26 @@ export default function MarketPage() {
             ))}
           </div>
         ) : (
-        <div className="grid grid-cols-2 gap-3">
-          {EFFECTS.map((effect) => {
-            const isOwned = ownedEffects.includes(effect.id);
-            const isActive = auraColor === effect.id;
-            const isBuying = purchasing === effect.id;
-            const isApplying = applying === effect.id;
-            const canAfford = gemState.balance >= effect.price;
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            {STANDARD_EFFECTS.map((effect) => renderEffectCard(effect))}
+          </div>
 
-            return (
-              <div
-                key={effect.id}
-                className={`relative overflow-hidden rounded-2xl border ${effect.borderColor} ${effect.glowColor} shadow-lg transition-all duration-300 ${
-                  isBuying ? "scale-95 opacity-70" : ""
-                } ${isActive ? "ring-2 ring-white/30" : ""}`}
-              >
-                {/* Arka plan gradyanı */}
-                <div className={`absolute inset-0 bg-gradient-to-b ${effect.bgGradient} opacity-60`} />
-
-                {/* Efekt önizleme - dönen aura halkası */}
-                <div className="relative flex items-center justify-center pt-6 pb-3">
-                  {effect.id === "electric" ? (
-                    /* Elektrik efekti özel önizleme - sadece efekt, resim yok */
-                    <div className="relative h-20 w-20 flex items-center justify-center">
-                      <div className="electric-aura" style={{ "--spark-color": "#7dd3fc" } as React.CSSProperties}>
-                        <span className="electric-bolt" style={{ "--spark-color": "#7dd3fc" } as React.CSSProperties} />
-                        <span className="electric-bolt" style={{ "--spark-color": "#7dd3fc" } as React.CSSProperties} />
-                        <span className="electric-bolt" style={{ "--spark-color": "#7dd3fc" } as React.CSSProperties} />
-                        <span className="electric-bolt" style={{ "--spark-color": "#7dd3fc" } as React.CSSProperties} />
-                        <span className="electric-bolt" style={{ "--spark-color": "#7dd3fc" } as React.CSSProperties} />
-                        <span className="electric-bolt" style={{ "--spark-color": "#7dd3fc" } as React.CSSProperties} />
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Dış halka */}
-                      <div
-                        className={`h-20 w-20 rounded-full border-2 ${effect.borderColor} ${effect.glowColor} flex items-center justify-center`}
-                        style={{
-                          animation: "fire-aura-pulse 1.5s ease-in-out infinite",
-                          boxShadow: `0 0 30px 8px color-mix(in srgb, ${effect.id === "blue" ? "cyan" : effect.id === "red" ? "red" : effect.id === "green" ? "emerald" : effect.id === "pink" ? "pink" : effect.id === "gold" ? "yellow" : effect.id === "white" ? "white" : effect.id === "orange" ? "orange" : effect.id === "indigo" ? "indigo" : "purple"} 40%, transparent)`,
-                        }}
-                      >
-                        {/* İç halka */}
-                        <div
-                          className={`h-12 w-12 rounded-full ${effect.ringColor} opacity-30 blur-sm`}
-                        />
-                      </div>
-
-                      {/* Kıvılcımlar */}
-                      <span
-                        className={`absolute left-3 top-3 text-lg ${effect.sparkColor}`}
-                        style={{ animation: "fire-aura-spark 1.5s ease-out infinite", animationDelay: "0s" }}
-                      >
-                        ✦
-                      </span>
-                      <span
-                        className={`absolute right-3 bottom-3 text-lg ${effect.sparkColor}`}
-                        style={{ animation: "fire-aura-spark 1.5s ease-out infinite", animationDelay: "0.5s" }}
-                      >
-                        ✦
-                      </span>
-                      <span
-                        className={`absolute left-6 bottom-6 text-sm ${effect.sparkColor}`}
-                        style={{ animation: "fire-aura-spark 1.5s ease-out infinite", animationDelay: "1s" }}
-                      >
-                        ✦
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {/* İsim ve fiyat */}
-                <div className="relative px-3 pb-4 text-center">
-                  <h3 className="text-sm font-semibold text-white">{t(effect.nameKey)}</h3>
-                  <p className="mt-1 flex items-center justify-center gap-1 text-xs text-zinc-400">
-                    <span>{effect.price}</span>
-                    <GemIcon size={12} />
-                  </p>
-                  {isActive && (
-                    <span className="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/60">
-                      {t("market.active")}
-                    </span>
-                  )}
-                </div>
-
-                {/* Satın al / Uygula butonu */}
-                <div className="relative px-3 pb-4">
-                  {isOwned ? (
-                    isActive ? (
-                      <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-2.5 text-sm font-medium text-emerald-400">
-                        <Check className="h-4 w-4" />
-                        {t("market.in_use")}
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => void handleApply(effect)}
-                        disabled={isApplying}
-                        className={`flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r ${effect.gradient} py-2.5 text-sm font-medium text-white shadow-lg ${effect.glowColor} transition active:scale-95 hover:opacity-90 disabled:opacity-60`}
-                      >
-                        {isApplying ? (
-                          <>
-                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                            {t("market.applying")}
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="h-4 w-4" />
-                            {t("market.apply")}
-                          </>
-                        )}
-                      </button>
-                    )
-                  ) : (
-                    <button
-                      onClick={() => handleBuy(effect)}
-                      disabled={!canAfford || isBuying}
-                      className={`flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium transition active:scale-95 ${
-                        canAfford
-                          ? `bg-gradient-to-r ${effect.gradient} text-white shadow-lg ${effect.glowColor} hover:opacity-90`
-                          : "cursor-not-allowed border border-zinc-700 bg-zinc-800/50 text-zinc-500"
-                      }`}
-                    >
-                      {isBuying ? (
-                        <>
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                          {t("market.buying")}
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingCart className="h-4 w-4" />
-                          {canAfford ? t("market.buy") : t("market.insufficient")}
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
+          {PREMIUM_EFFECTS.length > 0 && (
+            <>
+              <div className="mt-6 mb-3 flex items-center gap-2">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
+                <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-[10px] font-bold tracking-widest text-amber-300">
+                  {t("market.premium_section")}
+                </span>
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
               </div>
-            );
-          })}
-        </div>
+              <div className="grid grid-cols-2 gap-3">
+                {PREMIUM_EFFECTS.map((effect) => renderEffectCard(effect))}
+              </div>
+            </>
+          )}
+        </>
         )}
       </main>
     </div>

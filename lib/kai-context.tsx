@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { getKaiLevel, KAI_LEVEL_AVATARS, type KaiLevel } from "@/lib/kai-level";
 
-export type AuraColor = "default" | "blue" | "red" | "green" | "pink" | "purple" | "gold" | "white" | "orange" | "indigo" | "electric";
+export type AuraColor = "default" | "blue" | "red" | "green" | "pink" | "purple" | "gold" | "white" | "orange" | "indigo" | "electric" | "phoenix" | "nebula" | "thunder" | "eclipse" | "prism";
 
 interface KaiContextType {
   /** localStorage'daki en yüksek unlock edilmiş Kai level'ı */
@@ -47,6 +47,11 @@ const VALID_AURA_COLORS: AuraColor[] = [
   "orange",
   "indigo",
   "electric",
+  "phoenix",
+  "nebula",
+  "thunder",
+  "eclipse",
+  "prism",
 ];
 
 /** Clears persisted Kai cosmetics (call on sign-out). */
@@ -74,9 +79,8 @@ function getStoredLevel(): KaiLevel {
 function getStoredAuraColor(): AuraColor {
   if (typeof window === "undefined") return "default";
   const stored = localStorage.getItem(AURA_STORAGE_KEY);
-  const validColors: AuraColor[] = ["blue", "red", "green", "pink", "purple", "gold", "white", "orange", "indigo", "electric"];
-  if (validColors.includes(stored as AuraColor)) {
-    return stored as AuraColor;
+  if (stored && isAuraColor(stored)) {
+    return stored;
   }
   return "default";
 }
