@@ -88,12 +88,28 @@ async function saveClaimState(
 ): Promise<void> {
   const admin = createAdminSupabaseClient();
   const next = { ...weeklyGoals, dailyChest: claim };
-  await admin
+
+  const { error: updateError } = await admin
+    .from("user_coaching_state")
+    .update({ weekly_goals: next as never })
+    .eq("user_id", userId);
+
+  if (!updateError) return;
+
+  const { error: upsertError } = await admin
     .from("user_coaching_state")
     .upsert(
       { user_id: userId, weekly_goals: next as never },
       { onConflict: "user_id" },
     );
+
+  if (upsertError) {
+    logger.error("[daily-chest] save claim state failed", {
+      userId,
+      error: upsertError.message,
+    });
+    throw new ApiError("INTERNAL_ERROR", "Sandık durumu kaydedilemedi.");
+  }
 }
 
 export async function getDailyChestStatus(userId: string): Promise<DailyChestStatusDTO> {
