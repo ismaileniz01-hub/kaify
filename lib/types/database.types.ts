@@ -70,6 +70,7 @@ type ProfileRow = {
   city_name: string | null;
   locale: string;
   timezone: string;
+  timezone_updated_at: string;
   onboarding_status: OnboardingStatus;
   tier: SubscriptionTier;
   billing_cycle: BillingCycle;
@@ -99,6 +100,7 @@ type ProfileInsert = {
   city_name?: string | null;
   locale?: string;
   timezone?: string;
+  timezone_updated_at?: string;
   onboarding_status?: OnboardingStatus;
   tier?: SubscriptionTier;
   billing_cycle?: BillingCycle;
@@ -125,6 +127,7 @@ type ProfileUpdate = {
   city_name?: string | null;
   locale?: string;
   timezone?: string;
+  timezone_updated_at?: string;
   onboarding_status?: OnboardingStatus;
   tier?: SubscriptionTier;
   billing_cycle?: BillingCycle;
