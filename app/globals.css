@@ -3069,3 +3069,125 @@ select:active {
   animation: streakDramaPulse 2.5s ease-in-out infinite;
 }
 
+/* ── Full-screen chest reward backdrop ── */
+.chest-reward-overlay {
+  background: #08050f;
+}
+
+.chest-reward-screen__gradient {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 120% 70% at 50% -5%, rgba(124, 58, 237, 0.45), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 10% 60%, rgba(251, 191, 36, 0.14), transparent 50%),
+    radial-gradient(ellipse 70% 45% at 92% 35%, rgba(34, 211, 238, 0.12), transparent 45%),
+    radial-gradient(ellipse 60% 40% at 50% 95%, rgba(217, 70, 239, 0.15), transparent 50%),
+    linear-gradient(180deg, #120820 0%, #0c0614 35%, #08050f 70%, #050308 100%);
+}
+
+.chest-reward-screen__grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 39px,
+      rgba(167, 139, 250, 0.045) 39px,
+      rgba(167, 139, 250, 0.045) 40px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 39px,
+      rgba(251, 191, 36, 0.03) 39px,
+      rgba(251, 191, 36, 0.03) 40px
+    );
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 45%, black 20%, transparent 75%);
+}
+
+@keyframes chestScreenOrb {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
+  50% { transform: translate(12px, -16px) scale(1.08); opacity: 0.85; }
+}
+
+@keyframes chestScreenRay {
+  0%, 100% { opacity: 0.04; }
+  50% { opacity: 0.12; }
+}
+
+@keyframes chestScreenFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.15; }
+  50% { transform: translateY(-8px) rotate(8deg); opacity: 0.35; }
+}
+
+@keyframes chestScreenDot {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.chest-reward-screen__orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(48px);
+  animation: chestScreenOrb 7s ease-in-out infinite;
+}
+
+.chest-reward-screen__orb--1 { width: 280px; height: 280px; left: -80px; top: 8%; background: rgba(124, 58, 237, 0.5); }
+.chest-reward-screen__orb--2 { width: 220px; height: 220px; right: -60px; top: 22%; background: rgba(251, 191, 36, 0.35); animation-delay: 1.5s; }
+.chest-reward-screen__orb--3 { width: 180px; height: 180px; left: 20%; bottom: 12%; background: rgba(34, 211, 238, 0.28); animation-delay: 3s; }
+.chest-reward-screen__orb--4 { width: 200px; height: 200px; right: 15%; bottom: 18%; background: rgba(217, 70, 239, 0.3); animation-delay: 2s; }
+.chest-reward-screen__orb--5 { width: 140px; height: 140px; left: 42%; top: 38%; background: rgba(139, 92, 246, 0.25); animation-delay: 4s; }
+
+.chest-reward-screen__ray {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: 2px;
+  height: 55vh;
+  margin-left: -1px;
+  transform-origin: center top;
+  background: linear-gradient(to bottom, rgba(251, 191, 36, 0.35), transparent 85%);
+  animation: chestScreenRay 4s ease-in-out infinite;
+}
+
+.chest-reward-screen__ray--1 { transform: rotate(-18deg); }
+.chest-reward-screen__ray--2 { transform: rotate(0deg); animation-delay: 0.8s; }
+.chest-reward-screen__ray--3 { transform: rotate(18deg); animation-delay: 1.6s; }
+
+.chest-reward-screen__dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  animation: chestScreenDot 3s ease-in-out infinite;
+}
+
+.chest-reward-screen__dot--1 { left: 8%; top: 18%; animation-delay: 0s; }
+.chest-reward-screen__dot--2 { right: 12%; top: 14%; animation-delay: 0.5s; }
+.chest-reward-screen__dot--3 { left: 6%; top: 48%; animation-delay: 1s; }
+.chest-reward-screen__dot--4 { right: 8%; top: 52%; animation-delay: 1.5s; }
+.chest-reward-screen__dot--5 { left: 14%; bottom: 22%; animation-delay: 2s; }
+.chest-reward-screen__dot--6 { right: 16%; bottom: 26%; animation-delay: 2.5s; }
+
+.chest-reward-screen__icon {
+  position: absolute;
+  animation: chestScreenFloat 5s ease-in-out infinite;
+}
+
+.chest-reward-screen__icon--s1 { left: 5%; top: 28%; width: 20px; height: 20px; color: rgba(251, 191, 36, 0.4); }
+.chest-reward-screen__icon--s2 { right: 6%; top: 32%; width: 18px; height: 18px; color: rgba(196, 181, 253, 0.45); animation-delay: 0.7s; }
+.chest-reward-screen__icon--s3 { left: 50%; top: 10%; width: 16px; height: 16px; color: rgba(251, 191, 36, 0.3); transform: translateX(-50%); animation-delay: 1.4s; }
+.chest-reward-screen__icon--st1 { left: 10%; bottom: 30%; width: 16px; height: 16px; color: rgba(34, 211, 238, 0.35); animation-delay: 0.3s; }
+.chest-reward-screen__icon--st2 { right: 10%; bottom: 34%; width: 14px; height: 14px; color: rgba(251, 191, 36, 0.35); animation-delay: 1.1s; }
+.chest-reward-screen__icon--g1 { left: 4%; top: 62%; width: 22px; height: 22px; color: rgba(167, 139, 250, 0.4); animation-delay: 0.5s; }
+.chest-reward-screen__icon--g2 { right: 5%; top: 58%; width: 20px; height: 20px; color: rgba(217, 70, 239, 0.38); animation-delay: 1.8s; }
+.chest-reward-screen__icon--g3 { left: 18%; top: 12%; width: 15px; height: 15px; color: rgba(139, 92, 246, 0.35); animation-delay: 2.2s; }
+.chest-reward-screen__icon--f1 { left: 3%; bottom: 18%; width: 18px; height: 18px; color: rgba(249, 115, 22, 0.32); animation-delay: 1.6s; }
+.chest-reward-screen__icon--f2 { right: 4%; bottom: 14%; width: 17px; height: 17px; color: rgba(251, 146, 60, 0.28); animation-delay: 2.8s; }
+.chest-reward-screen__icon--d1 { right: 7%; top: 18%; width: 19px; height: 19px; color: rgba(56, 189, 248, 0.32); animation-delay: 0.9s; }
+.chest-reward-screen__icon--d2 { left: 7%; top: 78%; width: 18px; height: 18px; color: rgba(96, 165, 250, 0.28); animation-delay: 2.4s; }
+.chest-reward-screen__icon--z1 { right: 18%; bottom: 22%; width: 16px; height: 16px; color: rgba(251, 191, 36, 0.3); animation-delay: 3.2s; }
+.chest-reward-screen__icon--t1 { left: 20%; bottom: 12%; width: 20px; height: 20px; color: rgba(251, 191, 36, 0.28); animation-delay: 1.3s; }
+
