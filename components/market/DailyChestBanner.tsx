@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Gift, Timer } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
+import { useSession } from "@/lib/session-context";
 import { apiGet, apiPost } from "@/lib/api/client";
 import type {
   DailyChestClaimDTO,
@@ -25,20 +26,41 @@ function formatCountdown(iso: string): string {
 
 export function DailyChestBanner({ onClaimed }: Props) {
   const { t } = useLang();
+  const { isAuthenticated } = useSession();
   const [status, setStatus] = useState<DailyChestStatusDTO | null>(null);
+  const [statusLoading, setStatusLoading] = useState(true);
+  const [statusError, setStatusError] = useState(false);
   const [opening, setOpening] = useState(false);
   const [claimData, setClaimData] = useState<DailyChestClaimDTO | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [claimLoading, setClaimLoading] = useState(false);
   const [countdown, setCountdown] = useState("");
 
-  useEffect(() => {
+  const loadStatus = useCallback(() => {
+    if (!isAuthenticated) {
+      setStatusLoading(false);
+      setStatus(null);
+      return;
+    }
+    setStatusLoading(true);
+    setStatusError(false);
     apiGet<DailyChestStatusDTO>("/api/market/chest")
-      .then(setStatus)
-      .catch(() => setStatus(null));
-  }, []);
+      .then((data) => {
+        setStatus(data);
+        setStatusError(false);
+      })
+      .catch(() => {
+        setStatus(null);
+        setStatusError(true);
+      })
+      .finally(() => setStatusLoading(false));
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!status?.nextClaimAt) {
+    loadStatus();
+  }, [loadStatus]);
+
+  useEffect(() => {
+    if (!status?.nextClaimAt || status.canClaim) {
       setCountdown("");
       return;
     }
@@ -46,76 +68,103 @@ export function DailyChestBanner({ onClaimed }: Props) {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [status?.nextClaimAt]);
+  }, [status?.nextClaimAt, status?.canClaim]);
+
+  const canClaim = status?.canClaim ?? false;
+  const showClaimed = !statusLoading && status !== null && !canClaim;
 
   const handleOpen = async () => {
-    if (loading || !status?.canClaim) return;
-    setLoading(true);
+    if (!isAuthenticated || claimLoading || statusLoading) return;
+    if (status && !status.canClaim) return;
+
+    setClaimLoading(true);
     try {
       const result = await apiPost<DailyChestClaimDTO>("/api/market/chest");
       setClaimData(result);
       setOpening(true);
+      setStatusError(false);
     } catch {
-      // ignore
+      setStatusError(true);
     } finally {
-      setLoading(false);
+      setClaimLoading(false);
     }
   };
 
   const handleClose = () => {
     setOpening(false);
     setClaimData(null);
-    setStatus((prev) =>
-      prev
-        ? { ...prev, canClaim: false, nextClaimAt: new Date(Date.now() + 86_400_000).toISOString() }
-        : prev,
-    );
     onClaimed?.();
-    apiGet<DailyChestStatusDTO>("/api/market/chest").then(setStatus).catch(() => undefined);
+    loadStatus();
   };
+
+  const buttonLabel = (() => {
+    if (!isAuthenticated) return t("chest.login_required");
+    if statusLoading || claimLoading) return t("chest.loading");
+    if (statusError && !status) return t("chest.retry");
+    if (showClaimed) return t("chest.claimed");
+    return t("chest.claim");
+  })();
+
+  const buttonDisabled =
+    !isAuthenticated ||
+    statusLoading ||
+    claimLoading ||
+    (status !== null && !status.canClaim && !statusError);
 
   return (
     <>
-      <div className="relative overflow-hidden rounded-2xl border border-amber-400/35 bg-gradient-to-br from-amber-950/50 via-purple-950/40 to-violet-950/50 p-4 shadow-[0_8px_32px_rgba(124,58,237,0.25)]">
-        <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-amber-400/10 blur-2xl" />
-        <div className="pointer-events-none absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-purple-500/15 blur-2xl" />
+      <div className="w-full shrink-0 rounded-2xl border border-amber-400/40 bg-gradient-to-br from-amber-950/55 via-purple-950/45 to-violet-950/55 p-4 shadow-[0_8px_32px_rgba(124,58,237,0.25)]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300/90">
+          {t("chest.daily_label")}
+        </p>
 
-        <div className="relative flex items-center gap-4">
-          <div className="relative flex h-16 w-16 shrink-0 items-center justify-center">
+        <div className="mt-3 flex items-center gap-3">
+          <div className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center">
             <div className="absolute inset-0 animate-pulse rounded-2xl bg-amber-400/10" />
-            <div className="relative flex h-14 w-14 flex-col items-center justify-end rounded-xl border-2 border-purple-400/40 bg-gradient-to-b from-purple-500 to-violet-800 shadow-lg">
-              <div className="mb-1 h-3 w-8 rounded-t-md border border-b-0 border-purple-300/40 bg-purple-400/80" />
-              <Gift className="mb-1.5 h-5 w-5 text-amber-300" />
+            <div className="relative flex h-16 w-16 flex-col items-center justify-end rounded-xl border-2 border-purple-400/50 bg-gradient-to-b from-purple-500 to-violet-800 shadow-lg">
+              <div className="mb-1 h-3 w-9 rounded-t-md border border-b-0 border-purple-300/40 bg-purple-400/80" />
+              <Gift className="mb-1.5 h-5 w-5 text-amber-300" strokeWidth={2} />
             </div>
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-300/80">
-              {t("chest.daily_label")}
+            <h3 className="text-base font-bold leading-tight text-white">
+              {t("chest.daily_title")}
+            </h3>
+            <p className="mt-1 text-[11px] leading-snug text-zinc-400">
+              {t("chest.daily_desc")}
             </p>
-            <h3 className="text-sm font-bold text-white">{t("chest.daily_title")}</h3>
-            <p className="mt-0.5 text-[11px] text-zinc-400">{t("chest.daily_desc")}</p>
-            {!status?.canClaim && countdown && (
-              <p className="mt-1 flex items-center gap-1 text-[10px] text-purple-300">
-                <Timer className="h-3 w-3" />
+            {showClaimed && countdown && (
+              <p className="mt-1.5 flex items-center gap-1 text-[10px] text-purple-300">
+                <Timer className="h-3 w-3 shrink-0" />
                 {t("chest.next_in", { time: countdown })}
               </p>
             )}
+            {statusError && (
+              <p className="mt-1.5 text-[10px] text-red-300">{t("chest.error")}</p>
+            )}
           </div>
-
-          <button
-            type="button"
-            onClick={handleOpen}
-            disabled={!status?.canClaim || loading}
-            className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-bold transition active:scale-95 ${
-              status?.canClaim
-                ? "bg-gradient-to-r from-amber-400 to-orange-500 text-zinc-900 shadow-[0_4px_16px_rgba(251,191,36,0.4)]"
-                : "cursor-not-allowed border border-zinc-700 bg-zinc-800/60 text-zinc-500"
-            }`}
-          >
-            {loading ? "..." : status?.canClaim ? t("chest.claim") : t("chest.claimed")}
-          </button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (statusError && !status) {
+              loadStatus();
+              return;
+            }
+            void handleOpen();
+          }}
+          disabled={buttonDisabled && !(statusError && !status)}
+          className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition active:scale-[0.98] ${
+            !buttonDisabled || (statusError && !status)
+              ? "bg-gradient-to-r from-amber-400 to-orange-500 text-zinc-900 shadow-[0_4px_16px_rgba(251,191,36,0.4)]"
+              : "cursor-not-allowed border border-zinc-700 bg-zinc-800/60 text-zinc-500"
+          }`}
+        >
+          <Gift className="h-4 w-4" />
+          {buttonLabel}
+        </button>
       </div>
 
       {opening && claimData && (
