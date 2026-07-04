@@ -6,6 +6,7 @@ import { apiPost, ApiClientError } from "@/lib/api/client";
 import { useSession } from "@/lib/session-context";
 import { useLang } from "@/lib/lang-context";
 import { errorToMessage } from "@/lib/i18n/api-error";
+import { InlineAlert } from "@/components/InlineAlert";
 import type { ProfileDTO } from "@/lib/types/domain.types";
 import {
   GENDERS,
@@ -228,7 +229,17 @@ export function OnboardingGate() {
             />
           </div>
 
-          {error && <p className="text-center text-xs text-red-300">{error}</p>}
+          {!valid && !submitting && (
+            <p className="text-center text-[11px] text-zinc-500">{t("onboarding.validation.hint")}</p>
+          )}
+
+          {error && (
+            <InlineAlert
+              message={error}
+              dismissLabel={t("common.dismiss")}
+              onDismiss={() => setError(null)}
+            />
+          )}
 
           <button
             type="button"

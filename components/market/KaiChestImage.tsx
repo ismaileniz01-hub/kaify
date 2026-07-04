@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useLang } from "@/lib/lang-context";
 
 type Props = {
   size?: number;
@@ -10,6 +11,8 @@ type Props = {
 
 /** Static Kai chest icon (green-screen removed PNG). */
 export function KaiChestImage({ size = 72, className = "", pulse = false }: Props) {
+  const { t } = useLang();
+
   return (
     <div
       className={`relative flex shrink-0 items-center justify-center ${className}`}
@@ -20,7 +23,7 @@ export function KaiChestImage({ size = 72, className = "", pulse = false }: Prop
       )}
       <Image
         src="/assets/kai-chest.png"
-        alt="Kai Chest"
+        alt={t("market.kai_chest_alt")}
         width={size}
         height={size}
         className="relative h-full w-full object-contain drop-shadow-[0_4px_16px_rgba(124,58,237,0.45)]"

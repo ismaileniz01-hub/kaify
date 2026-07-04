@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api/client";
+import { useLang } from "@/lib/lang-context";
 
 type OverviewResponse = {
   overview: {
@@ -22,12 +23,13 @@ type OverviewResponse = {
 };
 
 const LINKS = [
-  { href: "/admin/costs", label: "AI Maliyetleri", desc: "Token harcaması, USD tahmini, alarmlar" },
-  { href: "/admin/self-heal", label: "Self-Heal", desc: "Circuit breaker, degraded mode, AI teşhis" },
-  { href: "/admin/audit", label: "Audit Log", desc: "Yönetici işlem geçmişi" },
+  { href: "/admin/costs", labelKey: "admin.link.costs", descKey: "admin.link.costs.desc" },
+  { href: "/admin/self-heal", labelKey: "admin.link.self_heal", descKey: "admin.link.self_heal.desc" },
+  { href: "/admin/audit", labelKey: "admin.link.audit", descKey: "admin.link.audit.desc" },
 ] as const;
 
 export default function AdminHubPage() {
+  const { t } = useLang();
   const [data, setData] = useState<OverviewResponse | null>(null);
   const [users, setUsers] = useState<
     { id: string; displayName: string; tier: string }[]
@@ -68,42 +70,38 @@ export default function AdminHubPage() {
 
   const o = data?.overview;
 
+  const statCards = o
+    ? [
+        { label: t("admin.stats.users"), value: o.usersTotal },
+        { label: t("admin.stats.active_today"), value: o.usersActiveToday },
+        { label: t("admin.stats.ai_cost_today"), value: `$${o.costTodayUsd.toFixed(2)}` },
+        { label: t("admin.stats.tokens_today"), value: o.costTodayTokens.toLocaleString() },
+        { label: t("admin.stats.quota_blocks"), value: o.quotaBlocksToday },
+        { label: t("admin.stats.cost_alerts"), value: o.openCostAlerts },
+        {
+          label: t("admin.stats.degraded"),
+          value: o.degradedMode ? t("admin.stats.degraded_on") : t("admin.stats.degraded_ok"),
+        },
+        { label: t("admin.stats.referrals"), value: o.referralsTotal },
+      ]
+    : [];
+
   return (
     <div className="min-h-screen bg-zinc-950 p-6 text-white">
       <div className="mx-auto max-w-4xl space-y-8">
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Kaify Operatör Hub</h1>
-            <p className="mt-1 text-sm text-zinc-500">
-              Tek ekrandan sistem durumu, maliyet ve yönetim
-            </p>
+            <h1 className="text-2xl font-bold">{t("admin.hub.title")}</h1>
+            <p className="mt-1 text-sm text-zinc-500">{t("admin.hub.subtitle")}</p>
           </div>
           <Link href="/welcome" className="text-sm text-purple-400">
-            ← Uygulama
+            {t("admin.hub.back")}
           </Link>
         </header>
 
         {o && (
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              { label: "Kullanıcı", value: o.usersTotal },
-              { label: "Bugün aktif", value: o.usersActiveToday },
-              {
-                label: "AI bugün",
-                value: `$${o.costTodayUsd.toFixed(2)}`,
-              },
-              {
-                label: "Token bugün",
-                value: o.costTodayTokens.toLocaleString(),
-              },
-              { label: "Kota blok", value: o.quotaBlocksToday },
-              { label: "Maliyet alarm", value: o.openCostAlerts },
-              {
-                label: "Degraded",
-                value: o.degradedMode ? "⚠ Açık" : "OK",
-              },
-              { label: "Referral", value: o.referralsTotal },
-            ].map((card) => (
+            {statCards.map((card) => (
               <div
                 key={card.label}
                 className="rounded-xl border border-white/10 bg-white/5 p-3"
@@ -117,7 +115,7 @@ export default function AdminHubPage() {
 
         {data && (
           <section className="rounded-xl border border-white/10 p-4 text-sm">
-            <p className="mb-2 font-semibold">Altyapı durumu</p>
+            <p className="mb-2 font-semibold">{t("admin.infra.title")}</p>
             <div className="flex flex-wrap gap-3">
               {Object.entries(data.env).map(([k, ok]) => (
                 <span
@@ -130,12 +128,12 @@ export default function AdminHubPage() {
             </div>
             {data.degraded.active && (
               <p className="mt-2 text-amber-400">
-                Degraded: {data.degraded.reason ?? "aktif"}
+                {t("admin.infra.degraded")}: {data.degraded.reason ?? t("admin.stats.degraded_on")}
               </p>
             )}
             {data.circuits.some((c) => c.open) && (
               <p className="mt-1 text-red-400">
-                Açık circuit:{" "}
+                {t("admin.infra.open_circuits")}:{" "}
                 {data.circuits
                   .filter((c) => c.open)
                   .map((c) => c.name)
@@ -152,15 +150,15 @@ export default function AdminHubPage() {
               href={link.href}
               className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 transition hover:bg-purple-500/10"
             >
-              <p className="font-semibold text-purple-200">{link.label}</p>
-              <p className="mt-1 text-xs text-zinc-400">{link.desc}</p>
+              <p className="font-semibold text-purple-200">{t(link.labelKey)}</p>
+              <p className="mt-1 text-xs text-zinc-400">{t(link.descKey)}</p>
             </Link>
           ))}
         </section>
 
         <section>
           <h2 className="mb-3 text-lg font-semibold">
-            Son kullanıcılar ({users.length})
+            {t("admin.users.recent", { count: users.length })}
           </h2>
           <div className="overflow-hidden rounded-xl border border-white/10">
             {users.slice(0, 10).map((u) => (
@@ -177,7 +175,7 @@ export default function AdminHubPage() {
 
         {coupons.length > 0 && (
           <section>
-            <h2 className="mb-3 text-lg font-semibold">Influencer kuponları</h2>
+            <h2 className="mb-3 text-lg font-semibold">{t("admin.coupons.title")}</h2>
             <div className="overflow-hidden rounded-xl border border-white/10">
               {coupons.slice(0, 8).map((c) => (
                 <div
@@ -194,7 +192,7 @@ export default function AdminHubPage() {
 
         {referrals.length > 0 && (
           <section>
-            <h2 className="mb-3 text-lg font-semibold">Son referrallar</h2>
+            <h2 className="mb-3 text-lg font-semibold">{t("admin.referrals.recent")}</h2>
             <div className="overflow-hidden rounded-xl border border-white/10">
               {referrals.map((r) => (
                 <div

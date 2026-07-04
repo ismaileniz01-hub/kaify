@@ -20,6 +20,7 @@ const KNOWN_CODES = [
   "CONFLICT",
   "RATE_LIMITED",
   "INTERNAL_ERROR",
+  "SERVICE_UNAVAILABLE",
 ] as const;
 
 /** Translates an API error code into a localized, user-facing message. */

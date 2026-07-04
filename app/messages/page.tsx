@@ -5,11 +5,13 @@ import Link from "next/link";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MessageRow } from "@/components/messages/MessageRow";
+import { InlineAlert } from "@/components/InlineAlert";
 import { type ContactId } from "@/lib/contacts";
 import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { apiGet } from "@/lib/api/client";
+import { errorToMessage } from "@/lib/i18n/api-error";
 import type { InboxCoachDTO } from "@/lib/services/messages.service";
 import { CONTACTS, CONTACT_LIST } from "@/lib/contacts";
 
@@ -18,28 +20,45 @@ export default function MessagesPage() {
   const { avatar: kaiAvatar } = useKai();
   const { isAuthenticated, profile } = useSession();
   const [inbox, setInbox] = useState<InboxCoachDTO[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const loadInbox = () => {
+    if (!isAuthenticated) return;
+    setLoading(true);
+    setLoadError(null);
+    void apiGet<{ inbox: InboxCoachDTO[] }>("/api/messages")
+      .then((res) => setInbox(res.inbox))
+      .catch((err) => {
+        setInbox(null);
+        setLoadError(errorToMessage(err, t) || t("messages.error.load"));
+      })
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    apiGet<{ inbox: InboxCoachDTO[] }>("/api/messages")
-      .then((res) => setInbox(res.inbox))
-      .catch(() => setInbox(null));
+    loadInbox();
   }, [isAuthenticated]);
 
   const rows =
     inbox ??
-    CONTACT_LIST.map((id) => {
-      const c = CONTACTS[id];
-      return {
-        coachId: id,
-        name: c.name,
-        role: c.role,
-        avatarUrl: c.avatar,
-        preview: c.preview,
-        time: c.time,
-        unreadCount: c.badge ?? 0,
-      };
-    });
+    (!isAuthenticated
+      ? CONTACT_LIST.map((id) => {
+          const c = CONTACTS[id];
+          return {
+            coachId: id,
+            name: c.name,
+            role: c.role,
+            avatarUrl: c.avatar,
+            preview: c.preview,
+            time: c.time,
+            unreadCount: c.badge ?? 0,
+          };
+        })
+      : []);
+
+  const teamUnlocked = profile?.teamChatUnlocked || !isAuthenticated;
 
   return (
     <div className="phone-shell messages-gradient messages-pattern relative flex flex-col">
@@ -60,29 +79,60 @@ export default function MessagesPage() {
       </header>
 
       <main className="flex-1 space-y-2.5 overflow-y-auto px-4 pb-8">
-        {rows.map((row, i) => {
-          const id = row.coachId as ContactId;
-          const c = CONTACTS[id];
-          return (
-            <MessageRow
-              key={id}
-              index={i}
-              name={row.name}
-              role={row.role}
-              preview={row.preview}
-              time={row.time}
-              href={`/chat/${id}`}
-              avatarSrc={id === "kai" ? kaiAvatar : row.avatarUrl || c.avatar}
-              badge={row.unreadCount > 0 ? row.unreadCount : undefined}
-              color={c.color.primary}
-            />
-          );
-        })}
+        {loadError && (
+          <InlineAlert
+            message={loadError}
+            onRetry={loadInbox}
+            retryLabel={t("common.retry")}
+            dismissLabel={t("common.dismiss")}
+            onDismiss={() => setLoadError(null)}
+          />
+        )}
+
+        {loading && isAuthenticated && (
+          <div className="space-y-2.5">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-[72px] animate-pulse rounded-2xl bg-white/5"
+                aria-hidden
+              />
+            ))}
+            <p className="sr-only">{t("common.loading")}</p>
+          </div>
+        )}
+
+        {!loading && isAuthenticated && rows.length === 0 && !loadError && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <p className="text-sm font-medium text-zinc-400">{t("messages.empty.title")}</p>
+            <p className="mt-1 max-w-[240px] text-xs text-zinc-600">{t("messages.empty.subtitle")}</p>
+          </div>
+        )}
+
+        {!loading &&
+          rows.map((row, i) => {
+            const id = row.coachId as ContactId;
+            const c = CONTACTS[id];
+            return (
+              <MessageRow
+                key={id}
+                index={i}
+                name={row.name}
+                role={row.role}
+                preview={row.preview}
+                time={row.time}
+                href={`/chat/${id}`}
+                avatarSrc={id === "kai" ? kaiAvatar : row.avatarUrl || c.avatar}
+                badge={row.unreadCount > 0 ? row.unreadCount : undefined}
+                color={c.color.primary}
+              />
+            );
+          })}
 
         <Link
-          href="/chat/team"
+          href={teamUnlocked ? "/chat/team" : "/streak"}
           className={`animate-in mt-4 flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition ${
-            profile?.teamChatUnlocked || !isAuthenticated
+            teamUnlocked
               ? "border-purple-500/20 bg-purple-500/10 hover:bg-purple-500/15"
               : "border-zinc-700/50 bg-zinc-900/50 opacity-60"
           }`}
@@ -106,9 +156,7 @@ export default function MessagesPage() {
           <div className="flex-1">
             <p className="text-sm font-semibold text-white">{t("messages.team_title")}</p>
             <p className="text-[11px] text-zinc-400">
-              {profile?.teamChatUnlocked || !isAuthenticated
-                ? t("messages.team_sub")
-                : "7 günlük seriden sonra açılır"}
+              {teamUnlocked ? t("messages.team_sub") : t("messages.team_locked")}
             </p>
           </div>
           <ChevronRight className="h-4 w-4 text-zinc-500" />

@@ -3,8 +3,9 @@
 import { useState, useRef } from "react";
 import { X, MapPin, Ruler, Weight, VenusAndMars, Leaf, Sparkles, Pencil, Check, Camera } from "lucide-react";
 import Image from "next/image";
-import type { UserProfile } from "@/lib/user";
 import { useLang } from "@/lib/lang-context";
+import { InlineAlert } from "@/components/InlineAlert";
+import type { UserProfile } from "@/lib/user";
 
 type ProfileModalProps = {
   isOpen: boolean;
@@ -31,6 +32,10 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
 
   const handleSave = async () => {
     if (!onSave || saving) return;
+    if (!form.name.trim()) {
+      setSaveError(t("profile.validation.name_required"));
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
@@ -55,13 +60,19 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
   // Görüntüleme modu
   if (!editing) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-modal-title"
+      >
         <div className="relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-zinc-900 shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
-            <h2 className="text-sm font-semibold text-white">{t("profile.modal_title")}</h2>
+            <h2 id="profile-modal-title" className="text-sm font-semibold text-white">{t("profile.modal_title")}</h2>
             <button
               onClick={onClose}
+              aria-label={t("common.dismiss")}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
             >
               <X className="h-4 w-4" />
@@ -181,13 +192,19 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
 
   // Düzenleme modu
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="profile-edit-title"
+    >
       <div className="relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-zinc-900 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
-          <h2 className="text-sm font-semibold text-white">{t("profile.edit_title")}</h2>
+          <h2 id="profile-edit-title" className="text-sm font-semibold text-white">{t("profile.edit_title")}</h2>
           <button
             onClick={handleCancel}
+            aria-label={t("common.dismiss")}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
           >
             <X className="h-4 w-4" />
@@ -352,7 +369,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
 
           {/* Butonlar */}
           {saveError && (
-            <p className="text-center text-xs text-red-300">{saveError}</p>
+            <InlineAlert message={saveError} dismissLabel={t("common.dismiss")} onDismiss={() => setSaveError(null)} />
           )}
           <div className="mt-2 flex gap-3">
             <button

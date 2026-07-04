@@ -9,6 +9,7 @@ import type { MessageType } from "@/lib/types/database.types";
 import type { ContactId } from "@/lib/contacts";
 import { CONTACTS } from "@/lib/contacts";
 import { ChatRichCard } from "@/components/chat/ChatRichCard";
+import { InlineAlert } from "@/components/InlineAlert";
 import { useLang } from "@/lib/lang-context";
 import { useKai } from "@/lib/kai-context";
 import { useSession } from "@/lib/session-context";
@@ -49,6 +50,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quotaWarning, setQuotaWarning] = useState<"LIMIT_80" | "LIMIT_100" | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -92,6 +94,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     setInput("");
     setSending(true);
     setError(null);
+    setQuotaWarning(null);
 
     const userMsg: LiveMessage = {
       id: `local-user-${Date.now()}`,
@@ -125,6 +128,9 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             );
           },
           onDone: (data) => {
+            if (data.warning_trigger === "LIMIT_80" || data.warning_trigger === "LIMIT_100") {
+              setQuotaWarning(data.warning_trigger);
+            }
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === coachMsgId
@@ -170,6 +176,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
 
     setSending(true);
     setError(null);
+    setQuotaWarning(null);
     onCoachTyping?.(true);
 
     // Optimistic feedback: show the photo bubble + a typing placeholder
@@ -181,7 +188,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
       {
         id: photoUserId,
         from: "user",
-        text: "📷 Fotoğraf gönderildi",
+        text: t("chat.photo.sent"),
         time: formatTime(),
       },
       {
@@ -258,12 +265,31 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
         {loadingHistory && (
-          <p className="text-center text-xs text-zinc-500">Yükleniyor…</p>
+          <div className="space-y-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-12 animate-pulse rounded-2xl bg-white/5" aria-hidden />
+            ))}
+            <p className="sr-only">{t("common.loading")}</p>
+          </div>
+        )}
+        {quotaWarning && (
+          <InlineAlert
+            variant={quotaWarning === "LIMIT_100" ? "error" : "info"}
+            message={
+              quotaWarning === "LIMIT_100"
+                ? t("chat.quota.warning_100")
+                : t("chat.quota.warning_80")
+            }
+            dismissLabel={t("common.dismiss")}
+            onDismiss={() => setQuotaWarning(null)}
+          />
         )}
         {error && (
-          <p className="rounded-xl bg-red-500/10 px-3 py-2 text-center text-xs text-red-300">
-            {error}
-          </p>
+          <InlineAlert
+            message={error}
+            dismissLabel={t("common.dismiss")}
+            onDismiss={() => setError(null)}
+          />
         )}
         {messages.map((msg) => {
           const isCoach = msg.from === "coach";

@@ -3,9 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Mail } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { useLang } from "@/lib/lang-context";
+import { captureReferralFromUrl } from "@/lib/referral";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -14,6 +15,10 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    captureReferralFromUrl();
+  }, []);
 
   const handleMagicLink = async () => {
     const trimmed = email.trim();

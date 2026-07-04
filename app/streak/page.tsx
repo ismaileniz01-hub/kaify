@@ -5,6 +5,7 @@ import { ArrowLeft, Image as ImageIcon } from "lucide-react";
 import { StreakRoad } from "@/components/StreakRoad";
 import { StreakAtRiskBanner } from "@/components/streak/StreakAtRiskBanner";
 import { StreakCard } from "@/components/StreakCard";
+import { InlineAlert } from "@/components/InlineAlert";
 import { GemBalance } from "@/components/GemBalance";
 import { FreezieBalance } from "@/components/FreezieBalance";
 import { useGem } from "@/lib/gem-context";
@@ -17,7 +18,7 @@ export default function StreakPage() {
   const { gemState } = useGem();
   const { unlockedLevel, unlockLevel } = useKai();
   const { t } = useLang();
-  const { streak, isAuthenticated, checkIn } = useSession();
+  const { streak, isAuthenticated, isLoading, checkIn } = useSession();
   const [showCard, setShowCard] = useState(false);
   const [checkingIn, setCheckingIn] = useState(false);
   const [checkInMsg, setCheckInMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -82,6 +83,16 @@ export default function StreakPage() {
   }, []);
 
   const currentStreak = streak.currentStreak;
+
+  if (isLoading && isAuthenticated) {
+    return (
+      <div className="phone-shell flex flex-col px-4 pt-16">
+        <div className="h-8 w-32 animate-pulse rounded-lg bg-white/5" />
+        <div className="mt-6 h-64 animate-pulse rounded-2xl bg-white/5" />
+        <p className="sr-only">{t("common.loading")}</p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -153,16 +164,15 @@ export default function StreakPage() {
             disabled={checkingIn}
             className="w-full rounded-xl bg-orange-500/20 py-2.5 text-sm font-semibold text-orange-200 ring-1 ring-orange-400/30 transition hover:bg-orange-500/30 disabled:opacity-50"
           >
-            {checkingIn ? "…" : t("streak.checkin_button")}
+            {checkingIn ? t("common.loading") : t("streak.checkin_button")}
           </button>
           {checkInMsg && (
-            <p
-              className={`mt-2 text-center text-xs font-medium ${
-                checkInMsg.kind === "ok" ? "text-emerald-300" : "text-red-300"
-              }`}
-            >
-              {checkInMsg.text}
-            </p>
+            <InlineAlert
+              variant={checkInMsg.kind === "ok" ? "success" : "error"}
+              message={checkInMsg.text}
+              dismissLabel={t("common.dismiss")}
+              onDismiss={() => setCheckInMsg(null)}
+            />
           )}
         </div>
       )}

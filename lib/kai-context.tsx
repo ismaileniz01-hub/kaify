@@ -26,6 +26,8 @@ interface KaiContextType {
   purchaseEffect: (color: AuraColor) => void;
   /** Sunucudan owned + aura senkronize et */
   syncFromServer: (ownedIds: string[], activeAura: string) => void;
+  /** Oturum kapanınca misafir varsayılanına dön */
+  resetGuestState: () => void;
 }
 
 const KaiContext = createContext<KaiContextType | null>(null);
@@ -33,6 +35,31 @@ const KaiContext = createContext<KaiContextType | null>(null);
 const STORAGE_KEY = "kai_level";
 const AURA_STORAGE_KEY = "kai_aura_color";
 const OWNED_EFFECTS_KEY = "kai_owned_effects";
+
+const VALID_AURA_COLORS: AuraColor[] = [
+  "blue",
+  "red",
+  "green",
+  "pink",
+  "purple",
+  "gold",
+  "white",
+  "orange",
+  "indigo",
+  "electric",
+];
+
+/** Clears persisted Kai cosmetics (call on sign-out). */
+export function clearKaiLocalCache(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(AURA_STORAGE_KEY);
+  localStorage.removeItem(OWNED_EFFECTS_KEY);
+}
+
+function isAuraColor(value: string): value is AuraColor {
+  return value === "default" || VALID_AURA_COLORS.includes(value as AuraColor);
+}
 
 function getStoredLevel(): KaiLevel {
   if (typeof window === "undefined") return 1;
@@ -100,12 +127,24 @@ export function KaiProvider({ children, initialStreak = 0 }: { children: ReactNo
   }, []);
 
   const syncFromServer = useCallback((ownedIds: string[], activeAura: string) => {
-    const owned = ownedIds.filter((id) => id !== "default") as AuraColor[];
+    const owned = ownedIds.filter(
+      (id): id is AuraColor => id !== "default" && isAuraColor(id),
+    );
     setOwnedEffects(owned);
     localStorage.setItem(OWNED_EFFECTS_KEY, JSON.stringify(owned));
-    const aura = (activeAura === "default" ? "default" : activeAura) as AuraColor;
+
+    const serverAura = isAuraColor(activeAura) ? activeAura : "default";
+    const aura =
+      serverAura === "default" || owned.includes(serverAura) ? serverAura : "default";
     setAuraColorState(aura);
     localStorage.setItem(AURA_STORAGE_KEY, aura);
+  }, []);
+
+  const resetGuestState = useCallback(() => {
+    clearKaiLocalCache();
+    setUnlockedLevel(1);
+    setAuraColorState("default");
+    setOwnedEffects([]);
   }, []);
 
   const currentLevel = getKaiLevel(streak);
@@ -127,6 +166,7 @@ export function KaiProvider({ children, initialStreak = 0 }: { children: ReactNo
           ownedEffects: [],
           purchaseEffect,
           syncFromServer,
+          resetGuestState,
         }}
       >
         {children}
@@ -147,6 +187,7 @@ export function KaiProvider({ children, initialStreak = 0 }: { children: ReactNo
         ownedEffects,
         purchaseEffect,
         syncFromServer,
+        resetGuestState,
       }}
     >
       {children}

@@ -4,11 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Send, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { InlineAlert } from "@/components/InlineAlert";
 import { CONTACTS, type ContactId } from "@/lib/contacts";
 import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
-import { apiGet, apiPost } from "@/lib/api/client";
+import { apiGet, apiPost, ApiClientError } from "@/lib/api/client";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import type { ChatMessageDTO } from "@/lib/types/domain.types";
 
@@ -19,6 +20,15 @@ type TeamMessage = {
   time: string;
 };
 
+function isMeetingThisWeek(messages: ChatMessageDTO[]): boolean {
+  const weekStart = new Date();
+  weekStart.setUTCDate(weekStart.getUTCDate() - 7);
+  return messages.some(
+    (m) =>
+      m.messageType === "team_meeting" && new Date(m.createdAt) >= weekStart,
+  );
+}
+
 export default function TeamChatPage() {
   const { t } = useLang();
   const { avatar: kaiAvatar } = useKai();
@@ -27,6 +37,8 @@ export default function TeamChatPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [meetingDone, setMeetingDone] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const unlocked = !isAuthenticated || profile?.teamChatUnlocked;
@@ -38,6 +50,7 @@ export default function TeamChatPage() {
     }
     apiGet<{ messages: ChatMessageDTO[] }>("/api/chat/team")
       .then((res) => {
+        setMeetingDone(isMeetingThisWeek(res.messages));
         setMessages(
           res.messages.map((m) => ({
             id: m.id,
@@ -52,18 +65,20 @@ export default function TeamChatPage() {
       })
       .catch(() => setError(t("team.error.load")))
       .finally(() => setLoading(false));
-  }, [isAuthenticated]);
+  }, [isAuthenticated, t]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const startMeeting = async () => {
-    if (!isAuthenticated || !unlocked || generating) return;
+    if (!isAuthenticated || !unlocked || generating || meetingDone) return;
     setGenerating(true);
     setError(null);
+    setInfo(null);
     try {
       const res = await apiPost<{ messages: ChatMessageDTO[] }>("/api/chat/team");
+      setMeetingDone(true);
       setMessages((prev) => [
         ...prev,
         ...res.messages.map((m) => ({
@@ -77,7 +92,12 @@ export default function TeamChatPage() {
         })),
       ]);
     } catch (e) {
-      setError(errorToMessage(e, t));
+      if (e instanceof ApiClientError && e.code === "CONFLICT") {
+        setMeetingDone(true);
+        setInfo(t("team.error.meeting_done"));
+      } else {
+        setError(errorToMessage(e, t));
+      }
     } finally {
       setGenerating(false);
     }
@@ -89,6 +109,7 @@ export default function TeamChatPage() {
         <Link
           href="/messages"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-zinc-400"
+          aria-label={t("nav.back")}
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
@@ -96,21 +117,44 @@ export default function TeamChatPage() {
           <h1 className="text-sm font-semibold text-white">{t("messages.team_title")}</h1>
           <p className="text-[10px] text-zinc-500">{t("messages.team_sub")}</p>
         </div>
-        <Users className="h-5 w-5 text-purple-400" />
+        <Users className="h-5 w-5 text-purple-400" aria-hidden />
       </header>
 
       {!unlocked && (
-        <div className="mx-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-center text-xs text-amber-200">
-          Takım sohbeti 7 günlük seriden sonra açılır.
-        </div>
+        <InlineAlert
+          variant="info"
+          className="mx-4"
+          message={t("team.locked")}
+          dismissLabel={t("common.dismiss")}
+        />
       )}
 
       <main className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
-        {loading && <p className="text-center text-xs text-zinc-500">Yükleniyor…</p>}
+        {loading && (
+          <div className="space-y-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-14 animate-pulse rounded-2xl bg-white/5" aria-hidden />
+            ))}
+            <p className="sr-only">{t("common.loading")}</p>
+          </div>
+        )}
         {error && (
-          <p className="rounded-xl bg-red-500/10 px-3 py-2 text-center text-xs text-red-300">
-            {error}
-          </p>
+          <InlineAlert
+            message={error}
+            dismissLabel={t("common.dismiss")}
+            onDismiss={() => setError(null)}
+          />
+        )}
+        {info && (
+          <InlineAlert
+            variant="info"
+            message={info}
+            dismissLabel={t("common.dismiss")}
+            onDismiss={() => setInfo(null)}
+          />
+        )}
+        {!loading && messages.length === 0 && unlocked && !error && (
+          <p className="py-8 text-center text-xs text-zinc-500">{t("team.empty")}</p>
         )}
         {messages.map((msg) => {
           const c = CONTACTS[msg.coachId];
@@ -136,15 +180,22 @@ export default function TeamChatPage() {
       </main>
 
       {unlocked && isAuthenticated && (
-        <footer className="px-4 pb-8">
+        <footer className="space-y-2 px-4 pb-8">
+          {meetingDone && (
+            <p className="text-center text-[11px] text-zinc-500">{t("team.meeting_done_hint")}</p>
+          )}
           <button
             type="button"
             onClick={() => void startMeeting()}
-            disabled={generating}
+            disabled={generating || meetingDone}
             className="flex w-full items-center justify-center gap-2 rounded-full bg-purple-500 py-3 text-sm font-semibold text-white disabled:opacity-50"
           >
             <Send className="h-4 w-4" />
-            {generating ? t("team.generating") : t("team.start")}
+            {generating
+              ? t("team.generating")
+              : meetingDone
+                ? t("team.meeting_done_btn")
+                : t("team.start")}
           </button>
         </footer>
       )}

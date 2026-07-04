@@ -1096,7 +1096,10 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                     {t("streak.kai_level_up", { level: pendingKaiLevel })}
                   </p>
                   <p className="text-sm font-medium tracking-wider" style={{ color: colors.secondary.replace(')', '/80)') }}>
-                    {KAI_LEVEL_THRESHOLDS.find((t) => t.level === pendingKaiLevel)?.label}
+                    {(() => {
+                      const info = KAI_LEVEL_THRESHOLDS.find((row) => row.level === pendingKaiLevel);
+                      return info ? t(info.labelKey) : "";
+                    })()}
                   </p>
                 </div>
               </div>
@@ -1137,7 +1140,10 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
               {t("streak.kai_level_up", { level: kaiLevelUp })}
             </p>
             <p className="text-sm text-orange-300/70">
-              {KAI_LEVEL_THRESHOLDS.find((t) => t.level === kaiLevelUp)?.label}
+              {(() => {
+                const info = KAI_LEVEL_THRESHOLDS.find((row) => row.level === kaiLevelUp);
+                return info ? t(info.labelKey) : "";
+              })()}
             </p>
           </div>
         </div>

@@ -15,10 +15,12 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
+import { InlineAlert } from "@/components/InlineAlert";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { apiGet, ApiClientError } from "@/lib/api/client";
+import type { UserSettingsDTO } from "@/lib/services/settings.service";
 import { getCountryName } from "@/lib/country-names";
 import type { CountryLeaderboardDTO } from "@/lib/types/domain.types";
 
@@ -183,6 +185,14 @@ export default function LeaderboardPage() {
   const { profile, isAuthenticated } = useSession();
   const [data, setData] = useState<CountryLeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [leaderboardHidden, setLeaderboardHidden] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    apiGet<UserSettingsDTO>("/api/settings")
+      .then((s) => setLeaderboardHidden(s.leaderboardOptOut))
+      .catch(() => undefined);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -248,6 +258,14 @@ export default function LeaderboardPage() {
       </header>
 
       <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {leaderboardHidden && isAuthenticated && (
+          <div className="px-4 pt-3">
+            <InlineAlert
+              variant="info"
+              message={`${t("leaderboard.hidden_self")} — ${t("leaderboard.hidden_self.desc")}`}
+            />
+          </div>
+        )}
         {loading ? (
           <div className="flex flex-1 items-center justify-center">
             <div className="flex flex-col items-center gap-4">

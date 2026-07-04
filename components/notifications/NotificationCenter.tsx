@@ -19,6 +19,7 @@ import {
 import { useLang } from "@/lib/lang-context";
 import { useNotifications } from "@/lib/notification-context";
 import { PushToggle } from "@/components/notifications/PushToggle";
+import { InlineAlert } from "@/components/InlineAlert";
 import { visualFor } from "@/lib/notifications/config";
 import type { NotificationDTO } from "@/lib/services/notifications.service";
 import type { NotificationType } from "@/lib/types/database.types";
@@ -143,6 +144,13 @@ export function NotificationCenter() {
   const { notifications, unreadCount, loading, markAllRead, markRead, refresh } =
     useNotifications();
   const [open, setOpen] = useState(false);
+  const [markAllSuccess, setMarkAllSuccess] = useState(false);
+
+  const handleMarkAllRead = async () => {
+    await markAllRead();
+    setMarkAllSuccess(true);
+    setTimeout(() => setMarkAllSuccess(false), 2500);
+  };
 
   useEffect(() => {
     if (open) void refresh();
@@ -196,13 +204,16 @@ export function NotificationCenter() {
 
           <div
             className="animate-in animate-in--1 relative mt-0 flex h-full w-full max-w-[420px] flex-col bg-[#0a0a0a] shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="notif-panel-title"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-white/5 px-4 pb-3 pt-14">
               <div className="flex items-center gap-2">
                 <Bell className="h-5 w-5 text-purple-300" strokeWidth={2} />
-                <h2 className="text-lg font-semibold text-white">
+                <h2 id="notif-panel-title" className="text-lg font-semibold text-white">
                   {t("notif.title")}
                 </h2>
                 {unreadCount > 0 && (
@@ -224,12 +235,18 @@ export function NotificationCenter() {
             {/* Phone push opt-in */}
             <PushToggle />
 
+            {markAllSuccess && (
+              <div className="px-4 pt-2">
+                <InlineAlert variant="success" message={t("notif.mark_all_success")} />
+              </div>
+            )}
+
             {/* Actions */}
             {unreadCount > 0 && (
               <div className="flex justify-end px-4 py-2">
                 <button
                   type="button"
-                  onClick={() => void markAllRead()}
+                  onClick={() => void handleMarkAllRead()}
                   className="flex items-center gap-1.5 rounded-full bg-purple-500/15 px-3 py-1.5 text-[11px] font-semibold text-purple-300 ring-1 ring-purple-400/30 transition hover:brightness-110 active:scale-95"
                 >
                   <CheckCheck className="h-3.5 w-3.5" />

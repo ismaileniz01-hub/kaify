@@ -130,7 +130,7 @@ export default function GymLibraryPage() {
         <Link
           href="/library"
           className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition-all duration-300 hover:bg-white/20 hover:text-white hover:scale-110"
-          aria-label="Back"
+          aria-label={t("nav.back")}
         >
           <ArrowLeft className="h-4 w-4" strokeWidth={2} />
         </Link>

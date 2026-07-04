@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, ArrowLeft, Droplets, Dumbbell, Flame } from "lucide-react";
+import { Activity, ArrowLeft, Droplets, Dumbbell, Flame, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { MacroRing } from "@/components/analytics/MacroRing";
 import { StatCard } from "@/components/analytics/StatCard";
@@ -20,19 +20,24 @@ export default function AnalyticsPage() {
   const { isAuthenticated } = useSession();
   const [data, setData] = useState<AnalyticsBundleDTO | null>(() => readAnalyticsCache());
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const loadAnalytics = useCallback(() => {
     if (!isAuthenticated) return;
     setLoadError(null);
+    setRefreshing(true);
     void apiGet<AnalyticsBundleDTO>("/api/analytics")
       .then((bundle) => {
         setData(bundle);
         writeAnalyticsCache(bundle);
+        setLastUpdated(new Date());
       })
       .catch((err) => {
         setData(null);
         setLoadError(errorToMessage(err, t) || t("analytics.error.load"));
-      });
+      })
+      .finally(() => setRefreshing(false));
   }, [isAuthenticated, t]);
 
   useEffect(() => {
@@ -86,8 +91,24 @@ export default function AnalyticsPage() {
         <h1 className="flex-1 text-center text-sm font-medium text-white">
           {t("analytics.page_title")}
         </h1>
-        <div className="h-9 w-9" />
+        <button
+          type="button"
+          onClick={() => loadAnalytics()}
+          disabled={refreshing || !isAuthenticated}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white disabled:opacity-40"
+          aria-label={t("analytics.refresh")}
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+        </button>
       </header>
+
+      {lastUpdated && !loadError && (
+        <p className="px-4 pb-1 text-center text-[10px] text-zinc-600">
+          {t("analytics.updated", {
+            time: lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          })}
+        </p>
+      )}
 
       <main className="flex-1 overflow-y-auto px-4 pb-8">
         {loadError && (
@@ -96,6 +117,7 @@ export default function AnalyticsPage() {
             message={loadError}
             onRetry={loadAnalytics}
             retryLabel={t("common.retry")}
+            dismissLabel={t("common.dismiss")}
             onDismiss={() => setLoadError(null)}
           />
         )}

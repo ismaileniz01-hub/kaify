@@ -8,6 +8,7 @@ type InlineAlertProps = {
   onDismiss?: () => void;
   onRetry?: () => void;
   retryLabel?: string;
+  dismissLabel?: string;
   className?: string;
 };
 
@@ -17,6 +18,7 @@ export function InlineAlert({
   onDismiss,
   onRetry,
   retryLabel = "Retry",
+  dismissLabel = "Dismiss",
   className = "",
 }: InlineAlertProps) {
   const styles =
@@ -50,7 +52,7 @@ export function InlineAlert({
             type="button"
             onClick={onDismiss}
             className="rounded-lg p-1 opacity-70 hover:opacity-100"
-            aria-label="Dismiss"
+            aria-label={dismissLabel}
           >
             <X className="h-3.5 w-3.5" />
           </button>

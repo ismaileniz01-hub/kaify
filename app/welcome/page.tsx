@@ -14,9 +14,12 @@ import { useSession } from "@/lib/session-context";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLang, LANG_OPTIONS, hasStoredLangPreference } from "@/lib/lang-context";
+import { captureReferralFromUrl, getPendingReferral } from "@/lib/referral";
+import { InlineAlert } from "@/components/InlineAlert";
 
 function WelcomeContent() {
   const [profileOpen, setProfileOpen] = useState(false);
+  const [pendingReferral, setPendingReferral] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const { t, setLang } = useLang();
   const {
@@ -32,15 +35,16 @@ function WelcomeContent() {
     isAuthenticated,
   } = useSession();
 
-  if (isLoading && isAuthenticated) {
-    return <WelcomeSkeleton />;
-  }
-
   // ?profile=1 query param'ı ile gelindiyse profil modal'ını otomatik aç
   useEffect(() => {
     if (searchParams?.get("profile") === "1") {
       setProfileOpen(true);
     }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const code = captureReferralFromUrl(searchParams);
+    setPendingReferral(code ?? getPendingReferral());
   }, [searchParams]);
 
   useEffect(() => {
@@ -52,6 +56,10 @@ function WelcomeContent() {
     const match = LANG_OPTIONS.find((opt) => opt.code === base);
     if (match) setLang(match.code);
   }, [isAuthenticated, profile?.locale, setLang]);
+
+  if (isLoading && isAuthenticated) {
+    return <WelcomeSkeleton />;
+  }
 
   return (
     <div className="phone-shell welcome-page relative flex flex-col overflow-hidden">
@@ -115,9 +123,22 @@ function WelcomeContent() {
             {home?.motivation ?? t("welcome.subtitle")}
           </p>
           {isPreviewMode && (
-            <p className="mt-2 text-[10px] text-amber-400/80">
-              {t("welcome.preview_mode")}
-            </p>
+            <div className="mt-3 space-y-2">
+              <p className="text-[10px] text-amber-400/80">{t("welcome.preview_mode")}</p>
+              <Link
+                href="/login"
+                className="inline-flex rounded-full bg-purple-500/20 px-4 py-1.5 text-xs font-semibold text-purple-200 ring-1 ring-purple-400/30 transition hover:bg-purple-500/30"
+              >
+                {t("welcome.sign_in_cta")}
+              </Link>
+            </div>
+          )}
+          {!isAuthenticated && pendingReferral && (
+            <InlineAlert
+              variant="info"
+              className="mt-3 max-w-xs"
+              message={t("referral.welcome_banner", { code: pendingReferral })}
+            />
           )}
         </section>
 

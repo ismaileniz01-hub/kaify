@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Gift, Timer } from "lucide-react";
 import { KaiChestImage } from "./KaiChestImage";
+import { InlineAlert } from "@/components/InlineAlert";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
-import { apiGet, apiPost } from "@/lib/api/client";
+import { apiGet, apiPost, ApiClientError } from "@/lib/api/client";
+import { errorToMessage } from "@/lib/i18n/api-error";
 import type {
   DailyChestClaimDTO,
   DailyChestStatusDTO,
@@ -25,12 +27,20 @@ function formatCountdown(iso: string): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+function nextUtcMidnightIso(): string {
+  const d = new Date();
+  d.setUTCHours(24, 0, 0, 0);
+  return d.toISOString();
+}
+
 export function DailyChestBanner({ onClaimed }: Props) {
   const { t } = useLang();
   const { isAuthenticated } = useSession();
   const [status, setStatus] = useState<DailyChestStatusDTO | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [statusError, setStatusError] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
   const [claimData, setClaimData] = useState<DailyChestClaimDTO | null>(null);
   const [claimLoading, setClaimLoading] = useState(false);
@@ -40,10 +50,12 @@ export function DailyChestBanner({ onClaimed }: Props) {
     if (!isAuthenticated) {
       setStatusLoading(false);
       setStatus(null);
+      setStatusError(false);
       return;
     }
     setStatusLoading(true);
     setStatusError(false);
+    setClaimError(null);
     apiGet<DailyChestStatusDTO>("/api/market/chest")
       .then((data) => {
         setStatus(data);
@@ -61,6 +73,15 @@ export function DailyChestBanner({ onClaimed }: Props) {
   }, [loadStatus]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") loadStatus();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [isAuthenticated, loadStatus]);
+
+  useEffect(() => {
     if (!status?.nextClaimAt || status.canClaim) {
       setCountdown("");
       return;
@@ -71,6 +92,14 @@ export function DailyChestBanner({ onClaimed }: Props) {
     return () => clearInterval(id);
   }, [status?.nextClaimAt, status?.canClaim]);
 
+  const markClaimedToday = useCallback(() => {
+    setStatus((prev) => ({
+      canClaim: false,
+      nextClaimAt: prev?.nextClaimAt ?? nextUtcMidnightIso(),
+      utcDate: prev?.utcDate ?? new Date().toISOString().slice(0, 10),
+    }));
+  }, []);
+
   const canClaim = status?.canClaim ?? false;
   const showClaimed = !statusLoading && status !== null && !canClaim;
 
@@ -79,13 +108,27 @@ export function DailyChestBanner({ onClaimed }: Props) {
     if (status && !status.canClaim) return;
 
     setClaimLoading(true);
+    setClaimError(null);
+    setInfoMessage(null);
     try {
       const result = await apiPost<DailyChestClaimDTO>("/api/market/chest");
+      if (result.alreadyClaimed) {
+        markClaimedToday();
+        setInfoMessage(t("chest.already_claimed"));
+        loadStatus();
+        return;
+      }
       setClaimData(result);
       setOpening(true);
-      setStatusError(false);
-    } catch {
-      setStatusError(true);
+      markClaimedToday();
+    } catch (err) {
+      if (err instanceof ApiClientError && err.code === "CONFLICT") {
+        markClaimedToday();
+        setInfoMessage(t("chest.already_claimed"));
+        loadStatus();
+        return;
+      }
+      setClaimError(errorToMessage(err, t) || t("chest.claim_failed"));
     } finally {
       setClaimLoading(false);
     }
@@ -120,7 +163,7 @@ export function DailyChestBanner({ onClaimed }: Props) {
         </p>
 
         <div className="mt-3 flex items-center gap-3">
-          <KaiChestImage size={72} pulse={canClaim} />
+          <KaiChestImage size={72} pulse={canClaim && !statusLoading} />
 
           <div className="min-w-0 flex-1">
             <h3 className="text-base font-bold leading-tight text-white">
@@ -135,11 +178,36 @@ export function DailyChestBanner({ onClaimed }: Props) {
                 {t("chest.next_in", { time: countdown })}
               </p>
             )}
-            {statusError && (
-              <p className="mt-1.5 text-[10px] text-red-300">{t("chest.error")}</p>
-            )}
           </div>
         </div>
+
+        {statusError && !status && (
+          <InlineAlert
+            className="mt-3"
+            message={t("chest.error")}
+            dismissLabel={t("common.dismiss")}
+            onDismiss={() => setStatusError(false)}
+            onRetry={loadStatus}
+            retryLabel={t("common.retry")}
+          />
+        )}
+        {claimError && (
+          <InlineAlert
+            className="mt-3"
+            message={claimError}
+            dismissLabel={t("common.dismiss")}
+            onDismiss={() => setClaimError(null)}
+          />
+        )}
+        {infoMessage && (
+          <InlineAlert
+            variant="info"
+            className="mt-3"
+            message={infoMessage}
+            dismissLabel={t("common.dismiss")}
+            onDismiss={() => setInfoMessage(null)}
+          />
+        )}
 
         <button
           type="button"
