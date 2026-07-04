@@ -80,11 +80,9 @@ export default function AnalyticsPage() {
           <StatCard
             icon={Flame}
             label={t("analytics.calories")}
-            value={
-              today
-                ? `${(today.caloriesConsumed / 1000).toFixed(1)}k`
-                : t("analytics.calories_value")
-            }
+            value={t("analytics.calories_value")}
+            numericValue={today ? Math.round(today.caloriesConsumed) : undefined}
+            unitSuffix="kcal"
             trend={
               today
                 ? `▲ ${calPct}% ${t("home.completed")}`

@@ -10,6 +10,9 @@ type StatCardProps = {
   icon: LucideIcon;
   label: string;
   value: string;
+  /** When set, bypasses string parsing (avoids TR "1.840" → 1.84 bugs). */
+  numericValue?: number;
+  unitSuffix?: string;
   trend: string;
   trendPositive?: boolean;
   barColor: string;
@@ -27,11 +30,25 @@ function parseValue(v: string): [number, string] {
   return [isNaN(num) ? 0 : num, match[2]];
 }
 
-export function StatCard({ icon: Icon, label, value, trend, trendPositive = true, barColor, barPercent, gradient, animate = true }: StatCardProps) {
+export function StatCard({
+  icon: Icon,
+  label,
+  value,
+  numericValue,
+  unitSuffix,
+  trend,
+  trendPositive = true,
+  barColor,
+  barPercent,
+  gradient,
+  animate = true,
+}: StatCardProps) {
   const { t } = useLang();
   const [displayNum, setDisplayNum] = useState(0);
   const [displayBar, setDisplayBar] = useState(0);
-  const [targetNum, unit] = parseValue(value);
+  const parsed = parseValue(value);
+  const targetNum = numericValue ?? parsed[0];
+  const unit = unitSuffix ?? parsed[1];
 
   useEffect(() => {
     if (!animate) {

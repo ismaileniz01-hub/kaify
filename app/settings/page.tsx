@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, Bell, Globe, LogOut, Search, Shield, User, Volume2, Check, Gift } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useTheme } from "@/lib/theme-context";
-import { useLang, LANG_OPTIONS } from "@/lib/lang-context";
+import { useLang, LANG_OPTIONS, hasStoredLangPreference } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { apiGet, apiPatch } from "@/lib/api/client";
 import type { UserSettingsDTO } from "@/lib/services/settings.service";
@@ -121,6 +121,8 @@ export default function SettingsPage() {
   }, [isAuthenticated, setUnit]);
 
   useEffect(() => {
+    // Kullanıcı cihazda açıkça bir dil seçtiyse bayat profil locale'i ezmesin.
+    if (hasStoredLangPreference()) return;
     if (isAuthenticated && profile?.locale) {
       const base = profile.locale.split("-")[0].toLowerCase();
       const match = LANG_OPTIONS.find((o) => o.code === base || o.code === profile.locale);

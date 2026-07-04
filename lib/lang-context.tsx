@@ -153,6 +153,17 @@ function getStoredLang(): LangCode {
   return detectBrowserLang();
 }
 
+/**
+ * Kullanıcının cihazda açıkça seçtiği bir dil var mı?
+ * (localStorage yalnızca setLang ile — yani kullanıcı seçince — yazılır.)
+ * Profil locale'i yalnızca kullanıcı henüz seçim yapmadıysa uygulanmalı;
+ * aksi halde sayfalar arası gezinmede bayat profil locale'i seçimi ezer.
+ */
+export function hasStoredLangPreference(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(STORAGE_KEY) != null;
+}
+
 /** Dil JSON'larını dinamik import et */
 const langModules: Record<string, () => Promise<{ default: LangDict }>> = {
   tr: () => import("@/lib/lang/tr.json"),

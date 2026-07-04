@@ -100,6 +100,108 @@ function defaultToday(): AnalyticsDailyDTO {
   };
 }
 
+type MealTotals = {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+};
+
+function extractFoodFromPayload(payload: Json | null): MealTotals | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const analysis = (payload as Record<string, unknown>).analysis;
+  if (!analysis || typeof analysis !== "object" || Array.isArray(analysis)) return null;
+  const food = (analysis as Record<string, unknown>).food_analysis;
+  if (!food || typeof food !== "object" || Array.isArray(food)) return null;
+
+  const row = food as Record<string, unknown>;
+  const calories = Number(row.calories);
+  const protein = Number(row.protein);
+  const carbs = Number(row.carb);
+  const fat = Number(row.fat);
+  if (![calories, protein, carbs, fat].some((n) => Number.isFinite(n) && n > 0)) {
+    return null;
+  }
+
+  return {
+    calories: Number.isFinite(calories) ? Math.max(0, Math.round(calories)) : 0,
+    protein: Number.isFinite(protein) ? Math.max(0, Math.round(protein)) : 0,
+    carbs: Number.isFinite(carbs) ? Math.max(0, Math.round(carbs)) : 0,
+    fat: Number.isFinite(fat) ? Math.max(0, Math.round(fat)) : 0,
+  };
+}
+
+/** Sum today's Maya food-photo analyses from chat when analytics_daily is stale. */
+async function syncTodayMealsFromMayaChat(
+  userId: string,
+  entryDate: string,
+  stored: AnalyticsDailyDTO,
+): Promise<AnalyticsDailyDTO | null> {
+  const admin = createAdminSupabaseClient();
+  const dayStart = `${entryDate}T00:00:00.000Z`;
+  const dayEnd = new Date(`${entryDate}T00:00:00.000Z`);
+  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+
+  const { data: messages, error } = await admin
+    .from("chat_messages")
+    .select("payload")
+    .eq("user_id", userId)
+    .eq("coach_id", "maya")
+    .eq("message_type", "analysis")
+    .gte("created_at", dayStart)
+    .lt("created_at", dayEnd.toISOString());
+
+  if (error) {
+    logger.warn("[analytics.service] maya meal sync read failed", { error: error.message });
+    return null;
+  }
+
+  const chatTotals: MealTotals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+  for (const msg of messages ?? []) {
+    const meal = extractFoodFromPayload(msg.payload ?? null);
+    if (!meal) continue;
+    chatTotals.calories += meal.calories;
+    chatTotals.protein += meal.protein;
+    chatTotals.carbs += meal.carbs;
+    chatTotals.fat += meal.fat;
+  }
+
+  if (chatTotals.calories === 0 && chatTotals.protein === 0) return null;
+
+  // Chat food photos are the source of truth when DB totals lag behind.
+  if (
+    chatTotals.calories <= stored.caloriesConsumed &&
+    chatTotals.protein <= stored.proteinG &&
+    chatTotals.carbs <= stored.carbsG &&
+    chatTotals.fat <= stored.fatG
+  ) {
+    return null;
+  }
+
+  try {
+    await patchAnalyticsDaily(userId, {
+      caloriesConsumed: chatTotals.calories,
+      proteinG: chatTotals.protein,
+      carbsG: chatTotals.carbs,
+      fatG: chatTotals.fat,
+    }, entryDate);
+
+    const { data: row } = await admin
+      .from("analytics_daily")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("entry_date", entryDate)
+      .maybeSingle();
+
+    return row ? mapRow(row as AnalyticsRow) : null;
+  } catch (syncError) {
+    logger.warn("[analytics.service] maya meal sync patch failed", {
+      error: syncError instanceof Error ? syncError.message : String(syncError),
+    });
+    return null;
+  }
+}
+
 export async function getAnalyticsBundle(userId: string): Promise<AnalyticsBundleDTO> {
   const supabase = await createServerSupabaseClient();
   const today = utcToday();
@@ -142,6 +244,9 @@ export async function getAnalyticsBundle(userId: string): Promise<AnalyticsBundl
   if (prevError) logger.error("[analytics.service] weight read error", { error: prevError.message });
 
   let todayDto = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday();
+
+  const synced = await syncTodayMealsFromMayaChat(userId, today, todayDto);
+  if (synced) todayDto = synced;
 
   if (weekRows && weekRows.length > 0) {
     const stepSum = weekRows.reduce((sum, r) => sum + (r.steps ?? 0), 0);
@@ -206,6 +311,42 @@ export async function patchAnalyticsDaily(
     logger.error("[analytics.service] upsert error", { error: error.message });
     throw new ApiError("INTERNAL_ERROR", "Analiz verisi güncellenemedi.");
   }
+}
+
+/**
+ * Adds a logged meal's macros onto today's running totals (accumulate, not
+ * overwrite). Used by the Maya food-photo pipeline so a breakfast photo is
+ * reflected in the analytics screen. Reads current totals with the admin
+ * client, then writes the summed values via the SET-semantics RPC.
+ */
+export async function addMealToAnalytics(
+  userId: string,
+  meal: { calories?: number; protein?: number; carbs?: number; fat?: number },
+): Promise<void> {
+  const add = {
+    calories: Math.max(0, Math.round(meal.calories ?? 0)),
+    protein: Math.max(0, Math.round(meal.protein ?? 0)),
+    carbs: Math.max(0, Math.round(meal.carbs ?? 0)),
+    fat: Math.max(0, Math.round(meal.fat ?? 0)),
+  };
+  if (add.calories + add.protein + add.carbs + add.fat === 0) return;
+
+  const admin = createAdminSupabaseClient();
+  const date = utcToday();
+
+  const { data: current } = await admin
+    .from("analytics_daily")
+    .select("calories_consumed, protein_g, carbs_g, fat_g")
+    .eq("user_id", userId)
+    .eq("entry_date", date)
+    .maybeSingle();
+
+  await patchAnalyticsDaily(userId, {
+    caloriesConsumed: (current?.calories_consumed ?? 0) + add.calories,
+    proteinG: (current?.protein_g ?? 0) + add.protein,
+    carbsG: (current?.carbs_g ?? 0) + add.carbs,
+    fatG: (current?.fat_g ?? 0) + add.fat,
+  });
 }
 
 export async function syncHealthSteps(

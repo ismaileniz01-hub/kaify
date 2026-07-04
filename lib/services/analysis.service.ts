@@ -7,6 +7,7 @@ import { refundQuota, reserveQuota } from "@/lib/ai/quota-guard";
 import { toApiError } from "@/lib/ai/errors";
 import { prepareVisionImage } from "@/lib/security/image";
 import { getCoachOrThrow } from "@/lib/services/coach.service";
+import { addMealToAnalytics } from "@/lib/services/analytics.service";
 import type { ScoreDrift } from "@/lib/ai/consistency";
 import type {
   AnalysisMimeType,
@@ -183,6 +184,22 @@ export async function analyzePhoto(
 
   if (insertError) {
     logger.error("[analysis.service] persist error", { error: insertError.message });
+  }
+
+  // Reflect a logged meal onto today's analytics totals so a food photo shows
+  // up in the analysis screen. Fire-and-forget: never fail the response.
+  if (persona.kind === "food" && result.analysis.food_analysis) {
+    const food = result.analysis.food_analysis;
+    void addMealToAnalytics(params.userId, {
+      calories: food.calories,
+      protein: food.protein,
+      carbs: food.carb,
+      fat: food.fat,
+    }).catch((error) => {
+      logger.error("[analysis.service] meal analytics patch failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
   }
 
   return {

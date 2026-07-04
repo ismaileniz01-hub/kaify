@@ -19,6 +19,7 @@ export default function StreakPage() {
   const { streak, isAuthenticated, checkIn } = useSession();
   const [showCard, setShowCard] = useState(false);
   const [checkingIn, setCheckingIn] = useState(false);
+  const [checkInMsg, setCheckInMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   useEffect(() => {
     if (streak.kaiUnlockedLevel > unlockedLevel) {
@@ -29,12 +30,26 @@ export default function StreakPage() {
   const handleCheckIn = async () => {
     if (!isAuthenticated || checkingIn) return;
     setCheckingIn(true);
+    setCheckInMsg(null);
     try {
-      await checkIn();
+      const result = await checkIn();
+      setCheckInMsg({
+        kind: "ok",
+        text: t("streak.checkin_success", { streak: result.currentStreak }),
+      });
     } catch (error) {
       console.error("[streak] check-in failed:", error);
+      const already =
+        error instanceof Error && /already|zaten|bugün|today/i.test(error.message);
+      setCheckInMsg({
+        kind: already ? "ok" : "err",
+        text: already
+          ? t("streak.checkin_already")
+          : t("streak.checkin_error"),
+      });
     } finally {
       setCheckingIn(false);
+      setTimeout(() => setCheckInMsg(null), 4000);
     }
   };
 
@@ -132,8 +147,17 @@ export default function StreakPage() {
             disabled={checkingIn}
             className="w-full rounded-xl bg-orange-500/20 py-2.5 text-sm font-semibold text-orange-200 ring-1 ring-orange-400/30 transition hover:bg-orange-500/30 disabled:opacity-50"
           >
-            {checkingIn ? "…" : "Günlük Giriş Yap (+1 streak, +10 💎)"}
+            {checkingIn ? "…" : t("streak.checkin_button")}
           </button>
+          {checkInMsg && (
+            <p
+              className={`mt-2 text-center text-xs font-medium ${
+                checkInMsg.kind === "ok" ? "text-emerald-300" : "text-red-300"
+              }`}
+            >
+              {checkInMsg.text}
+            </p>
+          )}
         </div>
       )}
 

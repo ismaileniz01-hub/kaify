@@ -11,7 +11,7 @@ import { NotificationCenter } from "@/components/notifications/NotificationCente
 import { useSession } from "@/lib/session-context";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { useLang, LANG_OPTIONS } from "@/lib/lang-context";
+import { useLang, LANG_OPTIONS, hasStoredLangPreference } from "@/lib/lang-context";
 
 function WelcomeContent() {
   const [profileOpen, setProfileOpen] = useState(false);
@@ -36,6 +36,9 @@ function WelcomeContent() {
   }, [searchParams]);
 
   useEffect(() => {
+    // Kullanıcı cihazda açıkça bir dil seçtiyse, bayat profil locale'i
+    // o seçimi ezmemeli (aksi halde diğer sayfaya geçince dil geri döner).
+    if (hasStoredLangPreference()) return;
     if (!isAuthenticated || !profile?.locale) return;
     const base = profile.locale.split("-")[0].toLowerCase();
     const match = LANG_OPTIONS.find((opt) => opt.code === base);
