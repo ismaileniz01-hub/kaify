@@ -2,7 +2,9 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
 import { ModelRouter } from "@/lib/ai/model-router";
+import { resolveLocale } from "@/lib/i18n/dictionary";
 import { buildChatSystemPrompt } from "@/lib/ai/personas";
+import { buildFitnessContextSummary } from "@/lib/ai/chat-context";
 import { checkQuotaGuard, refundQuota, settleQuota } from "@/lib/ai/quota-guard";
 import { AiError, toApiError } from "@/lib/ai/errors";
 import { getCoachOrThrow } from "@/lib/services/coach.service";
@@ -62,7 +64,7 @@ async function getLocale(
     .select("locale")
     .eq("id", userId)
     .maybeSingle();
-  return data?.locale ?? "tr";
+  return resolveLocale(data?.locale);
 }
 
 async function getCoachingState(
@@ -77,15 +79,20 @@ async function getCoachingState(
   return data ?? null;
 }
 
-function buildStateSummary(state: CoachingStateRow | null): string {
-  if (!state) return "";
+function buildStateSummary(
+  state: CoachingStateRow | null,
+  fitnessContext?: string,
+): string {
   const parts: string[] = [];
-  if (state.motivation_style) parts.push(`motivation style: ${state.motivation_style}`);
-  if (state.training_focus.length > 0)
+  if (state?.motivation_style) parts.push(`motivation style: ${state.motivation_style}`);
+  if (state && state.training_focus.length > 0)
     parts.push(`training focus: ${state.training_focus.join(", ")}`);
-  if (state.last_workout_summary)
+  if (state?.last_workout_summary)
     parts.push(`last workout: ${state.last_workout_summary}`);
-  if (state.injury_notes) parts.push(`injuries/limitations: ${state.injury_notes}`);
+  if (state?.injury_notes) parts.push(`injuries/limitations: ${state.injury_notes}`);
+  if (fitnessContext && fitnessContext.trim().length > 0) {
+    parts.push(fitnessContext);
+  }
   return parts.join("; ");
 }
 
@@ -204,11 +211,12 @@ export async function* streamCoachReply(
     }
     const canary = createCanary();
 
-    const [locale, state, sync, memories] = await Promise.all([
+    const [locale, state, sync, memories, fitnessContext] = await Promise.all([
       getLocale(admin, params.userId),
       getCoachingState(admin, params.userId),
       syncAgents({ activeCoachId: params.coachId }),
       getRecentMemories(params.userId, 3),
+      buildFitnessContextSummary(params.userId).catch(() => ""),
     ]);
 
     const history = await fetchRecentTurns(admin, params.userId, params.coachId);
@@ -218,7 +226,7 @@ export async function* streamCoachReply(
       coachName: coach.name,
       coachPersonality: coach.personality,
       locale,
-      stateSummary: buildStateSummary(state),
+      stateSummary: buildStateSummary(state, fitnessContext),
     });
     // Condensed memory is derived from prior user messages -> untrusted data.
     // Stable wrap so the memory block stays byte-identical between condensations
@@ -278,7 +286,7 @@ export async function* streamCoachReply(
     let totalTokens = 0;
 
     for await (const event of ModelRouter.streamText(messages, {
-      temperature: 0.7,
+      temperature: params.coachId === "kai" ? 0.85 : 0.7,
       maxTokens: TOKEN_BUDGET.chatReply,
       usageContext: { userId: params.userId, operation: "chat_stream" },
     })) {
