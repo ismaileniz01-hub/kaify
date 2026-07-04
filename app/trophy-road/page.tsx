@@ -6,9 +6,11 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/lib/session-context";
 import { apiGet, apiPost, apiPatch } from "@/lib/api/client";
 import { GemBalance } from "@/components/GemBalance";
+import { GemIcon } from "@/components/GemIcon";
 import { useGem } from "@/lib/gem-context";
 import { useKai, type AuraColor } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
+import { DailyChestBanner } from "@/components/market/DailyChestBanner";
 
 type EffectColor = {
   id: AuraColor;
@@ -139,7 +141,7 @@ export default function MarketPage() {
   const { t } = useLang();
   const { gemState, spend, refreshBalance } = useGem();
   const { ownedEffects, purchaseEffect, setAuraColor, auraColor, syncFromServer } = useKai();
-  const { isAuthenticated } = useSession();
+  const { isAuthenticated, refreshSession } = useSession();
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [successEffect, setSuccessEffect] = useState<EffectColor | null>(null);
 
@@ -211,6 +213,13 @@ export default function MarketPage() {
       </header>
 
       <main className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-8 pt-4">
+        <DailyChestBanner
+          onClaimed={() => {
+            void refreshBalance?.();
+            void refreshSession();
+          }}
+        />
+
         {/* Banner */}
         <div className="rounded-2xl border border-purple-400/30 bg-gradient-to-r from-purple-900/40 to-violet-900/30 px-5 py-4 text-center">
           <Sparkles className="mx-auto mb-2 h-6 w-6 text-purple-300" />
@@ -327,7 +336,10 @@ export default function MarketPage() {
                 {/* İsim ve fiyat */}
                 <div className="relative px-3 pb-4 text-center">
                   <h3 className="text-sm font-semibold text-white">{t(effect.nameKey)}</h3>
-                  <p className="mt-1 text-xs text-zinc-400">{effect.price} 💎</p>
+                  <p className="mt-1 flex items-center justify-center gap-1 text-xs text-zinc-400">
+                    <span>{effect.price}</span>
+                    <GemIcon size={12} />
+                  </p>
                   {isActive && (
                     <span className="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/60">
                       {t("market.active")}

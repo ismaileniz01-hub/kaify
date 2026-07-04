@@ -5,6 +5,7 @@ import { ArrowLeft, BarChart3, Flame, Globe, MessageCircle, Settings, ShoppingCa
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { WelcomeCard } from "@/components/welcome/WelcomeCard";
 import { WelcomeExtras } from "@/components/welcome/WelcomeExtras";
+import { StreakAtRiskBanner } from "@/components/streak/StreakAtRiskBanner";
 import { GemBalance } from "@/components/GemBalance";
 import { ProfileModal } from "@/components/ProfileModal";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
@@ -22,6 +23,7 @@ function WelcomeContent() {
     userProfile,
     home,
     gemBalance,
+    streak,
     isPreviewMode,
     updateProfile,
     profile,
@@ -156,7 +158,14 @@ function WelcomeContent() {
         </section>
 
         {/* Extra suggestions */}
-        <section className="animate-in animate-in--7 mt-6 px-4 pb-10">
+        <section className="animate-in animate-in--7 mt-6 space-y-3 px-4 pb-10">
+          {isAuthenticated && (
+            <StreakAtRiskBanner
+              currentStreak={streak.currentStreak}
+              lastCheckInDate={streak.lastCheckInDate}
+              freezieBalance={streak.freezieBalance}
+            />
+          )}
           <WelcomeExtras />
         </section>
       </main>

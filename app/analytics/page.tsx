@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { MacroRing } from "@/components/analytics/MacroRing";
 import { StatCard } from "@/components/analytics/StatCard";
 import { WeeklyChart } from "@/components/analytics/WeeklyChart";
+import { WeeklyScoreCard } from "@/components/analytics/WeeklyScoreCard";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { apiGet } from "@/lib/api/client";
@@ -119,6 +120,8 @@ export default function AnalyticsPage() {
         <div className="mt-3">
           <WeeklyChart stepsData={data?.weeklySteps} />
         </div>
+
+        <WeeklyScoreCard score={data?.weeklyScore} />
 
         <div className="mt-3 grid grid-cols-3 gap-2.5">
           <MacroRing

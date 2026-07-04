@@ -1,4 +1,4 @@
-import { Gem } from "lucide-react";
+import { GemIcon } from "@/components/GemIcon";
 
 type GemBalanceProps = {
   balance: number;
@@ -25,13 +25,7 @@ export function GemBalance({
     <div
       className={`inline-flex items-center ${s.gap} ${s.px} ${s.py} rounded-full border border-purple-400/30 bg-[#0a0612] shadow-[0_0_12px_rgba(168,85,247,0.2)] ${className}`}
     >
-      <Gem
-        size={s.icon}
-        strokeWidth={2.5}
-        className={animate ? "gem-sparkle" : ""}
-        style={{ color: "#a855f7", filter: "drop-shadow(0 0 6px rgba(168,85,247,0.5))" }}
-        aria-hidden
-      />
+      <GemIcon size={s.icon} sparkle={animate} />
       <span
         className={`font-bold tracking-tight text-purple-300 ${s.text}`}
         style={{

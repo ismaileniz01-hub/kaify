@@ -28,10 +28,19 @@ export type WeeklyStepsDTO = {
   steps: number;
 }[];
 
+export type WeeklyFitnessScoreDTO = {
+  foodScore: number;
+  bodyScore: number;
+  combinedScore: number;
+  foodDaysLogged: number;
+  bodyScansCount: number;
+};
+
 export type AnalyticsBundleDTO = {
   today: AnalyticsDailyDTO;
   weeklySteps: WeeklyStepsDTO;
   weightTrendKg: number | null;
+  weeklyScore: WeeklyFitnessScoreDTO;
 };
 
 type AnalyticsRow = {
@@ -128,6 +137,92 @@ function extractFoodFromPayload(payload: Json | null): MealTotals | null {
     protein: Number.isFinite(protein) ? Math.max(0, Math.round(protein)) : 0,
     carbs: Number.isFinite(carbs) ? Math.max(0, Math.round(carbs)) : 0,
     fat: Number.isFinite(fat) ? Math.max(0, Math.round(fat)) : 0,
+  };
+}
+
+function extractBodyScoreFromPayload(payload: Json | null): number | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const analysis = (payload as Record<string, unknown>).analysis;
+  if (!analysis || typeof analysis !== "object" || Array.isArray(analysis)) return null;
+  const row = analysis as Record<string, unknown>;
+  const score = Number(row.overall_score ?? row.overallScore);
+  if (!Number.isFinite(score) || score <= 0) return null;
+  return Math.min(100, Math.max(0, Math.round(score)));
+}
+
+async function computeWeeklyScore(
+  userId: string,
+  weekStart: string,
+  today: string,
+): Promise<WeeklyFitnessScoreDTO> {
+  const admin = createAdminSupabaseClient();
+
+  const [{ data: weekAnalytics }, { data: leoMessages }] = await Promise.all([
+    admin
+      .from("analytics_daily")
+      .select("entry_date, calories_consumed, calorie_goal, protein_g, protein_goal_g, workouts_completed")
+      .eq("user_id", userId)
+      .gte("entry_date", weekStart)
+      .lte("entry_date", today),
+    admin
+      .from("chat_messages")
+      .select("payload")
+      .eq("user_id", userId)
+      .eq("coach_id", "leo")
+      .eq("message_type", "analysis")
+      .gte("created_at", `${weekStart}T00:00:00.000Z`)
+      .lt("created_at", `${today}T23:59:59.999Z`),
+  ]);
+
+  let foodDaysLogged = 0;
+  let foodDayScoreSum = 0;
+
+  for (const row of weekAnalytics ?? []) {
+    const calGoal = Number(row.calorie_goal) || 2100;
+    const cal = Number(row.calories_consumed) || 0;
+    const proteinGoal = Number(row.protein_goal_g) || 150;
+    const protein = Number(row.protein_g) || 0;
+    const workouts = Number(row.workouts_completed) || 0;
+
+    if (cal <= 0 && protein <= 0 && workouts <= 0) continue;
+    foodDaysLogged += 1;
+
+    const calAdherence = calGoal > 0 ? 1 - Math.min(1, Math.abs(cal - calGoal) / calGoal) : 0;
+    const proteinAdherence = proteinGoal > 0 ? Math.min(1, protein / proteinGoal) : 0;
+    const workoutBonus = Math.min(1, workouts / 2) * 0.2;
+    const dayScore = (calAdherence * 0.5 + proteinAdherence * 0.3 + workoutBonus) * 10;
+    foodDayScoreSum += dayScore;
+  }
+
+  const foodScore =
+    foodDaysLogged > 0
+      ? Math.round((foodDayScoreSum / foodDaysLogged) * 10) / 10
+      : 0;
+
+  const bodyScores: number[] = [];
+  for (const msg of leoMessages ?? []) {
+    const s = extractBodyScoreFromPayload(msg.payload ?? null);
+    if (s != null) bodyScores.push(s);
+  }
+
+  const bodyScore =
+    bodyScores.length > 0
+      ? Math.round((bodyScores.reduce((a, b) => a + b, 0) / bodyScores.length) / 10 * 10) / 10
+      : 0;
+
+  const combinedScore =
+    bodyScores.length > 0 && foodDaysLogged > 0
+      ? Math.round(((foodScore + bodyScore) / 2) * 10) / 10
+      : foodDaysLogged > 0
+        ? foodScore
+        : bodyScore;
+
+  return {
+    foodScore,
+    bodyScore,
+    combinedScore,
+    foodDaysLogged,
+    bodyScansCount: bodyScores.length,
   };
 }
 
@@ -269,7 +364,9 @@ export async function getAnalyticsBundle(userId: string): Promise<AnalyticsBundl
     weightTrendKg = Number(todayDto.weightKg) - Number(prevWeight.weight_kg);
   }
 
-  return { today: todayDto, weeklySteps, weightTrendKg };
+  const weeklyScore = await computeWeeklyScore(userId, weekStart, today);
+
+  return { today: todayDto, weeklySteps, weightTrendKg, weeklyScore };
 }
 
 export async function patchAnalyticsDaily(

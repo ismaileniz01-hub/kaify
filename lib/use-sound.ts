@@ -11,7 +11,24 @@ import { useCallback, useRef } from "react";
  * - "kaify-chat-sfx-enabled": mesajlaşma sesleri
  */
 
-export type SoundType = "send" | "receive" | "typing" | "scan" | "levelup" | "whoosh" | "transform";
+export type SoundType =
+  | "send"
+  | "receive"
+  | "typing"
+  | "scan"
+  | "levelup"
+  | "whoosh"
+  | "transform"
+  | "chestDrop"
+  | "chestLand"
+  | "chestOpen"
+  | "chestPop"
+  | "jackpotTick"
+  | "chestRevealCommon"
+  | "chestRevealRare"
+  | "chestRevealUltraRare"
+  | "chestRevealEpic"
+  | "chestRevealLegendary";
 
 const AUDIO_CTX_KEY = "kaify-audio-ctx";
 const SFX_KEY = "kaify-sfx-enabled";
@@ -35,6 +52,29 @@ function isEnabled(key: string, fallback: boolean): boolean {
   const val = localStorage.getItem(key);
   if (val === null) return fallback;
   return val === "true";
+}
+
+function playNoiseBurst(
+  ctx: AudioContext,
+  duration: number,
+  volume = 0.04,
+  delay = 0,
+) {
+  const bufferSize = Math.floor(ctx.sampleRate * duration);
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+  }
+  const source = ctx.createBufferSource();
+  const gain = ctx.createGain();
+  source.buffer = buffer;
+  gain.gain.setValueAtTime(volume, ctx.currentTime + delay);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duration);
+  source.connect(gain);
+  gain.connect(ctx.destination);
+  source.start(ctx.currentTime + delay);
+  source.stop(ctx.currentTime + delay + duration);
 }
 
 function playTone(
@@ -138,8 +178,75 @@ export function useSound() {
           playTone(ctx, 880, 0.2, "sine", 0.07, 0.3);
           playTone(ctx, 1108, 0.25, "sine", 0.06, 0.4);
           playTone(ctx, 1320, 0.3, "sine", 0.05, 0.5);
-          // Parlak bitiş
           playTone(ctx, 1760, 0.4, "triangle", 0.04, 0.65);
+          break;
+        }
+        case "chestDrop": {
+          playTone(ctx, 280, 0.18, "triangle", 0.06);
+          playTone(ctx, 220, 0.22, "triangle", 0.05, 0.08);
+          playTone(ctx, 160, 0.28, "sine", 0.04, 0.16);
+          break;
+        }
+        case "chestLand": {
+          playTone(ctx, 90, 0.12, "sine", 0.1);
+          playNoiseBurst(ctx, 0.08, 0.05);
+          playTone(ctx, 130, 0.08, "triangle", 0.04, 0.04);
+          break;
+        }
+        case "chestOpen": {
+          playTone(ctx, 330, 0.12, "sine", 0.07);
+          playTone(ctx, 440, 0.14, "sine", 0.06, 0.08);
+          playTone(ctx, 554, 0.16, "sine", 0.06, 0.16);
+          playTone(ctx, 659, 0.2, "triangle", 0.05, 0.24);
+          break;
+        }
+        case "chestPop": {
+          playNoiseBurst(ctx, 0.06, 0.035);
+          playTone(ctx, 180, 0.1, "sine", 0.08);
+          playTone(ctx, 880, 0.08, "sine", 0.04, 0.05);
+          playTone(ctx, 1320, 0.12, "triangle", 0.03, 0.07);
+          break;
+        }
+        case "jackpotTick": {
+          playTone(ctx, 520 + Math.random() * 80, 0.04, "square", 0.025);
+          break;
+        }
+        case "chestRevealCommon": {
+          playTone(ctx, 392, 0.12, "sine", 0.05);
+          playTone(ctx, 494, 0.1, "sine", 0.04, 0.1);
+          break;
+        }
+        case "chestRevealRare": {
+          playTone(ctx, 440, 0.12, "sine", 0.06);
+          playTone(ctx, 554, 0.12, "sine", 0.05, 0.1);
+          playTone(ctx, 659, 0.14, "triangle", 0.05, 0.2);
+          break;
+        }
+        case "chestRevealUltraRare": {
+          playTone(ctx, 523, 0.14, "sine", 0.06);
+          playTone(ctx, 659, 0.14, "sine", 0.06, 0.12);
+          playTone(ctx, 784, 0.16, "sine", 0.05, 0.24);
+          playTone(ctx, 988, 0.12, "triangle", 0.04, 0.36);
+          break;
+        }
+        case "chestRevealEpic": {
+          playTone(ctx, 523, 0.18, "sine", 0.07);
+          playTone(ctx, 659, 0.18, "sine", 0.07, 0.14);
+          playTone(ctx, 784, 0.22, "sine", 0.06, 0.28);
+          playTone(ctx, 1047, 0.28, "sine", 0.07, 0.42);
+          playTone(ctx, 1319, 0.2, "triangle", 0.05, 0.56);
+          break;
+        }
+        case "chestRevealLegendary": {
+          playTone(ctx, 523, 0.35, "sine", 0.08);
+          playTone(ctx, 659, 0.35, "sine", 0.07, 0.12);
+          playTone(ctx, 784, 0.4, "sine", 0.07, 0.24);
+          playTone(ctx, 988, 0.45, "triangle", 0.06, 0.36);
+          playTone(ctx, 1175, 0.5, "sine", 0.06, 0.48);
+          playTone(ctx, 1319, 0.55, "sine", 0.06, 0.58);
+          playTone(ctx, 1568, 0.65, "sine", 0.05, 0.68);
+          playTone(ctx, 1760, 0.75, "triangle", 0.05, 0.78);
+          playTone(ctx, 2093, 0.85, "sine", 0.04, 0.9);
           break;
         }
       }

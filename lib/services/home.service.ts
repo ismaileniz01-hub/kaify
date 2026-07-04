@@ -9,10 +9,13 @@ import { getAnalyticsBundle } from "@/lib/services/analytics.service";
 import type { ChatTurn } from "@/lib/ai/types";
 import { sanitizeUserText, wrapUntrustedInput } from "@/lib/ai/prompt-safety";
 
+import { buildKaiFoodInsight } from "@/lib/kai-food-insight";
+
 export type HomeDTO = {
   displayName: string;
   motivation: string;
   dailyTip: string;
+  kaiFoodInsight: string | null;
   stats: {
     steps: number | null;
     streak: number;
@@ -193,6 +196,7 @@ export async function getHomeData(userId: string): Promise<HomeDTO> {
     displayName: profile.displayName,
     motivation,
     dailyTip,
+    kaiFoodInsight: buildKaiFoodInsight(analytics?.today ?? null, profile.locale),
     stats: {
       steps,
       streak: streakStatus.currentStreak,

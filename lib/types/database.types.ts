@@ -45,6 +45,7 @@ export type NotificationType =
 export type GemTransactionType =
   | "welcome_bonus"
   | "daily_check_in"
+  | "daily_chest"
   | "chat_message"
   | "workout_complete"
   | "streak_milestone"

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, Image as ImageIcon } from "lucide-react";
 import { StreakRoad } from "@/components/StreakRoad";
+import { StreakAtRiskBanner } from "@/components/streak/StreakAtRiskBanner";
 import { StreakCard } from "@/components/StreakCard";
 import { GemBalance } from "@/components/GemBalance";
 import { FreezieBalance } from "@/components/FreezieBalance";
@@ -140,7 +141,12 @@ export default function StreakPage() {
       </header>
 
       {isAuthenticated && (
-        <div className="px-4 pb-2">
+        <div className="space-y-2 px-4 pb-2">
+          <StreakAtRiskBanner
+            currentStreak={streak.currentStreak}
+            lastCheckInDate={streak.lastCheckInDate}
+            freezieBalance={streak.freezieBalance}
+          />
           <button
             type="button"
             onClick={() => void handleCheckIn()}

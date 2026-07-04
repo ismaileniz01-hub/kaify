@@ -61,6 +61,24 @@ export function WelcomeExtras() {
         </div>
       </div>
 
+      {home?.kaiFoodInsight && (
+        <div className="analytics-card analytics-card--orange flex items-start gap-3 p-3.5">
+          <div className="relative h-9 w-9 shrink-0">
+            <Image
+              src={kaiAvatar}
+              alt="Kai"
+              width={36}
+              height={36}
+              className="h-full w-full object-contain"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-medium text-orange-300">{t("home.kai_food_title")}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-zinc-300">{home.kaiFoodInsight}</p>
+          </div>
+        </div>
+      )}
+
       <Link
         href="/chat/kai"
         className="analytics-card analytics-card--blue flex items-center gap-3 p-3.5 transition active:scale-[0.99]"
