@@ -5,6 +5,14 @@ type RateLimitConfig = {
   windowMs: number;
 };
 
+export type RateLimitOptions = {
+  /**
+   * When Upstash is missing or errors in production, deny instead of using a
+   * per-instance memory fallback. Use on high-cost endpoints (AI, check-in).
+   */
+  failClosedInProduction?: boolean;
+};
+
 type RateLimitResult = {
   allowed: boolean;
   remaining: number;
@@ -129,33 +137,53 @@ async function checkUpstashRateLimit(
 }
 
 /**
- * Distributed rate limit with Upstash REST. Falls back to an in-memory
- * per-instance counter whenever Upstash is unavailable or misconfigured, so a
- * backing-store outage degrades protection instead of taking the whole site
- * down. Backend failures are logged loudly for the operator dashboards.
+ * Distributed rate limit with Upstash REST. In production without Upstash, uses
+ * a conservative per-instance memory cap (1/10 of configured limit). Callers may
+ * set failClosedInProduction to deny requests when the shared store is down.
  */
 export async function checkRateLimit(
   key: string,
   config: RateLimitConfig,
+  options?: RateLimitOptions,
 ): Promise<RateLimitResult> {
   const now = Date.now();
   const isProduction = process.env.NODE_ENV === "production";
+  let upstashFailed = false;
 
   if (isUpstashConfigured()) {
     try {
       return await checkUpstashRateLimit(key, config);
     } catch (error) {
+      upstashFailed = true;
       logger.error("rate-limit upstash error, falling back to memory", {
         error: error instanceof Error ? error.message : "unknown",
       });
     }
   } else if (isProduction) {
+    upstashFailed = true;
     logger.error(
       "rate-limit upstash not configured in production, using memory fallback",
     );
   }
 
-  return checkMemoryRateLimit(key, config, now);
+  if (options?.failClosedInProduction && isProduction && upstashFailed) {
+    return {
+      allowed: false,
+      remaining: 0,
+      limit: config.requests,
+      resetMs: config.windowMs,
+    };
+  }
+
+  const memoryConfig =
+    isProduction && upstashFailed
+      ? {
+          ...config,
+          requests: Math.max(1, Math.ceil(config.requests / 10)),
+        }
+      : config;
+
+  return checkMemoryRateLimit(key, memoryConfig, now);
 }
 
 /**

@@ -7,6 +7,7 @@ import { updateSupabaseSession } from "@/lib/supabase/middleware";
 const RATE_LIMIT_CONFIG = {
   api: { requests: 60, windowMs: 60 * 1000 },
   page: { requests: 120, windowMs: 60 * 1000 },
+  health: { requests: 10, windowMs: 60 * 1000 },
 };
 
 const SUSPICIOUS_PATHS = [
@@ -69,7 +70,30 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  if (pathname === "/api/health" || pathname.startsWith("/api/cron/")) {
+  if (pathname === "/api/health") {
+    const healthLimit = await checkRateLimit(
+      `health:${ip}`,
+      RATE_LIMIT_CONFIG.health,
+    );
+    if (!healthLimit.allowed) {
+      return new NextResponse(
+        JSON.stringify({ error: "Too many requests. Please try again later." }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": String(Math.ceil(healthLimit.resetMs / 1000)),
+          },
+        },
+      );
+    }
+    const { response } = await updateSupabaseSession(forwardedRequest);
+    response.headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce));
+    response.headers.set("X-Request-ID", requestId);
+    return response;
+  }
+
+  if (pathname.startsWith("/api/cron/")) {
     const { response } = await updateSupabaseSession(forwardedRequest);
     response.headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce));
     response.headers.set("X-Request-ID", requestId);

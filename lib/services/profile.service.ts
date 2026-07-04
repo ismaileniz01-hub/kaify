@@ -28,6 +28,8 @@ export async function getOwnProfile(userId: string): Promise<ProfileDTO> {
   return mapProfileRow(data);
 }
 
+const TIMEZONE_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
 /**
  * Updates the authenticated user's own profile with validated, non-sensitive
  * fields. Protected columns are excluded at the schema level and enforced again
@@ -37,6 +39,36 @@ export async function updateOwnProfile(
   userId: string,
   patch: ProfileUpdateInput,
 ): Promise<ProfileDTO> {
+  const supabase = await createServerSupabaseClient();
+
+  if (patch.timezone !== undefined) {
+    const { data: current, error: readError } = await supabase
+      .from("profiles")
+      .select("timezone, timezone_updated_at")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (readError) {
+      logger.error("[profile.service:update] timezone read error", {
+        error: readError.message,
+      });
+      throw new ApiError("INTERNAL_ERROR", "Profil güncellenemedi.");
+    }
+
+    const prevTz = current?.timezone ?? "UTC";
+    if (patch.timezone !== prevTz) {
+      const updatedAt = current?.timezone_updated_at
+        ? new Date(current.timezone_updated_at).getTime()
+        : 0;
+      if (updatedAt > 0 && Date.now() - updatedAt < TIMEZONE_CHANGE_COOLDOWN_MS) {
+        throw new ApiError(
+          "CONFLICT",
+          "Saat dilimi 24 saatte bir kez değiştirilebilir.",
+        );
+      }
+    }
+  }
+
   const updates: ProfileUpdateColumns = {};
 
   if (patch.displayName !== undefined) updates.display_name = patch.displayName;
@@ -52,13 +84,15 @@ export async function updateOwnProfile(
   if (patch.countryCode !== undefined) updates.country_code = patch.countryCode;
   if (patch.cityName !== undefined) updates.city_name = patch.cityName === "" ? null : patch.cityName;
   if (patch.locale !== undefined) updates.locale = patch.locale;
-  if (patch.timezone !== undefined) updates.timezone = patch.timezone;
+  if (patch.timezone !== undefined) {
+    updates.timezone = patch.timezone;
+    (updates as Record<string, unknown>).timezone_updated_at =
+      new Date().toISOString();
+  }
 
   const payload = applyLegacyProfileWrites(
     updates as Record<string, unknown>,
   ) as ProfileUpdateColumns;
-
-  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from("profiles")

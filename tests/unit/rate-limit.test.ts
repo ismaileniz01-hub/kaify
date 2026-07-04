@@ -52,4 +52,18 @@ describe("checkRateLimit (in-memory fallback)", () => {
     const afterReset = await checkRateLimit(key, config);
     expect(afterReset.allowed).toBe(true);
   });
+
+  it("failClosedInProduction denies when Upstash is missing in production", async () => {
+    const prevEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    const result = await checkRateLimit(
+      `test:failclosed:${Math.random()}`,
+      { requests: 10, windowMs: 60_000 },
+      { failClosedInProduction: true },
+    );
+
+    process.env.NODE_ENV = prevEnv;
+    expect(result.allowed).toBe(false);
+  });
 });

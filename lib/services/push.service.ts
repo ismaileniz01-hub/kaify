@@ -1,5 +1,6 @@
 import "server-only";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
 import { isPushConfigured, webpush } from "@/lib/push/vapid";
 import { isFcmConfigured, sendFcmMessage } from "@/lib/push/fcm";
@@ -29,13 +30,26 @@ export type PushPayload = {
   icon?: string;
 };
 
-/** Upserts a Web Push subscription (keyed by endpoint). */
+/** Upserts a Web Push subscription (keyed by endpoint). Rejects rebinding to another user. */
 export async function saveSubscription(
   userId: string,
   sub: BrowserSubscription,
   userAgent?: string | null,
 ): Promise<void> {
   const admin = createAdminSupabaseClient();
+
+  const { data: existing } = await admin
+    .from("push_subscriptions")
+    .select("user_id")
+    .eq("endpoint", sub.endpoint)
+    .maybeSingle();
+
+  if (existing && existing.user_id !== userId) {
+    throw new ApiError(
+      "FORBIDDEN",
+      "Bu cihaz bildirim aboneliği başka bir hesaba bağlı.",
+    );
+  }
 
   const { error } = await admin.from("push_subscriptions").upsert(
     {
@@ -72,13 +86,26 @@ export async function deleteSubscription(
   }
 }
 
-/** Upserts a native FCM token (keyed by token). */
+/** Upserts a native FCM token (keyed by token). Rejects rebinding to another user. */
 export async function saveNativeToken(
   userId: string,
   platform: NativePlatform,
   token: string,
 ): Promise<void> {
   const admin = createAdminSupabaseClient();
+
+  const { data: existing } = await admin
+    .from("native_push_tokens")
+    .select("user_id")
+    .eq("token", token)
+    .maybeSingle();
+
+  if (existing && existing.user_id !== userId) {
+    throw new ApiError(
+      "FORBIDDEN",
+      "Bu cihaz push token'ı başka bir hesaba bağlı.",
+    );
+  }
 
   const { error } = await admin.from("native_push_tokens").upsert(
     { user_id: userId, platform, token },

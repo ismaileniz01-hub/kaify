@@ -26,7 +26,9 @@ export async function enforceUserRateLimit(
   action: AiRateAction,
 ): Promise<void> {
   const config = AI_RATE_LIMITS[action];
-  const result = await checkRateLimit(`ai:${action}:${userId}`, config);
+  const result = await checkRateLimit(`ai:${action}:${userId}`, config, {
+    failClosedInProduction: true,
+  });
 
   if (!result.allowed) {
     logger.warn("user AI rate limit exceeded", { userId, action });

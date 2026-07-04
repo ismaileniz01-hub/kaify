@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/api/admin-guard";
 import { ApiError } from "@/lib/api/errors";
 import { handleApiError, ok } from "@/lib/api/response";
+import { getClientIP } from "@/lib/api-security";
+import { recordAdminAction } from "@/lib/services/audit.service";
 import {
   acknowledgeCostAlert,
   getCacheHitStats,
@@ -37,12 +39,21 @@ export async function GET(request: NextRequest) {
 /** PATCH /api/admin/costs — acknowledge a cost alert. */
 export async function PATCH(request: NextRequest) {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     const body = (await request.json()) as { alertId?: string };
     if (!body.alertId) {
       throw new ApiError("VALIDATION_ERROR", "alertId gerekli.");
     }
     await acknowledgeCostAlert(body.alertId);
+
+    await recordAdminAction({
+      adminId: admin.id,
+      action: "costs.alert_ack",
+      targetType: "cost_alert",
+      targetId: body.alertId,
+      ip: getClientIP(request),
+    });
+
     return ok({ acknowledged: true });
   } catch (error) {
     return handleApiError(error, { route: "/api/admin/costs" });
