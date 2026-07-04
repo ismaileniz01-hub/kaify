@@ -283,6 +283,8 @@
   "analytics.weight_value_imperial": "172.8 lbs",
   "analytics.weight_trend_metric": "▼ 1.2 kg this week",
   "analytics.weight_trend_imperial": "▼ 2.6 lbs this week",
+  "analytics.no_trend": "No data yet",
+  "analytics.weight_stable": "Stable",
   "profile.placeholder_height_metric": "e.g. 178 cm",
   "profile.placeholder_height_imperial": "e.g. 5 ft 10 in",
   "profile.placeholder_weight_metric": "e.g. 75 kg",

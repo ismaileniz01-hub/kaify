@@ -9,7 +9,7 @@ type GradientVariant = "blue" | "orange" | "green" | "purple" | "water";
 type StatCardProps = {
   icon: LucideIcon;
   label: string;
-  value: string;
+  value?: string;
   /** When set, bypasses string parsing (avoids TR "1.840" → 1.84 bugs). */
   numericValue?: number;
   unitSuffix?: string;
@@ -46,9 +46,10 @@ export function StatCard({
   const { t } = useLang();
   const [displayNum, setDisplayNum] = useState(0);
   const [displayBar, setDisplayBar] = useState(0);
-  const parsed = parseValue(value);
+  const parsed = parseValue(value ?? "");
   const targetNum = numericValue ?? parsed[0];
   const unit = unitSuffix ?? parsed[1];
+  const showNumeric = numericValue != null || (value != null && /^[\d.,]/.test(value));
 
   useEffect(() => {
     if (!animate) {
@@ -57,7 +58,7 @@ export function StatCard({
       return;
     }
 
-    const duration = 1400;
+    const duration = 500;
     const steps = 40;
     const stepMs = duration / steps;
     let step = 0;
@@ -86,7 +87,13 @@ export function StatCard({
         <span className="text-[11px] font-medium">{label}</span>
       </div>
       <p className="text-xl font-semibold tracking-tight text-white">
-        {formattedNum} {unit}
+        {showNumeric ? (
+          <>
+            {formattedNum} {unit}
+          </>
+        ) : (
+          value ?? "—"
+        )}
       </p>
       <p
         className={`text-[10px] font-medium ${

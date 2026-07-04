@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Gift, Timer } from "lucide-react";
+import { KaiChestImage } from "./KaiChestImage";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { apiGet, apiPost } from "@/lib/api/client";
@@ -119,13 +120,7 @@ export function DailyChestBanner({ onClaimed }: Props) {
         </p>
 
         <div className="mt-3 flex items-center gap-3">
-          <div className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center">
-            <div className="absolute inset-0 animate-pulse rounded-2xl bg-amber-400/10" />
-            <div className="relative flex h-16 w-16 flex-col items-center justify-end rounded-xl border-2 border-purple-400/50 bg-gradient-to-b from-purple-500 to-violet-800 shadow-lg">
-              <div className="mb-1 h-3 w-9 rounded-t-md border border-b-0 border-purple-300/40 bg-purple-400/80" />
-              <Gift className="mb-1.5 h-5 w-5 text-amber-300" strokeWidth={2} />
-            </div>
-          </div>
+          <KaiChestImage size={72} pulse={canClaim} />
 
           <div className="min-w-0 flex-1">
             <h3 className="text-base font-bold leading-tight text-white">

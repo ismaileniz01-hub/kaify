@@ -61,25 +61,24 @@ const DEFAULT_STREAK: StreakStatusDTO = {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
-async function loadAuthenticatedBundle(): Promise<{
+async function loadCoreSession(): Promise<{
   profile: ProfileDTO;
   gems: GemBalanceDTO;
   streak: StreakStatusDTO;
-  home: HomeDTO;
   referral: { referralCode: string };
 }> {
-  const [profile, gems, streak, home, referral] = await Promise.all([
+  const [profile, gems, streak, referral] = await Promise.all([
     apiGet<ProfileDTO>("/api/profile"),
     apiGet<GemBalanceDTO>("/api/gems"),
     apiGet<StreakStatusDTO>("/api/streak"),
-    apiGet<HomeDTO>("/api/home"),
     apiGet<{ referralCode: string }>("/api/referral"),
   ]);
-  return { profile, gems, streak, home, referral };
+  return { profile, gems, streak, referral };
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
+  const [hasHydrated, setHasHydrated] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(true);
   const [profile, setProfile] = useState<ProfileDTO | null>(null);
@@ -90,7 +89,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [referralCode, setReferralCode] = useState("");
 
   const refreshSession = useCallback(async () => {
-    setIsLoading(true);
+    const isBackgroundRefresh = hasHydrated && isAuthenticated;
+    if (!isBackgroundRefresh) {
+      setIsLoading(true);
+    }
     try {
       const supabase = tryCreateBrowserSupabaseClient();
       if (!supabase) {
@@ -118,15 +120,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const bundle = await loadAuthenticatedBundle();
+      const bundle = await loadCoreSession();
       setIsAuthenticated(true);
       setIsPreviewMode(false);
       setProfile(bundle.profile);
       setUserProfile(profileDtoToUserProfile(bundle.profile));
       setGemBalance(bundle.gems);
       setStreak(bundle.streak);
-      setHome(bundle.home);
       setReferralCode(bundle.referral.referralCode);
+
+      void apiGet<HomeDTO>("/api/home")
+        .then((homeData) => setHome(homeData))
+        .catch(() => setHome(null));
     } catch (error) {
       if (error instanceof ApiClientError && error.code === "UNAUTHORIZED") {
         setIsAuthenticated(false);
@@ -136,8 +141,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
     } finally {
       setIsLoading(false);
+      setHasHydrated(true);
     }
-  }, []);
+  }, [hasHydrated, isAuthenticated]);
 
   useEffect(() => {
     void refreshSession();

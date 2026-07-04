@@ -418,7 +418,7 @@ p, li, .text-zinc-400 {
 @keyframes fade-in-up {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -427,17 +427,17 @@ p, li, .text-zinc-400 {
 }
 
 .animate-in {
-  animation: fade-in-up 0.4s ease-out both;
+  animation: fade-in-up 0.15s ease-out both;
 }
 
-.animate-in--1 { animation-delay: 0.05s; }
-.animate-in--2 { animation-delay: 0.10s; }
-.animate-in--3 { animation-delay: 0.15s; }
-.animate-in--4 { animation-delay: 0.20s; }
-.animate-in--5 { animation-delay: 0.25s; }
-.animate-in--6 { animation-delay: 0.30s; }
-.animate-in--7 { animation-delay: 0.35s; }
-.animate-in--8 { animation-delay: 0.40s; }
+.animate-in--1 { animation-delay: 0s; }
+.animate-in--2 { animation-delay: 0.02s; }
+.animate-in--3 { animation-delay: 0.04s; }
+.animate-in--4 { animation-delay: 0.06s; }
+.animate-in--5 { animation-delay: 0.08s; }
+.animate-in--6 { animation-delay: 0.10s; }
+.animate-in--7 { animation-delay: 0.12s; }
+.animate-in--8 { animation-delay: 0.14s; }
 
 /* Kartlar için slide-in efekti — mesajlaşma rehberi */
 @keyframes slide-in {

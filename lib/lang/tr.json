@@ -289,6 +289,8 @@
   "analytics.weight_value_imperial": "172.8 lbs",
   "analytics.weight_trend_metric": "▼ Bu hafta 1.2 kg",
   "analytics.weight_trend_imperial": "▼ Bu hafta 2.6 lbs",
+  "analytics.no_trend": "Henüz kayıt yok",
+  "analytics.weight_stable": "Stabil",
   "profile.placeholder_height_metric": "örn. 178 cm",
   "profile.placeholder_height_imperial": "örn. 5 ft 10 in",
   "profile.placeholder_weight_metric": "örn. 75 kg",

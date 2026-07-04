@@ -1,6 +1,8 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
+import { cacheDelete } from "@/lib/cache";
+import { localDayQueryWindow, localTodayDate, isLocalDate } from "@/lib/date-utils";
 import { logger } from "@/lib/logger";
 import type { Json } from "@/lib/types/database.types";
 
@@ -62,8 +64,18 @@ type AnalyticsRow = {
   fat_goal_g: number;
 };
 
-function utcToday(): string {
-  return new Date().toISOString().slice(0, 10);
+async function invalidateAnalyticsCache(userId: string): Promise<void> {
+  await cacheDelete(`analytics:v1:${userId}`);
+}
+
+async function resolveUserTimezone(userId: string): Promise<string> {
+  const admin = createAdminSupabaseClient();
+  const { data } = await admin
+    .from("profiles")
+    .select("timezone")
+    .eq("id", userId)
+    .maybeSingle();
+  return data?.timezone ?? "UTC";
 }
 
 function mapRow(row: AnalyticsRow): AnalyticsDailyDTO {
@@ -87,8 +99,8 @@ function mapRow(row: AnalyticsRow): AnalyticsDailyDTO {
   };
 }
 
-function defaultToday(): AnalyticsDailyDTO {
-  const today = utcToday();
+function defaultToday(entryDate?: string): AnalyticsDailyDTO {
+  const today = entryDate ?? new Date().toISOString().slice(0, 10);
   return {
     entryDate: today,
     weightKg: null,
@@ -126,7 +138,7 @@ function extractFoodFromPayload(payload: Json | null): MealTotals | null {
   const row = food as Record<string, unknown>;
   const calories = Number(row.calories);
   const protein = Number(row.protein);
-  const carbs = Number(row.carb);
+  const carbs = Number(row.carb ?? row.carbs);
   const fat = Number(row.fat);
   if (![calories, protein, carbs, fat].some((n) => Number.isFinite(n) && n > 0)) {
     return null;
@@ -226,33 +238,33 @@ async function computeWeeklyScore(
   };
 }
 
-/** Sum today's Maya food-photo analyses from chat when analytics_daily is stale. */
-async function syncTodayMealsFromMayaChat(
+/** Sum Maya food-photo analyses for a local calendar day from chat messages. */
+async function sumMayaMealsForDay(
   userId: string,
   entryDate: string,
-  stored: AnalyticsDailyDTO,
-): Promise<AnalyticsDailyDTO | null> {
+  timezone: string,
+): Promise<MealTotals> {
   const admin = createAdminSupabaseClient();
-  const dayStart = `${entryDate}T00:00:00.000Z`;
-  const dayEnd = new Date(`${entryDate}T00:00:00.000Z`);
-  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+  const { start, end } = localDayQueryWindow(entryDate, timezone);
 
   const { data: messages, error } = await admin
     .from("chat_messages")
-    .select("payload")
+    .select("payload, created_at")
     .eq("user_id", userId)
     .eq("coach_id", "maya")
+    .eq("sender", "coach")
     .eq("message_type", "analysis")
-    .gte("created_at", dayStart)
-    .lt("created_at", dayEnd.toISOString());
+    .gte("created_at", start)
+    .lt("created_at", end);
 
   if (error) {
-    logger.warn("[analytics.service] maya meal sync read failed", { error: error.message });
-    return null;
+    logger.warn("[analytics.service] maya meal read failed", { error: error.message });
+    return { calories: 0, protein: 0, carbs: 0, fat: 0 };
   }
 
   const chatTotals: MealTotals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
   for (const msg of messages ?? []) {
+    if (!isLocalDate(msg.created_at, entryDate, timezone)) continue;
     const meal = extractFoodFromPayload(msg.payload ?? null);
     if (!meal) continue;
     chatTotals.calories += meal.calories;
@@ -260,48 +272,84 @@ async function syncTodayMealsFromMayaChat(
     chatTotals.carbs += meal.carbs;
     chatTotals.fat += meal.fat;
   }
+  return chatTotals;
+}
 
-  if (chatTotals.calories === 0 && chatTotals.protein === 0) return null;
-
-  // Chat food photos are the source of truth when DB totals lag behind.
-  if (
-    chatTotals.calories <= stored.caloriesConsumed &&
-    chatTotals.protein <= stored.proteinG &&
-    chatTotals.carbs <= stored.carbsG &&
-    chatTotals.fat <= stored.fatG
-  ) {
-    return null;
+function mergeMealTotals(stored: AnalyticsDailyDTO, chat: MealTotals): AnalyticsDailyDTO {
+  if (chat.calories === 0 && chat.protein === 0 && chat.carbs === 0 && chat.fat === 0) {
+    return stored;
   }
+  return {
+    ...stored,
+    caloriesConsumed: Math.max(stored.caloriesConsumed, chat.calories),
+    proteinG: Math.max(stored.proteinG, chat.protein),
+    carbsG: Math.max(stored.carbsG, chat.carbs),
+    fatG: Math.max(stored.fatG, chat.fat),
+  };
+}
+
+/** Persist chat totals when they exceed stored DB values (fire-and-forget safe). */
+async function persistMayaMealsIfNeeded(
+  userId: string,
+  entryDate: string,
+  stored: AnalyticsDailyDTO,
+  chat: MealTotals,
+): Promise<void> {
+  if (
+    chat.calories <= stored.caloriesConsumed &&
+    chat.protein <= stored.proteinG &&
+    chat.carbs <= stored.carbsG &&
+    chat.fat <= stored.fatG
+  ) {
+    return;
+  }
+  if (chat.calories === 0 && chat.protein === 0) return;
 
   try {
-    await patchAnalyticsDaily(userId, {
-      caloriesConsumed: chatTotals.calories,
-      proteinG: chatTotals.protein,
-      carbsG: chatTotals.carbs,
-      fatG: chatTotals.fat,
-    }, entryDate);
-
-    const { data: row } = await admin
-      .from("analytics_daily")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("entry_date", entryDate)
-      .maybeSingle();
-
-    return row ? mapRow(row as AnalyticsRow) : null;
+    await patchAnalyticsDaily(
+      userId,
+      {
+        caloriesConsumed: chat.calories,
+        proteinG: chat.protein,
+        carbsG: chat.carbs,
+        fatG: chat.fat,
+      },
+      entryDate,
+    );
+    await invalidateAnalyticsCache(userId);
   } catch (syncError) {
-    logger.warn("[analytics.service] maya meal sync patch failed", {
+    logger.warn("[analytics.service] maya meal persist failed", {
       error: syncError instanceof Error ? syncError.message : String(syncError),
     });
-    return null;
   }
+}
+
+/** Lightweight today snapshot for the home screen (no weekly score). */
+export async function getTodayNutritionSnapshot(userId: string): Promise<AnalyticsDailyDTO> {
+  const admin = createAdminSupabaseClient();
+  const timezone = await resolveUserTimezone(userId);
+  const today = localTodayDate(timezone);
+
+  const { data: todayRow } = await admin
+    .from("analytics_daily")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("entry_date", today)
+    .maybeSingle();
+
+  let todayDto = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today);
+  const chatTotals = await sumMayaMealsForDay(userId, today, timezone);
+  todayDto = mergeMealTotals(todayDto, chatTotals);
+  void persistMayaMealsIfNeeded(userId, today, todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today), chatTotals);
+  return todayDto;
 }
 
 export async function getAnalyticsBundle(userId: string): Promise<AnalyticsBundleDTO> {
   const supabase = await createServerSupabaseClient();
-  const today = utcToday();
+  const timezone = await resolveUserTimezone(userId);
+  const today = localTodayDate(timezone);
 
-  const weekAgo = new Date();
+  const weekAgo = new Date(`${today}T12:00:00.000Z`);
   weekAgo.setUTCDate(weekAgo.getUTCDate() - 6);
   const weekStart = weekAgo.toISOString().slice(0, 10);
 
@@ -338,10 +386,10 @@ export async function getAnalyticsBundle(userId: string): Promise<AnalyticsBundl
   if (weekError) logger.error("[analytics.service] steps read error", { error: weekError.message });
   if (prevError) logger.error("[analytics.service] weight read error", { error: prevError.message });
 
-  let todayDto = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday();
-
-  const synced = await syncTodayMealsFromMayaChat(userId, today, todayDto);
-  if (synced) todayDto = synced;
+  const storedDto = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today);
+  const chatTotals = await sumMayaMealsForDay(userId, today, timezone);
+  let todayDto = mergeMealTotals(storedDto, chatTotals);
+  void persistMayaMealsIfNeeded(userId, today, storedDto, chatTotals);
 
   if (weekRows && weekRows.length > 0) {
     const stepSum = weekRows.reduce((sum, r) => sum + (r.steps ?? 0), 0);
@@ -361,7 +409,8 @@ export async function getAnalyticsBundle(userId: string): Promise<AnalyticsBundl
 
   let weightTrendKg: number | null = null;
   if (todayDto.weightKg != null && prevWeight?.weight_kg != null) {
-    weightTrendKg = Number(todayDto.weightKg) - Number(prevWeight.weight_kg);
+    const delta = Number(todayDto.weightKg) - Number(prevWeight.weight_kg);
+    weightTrendKg = Math.abs(delta) < 0.05 ? 0 : delta;
   }
 
   const weeklyScore = await computeWeeklyScore(userId, weekStart, today);
@@ -375,7 +424,7 @@ export async function patchAnalyticsDaily(
   entryDate?: string,
 ): Promise<void> {
   const admin = createAdminSupabaseClient();
-  const date = entryDate ?? utcToday();
+  const date = entryDate ?? localTodayDate(await resolveUserTimezone(userId));
 
   const jsonPatch: Json = {};
   if (patch.weightKg !== undefined) jsonPatch.weight_kg = patch.weightKg;
@@ -429,7 +478,8 @@ export async function addMealToAnalytics(
   if (add.calories + add.protein + add.carbs + add.fat === 0) return;
 
   const admin = createAdminSupabaseClient();
-  const date = utcToday();
+  const timezone = await resolveUserTimezone(userId);
+  const date = localTodayDate(timezone);
 
   const { data: current } = await admin
     .from("analytics_daily")
@@ -438,12 +488,17 @@ export async function addMealToAnalytics(
     .eq("entry_date", date)
     .maybeSingle();
 
-  await patchAnalyticsDaily(userId, {
-    caloriesConsumed: (current?.calories_consumed ?? 0) + add.calories,
-    proteinG: (current?.protein_g ?? 0) + add.protein,
-    carbsG: (current?.carbs_g ?? 0) + add.carbs,
-    fatG: (current?.fat_g ?? 0) + add.fat,
-  });
+  await patchAnalyticsDaily(
+    userId,
+    {
+      caloriesConsumed: (current?.calories_consumed ?? 0) + add.calories,
+      proteinG: (current?.protein_g ?? 0) + add.protein,
+      carbsG: (current?.carbs_g ?? 0) + add.carbs,
+      fatG: (current?.fat_g ?? 0) + add.fat,
+    },
+    date,
+  );
+  await invalidateAnalyticsCache(userId);
 }
 
 export async function syncHealthSteps(

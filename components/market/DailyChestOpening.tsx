@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Gift, Sparkles, Snowflake } from "lucide-react";
+import { Gift, Snowflake } from "lucide-react";
 import { GemIcon } from "@/components/GemIcon";
+import { ChromaKeyVideo } from "@/components/market/ChromaKeyVideo";
 import { useLang } from "@/lib/lang-context";
 import { useSound } from "@/lib/use-sound";
 import {
@@ -13,12 +14,14 @@ import {
 } from "@/lib/chest-rewards";
 import type { DailyChestClaimDTO } from "@/lib/services/daily-chest.service";
 
-type Phase = "drop" | "shake" | "open" | "spin" | "reveal" | "done";
+type Phase = "video" | "spin" | "reveal" | "done";
 
 const CARD_W = 92;
 const CARD_GAP = 10;
 const CARD_STEP = CARD_W + CARD_GAP;
 const REEL_VIEWPORT_W = 288;
+/** Total reel spin duration in ms — one tick sound per card crossed. */
+const SPIN_DURATION_MS = 5000;
 
 function RewardCard({
   slot,
@@ -54,35 +57,6 @@ function RewardCard({
   );
 }
 
-function KaiChest({ shaking, open }: { shaking: boolean; open: boolean }) {
-  return (
-    <div className={`relative ${shaking ? "chest-shake" : ""} ${open ? "chest-open-burst" : ""}`}>
-      <div className="relative mx-auto h-28 w-32">
-        <div className="absolute inset-x-2 bottom-0 h-16 rounded-b-2xl rounded-t-lg border-2 border-purple-400/40 bg-gradient-to-b from-purple-600 to-violet-900 shadow-[0_8px_32px_rgba(124,58,237,0.45)]">
-          <div className="absolute inset-x-3 top-3 h-1 rounded-full bg-purple-300/30" />
-          <div className="absolute inset-x-3 top-6 h-1 rounded-full bg-purple-300/20" />
-          <div className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-amber-400/50 bg-amber-500/20">
-            <Sparkles className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 text-amber-300" />
-          </div>
-        </div>
-        <div
-          className={`absolute inset-x-4 top-0 h-10 origin-bottom rounded-t-xl border-2 border-b-0 border-purple-300/50 bg-gradient-to-b from-purple-400 to-purple-700 transition-transform duration-500 ${
-            open ? "-translate-y-6 -rotate-[28deg] opacity-80" : ""
-          }`}
-        />
-      </div>
-      {open && (
-        <>
-          <span className="chest-ray chest-ray--1" />
-          <span className="chest-ray chest-ray--2" />
-          <span className="chest-ray chest-ray--3" />
-          <span className="chest-ray chest-ray--4" />
-        </>
-      )}
-    </div>
-  );
-}
-
 type Props = {
   claim: DailyChestClaimDTO;
   onClose: () => void;
@@ -91,10 +65,11 @@ type Props = {
 export function DailyChestOpening({ claim, onClose }: Props) {
   const { t } = useLang();
   const { play } = useSound();
-  const [phase, setPhase] = useState<Phase>("drop");
+  const [phase, setPhase] = useState<Phase>("video");
   const [spinOffset, setSpinOffset] = useState(0);
   const [showRevealGlow, setShowRevealGlow] = useState(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const videoStartedRef = useRef(false);
 
   const { reel, stopIndex } = useMemo(
     () =>
@@ -106,39 +81,29 @@ export function DailyChestOpening({ claim, onClose }: Props) {
 
   const winnerStyles = rarityCardStyles(claim.reward.rarity);
 
-  useEffect(() => {
-    play("chestDrop");
-    const landTimer = setTimeout(() => play("chestLand"), 720);
-    const shakeTimer = setTimeout(() => setPhase("shake"), 900);
-    return () => {
-      clearTimeout(landTimer);
-      clearTimeout(shakeTimer);
-    };
-  }, [play]);
+  const startSpin = useCallback(() => {
+    setPhase("spin");
+    const offset = stopIndex * CARD_STEP - (REEL_VIEWPORT_W / 2 - CARD_W / 2);
+    setSpinOffset(0);
+    requestAnimationFrame(() => setSpinOffset(offset));
 
-  useEffect(() => {
-    if (phase !== "shake") return;
-    const openTimer = setTimeout(() => {
-      setPhase("open");
-      play("chestOpen");
-      setTimeout(() => play("chestPop"), 180);
-    }, 2200);
-    return () => clearTimeout(openTimer);
-  }, [phase, play]);
+    const cardCount = Math.max(1, stopIndex);
+    const tickMs = SPIN_DURATION_MS / cardCount;
+    play("jackpotTick");
+    let ticked = 1;
+    tickRef.current = setInterval(() => {
+      if (ticked >= cardCount) {
+        if (tickRef.current) clearInterval(tickRef.current);
+        return;
+      }
+      play("jackpotTick");
+      ticked += 1;
+    }, tickMs);
+  }, [play, stopIndex]);
 
-  useEffect(() => {
-    if (phase !== "open") return;
-    const spinTimer = setTimeout(() => {
-      setPhase("spin");
-      const offset = stopIndex * CARD_STEP - (REEL_VIEWPORT_W / 2 - CARD_W / 2);
-      setSpinOffset(0);
-      requestAnimationFrame(() => {
-        setSpinOffset(offset);
-      });
-      tickRef.current = setInterval(() => play("jackpotTick"), 90);
-    }, 700);
-    return () => clearTimeout(spinTimer);
-  }, [phase, play, stopIndex]);
+  const handleVideoEnded = useCallback(() => {
+    startSpin();
+  }, [startSpin]);
 
   useEffect(() => {
     if (phase !== "spin") return;
@@ -147,7 +112,7 @@ export function DailyChestOpening({ claim, onClose }: Props) {
       setPhase("reveal");
       setShowRevealGlow(true);
       play(revealSoundForRarity(claim.reward.rarity));
-    }, 4200);
+    }, SPIN_DURATION_MS + 80);
     return () => clearTimeout(revealTimer);
   }, [phase, play, claim.reward.rarity]);
 
@@ -183,10 +148,17 @@ export function DailyChestOpening({ claim, onClose }: Props) {
       </header>
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4">
-        {(phase === "drop" || phase === "shake" || phase === "open") && (
-          <div className={phase === "drop" ? "chest-drop-in" : ""}>
-            <KaiChest shaking={phase === "shake"} open={phase === "open"} />
-          </div>
+        {phase === "video" && (
+          <ChromaKeyVideo
+            src="/assets/chest-opening.mp4"
+            className="w-full max-w-sm"
+            onEnded={handleVideoEnded}
+            onStart={() => {
+              if (videoStartedRef.current) return;
+              videoStartedRef.current = true;
+            }}
+            muted={false}
+          />
         )}
 
         {(phase === "spin" || phase === "reveal" || phase === "done") && (
@@ -196,10 +168,11 @@ export function DailyChestOpening({ claim, onClose }: Props) {
               <div className="pointer-events-none absolute inset-y-2 left-1/2 z-10 w-[96px] -translate-x-1/2 rounded-xl border border-amber-400/20 bg-amber-400/5" />
 
               <div
-                className="flex pl-[50%] transition-transform duration-[3800ms] ease-[cubic-bezier(0.12,0.85,0.15,1)]"
+                className="flex pl-[50%] transition-transform ease-[cubic-bezier(0.12,0.85,0.15,1)]"
                 style={{
                   gap: CARD_GAP,
                   transform: `translateX(-${spinOffset}px)`,
+                  transitionDuration: `${SPIN_DURATION_MS}ms`,
                 }}
               >
                 {reel.map((slot, i) => (

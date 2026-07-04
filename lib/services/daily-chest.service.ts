@@ -28,6 +28,10 @@ export type DailyChestClaimDTO = {
   alreadyClaimed: boolean;
 };
 
+/** Temporary: set env DAILY_CHEST_LIMIT_ENABLED=true to restore one claim per UTC day. */
+const DAILY_CHEST_LIMIT_ENABLED =
+  process.env.DAILY_CHEST_LIMIT_ENABLED === "true";
+
 function utcToday(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -114,6 +118,11 @@ async function saveClaimState(
 
 export async function getDailyChestStatus(userId: string): Promise<DailyChestStatusDTO> {
   const today = utcToday();
+
+  if (!DAILY_CHEST_LIMIT_ENABLED) {
+    return { canClaim: true, nextClaimAt: null, utcDate: today };
+  }
+
   const { stored } = await readClaimState(userId);
   const claimedToday = stored?.date === today;
 
@@ -128,7 +137,7 @@ export async function claimDailyChest(userId: string): Promise<DailyChestClaimDT
   const today = utcToday();
   const { weeklyGoals, stored } = await readClaimState(userId);
 
-  if (stored?.date === today) {
+  if (DAILY_CHEST_LIMIT_ENABLED && stored?.date === today) {
     const [gems, streak] = await Promise.all([
       readGemBalance(userId),
       readFreezieBalance(userId),
@@ -151,7 +160,9 @@ export async function claimDailyChest(userId: string): Promise<DailyChestClaimDT
   let freezieBalance = await readFreezieBalance(userId);
 
   if (reward.kind === "gems") {
-    const idempotencyKey = `daily_chest:${userId}:${today}`;
+    const idempotencyKey = DAILY_CHEST_LIMIT_ENABLED
+      ? `daily_chest:${userId}:${today}`
+      : `daily_chest:${userId}:${Date.now()}`;
     try {
       const result = await earnGems({
         userId,

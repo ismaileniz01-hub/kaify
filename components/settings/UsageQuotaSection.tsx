@@ -6,13 +6,9 @@ import type { UsageStatusDTO } from "@/lib/types/domain.types";
 
 function UsageBar({
   label,
-  used,
-  limit,
   percent,
 }: {
   label: string;
-  used: number;
-  limit: number;
   percent: number;
 }) {
   const pct = Math.min(100, Math.max(0, percent));
@@ -23,9 +19,7 @@ function UsageBar({
     <div>
       <div className="mb-1 flex justify-between text-xs">
         <span className="text-zinc-400">{label}</span>
-        <span className="text-zinc-500">
-          {used.toLocaleString()} / {limit.toLocaleString()}
-        </span>
+        <span className="font-medium text-zinc-300">%{pct}</span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
@@ -57,20 +51,14 @@ export function UsageQuotaSection() {
         </p>
         <UsageBar
           label="Metin token (aylık)"
-          used={usage.textTokens.used}
-          limit={usage.textTokens.limit}
           percent={usage.textTokens.percent}
         />
         <UsageBar
           label="Maya foto (günlük)"
-          used={usage.mayaPhoto.used}
-          limit={usage.mayaPhoto.limit}
           percent={usage.mayaPhoto.percent}
         />
         <UsageBar
           label="Leo foto (haftalık)"
-          used={usage.leoPhoto.used}
-          limit={usage.leoPhoto.limit}
           percent={usage.leoPhoto.percent}
         />
       </div>

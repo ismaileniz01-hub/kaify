@@ -21,6 +21,7 @@ export function WelcomeCard({
   return (
     <Link
       href={href}
+      prefetch
       className={`analytics-card analytics-card--${gradient} relative flex min-h-[118px] flex-col justify-between p-4 transition active:scale-[0.97]`}
     >
       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-purple-200 ring-1 ring-white/10">

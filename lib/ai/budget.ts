@@ -38,7 +38,7 @@ export const TOKEN_BUDGET = {
   /** Team meeting turn. */
   teamChat: envInt("AI_MAX_TEAM_TOKENS", 700),
   /** Home screen motivational copy. */
-  homeCopy: envInt("AI_MAX_HOME_TOKENS", 160),
+  homeCopy: envInt("AI_MAX_HOME_TOKENS", 120),
 } as const;
 
 export const CONTEXT_BUDGET = {

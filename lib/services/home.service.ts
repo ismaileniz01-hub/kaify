@@ -5,7 +5,7 @@ import { AiError } from "@/lib/ai/errors";
 import { logger } from "@/lib/logger";
 import { getOwnProfile } from "@/lib/services/profile.service";
 import { getStreakStatus } from "@/lib/services/streak-status.service";
-import { getAnalyticsBundle } from "@/lib/services/analytics.service";
+import { getTodayNutritionSnapshot } from "@/lib/services/analytics.service";
 import type { ChatTurn } from "@/lib/ai/types";
 import { sanitizeUserText, wrapUntrustedInput } from "@/lib/ai/prompt-safety";
 
@@ -134,11 +134,47 @@ async function generateDailyCopy(params: {
   return fallback;
 }
 
+/** Skip optional home AI when monthly text budget is under pressure. */
+async function textTokenPressureHigh(userId: string): Promise<boolean> {
+  try {
+    const admin = createAdminSupabaseClient();
+    const monthStart = new Date().toISOString().slice(0, 7) + "-01";
+
+    const [{ data: profile }, { data: counters }] = await Promise.all([
+      admin.from("profiles").select("tier").eq("id", userId).maybeSingle(),
+      admin
+        .from("user_usage_counters")
+        .select("text_tokens_used, text_period_start")
+        .eq("user_id", userId)
+        .maybeSingle(),
+    ]);
+
+    const tier = profile?.tier ?? "essential";
+    const { data: limits } = await admin
+      .from("tier_limits")
+      .select("monthly_text_tokens")
+      .eq("tier", tier)
+      .maybeSingle();
+
+    const limit = Number(limits?.monthly_text_tokens ?? 0);
+    if (limit <= 0) return false;
+
+    const used =
+      counters?.text_period_start === monthStart
+        ? Number(counters.text_tokens_used ?? 0)
+        : 0;
+
+    return used / limit >= 0.65;
+  } catch {
+    return false;
+  }
+}
+
 export async function getHomeData(userId: string): Promise<HomeDTO> {
-  const [profile, streakStatus, analytics] = await Promise.all([
+  const [profile, streakStatus, todayNutrition] = await Promise.all([
     getOwnProfile(userId),
     getStreakStatus(userId),
-    getAnalyticsBundle(userId).catch(() => null),
+    getTodayNutritionSnapshot(userId).catch(() => null),
   ]);
 
   const today = utcToday();
@@ -157,6 +193,14 @@ export async function getHomeData(userId: string): Promise<HomeDTO> {
   if (cache && cache.date === today) {
     motivation = cache.motivation;
     dailyTip = cache.dailyTip;
+  } else if (await textTokenPressureHigh(userId)) {
+    const fb = fallbackHome(
+      profile.displayName || "User",
+      streakStatus.currentStreak,
+      profile.locale,
+    );
+    motivation = fb.motivation;
+    dailyTip = fb.dailyTip;
   } else {
     const generated = await generateDailyCopy({
       userId,
@@ -181,13 +225,13 @@ export async function getHomeData(userId: string): Promise<HomeDTO> {
       .eq("user_id", userId);
   }
 
-  const steps = analytics?.today.steps ?? null;
+  const steps = todayNutrition?.steps ?? null;
   const goalPercent =
-    analytics && analytics.today.calorieGoal > 0
+    todayNutrition && todayNutrition.calorieGoal > 0
       ? Math.min(
           100,
           Math.round(
-            (analytics.today.caloriesConsumed / analytics.today.calorieGoal) * 100,
+            (todayNutrition.caloriesConsumed / todayNutrition.calorieGoal) * 100,
           ),
         )
       : null;
@@ -196,7 +240,7 @@ export async function getHomeData(userId: string): Promise<HomeDTO> {
     displayName: profile.displayName,
     motivation,
     dailyTip,
-    kaiFoodInsight: buildKaiFoodInsight(analytics?.today ?? null, profile.locale),
+    kaiFoodInsight: buildKaiFoodInsight(todayNutrition ?? null, profile.locale),
     stats: {
       steps,
       streak: streakStatus.currentStreak,
