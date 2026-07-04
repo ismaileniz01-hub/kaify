@@ -19,9 +19,20 @@ type Phase = "video" | "spin" | "reveal" | "done";
 const CARD_W = 92;
 const CARD_GAP = 10;
 const CARD_STEP = CARD_W + CARD_GAP;
-const REEL_VIEWPORT_W = 288;
-/** Total reel spin duration in ms — one tick sound per card crossed. */
 const SPIN_DURATION_MS = 5000;
+
+/** px offset so card `index` sits under the centre selector (pl-[50%] layout). */
+function offsetForCard(index: number): number {
+  return index * CARD_STEP + CARD_W / 2;
+}
+
+function easeOutQuint(t: number): number {
+  return 1 - (1 - t) ** 5;
+}
+
+function centeredCardIndex(offset: number): number {
+  return Math.floor((offset - CARD_W / 2) / CARD_STEP);
+}
 
 function RewardCard({
   slot,
@@ -36,9 +47,10 @@ function RewardCard({
 
   return (
     <div
-      className={`flex h-[118px] w-[92px] shrink-0 flex-col items-center justify-between rounded-xl border py-2.5 px-1.5 text-center transition-transform duration-300 ${styles.card} ${
+      className={`flex h-[118px] w-[92px] shrink-0 flex-col items-center justify-between rounded-xl border py-2.5 px-1.5 text-center ${styles.card} ${
         highlight ? `scale-110 ring-2 ${styles.ring}` : ""
       }`}
+      style={{ transition: highlight ? "transform 0.25s ease-out" : undefined }}
     >
       <div className="flex flex-1 flex-col items-center justify-center">
         {slot.kind === "gems" ? (
@@ -68,8 +80,11 @@ export function DailyChestOpening({ claim, onClose }: Props) {
   const [phase, setPhase] = useState<Phase>("video");
   const [spinOffset, setSpinOffset] = useState(0);
   const [showRevealGlow, setShowRevealGlow] = useState(false);
-  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rafRef = useRef<number>(0);
+  const reelRef = useRef<HTMLDivElement>(null);
   const videoStartedRef = useRef(false);
+  const playRef = useRef(play);
+  playRef.current = play;
 
   const { reel, stopIndex } = useMemo(
     () =>
@@ -79,42 +94,54 @@ export function DailyChestOpening({ claim, onClose }: Props) {
     [claim.reel, claim.reward, claim.winningIndex],
   );
 
+  const targetOffset = offsetForCard(stopIndex);
   const winnerStyles = rarityCardStyles(claim.reward.rarity);
+
+  const finishReveal = useCallback(() => {
+    setSpinOffset(targetOffset);
+    setShowRevealGlow(true);
+    setPhase("reveal");
+    playRef.current(revealSoundForRarity(claim.reward.rarity));
+  }, [claim.reward.rarity, targetOffset]);
 
   const startSpin = useCallback(() => {
     setPhase("spin");
-    const offset = stopIndex * CARD_STEP - (REEL_VIEWPORT_W / 2 - CARD_W / 2);
     setSpinOffset(0);
-    requestAnimationFrame(() => setSpinOffset(offset));
 
-    const cardCount = Math.max(1, stopIndex);
-    const tickMs = SPIN_DURATION_MS / cardCount;
-    play("jackpotTick");
-    let ticked = 1;
-    tickRef.current = setInterval(() => {
-      if (ticked >= cardCount) {
-        if (tickRef.current) clearInterval(tickRef.current);
-        return;
+    const start = performance.now();
+    let lastTickIndex = -1;
+
+    const frame = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(1, elapsed / SPIN_DURATION_MS);
+      const eased = easeOutQuint(progress);
+      const offset = eased * targetOffset;
+
+      if (reelRef.current) {
+        reelRef.current.style.transform = `translate3d(-${offset}px, 0, 0)`;
       }
-      play("jackpotTick");
-      ticked += 1;
-    }, tickMs);
-  }, [play, stopIndex]);
+
+      const idx = centeredCardIndex(offset);
+      if (idx > lastTickIndex) {
+        playRef.current("jackpotTick");
+        lastTickIndex = idx;
+      }
+
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(frame);
+      } else {
+        setSpinOffset(targetOffset);
+        finishReveal();
+      }
+    };
+
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(frame);
+  }, [finishReveal, targetOffset]);
 
   const handleVideoEnded = useCallback(() => {
     startSpin();
   }, [startSpin]);
-
-  useEffect(() => {
-    if (phase !== "spin") return;
-    const revealTimer = setTimeout(() => {
-      if (tickRef.current) clearInterval(tickRef.current);
-      setPhase("reveal");
-      setShowRevealGlow(true);
-      play(revealSoundForRarity(claim.reward.rarity));
-    }, SPIN_DURATION_MS + 80);
-    return () => clearTimeout(revealTimer);
-  }, [phase, play, claim.reward.rarity]);
 
   useEffect(() => {
     if (phase !== "reveal") return;
@@ -124,7 +151,7 @@ export function DailyChestOpening({ claim, onClose }: Props) {
 
   useEffect(
     () => () => {
-      if (tickRef.current) clearInterval(tickRef.current);
+      cancelAnimationFrame(rafRef.current);
     },
     [],
   );
@@ -168,11 +195,11 @@ export function DailyChestOpening({ claim, onClose }: Props) {
               <div className="pointer-events-none absolute inset-y-2 left-1/2 z-10 w-[96px] -translate-x-1/2 rounded-xl border border-amber-400/20 bg-amber-400/5" />
 
               <div
-                className="flex pl-[50%] transition-transform ease-[cubic-bezier(0.12,0.85,0.15,1)]"
+                ref={reelRef}
+                className="flex pl-[50%] will-change-transform"
                 style={{
                   gap: CARD_GAP,
-                  transform: `translateX(-${spinOffset}px)`,
-                  transitionDuration: `${SPIN_DURATION_MS}ms`,
+                  transform: `translate3d(-${spinOffset}px, 0, 0)`,
                 }}
               >
                 {reel.map((slot, i) => (

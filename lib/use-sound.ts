@@ -208,7 +208,7 @@ export function useSound() {
           break;
         }
         case "jackpotTick": {
-          playTone(ctx, 520 + Math.random() * 80, 0.04, "square", 0.025);
+          playTone(ctx, 640 + Math.random() * 40, 0.028, "sine", 0.02);
           break;
         }
         case "chestRevealCommon": {
