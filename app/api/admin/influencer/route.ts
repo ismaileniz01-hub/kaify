@@ -1,8 +1,6 @@
-import { type NextRequest } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/api/admin-guard";
 import { ApiError } from "@/lib/api/errors";
-import { handleApiError, ok } from "@/lib/api/response";
+import { defineRoute } from "@/lib/api/route-handler";
 import { getClientIP } from "@/lib/api-security";
 import { recordAdminAction } from "@/lib/services/audit.service";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
@@ -17,9 +15,9 @@ const createSchema = z.object({
 });
 
 /** POST /api/admin/influencer — create influencer coupon code */
-export async function POST(request: NextRequest) {
-  try {
-    const admin_user = await requireAdmin();
+export const POST = defineRoute(
+  { route: "POST /api/admin/influencer", auth: "admin" },
+  async ({ user, request }) => {
     const raw = await request.json().catch(() => null);
     const parsed = createSchema.safeParse(raw);
     if (!parsed.success) {
@@ -44,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     await recordAdminAction({
-      adminId: admin_user.id,
+      adminId: user.id,
       action: "influencer_code.create",
       targetType: "influencer_code",
       targetId: code,
@@ -56,16 +54,14 @@ export async function POST(request: NextRequest) {
       ip: getClientIP(request),
     });
 
-    return ok(data);
-  } catch (error) {
-    return handleApiError(error, { route: "/api/admin/influencer" });
-  }
-}
+    return data;
+  },
+);
 
 /** GET /api/admin/influencer — list influencer codes */
-export async function GET(request: NextRequest) {
-  try {
-    const admin_user = await requireAdmin();
+export const GET = defineRoute(
+  { route: "GET /api/admin/influencer", auth: "admin" },
+  async ({ user, request }) => {
     const admin = createAdminSupabaseClient();
     const { data, error } = await admin
       .from("influencer_codes")
@@ -77,13 +73,11 @@ export async function GET(request: NextRequest) {
     }
 
     await recordAdminAction({
-      adminId: admin_user.id,
+      adminId: user.id,
       action: "influencer_code.list",
       ip: getClientIP(request),
     });
 
-    return ok(data ?? []);
-  } catch (error) {
-    return handleApiError(error, { route: "/api/admin/influencer" });
-  }
-}
+    return data ?? [];
+  },
+);

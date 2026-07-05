@@ -44,7 +44,15 @@ export function MfaGate() {
           return;
         }
       } catch {
-        // Fail open — do not lock users out on MFA check errors.
+        // Fail closed — ambiguous MFA state requires verification.
+        const supabase = tryCreateBrowserSupabaseClient();
+        const { data: sessionData } = supabase
+          ? await supabase.auth.getSession()
+          : { data: { session: null } };
+        if (sessionData.session && pathname !== MFA_VERIFY_PATH) {
+          router.replace(MFA_VERIFY_PATH);
+          return;
+        }
       } finally {
         setChecked(true);
       }

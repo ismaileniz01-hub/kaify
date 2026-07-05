@@ -108,6 +108,8 @@ After changing an env var in Vercel, **redeploy** for it to take effect.
   `cost_alerts`.
 - **Self-recovery** — Vercel Cron `GET /api/cron/self-recovery` (every 15m):
   probes DB and clears degraded mode / open circuit breakers when healthy.
+- **Leaderboard snapshot** — Vercel Cron `GET /api/cron/leaderboard-snapshot` (every 15m):
+  refreshes `leaderboard_snapshots` and warms Redis leaderboard keys.
 
 Check pg_cron status in Supabase SQL editor:
 

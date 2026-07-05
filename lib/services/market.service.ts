@@ -4,6 +4,9 @@ import { ApiError } from "@/lib/api/errors";
 import { mapRpcError } from "@/lib/supabase/rpc-errors";
 import { logger } from "@/lib/logger";
 import { cached } from "@/lib/cache";
+import { CacheKeys, CacheTTL } from "@/lib/cache/keys";
+import { createDomainEvent } from "@/lib/events/types";
+import { emitDomainEvent } from "@/lib/events/emit";
 
 export type MarketItemDTO = {
   id: string;
@@ -34,7 +37,7 @@ export async function getMarketState(userId: string): Promise<MarketStateDTO> {
   // The user's owned items and active aura are per-user → always live.
   const [items, { data: owned, error: ownedError }, { data: kai, error: kaiError }] =
     await Promise.all([
-      cached<MarketItemRow[]>("market:items:v2", 300, async () => {
+      cached<MarketItemRow[]>(CacheKeys.marketItems(), CacheTTL.marketCatalog, async () => {
         const { data, error } = await supabase
           .from("market_items")
           .select("id, name_key, price, color_hex, sort_order")
@@ -99,6 +102,10 @@ export async function purchaseMarketItem(
   }
 
   const result = data as { balance?: number; item_id?: string; active_aura?: string };
+
+  emitDomainEvent(
+    createDomainEvent("market.purchased", userId, { itemId, balance: result.balance }, userId),
+  );
 
   return {
     balance: result.balance ?? 0,

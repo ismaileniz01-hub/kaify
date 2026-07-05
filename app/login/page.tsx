@@ -7,6 +7,11 @@ import { useState, useEffect } from "react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { useLang } from "@/lib/lang-context";
 import { captureReferralFromUrl } from "@/lib/referral";
+import {
+  PENDING_LEGAL_CONSENT_KEY,
+  PRIVACY_VERSION,
+  TERMS_VERSION,
+} from "@/lib/legal/constants";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -26,6 +31,15 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
+      localStorage.setItem(
+        PENDING_LEGAL_CONSENT_KEY,
+        JSON.stringify({
+          termsVersion: TERMS_VERSION,
+          privacyVersion: PRIVACY_VERSION,
+          acceptedAt: new Date().toISOString(),
+        }),
+      );
+
       const supabase = tryCreateBrowserSupabaseClient();
       if (!supabase) {
         setError(t("login.error.failed"));
@@ -52,7 +66,7 @@ export default function LoginPage() {
     <div className="phone-shell relative flex flex-col overflow-hidden">
       <FitnessWallpaper />
 
-      <main className="relative z-10 flex flex-1 flex-col items-center justify-between px-8 pb-16 pt-16">
+      <main className="relative z-10 flex flex-1 flex-col items-center justify-between px-8 pb-20 pt-16">
         <div className="flex flex-1 flex-col items-center justify-center gap-6 pt-2">
           <div className="relative flex items-center justify-center">
             <div
@@ -111,15 +125,6 @@ export default function LoginPage() {
           {error && (
             <p className="text-center text-xs text-red-300">{error}</p>
           )}
-
-          <a
-            href="https://kaifyai.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-center text-xs text-purple-200/70 underline"
-          >
-            {t("login.sign_up")} (Web sitesi)
-          </a>
 
           <Link
             href="/welcome"

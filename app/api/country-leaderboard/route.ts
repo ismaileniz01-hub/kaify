@@ -1,6 +1,5 @@
-import { NextRequest } from "next/server";
 import { allowMethods, apiError, leaderboardQuerySchema } from "@/lib/api-security";
-import { handleApiError } from "@/lib/api/response";
+import { defineRouteRaw } from "@/lib/api/route-handler";
 import { getPublicCountryLeaderboard } from "@/lib/services/leaderboard.service";
 
 export const dynamic = "force-dynamic";
@@ -16,11 +15,12 @@ function countryName(code: string): string {
 }
 
 /** GET /api/country-leaderboard — public country ranking (legacy shape). */
-export async function GET(request: NextRequest) {
-  const methodCheck = allowMethods(request, ["GET"]);
-  if (methodCheck) return methodCheck;
+export const GET = defineRouteRaw(
+  { route: "GET /api/country-leaderboard", auth: "none" },
+  async ({ request }) => {
+    const methodCheck = allowMethods(request, ["GET"]);
+    if (methodCheck) return methodCheck;
 
-  try {
     const { searchParams } = new URL(request.url);
     const parsed = leaderboardQuerySchema.safeParse({
       userId: searchParams.get("userId") ?? undefined,
@@ -45,7 +45,5 @@ export async function GET(request: NextRequest) {
       userCountryRank: null,
       totalCountries: leaderboard.length,
     });
-  } catch (error) {
-    return handleApiError(error, { route: "/api/country-leaderboard" });
-  }
-}
+  },
+);

@@ -1,8 +1,7 @@
-import { type NextRequest } from "next/server";
 import { z } from "zod";
-import { requireUser } from "@/lib/api/auth-guard";
 import { ApiError } from "@/lib/api/errors";
-import { handleApiError, ok } from "@/lib/api/response";
+import { ok } from "@/lib/api/response";
+import { defineRoute, defineRouteRaw } from "@/lib/api/route-handler";
 import { deleteUserAccount } from "@/lib/services/account.service";
 import { getOwnProfile, updateOwnProfile } from "@/lib/services/profile.service";
 import { profileUpdateSchema } from "@/lib/validations/profile.schema";
@@ -15,15 +14,10 @@ const deleteSchema = z.object({ confirm: z.literal("DELETE") });
  * GET /api/profile
  * Returns the authenticated user's own profile.
  */
-export async function GET() {
-  try {
-    const user = await requireUser();
-    const profile = await getOwnProfile(user.id);
-    return ok(profile);
-  } catch (error) {
-    return handleApiError(error, { route: "/api/profile" });
-  }
-}
+export const GET = defineRoute(
+  { route: "GET /api/profile" },
+  async ({ user }) => getOwnProfile(user.id),
+);
 
 /**
  * PATCH /api/profile
@@ -31,10 +25,9 @@ export async function GET() {
  * onboarding_status, referral_code, ...) are rejected by the schema and
  * enforced by the database trigger.
  */
-export async function PATCH(request: NextRequest) {
-  try {
-    const user = await requireUser();
-
+export const PATCH = defineRoute(
+  { route: "PATCH /api/profile" },
+  async ({ user, request }) => {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
@@ -51,12 +44,9 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const profile = await updateOwnProfile(user.id, parsed.data);
-    return ok(profile);
-  } catch (error) {
-    return handleApiError(error, { route: "/api/profile" });
-  }
-}
+    return updateOwnProfile(user.id, parsed.data);
+  },
+);
 
 /**
  * DELETE /api/profile
@@ -64,10 +54,14 @@ export async function PATCH(request: NextRequest) {
  * (KVKK/GDPR right to be forgotten). Requires an explicit
  * `{ "confirm": "DELETE" }` body to prevent accidental deletion.
  */
-export async function DELETE(request: NextRequest) {
-  try {
-    const user = await requireUser();
-
+export const DELETE = defineRouteRaw(
+  {
+    route: "DELETE /api/profile",
+    sensitiveAction: true,
+    rateLimit: "profile_delete",
+    requireCsrf: true,
+  },
+  async ({ user, request }) => {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
@@ -85,7 +79,5 @@ export async function DELETE(request: NextRequest) {
 
     await deleteUserAccount(user.id);
     return ok({ deleted: true });
-  } catch (error) {
-    return handleApiError(error, { route: "/api/profile" });
-  }
-}
+  },
+);

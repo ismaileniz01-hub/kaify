@@ -1,9 +1,14 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getClientIP, isLikelyBot, isAllowedOrigin } from "@/lib/api-security";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { buildContentSecurityPolicy, generateCspNonce } from "@/lib/security/csp";
+import { buildContentSecurityPolicy, generateCspNonce, isLegalContentPath } from "@/lib/security/csp";
+import { attachCsrfCookie } from "@/lib/security/csrf-crypto";
 import { logger } from "@/lib/logger";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
+import {
+  isLegacyPublicApi,
+  legacyApiDeprecationHeaders,
+} from "@/lib/api/v1-manifest";
 const RATE_LIMIT_CONFIG = {
   api: { requests: 60, windowMs: 60 * 1000 },
   page: { requests: 120, windowMs: 60 * 1000 },
@@ -21,12 +26,16 @@ const SUSPICIOUS_PATHS = [
   "/vendor", "/node_modules", "/composer.json",
   "/server-status", "/server-info",
   "/cgi-bin", "/cpanel", "/webmail",
-  "/.well-known/security.txt",
 ];
 
 function getRateLimitBucket(pathname: string) {
   return pathname.startsWith("/api/") ? "api" : "page";
 }
+
+const RATE_LIMIT_FAIL_CLOSED =
+  process.env.NODE_ENV === "production"
+    ? ({ failClosedInProduction: true } as const)
+    : undefined;
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -74,6 +83,7 @@ export async function middleware(request: NextRequest) {
     const healthLimit = await checkRateLimit(
       `health:${ip}`,
       RATE_LIMIT_CONFIG.health,
+      RATE_LIMIT_FAIL_CLOSED,
     );
     if (!healthLimit.allowed) {
       return new NextResponse(
@@ -90,18 +100,22 @@ export async function middleware(request: NextRequest) {
     const { response } = await updateSupabaseSession(forwardedRequest);
     response.headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce));
     response.headers.set("X-Request-ID", requestId);
-    return response;
+    return await attachCsrfCookie(forwardedRequest, response);
   }
 
   if (pathname.startsWith("/api/cron/")) {
     const { response } = await updateSupabaseSession(forwardedRequest);
     response.headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce));
     response.headers.set("X-Request-ID", requestId);
-    return response;
+    return await attachCsrfCookie(forwardedRequest, response);
   }
   const bucket = getRateLimitBucket(pathname);
   const config = RATE_LIMIT_CONFIG[bucket];
-  const rateLimit = await checkRateLimit(`${bucket}:${ip}`, config);
+  const rateLimit = await checkRateLimit(
+    `${bucket}:${ip}`,
+    config,
+    RATE_LIMIT_FAIL_CLOSED,
+  );
 
   if (!rateLimit.allowed) {
     logger.warn("middleware rate limit exceeded", { requestId, bucket, ip });
@@ -121,7 +135,10 @@ export async function middleware(request: NextRequest) {
 
   const { response } = await updateSupabaseSession(forwardedRequest);
 
-  response.headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce));
+  response.headers.set(
+    "Content-Security-Policy",
+    buildContentSecurityPolicy(nonce, { legalEmbed: isLegalContentPath(pathname) }),
+  );
   response.headers.set("X-Request-ID", requestId);
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
@@ -129,7 +146,15 @@ export async function middleware(request: NextRequest) {
   response.headers.set("X-RateLimit-Limit", String(rateLimit.limit));
   response.headers.set("X-RateLimit-Remaining", String(rateLimit.remaining));
 
-  return response;
+  if (pathname.startsWith("/api/v1/")) {
+    response.headers.set("X-API-Version", "v1");
+  } else if (isLegacyPublicApi(pathname)) {
+    for (const [key, value] of Object.entries(legacyApiDeprecationHeaders())) {
+      response.headers.set(key, value);
+    }
+  }
+
+  return await attachCsrfCookie(forwardedRequest, response);
 }
 
 export const config = {

@@ -1,7 +1,6 @@
-import { type NextRequest } from "next/server";
-import { requireUser } from "@/lib/api/auth-guard";
+import { z } from "zod";
 import { ApiError } from "@/lib/api/errors";
-import { handleApiError, ok } from "@/lib/api/response";
+import { defineRoute } from "@/lib/api/route-handler";
 import { completeOnboarding } from "@/lib/services/onboarding.service";
 import { onboardingSchema } from "@/lib/validations/onboarding.schema";
 
@@ -11,10 +10,9 @@ export const dynamic = "force-dynamic";
  * POST /api/onboarding
  * Validates the onboarding form and transitions the user to FORMS_COMPLETED.
  */
-export async function POST(request: NextRequest) {
-  try {
-    await requireUser();
-
+export const POST = defineRoute(
+  { route: "POST /api/onboarding" },
+  async ({ request }) => {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
@@ -31,9 +29,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const profile = await completeOnboarding(parsed.data);
-    return ok(profile);
-  } catch (error) {
-    return handleApiError(error, { route: "/api/onboarding" });
-  }
-}
+    return completeOnboarding(parsed.data);
+  },
+);

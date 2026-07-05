@@ -65,6 +65,41 @@ const SETTINGS_GROUPS: { title: string; items: SettingItem[] }[] = [
         description: "settings.leaderboard_opt_out.desc",
         type: "toggle",
       },
+      {
+        icon: Bell,
+        label: "settings.marketing_emails",
+        description: "settings.marketing_emails.desc",
+        type: "toggle",
+      },
+    ],
+  },
+  {
+    title: "settings.legal_section",
+    items: [
+      {
+        icon: Shield,
+        label: "settings.legal.privacy",
+        description: "settings.legal.privacy.desc",
+        type: "link",
+        value: "settings.legal.open",
+        href: "/privacy",
+      },
+      {
+        icon: Shield,
+        label: "settings.legal.terms",
+        description: "settings.legal.terms.desc",
+        type: "link",
+        value: "settings.legal.open",
+        href: "/terms&conditions",
+      },
+      {
+        icon: Shield,
+        label: "settings.legal.cookies",
+        description: "settings.legal.cookies.desc",
+        type: "link",
+        value: "settings.legal.open",
+        href: "/cookies",
+      },
     ],
   },
   {
@@ -144,6 +179,7 @@ export default function SettingsPage() {
     "settings.sfx": loadBoolean(SFX_KEY, true),
     "settings.chat.sfx": loadBoolean(CHAT_SFX_KEY, true),
     "settings.leaderboard_opt_out": false,
+    "settings.marketing_emails": true,
   });
 
   const persistSettings = useCallback(
@@ -185,6 +221,7 @@ export default function SettingsPage() {
           "settings.sfx": s.soundEffects,
           "settings.chat.sfx": s.chatSounds,
           "settings.leaderboard_opt_out": s.leaderboardOptOut,
+          "settings.marketing_emails": s.marketingEmails,
         }));
         saveBoolean(SFX_KEY, s.soundEffects);
         saveBoolean(CHAT_SFX_KEY, s.chatSounds);
@@ -287,6 +324,7 @@ export default function SettingsPage() {
     if (label === "settings.sfx") patch.soundEffects = newVal;
     if (label === "settings.chat.sfx") patch.chatSounds = newVal;
     if (label === "settings.leaderboard_opt_out") patch.leaderboardOptOut = newVal;
+    if (label === "settings.marketing_emails") patch.marketingEmails = newVal;
 
     if (Object.keys(patch).length === 0) return;
 

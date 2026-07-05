@@ -2,6 +2,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { getCircuitSnapshots } from "@/lib/ai/circuit-breaker";
 import { upstashHealth } from "@/lib/rate-limit";
 import { verifyCronSecret } from "@/lib/api/cron-auth";
+import { defineRouteRaw } from "@/lib/api/route-handler";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -106,56 +107,59 @@ function isAuthorizedForDetail(request: Request): boolean {
  * Anonymous callers receive a cheap liveness probe only (no DB/storage/Upstash
  * amplification). Full dependency checks require CRON_SECRET (monitors, cron).
  */
-export async function GET(request: Request) {
-  const detailed = isAuthorizedForDetail(request);
+export const GET = defineRouteRaw(
+  { route: "GET /api/health", auth: "none", publicRateLimit: "health_probe" },
+  async ({ request }) => {
+    const detailed = isAuthorizedForDetail(request);
 
-  if (!detailed) {
-    return new Response(
-      JSON.stringify({
-        status: "ok",
-        timestamp: new Date().toISOString(),
-      }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
+    if (!detailed) {
+      return new Response(
+        JSON.stringify({
+          status: "ok",
+          timestamp: new Date().toISOString(),
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+          },
         },
-      },
+      );
+    }
+
+    const [database, storage, rateLimiter] = await Promise.all([
+      checkDatabase(),
+      checkStorage(),
+      checkRateLimiter(),
+    ]);
+    const ai = checkAi();
+
+    const checks = { database, storage, rateLimiter, ai };
+    const critical: CheckState[] = [database.status, rateLimiter.status];
+    const isDown = critical.includes("down");
+    const anyImpaired = Object.values(checks).some(
+      (c) => c.status === "down" || c.status === "degraded",
     );
-  }
 
-  const [database, storage, rateLimiter] = await Promise.all([
-    checkDatabase(),
-    checkStorage(),
-    checkRateLimiter(),
-  ]);
-  const ai = checkAi();
+    if (isDown) {
+      logger.error("health check critical failure", { checks });
+    } else if (anyImpaired) {
+      logger.warn("health check impaired", { checks });
+    }
 
-  const checks = { database, storage, rateLimiter, ai };
-  const critical: CheckState[] = [database.status, rateLimiter.status];
-  const isDown = critical.includes("down");
-  const anyImpaired = Object.values(checks).some(
-    (c) => c.status === "down" || c.status === "degraded",
-  );
+    const body: HealthBody = {
+      status: isDown ? "degraded" : "ok",
+      timestamp: new Date().toISOString(),
+      checks,
+    };
 
-  if (isDown) {
-    logger.error("health check critical failure", { checks });
-  } else if (anyImpaired) {
-    logger.warn("health check impaired", { checks });
-  }
-
-  const body: HealthBody = {
-    status: isDown ? "degraded" : "ok",
-    timestamp: new Date().toISOString(),
-    checks,
-  };
-
-  return new Response(JSON.stringify(body), {
-    status: isDown ? 503 : 200,
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
-    },
-  });
-}
+    return new Response(JSON.stringify(body), {
+      status: isDown ? 503 : 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+      },
+    });
+  },
+);

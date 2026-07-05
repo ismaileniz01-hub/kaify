@@ -6,7 +6,10 @@ export type CronJobName =
   | "cleanup"
   | "cost-check"
   | "self-recovery"
-  | "notifications";
+  | "notifications"
+  | "retention-purge"
+  | "outbox"
+  | "leaderboard-snapshot";
 
 export type CronRunStatus = "ok" | "error";
 

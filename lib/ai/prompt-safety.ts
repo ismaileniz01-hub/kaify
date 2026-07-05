@@ -44,6 +44,22 @@ const TEMPLATE_TOKENS = [
 
 const DEFAULT_MAX_LEN = 4000;
 
+// Emails, phone-like numbers, and TR national ID patterns (minimize PII in LLM prompts).
+const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+const PHONE_PATTERN = /(?:\+?\d{1,3}[\s-]?)?(?:\(?\d{3}\)?[\s-]?)?\d{3}[\s-]?\d{2}[\s-]?\d{2,4}/g;
+const TR_ID_PATTERN = /\b\d{11}\b/g;
+
+/**
+ * Redacts common personal identifiers before text is sent to external LLMs.
+ * GDPR data minimization (Compliance Faz 3).
+ */
+export function redactPersonalIdentifiers(text: string): string {
+  return text
+    .replace(EMAIL_PATTERN, "[email redacted]")
+    .replace(TR_ID_PATTERN, "[id redacted]")
+    .replace(PHONE_PATTERN, "[phone redacted]");
+}
+
 /**
  * Normalizes and defangs a piece of untrusted user text without destroying its
  * legitimate meaning (Turkish characters, emojis and Markdown are preserved).
@@ -66,6 +82,8 @@ export function sanitizeUserText(
   for (const pattern of TEMPLATE_TOKENS) {
     text = text.replace(pattern, " ");
   }
+
+  text = redactPersonalIdentifiers(text);
 
   // Collapse runaway whitespace used to push instructions out of view.
   text = text.replace(/[ \t]{4,}/g, "   ").replace(/\n{3,}/g, "\n\n");

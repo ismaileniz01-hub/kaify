@@ -5,6 +5,7 @@ import {
   containsCanary,
   createCanary,
   detectInjectionSignals,
+  redactPersonalIdentifiers,
   sanitizeUserText,
   scrubModelOutput,
   wrapUntrustedInput,
@@ -55,6 +56,27 @@ describe("sanitizeUserText", () => {
 
   it("collapses runaway newlines", () => {
     expect(sanitizeUserText("a\n\n\n\n\nb")).toBe("a\n\nb");
+  });
+});
+
+describe("redactPersonalIdentifiers", () => {
+  it("redacts email addresses", () => {
+    expect(redactPersonalIdentifiers("contact me at user@example.com please")).toBe(
+      "contact me at [email redacted] please",
+    );
+  });
+
+  it("redacts phone numbers", () => {
+    expect(redactPersonalIdentifiers("call +90 532 123 45 67")).toContain("[phone redacted]");
+  });
+
+  it("redacts Turkish national ID numbers", () => {
+    expect(redactPersonalIdentifiers("TC: 12345678901")).toContain("[id redacted]");
+  });
+
+  it("preserves fitness content without PII", () => {
+    const input = "Bugün 80kg squat yaptım, protein hedefim 150g.";
+    expect(redactPersonalIdentifiers(input)).toBe(input);
   });
 });
 

@@ -1,7 +1,10 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
+import { createDomainEvent } from "@/lib/events/types";
+import { emitDomainEvent } from "@/lib/events/emit";
 import { emitCheckInNotifications } from "@/lib/services/notifications.service";
+import { invalidateHomeBundleCache } from "@/lib/cache/invalidate";
 import { mapCheckInResult, type CheckInDTO } from "@/lib/types/domain.types";
 
 /**
@@ -11,6 +14,8 @@ import { mapCheckInResult, type CheckInDTO } from "@/lib/types/domain.types";
  * is a no-op that returns the current state). Check-in is intentionally NOT
  * gated by usage limits — the streak must never be punished (Streak İstisnası).
  *
+ * RPC is service_role-only; the API validates the caller and passes p_user_id.
+ *
  * @param requestKey Optional client Idempotency-Key, stored for audit only.
  *                   Daily de-duplication is enforced server-side by date.
  */
@@ -18,10 +23,11 @@ export async function performCheckIn(
   userId: string,
   requestKey: string | null,
 ): Promise<CheckInDTO> {
-  const supabase = await createServerSupabaseClient();
+  const admin = createAdminSupabaseClient();
 
-  const { data, error } = await supabase.rpc("perform_daily_check_in", {
+  const { data, error } = await admin.rpc("perform_daily_check_in", {
     p_request_key: requestKey,
+    p_user_id: userId,
   });
 
   if (error) {
@@ -36,6 +42,14 @@ export async function performCheckIn(
   }
 
   const dto = mapCheckInResult(data);
+
+  void invalidateHomeBundleCache(userId).catch(() => undefined);
+
+  emitDomainEvent(
+    createDomainEvent("check_in.completed", userId, {
+      streak: dto.currentStreak,
+    }, userId),
+  );
 
   // Fire-and-forget: surface Kai level-ups, Freezie awards and milestones.
   // userId is the authenticated caller (RLS already scopes the RPC to them).

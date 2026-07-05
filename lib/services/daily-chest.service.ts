@@ -178,6 +178,16 @@ export async function getDailyChestStatus(userId: string): Promise<DailyChestSta
 }
 
 export async function claimDailyChest(userId: string): Promise<DailyChestClaimDTO> {
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.DAILY_CHEST_LIMIT_ENABLED === "false"
+  ) {
+    throw new ApiError(
+      "SERVICE_UNAVAILABLE",
+      "Günlük sandık limiti yapılandırması geçersiz.",
+    );
+  }
+
   const today = utcTodayKey();
   const idempotencyKey = `daily_chest:${userId}:${today}`;
 

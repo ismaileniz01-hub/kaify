@@ -826,8 +826,17 @@ export type Database = {
         Returns: ProfileRow;
       };
       perform_daily_check_in: {
-        Args: { p_request_key?: string | null };
+        Args: { p_request_key?: string | null; p_user_id?: string | null };
         Returns: CheckInResult;
+      };
+      claim_streak_gem_rewards: {
+        Args: {
+          p_user_id: string;
+          p_claim_key: string;
+          p_amount: number;
+          p_description?: string;
+        };
+        Returns: Json;
       };
       earn_gems: {
         Args: GemMutationArgs;

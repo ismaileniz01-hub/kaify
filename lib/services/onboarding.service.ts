@@ -42,6 +42,7 @@ export async function completeOnboarding(
     p_is_natural: input.isNatural,
     p_bio: input.bio,
     p_locale: input.locale,
+    p_birth_date: input.birthDate,
   });
 
   if (error) {

@@ -34,7 +34,13 @@ export async function assertUserDailyAiBudget(userId: string): Promise<void> {
       .lt("created_at", `${today}T23:59:59.999Z`);
 
     if (error) {
-      logger.warn("[daily-cost-cap] ledger read failed", { userId, error: error.message });
+      logger.error("[daily-cost-cap] ledger read failed", { userId, error: error.message });
+      if (process.env.NODE_ENV === "production") {
+        throw new ApiError(
+          "SERVICE_UNAVAILABLE",
+          "AI kullanım limiti doğrulanamadı. Lütfen daha sonra tekrar dene.",
+        );
+      }
       return;
     }
 
@@ -52,9 +58,15 @@ export async function assertUserDailyAiBudget(userId: string): Promise<void> {
     }
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    logger.warn("[daily-cost-cap] unexpected error", {
+    logger.error("[daily-cost-cap] unexpected error", {
       userId,
       error: error instanceof Error ? error.message : "unknown",
     });
+    if (process.env.NODE_ENV === "production") {
+      throw new ApiError(
+        "SERVICE_UNAVAILABLE",
+        "AI kullanım limiti doğrulanamadı. Lütfen daha sonra tekrar dene.",
+      );
+    }
   }
 }

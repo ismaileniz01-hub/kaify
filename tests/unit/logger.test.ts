@@ -32,15 +32,26 @@ describe("logger", () => {
       logger.info("auth", {
         authorization: "Bearer secret",
         password: "hunter2",
+        email: "user@example.com",
         nested: { access_token: "xyz", safe: "ok" },
       }),
     );
     expect(record.authorization).toBe("[redacted]");
     expect(record.password).toBe("[redacted]");
+    expect(record.email).toBe("[redacted]");
     expect((record.nested as Record<string, unknown>).access_token).toBe(
       "[redacted]",
     );
     expect((record.nested as Record<string, unknown>).safe).toBe("ok");
+  });
+
+  it("partially masks long user ids", () => {
+    const record = captureLog(() =>
+      logger.info("event", {
+        userId: "550e8400-e29b-41d4-a716-446655440000",
+      }),
+    );
+    expect(record.userId).toBe("550e…0000");
   });
 
   it("child loggers merge base context", () => {

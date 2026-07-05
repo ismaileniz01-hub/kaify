@@ -1,17 +1,14 @@
-import { NextRequest } from "next/server";
-import { requireUser } from "@/lib/api/auth-guard";
 import { ApiError } from "@/lib/api/errors";
-import { handleApiError, ok } from "@/lib/api/response";
+import { defineRoute } from "@/lib/api/route-handler";
 import { getGlobalLeaderboard } from "@/lib/services/leaderboard.service";
 import { paginationQuerySchema } from "@/lib/validations/pagination.schema";
 
 export const runtime = "nodejs";
 
 /** GET /api/leaderboard/global — top users by streak + caller's rank. */
-export async function GET(request: NextRequest) {
-  try {
-    await requireUser();
-
+export const GET = defineRoute(
+  { route: "GET /api/leaderboard/global" },
+  async ({ user, request }) => {
     const url = new URL(request.url);
     const query = paginationQuerySchema.safeParse({
       limit: url.searchParams.get("limit") ?? undefined,
@@ -21,13 +18,10 @@ export async function GET(request: NextRequest) {
       throw new ApiError("VALIDATION_ERROR", "Geçersiz sorgu.", query.error.issues);
     }
 
-    const result = await getGlobalLeaderboard({
+    return getGlobalLeaderboard({
       limit: query.data.limit,
       offset: query.data.offset,
+      viewerId: user.id,
     });
-
-    return ok(result);
-  } catch (error) {
-    return handleApiError(error, { route: "/api/leaderboard/global" });
-  }
-}
+  },
+);

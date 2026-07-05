@@ -1,0 +1,13 @@
+Contact: mailto:support@kaifyai.org
+Contact: mailto:privacy@kaifyai.org
+Expires: 2027-07-05T00:00:00.000Z
+Preferred-Languages: tr, en
+Canonical: https://kaifyai.org/.well-known/security.txt
+Policy: https://kaifyai.org/privacy
+Acknowledgments: https://kaifyai.org/security
+
+If you discover a security vulnerability, please email support@kaifyai.org with
+reproduction steps and impact. Do not test against production user accounts.
+
+For personal data / privacy incidents (GDPR/KVKK), contact privacy@kaifyai.org.
+See docs/compliance/breach-playbook.md (internal).

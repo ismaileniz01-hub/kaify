@@ -1,3 +1,4 @@
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
@@ -5,8 +6,14 @@ import type { Database } from "@/lib/types/database.types";
 import { mapProfileRow, type ProfileDTO } from "@/lib/types/domain.types";
 import type { ProfileUpdateInput } from "@/lib/validations/profile.schema";
 import { applyLegacyProfileWrites } from "@/lib/supabase/profile-compat";
+import { createSignedAvatarUrl } from "@/lib/services/avatar-storage.service";
 
 type ProfileUpdateColumns = Database["public"]["Tables"]["profiles"]["Update"];
+
+async function withSignedProfileAvatar(dto: ProfileDTO): Promise<ProfileDTO> {
+  const signedAvatar = await createSignedAvatarUrl(dto.avatarUrl);
+  return { ...dto, avatarUrl: signedAvatar ?? dto.avatarUrl };
+}
 
 /**
  * Fetches the authenticated user's own profile.
@@ -25,7 +32,8 @@ export async function getOwnProfile(userId: string): Promise<ProfileDTO> {
     throw new ApiError("NOT_FOUND", "Profil bulunamadı.");
   }
 
-  return mapProfileRow(data);
+  const dto = mapProfileRow(data);
+  return withSignedProfileAvatar(dto);
 }
 
 const TIMEZONE_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -40,6 +48,8 @@ export async function updateOwnProfile(
   patch: ProfileUpdateInput,
 ): Promise<ProfileDTO> {
   const supabase = await createServerSupabaseClient();
+  let timezonePatch: { timezone: string; timezone_updated_at: string } | null =
+    null;
 
   if (patch.timezone !== undefined) {
     const { data: current, error: readError } = await supabase
@@ -66,6 +76,10 @@ export async function updateOwnProfile(
           "Saat dilimi 24 saatte bir kez değiştirilebilir.",
         );
       }
+      timezonePatch = {
+        timezone: patch.timezone,
+        timezone_updated_at: new Date().toISOString(),
+      };
     }
   }
 
@@ -84,10 +98,23 @@ export async function updateOwnProfile(
   if (patch.countryCode !== undefined) updates.country_code = patch.countryCode;
   if (patch.cityName !== undefined) updates.city_name = patch.cityName === "" ? null : patch.cityName;
   if (patch.locale !== undefined) updates.locale = patch.locale;
-  if (patch.timezone !== undefined) {
-    updates.timezone = patch.timezone;
-    (updates as Record<string, unknown>).timezone_updated_at =
-      new Date().toISOString();
+
+  if (timezonePatch) {
+    const admin = createAdminSupabaseClient();
+    const { error: tzError } = await admin
+      .from("profiles")
+      .update(timezonePatch)
+      .eq("id", userId);
+    if (tzError) {
+      logger.error("[profile.service:update] timezone write error", {
+        error: tzError.message,
+      });
+      throw new ApiError("INTERNAL_ERROR", "Profil güncellenemedi.");
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return getOwnProfile(userId);
   }
 
   const payload = applyLegacyProfileWrites(
@@ -108,5 +135,5 @@ export async function updateOwnProfile(
     throw new ApiError("INTERNAL_ERROR", "Profil güncellenemedi.");
   }
 
-  return mapProfileRow(data);
+  return withSignedProfileAvatar(mapProfileRow(data));
 }

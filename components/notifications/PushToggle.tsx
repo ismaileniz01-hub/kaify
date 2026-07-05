@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { BellRing, BellOff, Loader2 } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
+import { apiPost } from "@/lib/api/client";
+import { CONSENT_TYPES } from "@/lib/legal/constants";
 import {
   ensurePushReady,
   getPushPermission,
@@ -16,11 +18,13 @@ type State = "loading" | "unsupported" | "denied" | "off" | "on" | "busy";
 
 /**
  * In-panel banner to enable/disable phone push notifications. Hidden entirely on
- * unsupported browsers. Mirrors the notification-card visual language.
+ * unsupported browsers. Requires explicit push consent before subscribing.
  */
 export function PushToggle() {
   const { t } = useLang();
   const [state, setState] = useState<State>("loading");
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [hasConsent, setHasConsent] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -32,6 +36,16 @@ export function PushToggle() {
       await ensurePushReady();
       const permission = await getPushPermission();
       const subscribed = await hasActiveSubscription();
+      try {
+        const status = await fetch("/api/consent", { credentials: "include" }).then((r) =>
+          r.json(),
+        );
+        if (active && status.success) {
+          setHasConsent(Boolean(status.data?.pushNotifications));
+        }
+      } catch {
+        // ignore
+      }
       if (!active) return;
       if (permission === "denied") setState("denied");
       else setState(subscribed && permission === "granted" ? "on" : "off");
@@ -44,11 +58,22 @@ export function PushToggle() {
   if (state === "loading" || state === "unsupported") return null;
 
   async function enable() {
+    if (!consentChecked && !hasConsent) return;
     setState("busy");
-    const result = await subscribeToPush();
-    if (result.ok) setState("on");
-    else if (result.reason === "denied") setState("denied");
-    else setState("off");
+    try {
+      if (!hasConsent) {
+        await apiPost("/api/consent", {
+          consentType: CONSENT_TYPES.PUSH_NOTIFICATIONS,
+        });
+        setHasConsent(true);
+      }
+      const result = await subscribeToPush();
+      if (result.ok) setState("on");
+      else if (result.reason === "denied") setState("denied");
+      else setState("off");
+    } catch {
+      setState("off");
+    }
   }
 
   async function disable() {
@@ -94,13 +119,26 @@ export function PushToggle() {
                 ? t("notif.push.enabled_desc")
                 : t("notif.push.enable_desc")}
           </p>
+          {state === "off" && !hasConsent && (
+            <label className="mt-2 flex cursor-pointer items-start gap-2">
+              <input
+                type="checkbox"
+                checked={consentChecked}
+                onChange={(e) => setConsentChecked(e.target.checked)}
+                className="mt-0.5 rounded border-white/20"
+              />
+              <span className="text-[11px] leading-snug text-zinc-400">
+                {t("notif.push.consent_checkbox")}
+              </span>
+            </label>
+          )}
         </div>
 
         {state !== "denied" && (
           <button
             type="button"
             onClick={() => (state === "on" ? void disable() : void enable())}
-            disabled={state === "busy"}
+            disabled={state === "busy" || (state === "off" && !hasConsent && !consentChecked)}
             className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold text-white ring-1 transition hover:brightness-110 active:scale-95 disabled:opacity-60"
             style={{
               background: `${accent}26`,

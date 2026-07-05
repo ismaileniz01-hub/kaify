@@ -1,11 +1,9 @@
-import { NextRequest } from "next/server";
-import { assertAiAvailable } from "@/lib/api/ai-guard";
-import { requireUser } from "@/lib/api/auth-guard";
 import { ApiError } from "@/lib/api/errors";
-import { handleApiError, ok } from "@/lib/api/response";
 import { createSseResponse } from "@/lib/api/sse";
-import { enforceUserRateLimit } from "@/lib/api/rate-guard";
-import { assertUserDailyAiBudget } from "@/lib/ai/daily-cost-cap";
+import {
+  defineDynamicRoute,
+  defineDynamicRouteRaw,
+} from "@/lib/api/route-handler";
 import { CHAT_TOKEN_RESERVE, reserveQuota } from "@/lib/ai/quota-guard";
 import { getHistory, streamCoachReply } from "@/lib/services/chat.service";
 import {
@@ -21,15 +19,11 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type RouteContext = { params: Promise<{ coachId: string }> };
-
 /** GET /api/chat/[coachId] — paginated chat history (newest-last). */
-export async function GET(request: NextRequest, ctx: RouteContext) {
-  try {
-    const user = await requireUser();
-
-    const { coachId } = await ctx.params;
-    const coach = coachIdSchema.safeParse(coachId);
+export const GET = defineDynamicRoute<{ coachId: string }>(
+  { route: "GET /api/chat/[coachId]" },
+  async ({ user, request, params }) => {
+    const coach = coachIdSchema.safeParse(params.coachId);
     if (!coach.success) {
       throw new ApiError("VALIDATION_ERROR", "Geçersiz koç.");
     }
@@ -43,18 +37,14 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
       throw new ApiError("VALIDATION_ERROR", "Geçersiz sorgu.", query.error.issues);
     }
 
-    const history = await getHistory({
+    return getHistory({
       userId: user.id,
       coachId: coach.data,
       limit: query.data.limit,
       before: query.data.before,
     });
-
-    return ok(history);
-  } catch (error) {
-    return handleApiError(error, { route: "/api/chat/[coachId]" });
-  }
-}
+  },
+);
 
 /**
  * POST /api/chat/[coachId] — streamed DeepSeek reply (SSE).
@@ -62,26 +52,26 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
  * assistant reply streams as `delta` events followed by a `done` event that
  * carries `warning_trigger` (LIMIT_80 / LIMIT_100) + usage.
  */
-export async function POST(request: NextRequest, ctx: RouteContext) {
-  try {
-    const user = await requireUser();
-
-    const { coachId } = await ctx.params;
-    const coach = coachIdSchema.safeParse(coachId);
+export const POST = defineDynamicRouteRaw<{ coachId: string }>(
+  {
+    route: "POST /api/chat/[coachId]",
+    rateLimit: "chat",
+    requireAi: true,
+    dailyAiBudget: true,
+    requireTermsConsent: true,
+    requireAiConsent: true,
+  },
+  async ({ user, request, params }) => {
+    const coach = coachIdSchema.safeParse(params.coachId);
     if (!coach.success) {
       throw new ApiError("VALIDATION_ERROR", "Geçersiz koç.");
     }
-
-    await enforceUserRateLimit(user.id, "chat");
 
     const body = await parseJsonWithLimit(request, MAX_JSON_BODY_CHAT);
     const parsed = sendMessageSchema.safeParse(body);
     if (!parsed.success) {
       throw new ApiError("VALIDATION_ERROR", "Geçersiz istek.", parsed.error.issues);
     }
-
-    await assertAiAvailable();
-    await assertUserDailyAiBudget(user.id);
 
     await reserveQuota({
       userId: user.id,
@@ -97,7 +87,5 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
         tokensReserved: CHAT_TOKEN_RESERVE,
       }),
     );
-  } catch (error) {
-    return handleApiError(error, { route: "/api/chat/[coachId]" });
-  }
-}
+  },
+);

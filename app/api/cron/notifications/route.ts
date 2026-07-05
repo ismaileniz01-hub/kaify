@@ -1,8 +1,6 @@
-import { NextRequest } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { handleApiError, ok } from "@/lib/api/response";
+import { defineCronRoute } from "@/lib/api/route-handler";
 import { logger } from "@/lib/logger";
-import { verifyCronSecret } from "@/lib/api/cron-auth";
 import { recordCronRun } from "@/lib/services/cron-monitor.service";
 import {
   createNotificationsBatch,
@@ -64,11 +62,7 @@ const PRAISE_HOUR = 12;
  * Intended to run hourly. Each notification uses a dedup key so repeated runs
  * within a window never create duplicates.
  */
-export async function GET(request: NextRequest) {
-  if (!verifyCronSecret(request)) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
+export const GET = defineCronRoute("/api/cron/notifications", async () => {
   try {
     const admin = createAdminSupabaseClient();
     const now = new Date();
@@ -195,7 +189,7 @@ export async function GET(request: NextRequest) {
 
     await recordCronRun("notifications", "ok", payload);
 
-    return ok(payload);
+    return payload;
   } catch (error) {
     await recordCronRun("notifications", "error", {
       message: error instanceof Error ? error.message : "unknown",
@@ -203,6 +197,6 @@ export async function GET(request: NextRequest) {
     logger.error("cron notifications failed", {
       error: error instanceof Error ? error.message : "unknown",
     });
-    return handleApiError(error, { route: "/api/cron/notifications" });
+    throw error;
   }
-}
+});

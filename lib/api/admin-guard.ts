@@ -33,10 +33,16 @@ export async function requireAdmin(): Promise<AuthedUser> {
     await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
 
   if (aalError) {
-    logger.warn("[admin-guard] MFA assurance lookup failed", {
+    logger.error("[admin-guard] MFA assurance lookup failed", {
       error: aalError.message,
     });
-  } else if (aal?.nextLevel === "aal2" && aal?.currentLevel !== "aal2") {
+    throw new ApiError(
+      "FORBIDDEN",
+      "Yönetici işlemleri için MFA doğrulaması gerekir.",
+    );
+  }
+
+  if (aal?.nextLevel === "aal2" && aal?.currentLevel !== "aal2") {
     throw new ApiError(
       "FORBIDDEN",
       "Yönetici işlemleri için MFA doğrulaması gerekir.",

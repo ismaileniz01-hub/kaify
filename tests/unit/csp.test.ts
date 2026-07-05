@@ -24,6 +24,11 @@ describe("buildContentSecurityPolicy", () => {
   it("permits Supabase in connect-src", () => {
     expect(csp).toContain("https://*.supabase.co");
   });
+
+  it("allows Termly on legal pages only", () => {
+    const legal = buildContentSecurityPolicy(nonce, { legalEmbed: true });
+    expect(legal).toContain("https://app.termly.io");
+  });
 });
 
 describe("generateCspNonce", () => {

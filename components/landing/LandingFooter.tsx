@@ -30,6 +30,15 @@ export function LandingFooter() {
           <a href="#waitlist" className="transition hover:text-white">
             Waitlist
           </a>
+          <a href="/privacy" className="transition hover:text-white">
+            Privacy
+          </a>
+          <a href="/terms&conditions" className="transition hover:text-white">
+            Terms & Conditions
+          </a>
+          <a href="/cookies" className="transition hover:text-white">
+            Cookies
+          </a>
         </nav>
 
         <p className="text-xs text-zinc-600">Fitness · Coaching · Made enjoyable</p>

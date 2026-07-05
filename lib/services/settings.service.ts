@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type UserSettingsDTO = {
   workoutReminders: boolean;
@@ -9,6 +10,7 @@ export type UserSettingsDTO = {
   chatSounds: boolean;
   unitSystem: "metric" | "imperial";
   leaderboardOptOut: boolean;
+  marketingEmails: boolean;
 };
 
 function mapRow(row: {
@@ -17,6 +19,7 @@ function mapRow(row: {
   sound_effects: boolean;
   chat_sounds: boolean;
   unit_system: string;
+  marketing_emails?: boolean;
 }): Omit<UserSettingsDTO, "leaderboardOptOut"> {
   return {
     workoutReminders: row.workout_reminders,
@@ -24,6 +27,7 @@ function mapRow(row: {
     soundEffects: row.sound_effects,
     chatSounds: row.chat_sounds,
     unitSystem: row.unit_system === "imperial" ? "imperial" : "metric",
+    marketingEmails: row.marketing_emails ?? true,
   };
 }
 
@@ -50,6 +54,7 @@ export async function getUserSettings(userId: string): Promise<UserSettingsDTO> 
       chatSounds: true,
       unitSystem: "metric",
       leaderboardOptOut,
+      marketingEmails: true,
     };
   }
 
@@ -81,7 +86,7 @@ export async function upsertUserSettings(
     return getUserSettings(userId);
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as unknown as SupabaseClient)
     .from("user_settings")
     .upsert(
       {
@@ -100,6 +105,9 @@ export async function upsertUserSettings(
           : {}),
         ...(settingsPatch.unitSystem !== undefined
           ? { unit_system: settingsPatch.unitSystem }
+          : {}),
+        ...(settingsPatch.marketingEmails !== undefined
+          ? { marketing_emails: settingsPatch.marketingEmails }
           : {}),
       },
       { onConflict: "user_id" },

@@ -53,6 +53,16 @@ export function validateEnvAtBoot(): void {
       missing: missingSoft,
     });
   }
+
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.DAILY_CHEST_LIMIT_ENABLED === "false"
+  ) {
+    problems.push(
+      "DAILY_CHEST_LIMIT_ENABLED=false is forbidden in production",
+    );
+  }
+
   if (problems.length === 0 && missingSoft.length === 0) {
     logger.info("env validation passed");
   }

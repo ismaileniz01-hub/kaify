@@ -1,4 +1,14 @@
 import type { ApiResponseBody } from "@/lib/api/response";
+import { CSRF_HEADER_NAME, readCsrfCookieFromDocument } from "@/lib/security/csrf-client";
+
+function csrfHeaders(): HeadersInit {
+  const token = readCsrfCookieFromDocument();
+  return token ? { [CSRF_HEADER_NAME]: token } : {};
+}
+
+function mergeHeaders(init?: HeadersInit): HeadersInit {
+  return { ...csrfHeaders(), ...(init ?? {}) };
+}
 
 /** Typed fetch wrapper for Kaify API routes (cookie session). */
 export async function apiFetch<T>(
@@ -10,7 +20,7 @@ export async function apiFetch<T>(
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
+      ...mergeHeaders(init?.headers),
     },
   });
 
@@ -98,7 +108,10 @@ export async function streamChatMessage(
   const response = await fetch(`/api/chat/${coachId}`, {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...csrfHeaders(),
+    },
     body: JSON.stringify({ message }),
     signal,
   });

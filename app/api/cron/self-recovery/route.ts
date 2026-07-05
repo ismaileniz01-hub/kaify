@@ -1,9 +1,7 @@
-import { NextRequest } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { getCircuitSnapshots, resetCircuit } from "@/lib/resilience/circuit";
 import { exitDegradedMode, getDegradedState } from "@/lib/resilience/degraded-mode";
-import { handleApiError, ok } from "@/lib/api/response";
-import { verifyCronSecret } from "@/lib/api/cron-auth";
+import { defineCronRoute } from "@/lib/api/route-handler";
 import { recordCronRun } from "@/lib/services/cron-monitor.service";
 import { logger } from "@/lib/logger";
 
@@ -24,11 +22,7 @@ async function probeDatabase(): Promise<boolean> {
  * GET /api/cron/self-recovery — checks dependency health and clears degraded
  * mode + circuit breakers when the system has recovered.
  */
-export async function GET(request: NextRequest) {
-  if (!verifyCronSecret(request)) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
+export const GET = defineCronRoute("/api/cron/self-recovery", async () => {
   try {
     const degradedBefore = await getDegradedState();
     const dbOk = await probeDatabase();
@@ -65,11 +59,11 @@ export async function GET(request: NextRequest) {
 
     await recordCronRun("self-recovery", dbOk ? "ok" : "error", payload);
 
-    return ok(payload);
+    return payload;
   } catch (error) {
     await recordCronRun("self-recovery", "error", {
       message: error instanceof Error ? error.message : "unknown",
     });
-    return handleApiError(error, { route: "/api/cron/self-recovery" });
+    throw error;
   }
-}
+});

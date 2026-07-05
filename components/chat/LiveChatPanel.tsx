@@ -10,6 +10,8 @@ import type { ContactId } from "@/lib/contacts";
 import { CONTACTS } from "@/lib/contacts";
 import { ChatRichCard } from "@/components/chat/ChatRichCard";
 import { InlineAlert } from "@/components/InlineAlert";
+import { LegalDisclaimerBanner } from "@/components/consent/LegalDisclaimerBanner";
+import { PhotoAnalyzeConsentModal } from "@/components/consent/PhotoAnalyzeConsentModal";
 import { useLang } from "@/lib/lang-context";
 import { useKai } from "@/lib/kai-context";
 import { useSession } from "@/lib/session-context";
@@ -51,6 +53,9 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quotaWarning, setQuotaWarning] = useState<"LIMIT_80" | "LIMIT_100" | null>(null);
+  const [hasPhotoConsent, setHasPhotoConsent] = useState<boolean | null>(null);
+  const [photoConsentOpen, setPhotoConsentOpen] = useState(false);
+  const pendingPhotoRef = useRef<File | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -81,6 +86,13 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     return () => {
       cancelled = true;
     };
+  }, [coachId]);
+
+  useEffect(() => {
+    if (!VISION_COACHES.has(coachId)) return;
+    apiGet<{ photoAnalysis: boolean }>("/api/consent")
+      .then((status) => setHasPhotoConsent(status.photoAnalysis))
+      .catch(() => setHasPhotoConsent(false));
   }, [coachId]);
 
   useEffect(() => {
@@ -161,7 +173,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     }
   };
 
-  const handlePhoto = async (file: File) => {
+  const uploadPhoto = async (file: File) => {
     if (!VISION_COACHES.has(coachId) || sending) return;
 
     const allowed = ["image/jpeg", "image/png", "image/webp"];
@@ -261,8 +273,36 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     reader.readAsDataURL(file);
   };
 
+  const handlePhoto = (file: File) => {
+    if (hasPhotoConsent === false) {
+      pendingPhotoRef.current = file;
+      setPhotoConsentOpen(true);
+      return;
+    }
+    if (hasPhotoConsent === null) {
+      pendingPhotoRef.current = file;
+      setPhotoConsentOpen(true);
+      return;
+    }
+    void uploadPhoto(file);
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      <PhotoAnalyzeConsentModal
+        open={photoConsentOpen}
+        onClose={() => {
+          setPhotoConsentOpen(false);
+          pendingPhotoRef.current = null;
+        }}
+        onAccepted={() => {
+          setHasPhotoConsent(true);
+          setPhotoConsentOpen(false);
+          const file = pendingPhotoRef.current;
+          pendingPhotoRef.current = null;
+          if (file) void uploadPhoto(file);
+        }}
+      />
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
         {loadingHistory && (
           <div className="space-y-3">
@@ -284,6 +324,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             onDismiss={() => setQuotaWarning(null)}
           />
         )}
+        <LegalDisclaimerBanner />
         {error && (
           <InlineAlert
             message={error}

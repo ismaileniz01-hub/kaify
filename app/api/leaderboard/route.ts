@@ -1,16 +1,16 @@
-import { NextRequest } from "next/server";
 import { allowMethods, apiError, leaderboardQuerySchema } from "@/lib/api-security";
-import { handleApiError } from "@/lib/api/response";
+import { defineRouteRaw } from "@/lib/api/route-handler";
 import { getPublicGlobalLeaderboard } from "@/lib/services/leaderboard.service";
 
 export const dynamic = "force-dynamic";
 
 /** GET /api/leaderboard — public global leaderboard (legacy shape for demo/unauth clients). */
-export async function GET(request: NextRequest) {
-  const methodCheck = allowMethods(request, ["GET"]);
-  if (methodCheck) return methodCheck;
+export const GET = defineRouteRaw(
+  { route: "GET /api/leaderboard", auth: "none" },
+  async ({ request }) => {
+    const methodCheck = allowMethods(request, ["GET"]);
+    if (methodCheck) return methodCheck;
 
-  try {
     const { searchParams } = new URL(request.url);
     const parsed = leaderboardQuerySchema.safeParse({
       userId: searchParams.get("userId") ?? undefined,
@@ -29,17 +29,10 @@ export async function GET(request: NextRequest) {
       avatar: entry.avatar || "/kaify-logo.png",
     }));
 
-    const cleanUserId = parsed.data.userId ?? null;
-    const userRank = cleanUserId
-      ? leaderboard.findIndex((u) => u.userId === cleanUserId) + 1
-      : null;
-
     return Response.json({
       leaderboard,
-      userRank: userRank && userRank > 0 ? userRank : null,
+      userRank: null,
       totalUsers: result.totalUsers,
     });
-  } catch (error) {
-    return handleApiError(error, { route: "/api/leaderboard" });
-  }
-}
+  },
+);

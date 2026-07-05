@@ -1,4 +1,5 @@
 import type { BrowserOptions, EdgeOptions, NodeOptions } from "@sentry/nextjs";
+import { scrubSentryEvent } from "@/lib/sentry/scrub";
 
 const dsn = process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -15,6 +16,7 @@ const baseOptions = {
   tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
   enableLogs: true,
   sendDefaultPii: false,
+  beforeSend: scrubSentryEvent,
   // Drop noise from client-side network hiccups and user-cancelled requests.
   ignoreErrors: [
     "AbortError",
@@ -34,7 +36,7 @@ export const sentryClientOptions: BrowserOptions = {
 
 export const sentryServerOptions: NodeOptions = {
   ...baseOptions,
-  includeLocalVariables: true,
+  includeLocalVariables: false,
 };
 
 export const sentryEdgeOptions: EdgeOptions = {

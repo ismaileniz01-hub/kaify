@@ -1,11 +1,26 @@
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { ApiError } from "@/lib/api/errors";
-import { cacheDelete } from "@/lib/cache";
 import { localDayQueryWindow, localTodayDate, isLocalDate } from "@/lib/date-utils";
+import { cached } from "@/lib/cache";
+import { CacheKeys, CacheTTL } from "@/lib/cache/keys";
 import { logger } from "@/lib/logger";
 import type { Json } from "@/lib/types/database.types";
-
+import {
+  createAnalyticsAdminReadClient,
+  createAnalyticsReadClient,
+  readAnalyticsDailyRow,
+  readHealthStepsRange,
+  readLeoAnalysisMessages,
+  readMayaAnalysisMessages,
+  readMealTotalsRow,
+  readPreviousWeightKg,
+  readUserTimezone,
+  readWeeklyAnalyticsSummary,
+  type AnalyticsDailyRow,
+} from "@/lib/repositories/analytics-read.repository";
+import {
+  invalidateAnalyticsUserCache,
+  writeAnalyticsDailyPatch,
+  writeHealthStepsBatch,
+} from "@/lib/repositories/analytics-write.repository";
 export type AnalyticsDailyDTO = {
   entryDate: string;
   weightKg: number | null;
@@ -45,39 +60,16 @@ export type AnalyticsBundleDTO = {
   weeklyScore: WeeklyFitnessScoreDTO;
 };
 
-type AnalyticsRow = {
-  entry_date: string;
-  weight_kg: number | null;
-  calories_consumed: number;
-  calories_burned: number;
-  calorie_goal: number;
-  workouts_completed: number;
-  workouts_target: number;
-  water_liters: number;
-  water_goal_liters: number;
-  steps: number;
-  protein_g: number;
-  carbs_g: number;
-  fat_g: number;
-  protein_goal_g: number;
-  carbs_goal_g: number;
-  fat_goal_g: number;
-};
+type AnalyticsRow = AnalyticsDailyRow;
 
 async function invalidateAnalyticsCache(userId: string): Promise<void> {
-  await cacheDelete(`analytics:v1:${userId}`);
+  await invalidateAnalyticsUserCache(userId);
 }
 
 async function resolveUserTimezone(userId: string): Promise<string> {
-  const admin = createAdminSupabaseClient();
-  const { data } = await admin
-    .from("profiles")
-    .select("timezone")
-    .eq("id", userId)
-    .maybeSingle();
-  return data?.timezone ?? "UTC";
+  const admin = createAnalyticsAdminReadClient();
+  return readUserTimezone(admin, userId);
 }
-
 function mapRow(row: AnalyticsRow): AnalyticsDailyDTO {
   return {
     entryDate: row.entry_date,
@@ -167,29 +159,17 @@ async function computeWeeklyScore(
   weekStart: string,
   today: string,
 ): Promise<WeeklyFitnessScoreDTO> {
-  const admin = createAdminSupabaseClient();
+  const admin = createAnalyticsAdminReadClient();
 
-  const [{ data: weekAnalytics }, { data: leoMessages }] = await Promise.all([
-    admin
-      .from("analytics_daily")
-      .select("entry_date, calories_consumed, calorie_goal, protein_g, protein_goal_g, workouts_completed")
-      .eq("user_id", userId)
-      .gte("entry_date", weekStart)
-      .lte("entry_date", today),
-    admin
-      .from("chat_messages")
-      .select("payload")
-      .eq("user_id", userId)
-      .eq("coach_id", "leo")
-      .eq("message_type", "analysis")
-      .gte("created_at", `${weekStart}T00:00:00.000Z`)
-      .lt("created_at", `${today}T23:59:59.999Z`),
+  const [weekAnalytics, leoMessages] = await Promise.all([
+    readWeeklyAnalyticsSummary(admin, userId, weekStart, today),
+    readLeoAnalysisMessages(admin, userId, weekStart, today),
   ]);
 
   let foodDaysLogged = 0;
   let foodDayScoreSum = 0;
 
-  for (const row of weekAnalytics ?? []) {
+  for (const row of weekAnalytics) {
     const calGoal = Number(row.calorie_goal) || 2100;
     const cal = Number(row.calories_consumed) || 0;
     const proteinGoal = Number(row.protein_goal_g) || 150;
@@ -212,7 +192,7 @@ async function computeWeeklyScore(
       : 0;
 
   const bodyScores: number[] = [];
-  for (const msg of leoMessages ?? []) {
+  for (const msg of leoMessages) {
     const s = extractBodyScoreFromPayload(msg.payload ?? null);
     if (s != null) bodyScores.push(s);
   }
@@ -244,26 +224,13 @@ async function sumMayaMealsForDay(
   entryDate: string,
   timezone: string,
 ): Promise<MealTotals> {
-  const admin = createAdminSupabaseClient();
+  const admin = createAnalyticsAdminReadClient();
   const { start, end } = localDayQueryWindow(entryDate, timezone);
 
-  const { data: messages, error } = await admin
-    .from("chat_messages")
-    .select("payload, created_at")
-    .eq("user_id", userId)
-    .eq("coach_id", "maya")
-    .eq("sender", "coach")
-    .eq("message_type", "analysis")
-    .gte("created_at", start)
-    .lt("created_at", end);
-
-  if (error) {
-    logger.warn("[analytics.service] maya meal read failed", { error: error.message });
-    return { calories: 0, protein: 0, carbs: 0, fat: 0 };
-  }
+  const messages = await readMayaAnalysisMessages(admin, userId, start, end);
 
   const chatTotals: MealTotals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
-  for (const msg of messages ?? []) {
+  for (const msg of messages) {
     if (!isLocalDate(msg.created_at, entryDate, timezone)) continue;
     const meal = extractFoodFromPayload(msg.payload ?? null);
     if (!meal) continue;
@@ -326,16 +293,19 @@ async function persistMayaMealsIfNeeded(
 
 /** Lightweight today snapshot for the home screen (no weekly score). */
 export async function getTodayNutritionSnapshot(userId: string): Promise<AnalyticsDailyDTO> {
-  const admin = createAdminSupabaseClient();
+  return cached(
+    CacheKeys.analyticsToday(userId),
+    CacheTTL.analyticsUser,
+    () => loadTodayNutritionSnapshot(userId),
+  );
+}
+
+async function loadTodayNutritionSnapshot(userId: string): Promise<AnalyticsDailyDTO> {
+  const readClient = await createAnalyticsReadClient();
   const timezone = await resolveUserTimezone(userId);
   const today = localTodayDate(timezone);
 
-  const { data: todayRow } = await admin
-    .from("analytics_daily")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("entry_date", today)
-    .maybeSingle();
+  const todayRow = await readAnalyticsDailyRow(readClient, userId, today);
 
   let todayDto = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today);
   const chatTotals = await sumMayaMealsForDay(userId, today, timezone);
@@ -345,7 +315,15 @@ export async function getTodayNutritionSnapshot(userId: string): Promise<Analyti
 }
 
 export async function getAnalyticsBundle(userId: string): Promise<AnalyticsBundleDTO> {
-  const supabase = await createServerSupabaseClient();
+  return cached(
+    CacheKeys.analyticsBundle(userId),
+    CacheTTL.analyticsUser,
+    () => loadAnalyticsBundle(userId),
+  );
+}
+
+async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBundleDTO> {
+  const readClient = await createAnalyticsReadClient();
   const timezone = await resolveUserTimezone(userId);
   const today = localTodayDate(timezone);
 
@@ -353,38 +331,11 @@ export async function getAnalyticsBundle(userId: string): Promise<AnalyticsBundl
   weekAgo.setUTCDate(weekAgo.getUTCDate() - 6);
   const weekStart = weekAgo.toISOString().slice(0, 10);
 
-  const [
-    { data: todayRow, error: todayError },
-    { data: weekRows, error: weekError },
-    { data: prevWeight, error: prevError },
-  ] = await Promise.all([
-    supabase
-      .from("analytics_daily")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("entry_date", today)
-      .maybeSingle(),
-    supabase
-      .from("health_steps")
-      .select("entry_date, steps")
-      .eq("user_id", userId)
-      .gte("entry_date", weekStart)
-      .lte("entry_date", today)
-      .order("entry_date", { ascending: true }),
-    supabase
-      .from("analytics_daily")
-      .select("weight_kg")
-      .eq("user_id", userId)
-      .not("weight_kg", "is", null)
-      .lt("entry_date", today)
-      .order("entry_date", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+  const [todayRow, weekRows, prevWeightKg] = await Promise.all([
+    readAnalyticsDailyRow(readClient, userId, today),
+    readHealthStepsRange(readClient, userId, weekStart, today),
+    readPreviousWeightKg(readClient, userId, today),
   ]);
-
-  if (todayError) logger.error("[analytics.service] today read error", { error: todayError.message });
-  if (weekError) logger.error("[analytics.service] steps read error", { error: weekError.message });
-  if (prevError) logger.error("[analytics.service] weight read error", { error: prevError.message });
 
   const storedDto = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today);
   const chatTotals = await sumMayaMealsForDay(userId, today, timezone);
@@ -408,8 +359,8 @@ export async function getAnalyticsBundle(userId: string): Promise<AnalyticsBundl
   }
 
   let weightTrendKg: number | null = null;
-  if (todayDto.weightKg != null && prevWeight?.weight_kg != null) {
-    const delta = Number(todayDto.weightKg) - Number(prevWeight.weight_kg);
+  if (todayDto.weightKg != null && prevWeightKg != null) {
+    const delta = Number(todayDto.weightKg) - prevWeightKg;
     weightTrendKg = Math.abs(delta) < 0.05 ? 0 : delta;
   }
 
@@ -423,7 +374,6 @@ export async function patchAnalyticsDaily(
   patch: Partial<Record<string, number | null>>,
   entryDate?: string,
 ): Promise<void> {
-  const admin = createAdminSupabaseClient();
   const date = entryDate ?? localTodayDate(await resolveUserTimezone(userId));
 
   const jsonPatch: Json = {};
@@ -447,16 +397,7 @@ export async function patchAnalyticsDaily(
   if (patch.fatGoalG !== undefined) jsonPatch.fat_goal_g = patch.fatGoalG;
   if (patch.calorieGoal !== undefined) jsonPatch.calorie_goal = patch.calorieGoal;
 
-  const { error } = await admin.rpc("upsert_analytics_daily", {
-    p_user_id: userId,
-    p_entry_date: date,
-    p_patch: jsonPatch,
-  });
-
-  if (error) {
-    logger.error("[analytics.service] upsert error", { error: error.message });
-    throw new ApiError("INTERNAL_ERROR", "Analiz verisi güncellenemedi.");
-  }
+  await writeAnalyticsDailyPatch(userId, date, jsonPatch);
 }
 
 /**
@@ -477,16 +418,11 @@ export async function addMealToAnalytics(
   };
   if (add.calories + add.protein + add.carbs + add.fat === 0) return;
 
-  const admin = createAdminSupabaseClient();
+  const admin = createAnalyticsAdminReadClient();
   const timezone = await resolveUserTimezone(userId);
   const date = localTodayDate(timezone);
 
-  const { data: current } = await admin
-    .from("analytics_daily")
-    .select("calories_consumed, protein_g, carbs_g, fat_g")
-    .eq("user_id", userId)
-    .eq("entry_date", date)
-    .maybeSingle();
+  const current = await readMealTotalsRow(admin, userId, date);
 
   await patchAnalyticsDaily(
     userId,
@@ -507,19 +443,7 @@ export async function syncHealthSteps(
 ): Promise<void> {
   if (entries.length === 0) return;
 
-  const admin = createAdminSupabaseClient();
-  const syncedAt = new Date().toISOString();
-
-  await admin.from("health_steps").upsert(
-    entries.map((entry) => ({
-      user_id: userId,
-      entry_date: entry.date,
-      steps: entry.steps,
-      source: entry.source,
-      synced_at: syncedAt,
-    })),
-    { onConflict: "user_id,entry_date,source" },
-  );
+  await writeHealthStepsBatch(userId, entries);
 
   const latestByDate = new Map<string, number>();
   for (const entry of entries) {

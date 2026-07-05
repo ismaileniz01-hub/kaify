@@ -30,7 +30,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -48,6 +48,33 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Start production server
+        run: npm run start &
+        env:
+          PORT: "3000"
+
+      - name: Wait for /api/health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf -A "Mozilla/5.0" http://127.0.0.1:3000/api/health; then
+              echo "Server ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Server did not become ready"
+          exit 1
+
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: k6 load smoke (SLO gate)
+        run: k6 run scripts/load-test/k6-smoke.js
+        env:
+          BASE_URL: http://127.0.0.1:3000
+          K6_VUS: "5"
+          K6_DURATION: "10s"
+
   audit:
     name: Supply-chain audit
     runs-on: ubuntu-latest
@@ -59,15 +86,16 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      # Report known vulnerabilities in third-party packages. Non-blocking so a
-      # newly-disclosed transitive advisory never blocks shipping — review the
-      # output and patch deliberately.
       - name: npm audit (high and above)
         run: npm audit --audit-level=high
-        continue-on-error: true
+
+      - name: Gitleaks secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

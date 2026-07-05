@@ -1,7 +1,8 @@
 import { ApiError } from "@/lib/api/errors";
 
 export const MAX_JSON_BODY_CHAT = 512 * 1024; // 512 KB
-export const MAX_JSON_BODY_ANALYZE = 15 * 1024 * 1024; // 15 MB (base64 image)
+export const MAX_JSON_BODY_ANALYZE = 10 * 1024 * 1024; // 10 MB (base64 image)
+export const MAX_JSON_BODY_AVATAR = 5 * 1024 * 1024; // 5 MB
 
 /**
  * Reads and parses JSON with a hard byte ceiling.

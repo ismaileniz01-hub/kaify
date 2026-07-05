@@ -1,4 +1,3 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
@@ -71,7 +70,7 @@ export type AdminOverviewDTO = {
 };
 
 export async function getCostSummary(days = 7): Promise<CostSummaryDTO> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase.rpc("admin_get_ai_cost_summary", {
     p_days: days,
   });
@@ -86,7 +85,7 @@ export async function getCostByUser(
   days = 7,
   limit = 20,
 ): Promise<CostByUserRow[]> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase.rpc("admin_get_ai_cost_by_user", {
     p_days: days,
     p_limit: limit,
@@ -102,7 +101,7 @@ export async function getQuotaEvents(
   days = 7,
   limit = 30,
 ): Promise<QuotaEventRow[]> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase.rpc("admin_get_quota_events", {
     p_days: days,
     p_limit: limit,
@@ -115,7 +114,7 @@ export async function getQuotaEvents(
 }
 
 export async function getAdminOverview(): Promise<AdminOverviewDTO> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase.rpc("admin_get_overview_stats");
   if (error) {
     logger.error("[cost-admin] overview rpc error", { error: error.message });

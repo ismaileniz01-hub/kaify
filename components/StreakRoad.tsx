@@ -3,9 +3,10 @@
 import { useEffect, useState, useRef } from "react";
 import { Flame, Gem, Lock, Snowflake } from "lucide-react";
 import Image from "next/image";
-import { useGem } from "@/lib/gem-context";
 import { useKai } from "@/lib/kai-context";
 import { useSound } from "@/lib/use-sound";
+import { useSession } from "@/lib/session-context";
+import { apiPost } from "@/lib/api/client";
 import { getKaiLevel, KAI_LEVEL_THRESHOLDS, KAI_LEVEL_AVATARS, type KaiLevel } from "@/lib/kai-level";
 import { useLang } from "@/lib/lang-context";
 
@@ -55,12 +56,13 @@ function getProgressInSegment(streak: number, segment: RoadSegment): number {
 
 export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
   const { t } = useLang();
-  const { earn } = useGem();
+  const session = useSession();
   const { unlockLevel } = useKai();
   const { play } = useSound();
   const [claimedMilestones, setClaimedMilestones] = useState<Set<number>>(new Set());
   const [claimedStations, setClaimedStations] = useState<Set<number>>(new Set());
   const [hydrated, setHydrated] = useState(false);
+  const [serverRewardsSynced, setServerRewardsSynced] = useState(false);
   const [justClaimed, setJustClaimed] = useState<{
     type: "milestone" | "station";
     value: number;
@@ -69,8 +71,6 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
   const [pendingKaiLevel, setPendingKaiLevel] = useState<KaiLevel | null>(null);
   const [showEvolution, setShowEvolution] = useState(false);
   const [evolutionPhase, setEvolutionPhase] = useState<"idle" | "burning" | "evolving" | "done">("idle");
-  const earnRef = useRef(earn);
-  earnRef.current = earn;
   const claimedRef = useRef(false);
 
   // Hydration sonrası localStorage'dan oku
@@ -144,24 +144,39 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
     }, 2000);
   };
 
-  // Milestone ve istasyon ödüllerini otomatik kazan
+  // Server-authoritative streak gem rewards (replaces client-only earn).
+  useEffect(() => {
+    if (!hydrated || !session.isAuthenticated || serverRewardsSynced) return;
+    if (currentStreak <= 0) {
+      setServerRewardsSynced(true);
+      return;
+    }
+
+    void apiPost<{ totalAwarded: number }>("/api/streak/rewards", {})
+      .then((result) => {
+        if (result.totalAwarded > 0) {
+          setJustClaimed({ type: "milestone", value: currentStreak });
+          setTimeout(() => setJustClaimed(null), 2000);
+          void session.refreshSession();
+        }
+      })
+      .catch(() => {
+        // Non-fatal — UI still renders; user can retry on next visit.
+      })
+      .finally(() => setServerRewardsSynced(true));
+  }, [hydrated, session.isAuthenticated, serverRewardsSynced, currentStreak, session]);
+
+  // Milestone / station UI state from localStorage (display only).
   useEffect(() => {
     if (claimedRef.current) return;
     claimedRef.current = true;
-    
-    const earnFn = earnRef.current;
+
     SEGMENTS.forEach((segment) => {
       if (
         segment.milestone &&
         currentStreak >= segment.milestone &&
         !claimedMilestones.has(segment.milestone)
       ) {
-        earnFn(
-          "streak_milestone",
-          MILESTONE_GEM_REWARD,
-          t("streak.day_streak_earn", { day: segment.milestone!, reward: MILESTONE_GEM_REWARD }),
-        );
-
         const newClaimed = new Set(claimedMilestones);
         newClaimed.add(segment.milestone);
         setClaimedMilestones(newClaimed);
@@ -169,21 +184,11 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
           "streak_claimed_milestones",
           JSON.stringify([...newClaimed]),
         );
-
-        setJustClaimed({ type: "milestone", value: segment.milestone });
-        setTimeout(() => setJustClaimed(null), 2000);
       }
     });
 
     for (let day = 1; day <= currentStreak; day++) {
       if (!claimedStations.has(day)) {
-        const reward = day === SPECIAL_STATION_DAY ? SPECIAL_STATION_GEM_REWARD : STATION_GEM_REWARD;
-        earnFn(
-          "streak_milestone",
-          reward,
-          t("streak.day_earn", { day, reward }),
-        );
-
         const newClaimed = new Set(claimedStations);
         newClaimed.add(day);
         setClaimedStations(newClaimed);
@@ -191,9 +196,6 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
           "streak_claimed_stations",
           JSON.stringify([...newClaimed]),
         );
-
-        setJustClaimed({ type: "station", value: day });
-        setTimeout(() => setJustClaimed(null), 2000);
       }
     }
   }, [currentStreak, claimedMilestones, claimedStations]);

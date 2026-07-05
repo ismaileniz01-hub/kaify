@@ -28,5 +28,16 @@ export default async function AdminLayout({
     redirect("/welcome");
   }
 
+  const { data: aal, error: aalError } =
+    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+  if (aalError) {
+    redirect("/login/mfa");
+  }
+
+  if (aal?.nextLevel === "aal2" && aal?.currentLevel !== "aal2") {
+    redirect("/login/mfa");
+  }
+
   return children;
 }

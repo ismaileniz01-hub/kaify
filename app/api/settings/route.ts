@@ -1,8 +1,6 @@
-import { type NextRequest } from "next/server";
 import { z } from "zod";
-import { requireUser } from "@/lib/api/auth-guard";
 import { ApiError } from "@/lib/api/errors";
-import { handleApiError, ok } from "@/lib/api/response";
+import { defineRoute } from "@/lib/api/route-handler";
 import {
   getUserSettings,
   upsertUserSettings,
@@ -23,28 +21,20 @@ const patchSchema = z
   .strict();
 
 /** GET /api/settings */
-export async function GET() {
-  try {
-    const user = await requireUser();
-    const settings = await getUserSettings(user.id);
-    return ok(settings);
-  } catch (error) {
-    return handleApiError(error, { route: "/api/settings" });
-  }
-}
+export const GET = defineRoute(
+  { route: "GET /api/settings" },
+  async ({ user }) => getUserSettings(user.id),
+);
 
 /** PATCH /api/settings */
-export async function PATCH(request: NextRequest) {
-  try {
-    const user = await requireUser();
+export const PATCH = defineRoute(
+  { route: "PATCH /api/settings" },
+  async ({ user, request }) => {
     const raw = await request.json().catch(() => null);
     const parsed = patchSchema.safeParse(raw);
     if (!parsed.success) {
       throw new ApiError("VALIDATION_ERROR", "Geçersiz ayar.", parsed.error.issues);
     }
-    const settings = await upsertUserSettings(user.id, parsed.data);
-    return ok(settings);
-  } catch (error) {
-    return handleApiError(error, { route: "/api/settings" });
-  }
-}
+    return upsertUserSettings(user.id, parsed.data);
+  },
+);

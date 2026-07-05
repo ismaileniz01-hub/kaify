@@ -1,10 +1,8 @@
-import { NextRequest } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { handleApiError, ok } from "@/lib/api/response";
+import { defineCronRoute } from "@/lib/api/route-handler";
 import { createCostAlert } from "@/lib/services/cost-admin.service";
 import { getCronCostSnapshot } from "@/lib/services/cost-cron.service";
 import { dailyAnomalyMultiplier, userDailyTokenAlertThreshold } from "@/lib/ai/cost";
-import { verifyCronSecret } from "@/lib/api/cron-auth";
 import { getCronSnapshots, recordCronRun } from "@/lib/services/cron-monitor.service";
 import { logger } from "@/lib/logger";
 
@@ -12,11 +10,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /** GET /api/cron/cost-check — detect abnormal AI spend and write cost_alerts. */
-export async function GET(request: NextRequest) {
-  if (!verifyCronSecret(request)) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
+export const GET = defineCronRoute("/api/cron/cost-check", async () => {
   try {
     const alerts: string[] = [];
     const multiplier = dailyAnomalyMultiplier();
@@ -107,11 +101,11 @@ export async function GET(request: NextRequest) {
       todayUsd,
     });
 
-    return ok(payload);
+    return payload;
   } catch (error) {
     await recordCronRun("cost-check", "error", {
       message: error instanceof Error ? error.message : "unknown",
     });
-    return handleApiError(error, { route: "/api/cron/cost-check" });
+    throw error;
   }
-}
+});

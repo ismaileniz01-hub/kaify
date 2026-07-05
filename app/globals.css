@@ -1967,6 +1967,14 @@ body:has(.landing-site) {
   background: #050308;
 }
 
+html[data-cookie-banner="open"] .landing-site {
+  padding-bottom: 7rem;
+}
+
+html[data-cookie-banner="open"] .phone-shell {
+  padding-bottom: 7rem;
+}
+
 .landing-site {
   width: 100%;
   min-height: 100dvh;

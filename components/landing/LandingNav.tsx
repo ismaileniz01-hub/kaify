@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { useLang, LANG_OPTIONS } from "@/lib/lang-context";
+import { useLang } from "@/lib/lang-context";
 
 const LINKS = [
   { href: "#about", labelKey: "landing.nav.about" },
@@ -13,7 +13,7 @@ const LINKS = [
 ] as const;
 
 export function LandingNav() {
-  const { t, lang, setLang } = useLang();
+  const { t } = useLang();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -48,22 +48,7 @@ export function LandingNav() {
           ))}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <label className="sr-only" htmlFor="landing-lang">
-            {t("landing.nav.language")}
-          </label>
-          <select
-            id="landing-lang"
-            value={lang}
-            onChange={(e) => setLang(e.target.value as typeof lang)}
-            className="rounded-lg border border-white/10 bg-zinc-900/80 px-2 py-1.5 text-xs text-zinc-300 outline-none focus:border-purple-500/50"
-          >
-            {LANG_OPTIONS.map((opt) => (
-              <option key={opt.code} value={opt.code}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+        <div className="flex shrink-0 items-center gap-3">
           <a
             href="/login"
             className="hidden text-sm font-medium text-zinc-400 transition hover:text-white sm:inline"

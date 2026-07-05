@@ -1,7 +1,5 @@
-import { NextRequest } from "next/server";
-import { requireAdmin } from "@/lib/api/admin-guard";
 import { ApiError } from "@/lib/api/errors";
-import { handleApiError, ok } from "@/lib/api/response";
+import { defineRoute } from "@/lib/api/route-handler";
 import { getClientIP } from "@/lib/api-security";
 import { recordAdminAction } from "@/lib/services/audit.service";
 import {
@@ -16,9 +14,9 @@ import {
 export const dynamic = "force-dynamic";
 
 /** GET /api/admin/costs — AI spend dashboard data. */
-export async function GET(request: NextRequest) {
-  try {
-    await requireAdmin();
+export const GET = defineRoute(
+  { route: "GET /api/admin/costs", auth: "admin" },
+  async ({ request }) => {
     const url = new URL(request.url);
     const days = Number.parseInt(url.searchParams.get("days") ?? "7", 10);
 
@@ -30,16 +28,14 @@ export async function GET(request: NextRequest) {
       getCacheHitStats(Number.isFinite(days) ? days : 7),
     ]);
 
-    return ok({ summary, byUser, quotaEvents, alerts, cacheStats });
-  } catch (error) {
-    return handleApiError(error, { route: "/api/admin/costs" });
-  }
-}
+    return { summary, byUser, quotaEvents, alerts, cacheStats };
+  },
+);
 
 /** PATCH /api/admin/costs — acknowledge a cost alert. */
-export async function PATCH(request: NextRequest) {
-  try {
-    const admin = await requireAdmin();
+export const PATCH = defineRoute(
+  { route: "PATCH /api/admin/costs", auth: "admin" },
+  async ({ user, request }) => {
     const body = (await request.json()) as { alertId?: string };
     if (!body.alertId) {
       throw new ApiError("VALIDATION_ERROR", "alertId gerekli.");
@@ -47,15 +43,13 @@ export async function PATCH(request: NextRequest) {
     await acknowledgeCostAlert(body.alertId);
 
     await recordAdminAction({
-      adminId: admin.id,
+      adminId: user.id,
       action: "costs.alert_ack",
       targetType: "cost_alert",
       targetId: body.alertId,
       ip: getClientIP(request),
     });
 
-    return ok({ acknowledged: true });
-  } catch (error) {
-    return handleApiError(error, { route: "/api/admin/costs" });
-  }
-}
+    return { acknowledged: true };
+  },
+);

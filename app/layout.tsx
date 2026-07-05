@@ -1,9 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
-import Script from "next/script";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import "./light-theme.css";
 
@@ -15,6 +12,10 @@ import { KaiSync } from "@/components/KaiSync";
 import { SessionErrorBanner } from "@/components/SessionErrorBanner";
 import { CapacitorShell } from "@/components/CapacitorShell";
 import { MfaGate } from "@/components/auth/MfaGate";
+import { LegalConsentSync } from "@/components/consent/LegalConsentSync";
+import { AiConsentGate } from "@/components/consent/AiConsentGate";
+import { CookieConsentBanner } from "@/components/consent/CookieConsentBanner";
+import { OptionalAnalytics } from "@/components/consent/OptionalAnalytics";
 import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
 import { ThemeProvider } from "@/lib/theme-context";
 import { LangProvider } from "@/lib/lang-context";
@@ -66,33 +67,6 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <Script
-          id="sender-net"
-          strategy="afterInteractive"
-          nonce={nonce}
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function (s, e, n, d, er) {
-                s['Sender'] = er;
-                s[er] = s[er] || function () {
-                  (s[er].q = s[er].q || []).push(arguments)
-                }, s[er].l = 1 * new Date();
-                s[er].on = function(event, callback) {
-                  s[er].listeners = s[er].listeners || {};
-                  (s[er].listeners[event] = s[er].listeners[event] || []).push(callback);
-                };
-                var a = e.createElement(n),
-                    m = e.getElementsByTagName(n)[0];
-                a.async = 1;
-                a.src = d;
-                m.parentNode.insertBefore(a, m)
-              })(window, document, 'script', 'https://cdn.sender.net/accounts_resources/universal.js', 'sender');
-              sender('570f2b53948830')
-            `,
-          }}
-        />
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         style={{ viewTransitionName: "root" }}
@@ -105,12 +79,14 @@ export default async function RootLayout({
                   <NotificationProvider>
                     <CapacitorShell />
                     <MfaGate />
+                    <LegalConsentSync />
+                    <AiConsentGate />
                     <OnboardingGate />
                     <KaiSync />
                     <SessionErrorBanner />
                     {children}
-                    <Analytics />
-                    <SpeedInsights />
+                    <CookieConsentBanner />
+                    <OptionalAnalytics nonce={nonce} />
                   </NotificationProvider>
                 </KaiProvider>
               </GemProvider>

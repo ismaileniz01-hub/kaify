@@ -27,6 +27,9 @@ const REDACT_KEYS = [
   "service_role",
   "access_token",
   "refresh_token",
+  "email",
+  "phone",
+  "ip_address",
 ];
 
 function activeLevel(): LogLevel {
@@ -48,6 +51,12 @@ function redact(value: unknown, depth = 0): unknown {
   for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
     if (REDACT_KEYS.some((k) => key.toLowerCase().includes(k))) {
       out[key] = "[redacted]";
+    } else if (
+      (key === "userId" || key === "user_id") &&
+      typeof val === "string" &&
+      val.length > 8
+    ) {
+      out[key] = `${val.slice(0, 4)}…${val.slice(-4)}`;
     } else {
       out[key] = redact(val, depth + 1);
     }

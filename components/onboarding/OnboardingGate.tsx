@@ -14,6 +14,7 @@ import {
   type Gender,
   type ExperienceLevel,
 } from "@/lib/validations/onboarding.schema";
+import { maximumBirthDateForMinimumAge } from "@/lib/compliance/age";
 
 /**
  * First-run onboarding gate. When an authenticated user's profile is still in
@@ -27,6 +28,7 @@ export function OnboardingGate() {
 
   const [displayName, setDisplayName] = useState("");
   const [gender, setGender] = useState<Gender>("prefer_not_to_say");
+  const [birthDate, setBirthDate] = useState("");
   const [heightCm, setHeightCm] = useState("");
   const [weightKg, setWeightKg] = useState("");
   const [experienceLevel, setExperienceLevel] =
@@ -55,6 +57,7 @@ export function OnboardingGate() {
   const valid = useMemo(() => {
     return (
       displayName.trim().length >= 1 &&
+      birthDate.length > 0 &&
       Number.isFinite(heightNum) &&
       heightNum >= 50 &&
       heightNum <= 280 &&
@@ -62,7 +65,7 @@ export function OnboardingGate() {
       weightNum >= 20 &&
       weightNum <= 500
     );
-  }, [displayName, heightNum, weightNum]);
+  }, [displayName, birthDate, heightNum, weightNum]);
 
   if (!needsOnboarding) return null;
 
@@ -74,6 +77,7 @@ export function OnboardingGate() {
       await apiPost<ProfileDTO>("/api/onboarding", {
         displayName: displayName.trim(),
         gender,
+        birthDate,
         heightCm: heightNum,
         weightKg: weightNum,
         experienceLevel,
@@ -130,6 +134,20 @@ export function OnboardingGate() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+              {t("onboarding.birth_date")}
+            </label>
+            <input
+              type="date"
+              value={birthDate}
+              max={maximumBirthDateForMinimumAge()}
+              onChange={(e) => setBirthDate(e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition focus:border-purple-500/50 focus:bg-purple-500/5"
+            />
+            <p className="text-[10px] text-zinc-500">{t("onboarding.birth_date_hint")}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

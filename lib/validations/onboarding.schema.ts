@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { meetsMinimumAge } from "@/lib/compliance/age";
 
 export const GENDERS = ["male", "female", "other", "prefer_not_to_say"] as const;
 export const EXPERIENCE_LEVELS = ["beginner", "intermediate", "advanced"] as const;
@@ -15,9 +16,15 @@ export const localeSchema = z
   .regex(/^[a-zA-Z]{2,3}(-[a-zA-Z]{2,4})?$/, "Invalid locale format")
   .transform((value) => value.toLowerCase());
 
+const birthDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid birth date")
+  .refine(meetsMinimumAge, "You must be at least 16 years old");
+
 export const onboardingSchema = z.object({
   displayName: z.string().trim().min(1, "Name is required").max(80, "Name too long"),
   gender: z.enum(GENDERS),
+  birthDate: birthDateSchema,
   heightCm: z
     .number()
     .int("Height must be an integer")

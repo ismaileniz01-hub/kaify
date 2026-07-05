@@ -101,8 +101,7 @@ export async function generateGeminiJson(
   }
 
   const url =
-    `${GEMINI_BASE_URL}/models/${encodeURIComponent(config.model)}:generateContent` +
-    `?key=${encodeURIComponent(config.apiKey)}`;
+    `${GEMINI_BASE_URL}/models/${encodeURIComponent(config.model)}:generateContent`;
 
   let response: Response;
   try {
@@ -111,7 +110,10 @@ export async function generateGeminiJson(
       async () => {
         const res = await fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": config.apiKey,
+          },
           body: JSON.stringify(body),
           signal,
         });

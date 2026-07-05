@@ -1,20 +1,50 @@
 /** Builds a per-request Content-Security-Policy with a cryptographic nonce. */
-export function buildContentSecurityPolicy(nonce: string): string {
+export function isLegalContentPath(pathname: string): boolean {
+  return (
+    pathname === "/privacy" ||
+    pathname === "/terms" ||
+    pathname === "/cookies" ||
+    pathname.startsWith("/privacy/") ||
+    pathname.startsWith("/terms/") ||
+    pathname.startsWith("/cookies/")
+  );
+}
+
+export function buildContentSecurityPolicy(
+  nonce: string,
+  options?: { legalEmbed?: boolean },
+): string {
+  const styleSrc = options?.legalEmbed
+    ? "style-src 'self' 'unsafe-inline' https://app.termly.io"
+    : "style-src 'self' 'unsafe-inline'";
+
+  const scriptSrc = options?.legalEmbed
+    ? [
+        "script-src",
+        "'self'",
+        `'nonce-${nonce}'`,
+        "'strict-dynamic'",
+        "https://www.google.com",
+        "https://www.gstatic.com",
+        "https://cdn.sender.net",
+        "https://app.termly.io",
+      ].join(" ")
+    : [
+        "script-src",
+        "'self'",
+        `'nonce-${nonce}'`,
+        "'strict-dynamic'",
+        "https://www.google.com",
+        "https://www.gstatic.com",
+        "https://cdn.sender.net",
+      ].join(" ");
+
   const directives = [
     "default-src 'self'",
-    [
-      "script-src",
-      "'self'",
-      `'nonce-${nonce}'`,
-      "'strict-dynamic'",
-      "https://www.google.com",
-      "https://www.gstatic.com",
-      "https://cdn.sender.net",
-    ].join(" "),
-    "style-src 'self' 'unsafe-inline'",
+    scriptSrc,
+    styleSrc,
     "img-src 'self' data: blob: https://*.supabase.co https://flagcdn.com",
     "font-src 'self'",
-    // Service worker (Web Push) — governed here, not by strict-dynamic script-src.
     "worker-src 'self'",
     "manifest-src 'self'",
     [
@@ -29,11 +59,10 @@ export function buildContentSecurityPolicy(nonce: string): string {
       "https://*.ingest.us.sentry.io",
       "https://*.ingest.de.sentry.io",
     ].join(" "),
-    "frame-src https://www.google.com https://recaptcha.google.com",
+    "frame-src https://www.google.com https://recaptcha.google.com https://app.termly.io",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    // Clickjacking defense at the CSP layer (complements X-Frame-Options: DENY).
     "frame-ancestors 'none'",
     "upgrade-insecure-requests",
   ];

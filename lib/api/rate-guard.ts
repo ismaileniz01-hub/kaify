@@ -18,6 +18,12 @@ export const AI_RATE_LIMITS = {
   checkin: { requests: 10, windowMs: 60 * 1000 },
   steps: { requests: 30, windowMs: 60 * 1000 },
   chest: { requests: 5, windowMs: 60 * 1000 },
+  referral: { requests: 5, windowMs: 60 * 60 * 1000 },
+  profile_export: { requests: 3, windowMs: 60 * 60 * 1000 },
+  profile_delete: { requests: 2, windowMs: 24 * 60 * 60 * 1000 },
+  waitlist: { requests: 5, windowMs: 60 * 60 * 1000 },
+  subscribe: { requests: 5, windowMs: 60 * 60 * 1000 },
+  health_probe: { requests: 30, windowMs: 60 * 1000 },
 } as const;
 
 export type AiRateAction = keyof typeof AI_RATE_LIMITS;
@@ -32,7 +38,30 @@ export async function enforceUserRateLimit(
   });
 
   if (!result.allowed) {
-    logger.warn("user AI rate limit exceeded", { userId, action });
+    logger.warn("user rate limit exceeded", { userId, action });
+    throw new ApiError(
+      "RATE_LIMITED",
+      "Çok hızlı istek gönderiyorsun. Lütfen birkaç saniye bekle.",
+      { retryAfterMs: result.resetMs },
+    );
+  }
+}
+
+/** IP-scoped limits for unauthenticated public endpoints. */
+export async function enforcePublicRateLimit(
+  ip: string,
+  action: Extract<
+    AiRateAction,
+    "waitlist" | "subscribe" | "health_probe"
+  >,
+): Promise<void> {
+  const config = AI_RATE_LIMITS[action];
+  const result = await checkRateLimit(`pub:${action}:${ip}`, config, {
+    failClosedInProduction: true,
+  });
+
+  if (!result.allowed) {
+    logger.warn("public rate limit exceeded", { ip, action });
     throw new ApiError(
       "RATE_LIMITED",
       "Çok hızlı istek gönderiyorsun. Lütfen birkaç saniye bekle.",

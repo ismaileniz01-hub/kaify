@@ -39,6 +39,9 @@ type CoachingStateRow =
 
 const CONTEXT_TURNS = CONTEXT_BUDGET.historyTurns;
 
+/** Soft-block when multiple injection phrases match (avoids single-keyword false positives). */
+const INJECTION_SOFT_BLOCK_SCORE = 3;
+
 function trimHistoryContent(
   content: string,
   role: "user" | "coach",
@@ -208,6 +211,12 @@ export async function* streamCoachReply(
         score: signal.score,
         matched: signal.matched,
       });
+      if (signal.score >= INJECTION_SOFT_BLOCK_SCORE) {
+        throw new ApiError(
+          "FORBIDDEN",
+          "Mesaj güvenlik kontrolünden geçemedi. Lütfen fitness ve sağlık konularında sor.",
+        );
+      }
     }
     const canary = createCanary();
 

@@ -36,6 +36,11 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      { source: "/terms&conditions", destination: "/terms" },
+    ];
+  },
   serverExternalPackages: ["@upstash/redis", "firebase-admin"],
 };
 

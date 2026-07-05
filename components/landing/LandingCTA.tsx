@@ -62,18 +62,14 @@ export function LandingCTA() {
               <p className="text-xs text-zinc-500">
                 Protected by reCAPTCHA &mdash;{" "}
                 <a
-                  href="https://policies.google.com/privacy"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/privacy"
                   className="underline transition hover:text-zinc-300"
                 >
                   Privacy
                 </a>{" "}
                 &{" "}
                 <a
-                  href="https://policies.google.com/terms"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/terms&conditions"
                   className="underline transition hover:text-zinc-300"
                 >
                   Terms

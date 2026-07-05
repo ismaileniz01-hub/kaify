@@ -11,6 +11,9 @@ import {
   unenrollTotp,
   verifyTotpEnrollment,
 } from "@/lib/auth/mfa";
+import { CSRF_HEADER_NAME, readCsrfCookieFromDocument } from "@/lib/security/csrf-client";
+import { apiDelete, apiGet } from "@/lib/api/client";
+import { CONSENT_TYPES } from "@/lib/legal/constants";
 
 type PendingEnrollment = {
   factorId: string;
@@ -27,6 +30,10 @@ export default function SecuritySettingsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [aiConsentActive, setAiConsentActive] = useState(false);
+  const [pushConsentActive, setPushConsentActive] = useState(false);
 
   const refresh = async () => {
     const supabase = tryCreateBrowserSupabaseClient();
@@ -38,6 +45,15 @@ export default function SecuritySettingsPage() {
 
   useEffect(() => {
     void refresh();
+    void apiGet<{ aiHealth: boolean; pushNotifications: boolean }>("/api/consent")
+      .then((status) => {
+        setAiConsentActive(status.aiHealth);
+        setPushConsentActive(status.pushNotifications);
+      })
+      .catch(() => {
+        setAiConsentActive(false);
+        setPushConsentActive(false);
+      });
   }, []);
 
   const startEnroll = async () => {
@@ -122,12 +138,52 @@ export default function SecuritySettingsPage() {
     }
   };
 
+  const revokeOtherSessions = async () => {
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const supabase = tryCreateBrowserSupabaseClient();
+      if (!supabase) return;
+      const { error: signOutError } = await supabase.auth.signOut({ scope: "others" });
+      if (signOutError) {
+        setError(signOutError.message);
+        return;
+      }
+      setMessage("Diğer cihazlardaki oturumlar sonlandırıldı.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const revokeAllSessions = async () => {
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const supabase = tryCreateBrowserSupabaseClient();
+      if (!supabase) return;
+      const { error: signOutError } = await supabase.auth.signOut({ scope: "global" });
+      if (signOutError) {
+        setError(signOutError.message);
+        return;
+      }
+      window.location.href = "/login";
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const exportData = async () => {
     setLoading(true);
     setError(null);
     setMessage(null);
     try {
-      const res = await fetch("/api/profile/export", { credentials: "include" });
+      const csrf = readCsrfCookieFromDocument();
+      const res = await fetch("/api/profile/export", {
+        credentials: "include",
+        headers: csrf ? { [CSRF_HEADER_NAME]: csrf } : {},
+      });
       if (!res.ok) {
         setError(t("login.error.failed"));
         return;
@@ -144,6 +200,55 @@ export default function SecuritySettingsPage() {
       setMessage("Veri dışa aktarıldı.");
     } catch {
       setError(t("login.error.failed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const revokeAiConsent = async () => {
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiDelete("/api/consent", {
+        consentType: CONSENT_TYPES.AI_HEALTH,
+      });
+      setAiConsentActive(false);
+      setMessage(t("consent.revoke.success"));
+    } catch {
+      setError(t("consent.revoke.error"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const revokePushConsent = async () => {
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiDelete("/api/consent", {
+        consentType: CONSENT_TYPES.PUSH_NOTIFICATIONS,
+      });
+      setPushConsentActive(false);
+      setMessage(t("consent.revoke.push.success"));
+    } catch {
+      setError(t("consent.revoke.error"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteAccount = async () => {
+    if (deleteConfirm !== "DELETE") return;
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiDelete<{ deleted: boolean }>("/api/profile", { confirm: "DELETE" });
+      window.location.href = "/login";
+    } catch {
+      setError(t("settings.delete.error"));
     } finally {
       setLoading(false);
     }
@@ -237,6 +342,65 @@ export default function SecuritySettingsPage() {
         {message && <p className="text-sm text-emerald-400">{message}</p>}
 
         <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+          <p className="font-semibold">Oturum yönetimi</p>
+          <p className="mt-1 text-sm text-zinc-400">
+            Kayıp cihaz veya şüpheli erişim durumunda diğer oturumları kapatın.
+          </p>
+          <div className="mt-4 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => void revokeOtherSessions()}
+              disabled={loading}
+              className="w-full rounded-xl border border-white/10 py-3 text-sm font-medium disabled:opacity-50"
+            >
+              Diğer cihazlardaki oturumları kapat
+            </button>
+            <button
+              type="button"
+              onClick={() => void revokeAllSessions()}
+              disabled={loading}
+              className="w-full rounded-xl border border-red-500/30 py-3 text-sm text-red-300 disabled:opacity-50"
+            >
+              Tüm oturumları kapat (çıkış yap)
+            </button>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+          <p className="font-semibold">{t("consent.revoke.title")}</p>
+          <p className="mt-1 text-sm text-zinc-400">{t("consent.revoke.desc")}</p>
+          <p className="mt-2 text-xs text-zinc-500">
+            {aiConsentActive ? t("consent.revoke.active") : t("consent.revoke.inactive")}
+          </p>
+          <button
+            type="button"
+            onClick={() => void revokeAiConsent()}
+            disabled={loading || !aiConsentActive}
+            className="mt-4 w-full rounded-xl border border-amber-500/30 py-3 text-sm text-amber-200 disabled:opacity-40"
+          >
+            {t("consent.revoke.action")}
+          </button>
+        </section>
+
+        <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+          <p className="font-semibold">{t("consent.revoke.push.title")}</p>
+          <p className="mt-1 text-sm text-zinc-400">{t("consent.revoke.push.desc")}</p>
+          <p className="mt-2 text-xs text-zinc-500">
+            {pushConsentActive
+              ? t("consent.revoke.push.active")
+              : t("consent.revoke.push.inactive")}
+          </p>
+          <button
+            type="button"
+            onClick={() => void revokePushConsent()}
+            disabled={loading || !pushConsentActive}
+            className="mt-4 w-full rounded-xl border border-amber-500/30 py-3 text-sm text-amber-200 disabled:opacity-40"
+          >
+            {t("consent.revoke.push.action")}
+          </button>
+        </section>
+
+        <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
           <div className="flex items-start gap-3">
             <Download className="mt-0.5 h-6 w-6 text-zinc-400" />
             <div className="flex-1">
@@ -254,6 +418,39 @@ export default function SecuritySettingsPage() {
           >
             JSON indir
           </button>
+        </section>
+
+        <section className="rounded-2xl border border-red-500/30 bg-red-500/5 p-5">
+          <p className="font-semibold text-red-200">{t("settings.delete.title")}</p>
+          <p className="mt-1 text-sm text-zinc-400">{t("settings.delete.desc")}</p>
+          {!showDeleteConfirm ? (
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={loading}
+              className="mt-4 w-full rounded-xl border border-red-500/40 py-3 text-sm font-medium text-red-300 disabled:opacity-50"
+            >
+              {t("settings.delete.start")}
+            </button>
+          ) : (
+            <div className="mt-4 space-y-3">
+              <input
+                type="text"
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder="DELETE"
+                className="w-full rounded-xl border border-red-500/30 bg-black/30 px-4 py-3 text-center font-mono text-sm tracking-widest"
+              />
+              <button
+                type="button"
+                onClick={() => void deleteAccount()}
+                disabled={loading || deleteConfirm !== "DELETE"}
+                className="w-full rounded-xl bg-red-600 py-3 text-sm font-semibold disabled:opacity-50"
+              >
+                {t("settings.delete.confirm")}
+              </button>
+            </div>
+          )}
         </section>
       </div>
     </div>

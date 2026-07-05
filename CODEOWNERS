@@ -1,0 +1,26 @@
+# CODEOWNERS — Architecture Faz 4
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for the repo
+* @ismaileniz01
+
+# API surface & security
+/app/api/ @ismaileniz01
+/lib/api/ @ismaileniz01
+/middleware.ts @ismaileniz01
+
+# Domain & services
+/lib/domains/ @ismaileniz01
+/lib/services/ @ismaileniz01
+/lib/repositories/ @ismaileniz01
+
+# Database migrations
+/supabase/migrations/ @ismaileniz01
+
+# Compliance & architecture docs
+/docs/compliance/ @ismaileniz01
+/docs/architecture/ @ismaileniz01
+/docs/SECURITY.md @ismaileniz01
+
+# CI / quality gates
+/.github/ @ismaileniz01
