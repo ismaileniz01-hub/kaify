@@ -22,11 +22,11 @@
     },
     {
       "path": "/api/cron/outbox",
-      "schedule": "0 * * * *"
+      "schedule": "0 7 * * *"
     },
     {
       "path": "/api/cron/leaderboard-snapshot",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 8 * * *"
     }
   ],
   "headers": [
