@@ -1,0 +1,19 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: '0 4 * * 1' # Pazartesi 04:00 UTC
+  workflow_dispatch:    # Manuel çalıştırmak için (Test etmek istediğinde bu işine yarayacak)
+
+jobs:
+  zap_scan:
+    runs-on: ubuntu-latest
+    # Eğer secret tanımlı değilse bu job atlanır
+    if: secrets.STAGING_URL != ''
+    steps:
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: ${{ secrets.STAGING_URL }}
+          # Çıktı raporunu görmek istersen (isteğe bağlı)
+          cmd_options: '-a'
