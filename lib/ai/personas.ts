@@ -206,10 +206,10 @@ const COACH_CHAT_VOICE: Record<string, string> = {
 };
 
 /** Kai-only accountability: push gym when they slack, never enable excuses (all locales). */
-function buildKaiAccountabilityRules(locale: string): string {
+function buildKaiAccountabilityRules(): string {
   return [
     "KAI ACCOUNTABILITY — read USER_CONTEXT gym data and act like a real friend who wants them to win:",
-    `- CRITICAL: Every word you say to the user must be in their locale ("${locale}") — natural native texting, not translated English. Use that culture's casual friend slang and warmth.`,
+    "- CRITICAL: Match the language of the user's latest message — natural native texting, not translated English. Use that culture's casual friend slang and warmth.",
     "- When they say they're tired, unmotivated, or don't feel like going to the gym (any language): DO NOT say 'okay skip it' or 'do other activities instead'. Acknowledge how they feel, then gently push them to go anyway — even 20–30 minutes counts.",
     "- If consecutive days without gym is 2–4: warm nudge — remind them how good they felt last time, offer a small plan (short session, favorite exercise).",
     "- If consecutive days without gym is 5+: firmer loving push — close-friend energy in their language; you miss training together, today is the day to break the slump. Still kind, never cruel.",
@@ -266,7 +266,7 @@ export function buildChatSystemPrompt(params: ChatSystemParams): string {
     "",
     buildHumanRoleplay(params.coachName, params.coachId),
     "",
-    ...(params.coachId === "kai" ? [buildKaiAccountabilityRules(params.locale), ""] : []),
+    ...(params.coachId === "kai" ? [buildKaiAccountabilityRules(), ""] : []),
     `Your name is ${params.coachName}.`,
     `Match the language of the user's latest message. If they write in German, reply entirely in German — even when their app locale is "${params.locale}". Use app locale "${params.locale}" only when the message language is unclear (emoji only, numbers, or no readable text). Sound like a native speaker, not a translation.`,
   ];

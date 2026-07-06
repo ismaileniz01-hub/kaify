@@ -3,6 +3,8 @@ import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
 import { ModelRouter } from "@/lib/ai/model-router";
 import { resolveLocale } from "@/lib/i18n/dictionary";
+import { detectMessageLocale } from "@/lib/i18n/detect-message-locale";
+import { buildReplyLanguageDirective } from "@/lib/i18n/reply-language-directive";
 import { buildChatSystemPrompt } from "@/lib/ai/personas";
 import { buildFitnessContextSummary } from "@/lib/ai/chat-context";
 import { checkQuotaGuard, refundQuota, settleQuota } from "@/lib/ai/quota-guard";
@@ -270,7 +272,8 @@ export async function* streamCoachReply(
     // turn but OUTSIDE the untrusted delimiter block, so it's read as a trusted
     // instruction while the user's text stays spotlighted as data — preserving
     // the prompt-leak defense without breaking the cacheable prefix.
-    const currentTurn = `${buildCanaryReminder(canary)}\n\n${wrapUntrustedInput(
+    const replyLocale = detectMessageLocale(cleanMessage, locale);
+    const currentTurn = `${buildCanaryReminder(canary)}\n\n${buildReplyLanguageDirective(replyLocale)}\n\n${wrapUntrustedInput(
       "USER_MESSAGE",
       cleanMessage,
     )}`;
