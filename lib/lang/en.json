@@ -718,5 +718,5 @@
   "gift.claim.button": "Claim",
   "gift.claim.success_gems": "+{amount} gems added to your account!",
   "gift.claim.success_freezie": "+{amount} Freezie added to your account!",
-  "gift.claim.error": "Could not claim gift. Try again.",
+  "gift.claim.error": "Could not claim gift. Try again."
 }
