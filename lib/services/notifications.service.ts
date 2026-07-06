@@ -217,6 +217,71 @@ export async function createNotificationsBatch(
   return inserted.length;
 }
 
+export type BroadcastNotificationInput = {
+  title: string;
+  body: string;
+  /** Optional stable id — re-sending with the same id skips users already notified. */
+  broadcastId?: string;
+};
+
+export type BroadcastNotificationResult = {
+  broadcastId: string;
+  recipients: number;
+  inserted: number;
+};
+
+const BROADCAST_PAGE = 250;
+
+/**
+ * Sends a `system` in-app notification (and push mirror) to every user profile.
+ * Idempotent per user when the same `broadcastId` is reused.
+ */
+export async function broadcastSystemNotification(
+  input: BroadcastNotificationInput,
+): Promise<BroadcastNotificationResult> {
+  const admin = createAdminSupabaseClient();
+  const broadcastId = input.broadcastId?.trim() || crypto.randomUUID();
+  const dedupKey = `broadcast:${broadcastId}`;
+
+  let offset = 0;
+  let recipients = 0;
+  let inserted = 0;
+
+  for (;;) {
+    const { data: rows, error } = await admin
+      .from("profiles")
+      .select("id")
+      .order("created_at", { ascending: true })
+      .range(offset, offset + BROADCAST_PAGE - 1);
+
+    if (error) {
+      logger.error("broadcast notifications profile fetch failed", {
+        error: error.message,
+        offset,
+      });
+      throw new ApiError("INTERNAL_ERROR", "Kullanıcı listesi alınamadı.");
+    }
+
+    if (!rows?.length) break;
+
+    recipients += rows.length;
+    inserted += await createNotificationsBatch(
+      rows.map((row) => ({
+        userId: row.id,
+        type: "system",
+        title: input.title,
+        body: input.body,
+        dedupKey,
+      })),
+    );
+
+    offset += rows.length;
+    if (rows.length < BROADCAST_PAGE) break;
+  }
+
+  return { broadcastId, recipients, inserted };
+}
+
 /**
  * Emits event notifications triggered by a successful daily check-in:
  * Kai level up, Freezie earned, and streak milestones. Idempotent via dedup

@@ -743,6 +743,11 @@ a, button, input, select, textarea, label {
   letter-spacing: -0.02em;
 }
 
+/* Full-screen notification panel (portaled to body) */
+.notif-panel {
+  background: linear-gradient(180deg, #0c0614 0%, #08040f 45%, #050308 100%);
+}
+
 /* Opak ve 3D gölgeli kartlar — welcome-card */
 .welcome-card {
   position: relative;

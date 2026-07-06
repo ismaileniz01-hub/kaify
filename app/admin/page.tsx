@@ -23,6 +23,7 @@ type OverviewResponse = {
 };
 
 const LINKS = [
+  { href: "/admin/notifications", labelKey: "admin.link.notifications", descKey: "admin.link.notifications.desc" },
   { href: "/admin/costs", labelKey: "admin.link.costs", descKey: "admin.link.costs.desc" },
   { href: "/admin/self-heal", labelKey: "admin.link.self_heal", descKey: "admin.link.self_heal.desc" },
   { href: "/admin/audit", labelKey: "admin.link.audit", descKey: "admin.link.audit.desc" },
