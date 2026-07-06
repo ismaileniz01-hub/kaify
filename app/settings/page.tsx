@@ -186,7 +186,7 @@ function saveBoolean(key: string, value: boolean) {
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { lang, setLang, unit, setUnit, t } = useLang();
-  const { referralCode: sessionReferralCode, isAuthenticated, profile } = useSession();
+  const { referralCode: sessionReferralCode, isAuthenticated, profile, isAdmin } = useSession();
 
   const [referralCode, setReferralCode] = useState("");
   const [referralCopied, setReferralCopied] = useState(false);
@@ -368,11 +368,11 @@ export default function SettingsPage() {
     const groups = SETTINGS_GROUPS.filter(
       (group) => group.title !== "settings.privacy_section" || isAuthenticated,
     );
-    if (isAuthenticated && profile?.role === "admin") {
+    if (isAuthenticated && isAdmin) {
       return [ADMIN_SETTINGS_GROUP, ...groups];
     }
     return groups;
-  }, [isAuthenticated, profile?.role]);
+  }, [isAuthenticated, isAdmin]);
 
   return (
     <div className="phone-shell analytics-gradient relative flex flex-col">

@@ -35,6 +35,7 @@ type SessionContextValue = {
   isLoading: boolean;
   isAuthenticated: boolean;
   isPreviewMode: boolean;
+  isAdmin: boolean;
   sessionError: boolean;
   clearSessionError: () => void;
   profile: ProfileDTO | null;
@@ -78,6 +79,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [home, setHome] = useState<HomeDTO | null>(null);
   const [kai, setKai] = useState<KaiStateDTO | null>(null);
   const [referralCode, setReferralCode] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [sessionError, setSessionError] = useState(false);
 
   const clearSessionError = useCallback(() => setSessionError(false), []);
@@ -100,6 +102,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setHome(null);
         setKai(null);
         setReferralCode("");
+        setIsAdmin(false);
         return;
       }
 
@@ -114,6 +117,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setHome(null);
         setKai(null);
         setReferralCode("");
+        setIsAdmin(false);
         return;
       }
 
@@ -121,6 +125,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setIsAuthenticated(true);
       setIsPreviewMode(false);
       setProfile(bundle.profile);
+      setIsAdmin(bundle.isAdmin);
       setUserProfile(profileDtoToUserProfile(bundle.profile));
       setGemBalance(bundle.gems);
       setStreak(bundle.streak);
@@ -205,6 +210,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isLoading,
       isAuthenticated,
       isPreviewMode,
+      isAdmin,
       sessionError,
       clearSessionError,
       profile,
@@ -223,6 +229,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isLoading,
       isAuthenticated,
       isPreviewMode,
+      isAdmin,
       sessionError,
       clearSessionError,
       profile,

@@ -32,6 +32,17 @@ vi.mock("@/lib/services/home.service", () => ({
 vi.mock("@/lib/cache", () => ({
   cachedWithStale: vi.fn((_key, _ttl, _stale, producer) => producer()),
 }));
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminSupabaseClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          maybeSingle: vi.fn().mockResolvedValue({ data: { role: "user" }, error: null }),
+        })),
+      })),
+    })),
+  })),
+}));
 
 describe("getSessionBundle", () => {
   it("loads all bootstrap fields in one parallel call", async () => {
@@ -48,5 +59,6 @@ describe("getSessionBundle", () => {
     expect(bundle.referral.referralCode).toBe("ABC123");
     expect(bundle.home.displayName).toBe("Test");
     expect(bundle.kai.unlockedLevel).toBe(2);
+    expect(bundle.isAdmin).toBe(false);
   });
 });

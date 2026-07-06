@@ -1,5 +1,6 @@
 import { cachedWithStale } from "@/lib/cache";
 import { CacheKeys, CacheTTL } from "@/lib/cache/keys";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { getGemBalance } from "@/lib/services/gem-balance.service";
 import { getHomeData, type HomeDTO } from "@/lib/services/home.service";
 import { getKaiState, type KaiStateDTO } from "@/lib/services/kai-state.service";
@@ -12,6 +13,7 @@ import type { StreakStatusDTO } from "@/lib/services/streak-status.service";
 
 export type SessionBundleDTO = {
   profile: ProfileDTO;
+  isAdmin: boolean;
   gems: GemBalanceDTO;
   streak: StreakStatusDTO;
   referral: { referralCode: string };
@@ -24,7 +26,8 @@ export type SessionBundleDTO = {
  * (profile, gems, streak, referral, home, kai).
  */
 export async function getSessionBundle(userId: string): Promise<SessionBundleDTO> {
-  const [profile, gems, streak, referral, kai, home] = await Promise.all([
+  const admin = createAdminSupabaseClient();
+  const [profile, gems, streak, referral, kai, home, roleRow] = await Promise.all([
     getOwnProfile(userId),
     getGemBalance(userId),
     getStreakStatus(userId),
@@ -36,10 +39,12 @@ export async function getSessionBundle(userId: string): Promise<SessionBundleDTO
       CacheTTL.homeBundleStale,
       () => getHomeData(userId),
     ),
+    admin.from("profiles").select("role").eq("id", userId).maybeSingle(),
   ]);
 
   return {
     profile,
+    isAdmin: roleRow.data?.role === "admin",
     gems,
     streak,
     referral: { referralCode: referral.referralCode },
