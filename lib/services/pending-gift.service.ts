@@ -32,29 +32,29 @@ export async function createPendingGift(input: {
 }): Promise<PendingGiftDTO> {
   const admin = createAdminSupabaseClient();
 
-  const { data, error } = await admin
-    .from("pending_gifts")
-    .insert({
-      user_id: input.userId,
-      reward_kind: input.rewardKind,
-      amount: input.amount,
-      reason: input.reason,
-      granted_by: input.grantedBy,
-    })
-    .select("id, reward_kind, amount, reason, created_at")
-    .single();
+  const { data, error } = await admin.rpc("admin_create_pending_gift", {
+    p_user_id: input.userId,
+    p_reward_kind: input.rewardKind,
+    p_amount: input.amount,
+    p_reason: input.reason,
+    p_granted_by: input.grantedBy,
+  });
 
-  if (error || !data) {
-    logger.error("[pending-gift] insert failed", { error: error?.message });
+  if (error) {
+    logger.error("[pending-gift] create rpc failed", { error: error.message });
+    mapRpcError(error, "[pending-gift:create]", "Hediye oluşturulamadı.");
+  }
+  if (!data || typeof data !== "object") {
     throw new ApiError("INTERNAL_ERROR", "Hediye oluşturulamadı.");
   }
 
+  const row = data as Record<string, unknown>;
   const gift: PendingGiftDTO = {
-    id: data.id,
-    rewardKind: data.reward_kind as PendingGiftKind,
-    amount: data.amount,
-    reason: data.reason,
-    createdAt: data.created_at,
+    id: String(row.id),
+    rewardKind: row.rewardKind as PendingGiftKind,
+    amount: Number(row.amount),
+    reason: String(row.reason ?? ""),
+    createdAt: String(row.createdAt),
   };
 
   void createNotification({

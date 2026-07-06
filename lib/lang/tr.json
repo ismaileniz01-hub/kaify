@@ -707,6 +707,7 @@
   "admin.gift.amount": "Miktar",
   "admin.gift.reason": "Açıklama (isteğe bağlı)",
   "admin.gift.send": "Hediye gönder",
+  "admin.gift.use_mine": "Benim",
   "admin.gift.pending_success": "Hediye gönderildi. Kullanıcı ana ekranda Claim kartını görecek.",
   "admin.gift.error": "Hediye gönderilemedi. Kullanıcı ID ve miktarı kontrol edin.",
   "gift.pending.title": "Hediye aldın!",

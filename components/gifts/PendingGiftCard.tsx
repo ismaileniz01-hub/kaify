@@ -46,6 +46,17 @@ export function PendingGiftCard() {
     void loadGifts();
   }, [loadGifts]);
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void loadGifts();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [isAuthenticated, loadGifts]);
+
   const handleClaim = async (giftId: string) => {
     if (claimingId) return;
     setClaimingId(giftId);

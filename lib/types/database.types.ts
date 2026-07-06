@@ -1015,6 +1015,16 @@ export type Database = {
         Args: { p_gift_id: string };
         Returns: Json;
       };
+      admin_create_pending_gift: {
+        Args: {
+          p_user_id: string;
+          p_reward_kind: string;
+          p_amount: number;
+          p_reason: string;
+          p_granted_by: string;
+        };
+        Returns: Json;
+      };
     };
     Enums: {
       onboarding_status: OnboardingStatus;

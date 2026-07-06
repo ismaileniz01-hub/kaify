@@ -707,6 +707,7 @@
   "admin.gift.amount": "Amount",
   "admin.gift.reason": "Reason (optional)",
   "admin.gift.send": "Send gift",
+  "admin.gift.use_mine": "Mine",
   "admin.gift.pending_success": "Gift sent. The user will see a Claim card on their home screen.",
   "admin.gift.error": "Could not send gift. Check the user ID and amount.",
   "gift.pending.title": "You received a gift!",

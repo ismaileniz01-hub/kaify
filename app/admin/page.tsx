@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { BellRing, Gift, Loader2, Send, Snowflake, User } from "lucide-react";
-import { apiPost } from "@/lib/api/client";
+import { apiPost, ApiClientError } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
+import { useSession } from "@/lib/session-context";
 import { InlineAlert } from "@/components/InlineAlert";
 import { normalizeUserId } from "@/lib/utils/user-id";
 
@@ -19,6 +20,7 @@ type BroadcastResult = {
 
 export default function AdminHubPage() {
   const { t } = useLang();
+  const { profile } = useSession();
   const [tab, setTab] = useState<Tab>("broadcast");
 
   const [broadcastTitle, setBroadcastTitle] = useState("");
@@ -106,8 +108,8 @@ export default function AdminHubPage() {
         ...(giftReason.trim() ? { reason: giftReason.trim() } : {}),
       });
       setGiftSuccess(true);
-    } catch {
-      setGiftError(t("admin.gift.error"));
+    } catch (err) {
+      setGiftError(err instanceof ApiClientError ? err.message : t("admin.gift.error"));
     } finally {
       setGiftBusy(false);
     }
@@ -268,12 +270,23 @@ export default function AdminHubPage() {
 
             <label className="block">
               <span className="text-xs font-medium text-zinc-400">{t("admin.single.user_id")}</span>
-              <input
-                type="text"
-                value={giftUserId}
-                onChange={(e) => setGiftUserId(e.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 font-mono text-sm text-white focus:border-purple-500/50 focus:outline-none"
-              />
+              <div className="mt-1.5 flex gap-2">
+                <input
+                  type="text"
+                  value={giftUserId}
+                  onChange={(e) => setGiftUserId(e.target.value)}
+                  className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 font-mono text-sm text-white focus:border-purple-500/50 focus:outline-none"
+                />
+                {profile?.id && (
+                  <button
+                    type="button"
+                    onClick={() => setGiftUserId(profile.id)}
+                    className="shrink-0 rounded-xl border border-purple-500/30 px-3 text-xs text-purple-300 hover:bg-purple-500/10"
+                  >
+                    {t("admin.gift.use_mine")}
+                  </button>
+                )}
+              </div>
             </label>
 
             <div className="block">
