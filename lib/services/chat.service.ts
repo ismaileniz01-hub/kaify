@@ -272,7 +272,10 @@ export async function* streamCoachReply(
     // turn but OUTSIDE the untrusted delimiter block, so it's read as a trusted
     // instruction while the user's text stays spotlighted as data — preserving
     // the prompt-leak defense without breaking the cacheable prefix.
-    const replyLocale = detectMessageLocale(cleanMessage, locale);
+    const recentUserTexts = history
+      .filter((turn) => turn.role === "user")
+      .map((turn) => turn.content);
+    const replyLocale = detectMessageLocale(cleanMessage, locale, recentUserTexts);
     const currentTurn = `${buildCanaryReminder(canary)}\n\n${buildReplyLanguageDirective(replyLocale)}\n\n${wrapUntrustedInput(
       "USER_MESSAGE",
       cleanMessage,

@@ -43,7 +43,24 @@ const FRANC_TO_LOCALE: Record<string, SupportedLocale> = {
 
 const HAS_LETTERS = /[\p{L}]/u;
 
-/** Common short words franc-min often mislabels on brief Latin-script messages. */
+/** Strip trailing punctuation so "broo..." still matches slang tokens. */
+function normalizeForDetection(text: string): string {
+  return text.trim().replace(/[.…!?,;:]+$/gu, "").trim();
+}
+
+/** Latin-script messages with no confident signal (slang, very short). */
+function isAmbiguousShortMessage(text: string): boolean {
+  const cleaned = normalizeForDetection(text);
+  return cleaned.length > 0 && cleaned.length <= 24;
+}
+
+/** Global English gym/internet slang — often the whole message (e.g. "broo"). */
+const ENGLISH_SLANG =
+  /\b(bro{1,4}|bruh|dude|man|yeah|yep|nope|nah|lol|lmao|wtf|idk|tbh|ngl|sup|hey|hi|hello|ok|okay|cool|nice|thanks|thx|pls|please|yo|lets|let's|go|gym|workout|legday|push|pull|rest|day)\b/i;
+
+function localeFromEnglishSlang(text: string): SupportedLocale | null {
+  return ENGLISH_SLANG.test(normalizeForDetection(text)) ? "en" : null;
+}
 const WORD_HINTS: Array<{ locale: SupportedLocale; pattern: RegExp }> = [
   {
     locale: "en",
@@ -114,22 +131,41 @@ function localeFromFranc(text: string): SupportedLocale | null {
   return null;
 }
 
+function detectWithoutFallback(text: string): SupportedLocale | null {
+  const cleaned = normalizeForDetection(text);
+  if (!cleaned || !HAS_LETTERS.test(cleaned)) return null;
+
+  return (
+    localeFromScript(cleaned) ??
+    localeFromEnglishSlang(cleaned) ??
+    localeFromWordHints(cleaned) ??
+    localeFromFranc(cleaned)
+  );
+}
+
 /**
  * Best-effort locale for the user's latest chat message.
  * Falls back to profile/app locale when the text is too ambiguous.
+ * Pass recent user turns so short replies like "broo" inherit the thread language.
  */
 export function detectMessageLocale(
   text: string,
   profileLocale?: string | null,
+  recentUserMessages: string[] = [],
 ): SupportedLocale {
   const fallback = resolveLocale(profileLocale ?? FALLBACK_LOCALE);
-  const cleaned = text.trim();
+  const cleaned = normalizeForDetection(text);
   if (!cleaned || !HAS_LETTERS.test(cleaned)) return fallback;
 
-  return (
-    localeFromScript(cleaned) ??
-    localeFromWordHints(cleaned) ??
-    localeFromFranc(cleaned) ??
-    fallback
-  );
+  const direct = detectWithoutFallback(text);
+  if (direct) return direct;
+
+  if (isAmbiguousShortMessage(cleaned)) {
+    for (let i = recentUserMessages.length - 1; i >= 0; i--) {
+      const prior = detectWithoutFallback(recentUserMessages[i] ?? "");
+      if (prior) return prior;
+    }
+  }
+
+  return fallback;
 }

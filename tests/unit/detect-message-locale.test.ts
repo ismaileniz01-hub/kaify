@@ -15,6 +15,16 @@ describe("detectMessageLocale", () => {
     expect(detectMessageLocale("hello how are you today", "tr")).toBe("en");
   });
 
+  it("detects English slang bro/broo even when profile locale is Spanish", () => {
+    expect(detectMessageLocale("broo...", "es")).toBe("en");
+    expect(detectMessageLocale("bro", "es-mx")).toBe("en");
+  });
+
+  it("inherits thread language for ambiguous short replies", () => {
+    const history = ["hello how are you today", "yeah I'm tired"];
+    expect(detectMessageLocale("ok", "es", history)).toBe("en");
+  });
+
   it("falls back to profile locale for emoji-only messages", () => {
     expect(detectMessageLocale("😊💪", "tr")).toBe("tr");
   });
