@@ -157,14 +157,6 @@ const ADMIN_SETTINGS_GROUP: { title: string; items: SettingItem[] } = {
       value: "settings.admin.hub.action",
       href: "/admin",
     },
-    {
-      icon: Bell,
-      label: "settings.admin.broadcast",
-      description: "settings.admin.broadcast.desc",
-      type: "link",
-      value: "settings.admin.broadcast.action",
-      href: "/admin/notifications",
-    },
   ],
 };
 

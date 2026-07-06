@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { AdminHubGate } from "@/components/admin/AdminHubGate";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { assertAdminMfa } from "@/lib/auth/admin-mfa";
 
 export default async function AdminLayout({
   children,
@@ -29,11 +29,5 @@ export default async function AdminLayout({
     redirect("/welcome");
   }
 
-  try {
-    await assertAdminMfa(supabase);
-  } catch {
-    redirect("/login/mfa");
-  }
-
-  return children;
+  return <AdminHubGate>{children}</AdminHubGate>;
 }

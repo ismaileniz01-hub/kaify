@@ -1,36 +1,11 @@
-import { assertAdminMfa } from "@/lib/auth/admin-mfa";
-import { requireUser, type AuthedUser } from "@/lib/api/auth-guard";
-import { ApiError } from "@/lib/api/errors";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { logger } from "@/lib/logger";
+import { assertAdminHubUnlocked, requireAdminRole } from "@/lib/api/admin-role";
+import type { AuthedUser } from "@/lib/api/auth-guard";
 
 /**
- * Ensures the current request is made by an authenticated user whose
- * `profiles.role = 'admin'`. Mirrors the DB-level `is_admin()` guard used by
- * RLS, so admin routes are protected on both the API and the data layer.
+ * Ensures admin role + hub password session (replaces MFA for operator UI).
  */
 export async function requireAdmin(): Promise<AuthedUser> {
-  const user = await requireUser();
-
-  const admin = createAdminSupabaseClient();
-  const { data, error } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (error) {
-    logger.error("[admin-guard] role lookup error", { error: error.message });
-    throw new ApiError("INTERNAL_ERROR", "Yetki doğrulanamadı.");
-  }
-
-  if (data?.role !== "admin") {
-    throw new ApiError("FORBIDDEN", "Bu işlem için yönetici yetkisi gerekir.");
-  }
-
-  const supabase = await createServerSupabaseClient();
-  await assertAdminMfa(supabase);
-
+  const user = await requireAdminRole();
+  await assertAdminHubUnlocked(user.id);
   return user;
 }
