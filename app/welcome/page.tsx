@@ -11,6 +11,7 @@ import { ProfileModal } from "@/components/ProfileModal";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { WelcomeSkeleton } from "@/components/welcome/WelcomeSkeleton";
 import { DailyMotivationQuote } from "@/components/welcome/DailyMotivationQuote";
+import { PendingGiftCard } from "@/components/gifts/PendingGiftCard";
 import { useSession } from "@/lib/session-context";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -145,6 +146,8 @@ function WelcomeContent() {
             />
           )}
         </section>
+
+        {isAuthenticated && <PendingGiftCard />}
 
         {/* Main cards — opaque with 3D shadows */}
         <section className="mt-8 px-4">

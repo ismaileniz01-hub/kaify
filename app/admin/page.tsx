@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { BellRing, Gift, Loader2, Send, User } from "lucide-react";
+import { BellRing, Gift, Loader2, Send, Snowflake, User } from "lucide-react";
 import { apiPost } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
 import { InlineAlert } from "@/components/InlineAlert";
+import { normalizeUserId } from "@/lib/utils/user-id";
 
 type Tab = "broadcast" | "single" | "gift";
+type GiftKind = "gems" | "freezie";
 
 type BroadcastResult = {
   broadcastId: string;
@@ -34,11 +36,12 @@ export default function AdminHubPage() {
   const [singleSuccess, setSingleSuccess] = useState(false);
 
   const [giftUserId, setGiftUserId] = useState("");
+  const [giftKind, setGiftKind] = useState<GiftKind>("gems");
   const [giftAmount, setGiftAmount] = useState("");
   const [giftReason, setGiftReason] = useState("");
   const [giftBusy, setGiftBusy] = useState(false);
   const [giftError, setGiftError] = useState<string | null>(null);
-  const [giftResult, setGiftResult] = useState<{ amount: number; balance: number } | null>(null);
+  const [giftSuccess, setGiftSuccess] = useState(false);
 
   const tabs: { id: Tab; label: string; icon: typeof BellRing }[] = [
     { id: "broadcast", label: t("admin.tab.broadcast"), icon: BellRing },
@@ -69,13 +72,14 @@ export default function AdminHubPage() {
   };
 
   const handleSingle = async () => {
-    if (!singleUserId.trim() || !singleTitle.trim() || !singleBody.trim() || singleBusy) return;
+    const userId = normalizeUserId(singleUserId);
+    if (!userId || !singleTitle.trim() || !singleBody.trim() || singleBusy) return;
     setSingleBusy(true);
     setSingleError(null);
     setSingleSuccess(false);
     try {
       await apiPost("/api/admin/notifications/send", {
-        userId: singleUserId.trim(),
+        userId,
         title: singleTitle.trim(),
         body: singleBody.trim(),
       });
@@ -88,18 +92,20 @@ export default function AdminHubPage() {
   };
 
   const handleGift = async () => {
+    const userId = normalizeUserId(giftUserId);
     const amount = Number(giftAmount);
-    if (!giftUserId.trim() || !Number.isFinite(amount) || amount < 1 || giftBusy) return;
+    if (!userId || !Number.isFinite(amount) || amount < 1 || giftBusy) return;
     setGiftBusy(true);
     setGiftError(null);
-    setGiftResult(null);
+    setGiftSuccess(false);
     try {
-      const res = await apiPost<{ amount: number; balance: number }>("/api/admin/gems/grant", {
-        userId: giftUserId.trim(),
+      await apiPost("/api/admin/gifts/send", {
+        userId,
+        rewardKind: giftKind,
         amount,
         ...(giftReason.trim() ? { reason: giftReason.trim() } : {}),
       });
-      setGiftResult(res);
+      setGiftSuccess(true);
     } catch {
       setGiftError(t("admin.gift.error"));
     } finally {
@@ -210,8 +216,7 @@ export default function AdminHubPage() {
                 type="text"
                 value={singleUserId}
                 onChange={(e) => setSingleUserId(e.target.value)}
-                placeholder={t("admin.single.user_id_ph")}
-                className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 font-mono text-sm text-white placeholder:text-zinc-600 focus:border-purple-500/50 focus:outline-none"
+                className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 font-mono text-sm text-white focus:border-purple-500/50 focus:outline-none"
               />
             </label>
 
@@ -242,7 +247,12 @@ export default function AdminHubPage() {
 
             <button
               type="button"
-              disabled={singleBusy || !singleUserId.trim() || !singleTitle.trim() || !singleBody.trim()}
+              disabled={
+                singleBusy ||
+                !normalizeUserId(singleUserId) ||
+                !singleTitle.trim() ||
+                !singleBody.trim()
+              }
               onClick={() => void handleSingle()}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 py-3 text-sm font-semibold disabled:opacity-50"
             >
@@ -262,10 +272,39 @@ export default function AdminHubPage() {
                 type="text"
                 value={giftUserId}
                 onChange={(e) => setGiftUserId(e.target.value)}
-                placeholder={t("admin.single.user_id_ph")}
-                className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 font-mono text-sm text-white placeholder:text-zinc-600 focus:border-purple-500/50 focus:outline-none"
+                className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 font-mono text-sm text-white focus:border-purple-500/50 focus:outline-none"
               />
             </label>
+
+            <div className="block">
+              <span className="text-xs font-medium text-zinc-400">{t("admin.gift.kind")}</span>
+              <div className="mt-1.5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setGiftKind("gems")}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2.5 text-xs font-medium transition ${
+                    giftKind === "gems"
+                      ? "border-amber-400/40 bg-amber-500/15 text-amber-200"
+                      : "border-white/10 bg-black/20 text-zinc-400"
+                  }`}
+                >
+                  <Gift className="h-3.5 w-3.5" />
+                  {t("admin.gift.kind_gems")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGiftKind("freezie")}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border py-2.5 text-xs font-medium transition ${
+                    giftKind === "freezie"
+                      ? "border-cyan-400/40 bg-cyan-500/15 text-cyan-200"
+                      : "border-white/10 bg-black/20 text-zinc-400"
+                  }`}
+                >
+                  <Snowflake className="h-3.5 w-3.5" />
+                  {t("admin.gift.kind_freezie")}
+                </button>
+              </div>
+            </div>
 
             <label className="block">
               <span className="text-xs font-medium text-zinc-400">{t("admin.gift.amount")}</span>
@@ -275,8 +314,7 @@ export default function AdminHubPage() {
                 max={100000}
                 value={giftAmount}
                 onChange={(e) => setGiftAmount(e.target.value)}
-                placeholder="100"
-                className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-purple-500/50 focus:outline-none"
+                className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white focus:border-purple-500/50 focus:outline-none"
               />
             </label>
 
@@ -287,25 +325,21 @@ export default function AdminHubPage() {
                 value={giftReason}
                 onChange={(e) => setGiftReason(e.target.value)}
                 maxLength={200}
-                placeholder={t("admin.gift.reason_ph")}
-                className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-purple-500/50 focus:outline-none"
+                className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white focus:border-purple-500/50 focus:outline-none"
               />
             </label>
 
             {giftError && <InlineAlert variant="error" message={giftError} />}
-            {giftResult && (
-              <InlineAlert
-                variant="success"
-                message={t("admin.gift.success", {
-                  amount: giftResult.amount,
-                  balance: giftResult.balance,
-                })}
-              />
-            )}
+            {giftSuccess && <InlineAlert variant="success" message={t("admin.gift.pending_success")} />}
 
             <button
               type="button"
-              disabled={giftBusy || !giftUserId.trim() || !giftAmount || Number(giftAmount) < 1}
+              disabled={
+                giftBusy ||
+                !normalizeUserId(giftUserId) ||
+                !giftAmount ||
+                Number(giftAmount) < 1
+              }
               onClick={() => void handleGift()}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 py-3 text-sm font-semibold disabled:opacity-50"
             >

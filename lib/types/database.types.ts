@@ -762,6 +762,30 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["admin_audit_log"]["Row"]>;
         Relationships: [];
       };
+      pending_gifts: {
+        Row: {
+          id: string;
+          user_id: string;
+          reward_kind: string;
+          amount: number;
+          reason: string;
+          granted_by: string | null;
+          claimed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          reward_kind: string;
+          amount: number;
+          reason?: string;
+          granted_by?: string | null;
+          claimed_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["pending_gifts"]["Row"]>;
+        Relationships: [];
+      };
       notifications: {
         Row: {
           id: string;
@@ -981,6 +1005,14 @@ export type Database = {
       };
       set_active_aura: {
         Args: { p_user_id: string; p_item_id: string };
+        Returns: Json;
+      };
+      grant_freezie: {
+        Args: { p_user_id: string; p_amount: number };
+        Returns: number;
+      };
+      claim_pending_gift: {
+        Args: { p_gift_id: string };
         Returns: Json;
       };
     };

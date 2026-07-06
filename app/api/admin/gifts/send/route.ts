@@ -3,18 +3,20 @@ import { ApiError } from "@/lib/api/errors";
 import { defineRoute } from "@/lib/api/route-handler";
 import { getClientIP } from "@/lib/api-security";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { earnGems } from "@/lib/services/gem.service";
 import { recordAdminAction } from "@/lib/services/audit.service";
+import { createPendingGift } from "@/lib/services/pending-gift.service";
+import { normalizeUserId } from "@/lib/utils/user-id";
 
 const schema = z.object({
-  userId: z.string().uuid(),
-  amount: z.number().int().min(1).max(100_000),
+  userId: z.string().min(1).max(128),
+  rewardKind: z.enum(["gems", "freezie"]),
+  amount: z.coerce.number().int().min(1).max(100_000),
   reason: z.string().trim().min(1).max(200).optional(),
 });
 
-/** POST /api/admin/gems/grant — credit gems to a user (admin gift). */
+/** POST /api/admin/gifts/send — queue a claimable gift for a user. */
 export const POST = defineRoute(
-  { route: "POST /api/admin/gems/grant", auth: "admin" },
+  { route: "POST /api/admin/gifts/send", auth: "admin" },
   async ({ user, request }) => {
     const raw = await request.json().catch(() => null);
     const parsed = schema.safeParse(raw);
@@ -22,11 +24,16 @@ export const POST = defineRoute(
       throw new ApiError("VALIDATION_ERROR", "Geçersiz hediye.", parsed.error.issues);
     }
 
+    const userId = normalizeUserId(parsed.data.userId);
+    if (!userId) {
+      throw new ApiError("VALIDATION_ERROR", "Geçerli bir kullanıcı ID girin.");
+    }
+
     const admin = createAdminSupabaseClient();
     const { data: target } = await admin
       .from("profiles")
-      .select("id, display_name")
-      .eq("id", parsed.data.userId)
+      .select("id")
+      .eq("id", userId)
       .maybeSingle();
 
     if (!target) {
@@ -34,34 +41,34 @@ export const POST = defineRoute(
     }
 
     const reason = parsed.data.reason?.trim() || "Admin hediyesi";
-    const idempotencyKey = `admin_grant:${user.id}:${parsed.data.userId}:${Date.now()}`;
-
-    const result = await earnGems({
-      userId: parsed.data.userId,
+    const gift = await createPendingGift({
+      userId,
+      rewardKind: parsed.data.rewardKind,
       amount: parsed.data.amount,
-      type: "admin_adjustment",
-      description: reason,
-      idempotencyKey,
-      metadata: { grantedBy: user.id },
+      reason,
+      grantedBy: user.id,
     });
 
     await recordAdminAction({
       adminId: user.id,
-      action: "gems.grant",
+      action: "gifts.send",
       targetType: "user",
-      targetId: parsed.data.userId,
+      targetId: userId,
       metadata: {
+        giftId: gift.id,
+        rewardKind: parsed.data.rewardKind,
         amount: parsed.data.amount,
         reason,
-        balance: result.balance,
       },
       ip: getClientIP(request),
     });
 
     return {
-      userId: parsed.data.userId,
-      amount: parsed.data.amount,
-      balance: result.balance,
+      giftId: gift.id,
+      userId,
+      rewardKind: gift.rewardKind,
+      amount: gift.amount,
+      pending: true,
     };
   },
 );

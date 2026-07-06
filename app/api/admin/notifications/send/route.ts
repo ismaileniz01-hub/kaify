@@ -6,8 +6,10 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { recordAdminAction } from "@/lib/services/audit.service";
 import { createNotification } from "@/lib/services/notifications.service";
 
+import { normalizeUserId } from "@/lib/utils/user-id";
+
 const schema = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().min(1).max(128),
   title: z.string().trim().min(1).max(120),
   body: z.string().trim().min(1).max(500),
 });
@@ -22,11 +24,16 @@ export const POST = defineRoute(
       throw new ApiError("VALIDATION_ERROR", "Geçersiz bildirim.", parsed.error.issues);
     }
 
+    const userId = normalizeUserId(parsed.data.userId);
+    if (!userId) {
+      throw new ApiError("VALIDATION_ERROR", "Geçerli bir kullanıcı ID girin.");
+    }
+
     const admin = createAdminSupabaseClient();
     const { data: target } = await admin
       .from("profiles")
       .select("id")
-      .eq("id", parsed.data.userId)
+      .eq("id", userId)
       .maybeSingle();
 
     if (!target) {
@@ -34,7 +41,7 @@ export const POST = defineRoute(
     }
 
     await createNotification({
-      userId: parsed.data.userId,
+      userId,
       type: "system",
       title: parsed.data.title,
       body: parsed.data.body,
@@ -44,11 +51,11 @@ export const POST = defineRoute(
       adminId: user.id,
       action: "notifications.send",
       targetType: "user",
-      targetId: parsed.data.userId,
+      targetId: userId,
       metadata: { title: parsed.data.title },
       ip: getClientIP(request),
     });
 
-    return { sent: true, userId: parsed.data.userId };
+    return { sent: true, userId };
   },
 );
