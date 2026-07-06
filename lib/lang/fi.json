@@ -276,6 +276,7 @@
   "chat.aria.photo": "Lisää valokuva",
   "chat.aria.voice": "Ääniviesti",
   "chat.aria.send": "Lähetä",
+  "chat.disclaimer.footer": "Valmentajat eivät ole lääkäreitä ja voivat erehtyä. Muista sovittaa liikunta ja ruokavalio itseesi.",
   "chat.aria.camera": "Kamera",
   "team_chat.title": "Kaikki valmentajat",
   "team_chat.subtitle": "Joukkueen chat",

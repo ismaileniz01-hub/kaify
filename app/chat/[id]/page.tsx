@@ -173,7 +173,7 @@ export default function ChatPage() {
                 userMessages={userMessages}
               />
             </div>
-            <footer className="relative z-30 px-3 pb-8 pt-2">
+            <footer className="relative z-30 px-3 pb-6 pt-2">
               <div className="glass-input flex items-center gap-2 rounded-full px-2 py-2">
                 {contactId !== "kai" && contactId !== "alex" && (
                   <button
@@ -210,6 +210,12 @@ export default function ChatPage() {
                   <Send className="h-4 w-4" />
                 </button>
               </div>
+              <p
+                role="note"
+                className="mt-2 px-2 text-center text-[10px] leading-snug text-zinc-500"
+              >
+                {t("chat.disclaimer.footer")}
+              </p>
             </footer>
           </>
         )}
