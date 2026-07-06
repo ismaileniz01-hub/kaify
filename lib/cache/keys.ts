@@ -8,6 +8,8 @@ export const CacheTTL = {
   leaderboardHot: 60,
   leaderboardStale: 3600,
   analyticsUser: 120,
+  analyticsUserStale: 1200,
+  avatarSigned: 1800,
   coachesCatalog: 3600,
   coachById: 3600,
   homeBundle: 300,
@@ -33,6 +35,7 @@ export const CacheKeys = {
   leaderboardCountry: (limit: number) => `lb:country:v1:${limit}`,
   leaderboardSnapshotKey: (kind: "global" | "country", limit: number, offset = 0) =>
     kind === "global" ? `global:${limit}:${offset}` : `country:${limit}`,
+  avatarSigned: (storagePath: string) => `avatar:signed:v1:${storagePath}`,
 } as const;
 
 /** Invalidate after analytics writes. */

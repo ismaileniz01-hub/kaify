@@ -1,13 +1,24 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { defineCronRoute } from "@/lib/api/route-handler";
 import { recordCronRun } from "@/lib/services/cron-monitor.service";
+import {
+  persistBackupVerification,
+  runBackupVerification,
+} from "@/lib/services/backup-verification.service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-/** GET /api/cron/cleanup — daily maintenance (Vercel Cron). */
+/** GET /api/cron/cleanup — daily maintenance + DR manifest (Vercel Cron). */
 export const GET = defineCronRoute("/api/cron/cleanup", async () => {
   try {
+    const backupResult = await runBackupVerification();
+    await persistBackupVerification(backupResult);
+    await recordCronRun("backup-verification", backupResult.status === "error" ? "error" : "ok", {
+      status: backupResult.status,
+      migrationVersion: backupResult.manifest.migrations.latestVersion,
+    });
+
     const admin = createAdminSupabaseClient();
 
     const { data: streakRows } = await admin
@@ -47,6 +58,11 @@ export const GET = defineCronRoute("/api/cron/cleanup", async () => {
 
     const payload = {
       ranAt: new Date().toISOString(),
+      backup: {
+        status: backupResult.status,
+        migrationVersion: backupResult.manifest.migrations.latestVersion,
+        errors: backupResult.errors,
+      },
       results: {
         teamChatUnlocked,
         expiredIdempotencyKeysDeleted: deletedKeys?.length ?? 0,

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { handleApiError, ok } from "@/lib/api/response";
+import { handleApiError, fail, ok } from "@/lib/api/response";
 import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
 import {
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const secret = process.env.LEMON_SQUEEZY_WEBHOOK_SECRET?.trim();
     if (!secret) {
       logger.error("billing.webhook secret not configured");
-      return ok({ received: false, reason: "not_configured" });
+      return fail(new ApiError("INTERNAL_ERROR", "Webhook yapılandırması eksik."));
     }
 
     const rawBody = await request.text();

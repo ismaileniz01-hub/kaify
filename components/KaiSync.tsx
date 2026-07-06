@@ -11,7 +11,7 @@ const SYNC_RETRY_MS = 5_000;
 
 /** Syncs Kai aura/owned effects from the server after login. */
 export function KaiSync() {
-  const { isAuthenticated, isLoading, streak } = useSession();
+  const { isAuthenticated, isLoading, streak, kai } = useSession();
   const { syncFromServer, unlockLevel, setStreak, resetGuestState } = useKai();
   const syncedRef = useRef(false);
   const wasAuthenticatedRef = useRef(false);
@@ -46,6 +46,10 @@ export function KaiSync() {
       syncedRef.current = true;
     };
 
+    if (kai) {
+      applyState(kai);
+    }
+
     const sync = () =>
       apiGet<KaiStateDTO>("/api/kai")
         .then(applyState)
@@ -53,7 +57,9 @@ export function KaiSync() {
           syncedRef.current = false;
         });
 
-    void sync();
+    if (!kai) {
+      void sync();
+    }
 
     const retry = window.setInterval(() => {
       if (syncedRef.current || cancelled) {
@@ -75,7 +81,7 @@ export function KaiSync() {
       window.clearInterval(retry);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [isAuthenticated, isLoading, syncFromServer, unlockLevel]);
+  }, [isAuthenticated, isLoading, syncFromServer, unlockLevel, kai]);
 
   return null;
 }

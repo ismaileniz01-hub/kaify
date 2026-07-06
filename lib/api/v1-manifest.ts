@@ -16,6 +16,7 @@ export const API_LEGACY_EXCLUDED_PREFIXES = [
 /** Canonical v1 routes — keep in sync with tests/architecture/v1-routes.test.ts */
 export const API_V1_ROUTES = [
   "/api/v1/check-in",
+  "/api/v1/session",
   "/api/v1/profile",
   "/api/v1/profile/export",
   "/api/v1/profile/avatar",

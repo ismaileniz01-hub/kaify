@@ -4,6 +4,7 @@ import { upstashHealth } from "@/lib/rate-limit";
 import { verifyCronSecret } from "@/lib/api/cron-auth";
 import { defineRouteRaw } from "@/lib/api/route-handler";
 import { logger } from "@/lib/logger";
+import { getDegradedState } from "@/lib/resilience/degraded-mode";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -23,6 +24,7 @@ type HealthBody = {
     storage: HealthCheck;
     rateLimiter: HealthCheck;
     ai: HealthCheck;
+    degradedMode: HealthCheck;
   };
 };
 
@@ -85,6 +87,22 @@ async function checkRateLimiter(): Promise<HealthCheck> {
   return health.ok ? { status: "ok" } : { status: "down", detail: "ping failed" };
 }
 
+async function checkDegradedMode(): Promise<HealthCheck> {
+  try {
+    const state = await getDegradedState();
+    if (!state.active) return { status: "ok" };
+    return {
+      status: "degraded",
+      detail: state.reason ?? "active since " + (state.since ?? "unknown"),
+    };
+  } catch (error) {
+    return {
+      status: "skipped",
+      detail: error instanceof Error ? error.message : "unknown",
+    };
+  }
+}
+
 function checkAi(): HealthCheck {
   const snapshots = getCircuitSnapshots();
   const open = snapshots.filter((s) => s.open).map((s) => s.provider);
@@ -128,14 +146,15 @@ export const GET = defineRouteRaw(
       );
     }
 
-    const [database, storage, rateLimiter] = await Promise.all([
+    const [database, storage, rateLimiter, degradedMode] = await Promise.all([
       checkDatabase(),
       checkStorage(),
       checkRateLimiter(),
+      checkDegradedMode(),
     ]);
     const ai = checkAi();
 
-    const checks = { database, storage, rateLimiter, ai };
+    const checks = { database, storage, rateLimiter, ai, degradedMode };
     const critical: CheckState[] = [database.status, rateLimiter.status];
     const isDown = critical.includes("down");
     const anyImpaired = Object.values(checks).some(

@@ -19,7 +19,7 @@ import { InlineAlert } from "@/components/InlineAlert";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
-import { apiGet, ApiClientError } from "@/lib/api/client";
+import { apiGet } from "@/lib/api/client";
 import type { UserSettingsDTO } from "@/lib/services/settings.service";
 import { getCountryName } from "@/lib/country-names";
 import type { CountryLeaderboardDTO } from "@/lib/types/domain.types";
@@ -65,6 +65,10 @@ function FlagImage({ flagCode, size = 40 }: { flagCode: string; size?: number })
 }
 
 // Sayı animasyonu: 0'dan hedef değere yükselme
+function formatStreak(value: number): string {
+  return value.toLocaleString();
+}
+
 function AnimatedNumber({ value, duration = 1500 }: { value: number; duration?: number }) {
   const [display, setDisplay] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
@@ -188,13 +192,6 @@ export default function LeaderboardPage() {
   const [leaderboardHidden, setLeaderboardHidden] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-    apiGet<UserSettingsDTO>("/api/settings")
-      .then((s) => setLeaderboardHidden(s.leaderboardOptOut))
-      .catch(() => undefined);
-  }, [isAuthenticated]);
-
-  useEffect(() => {
     if (!isAuthenticated) {
       fetch("/api/country-leaderboard")
         .then((res) => res.json())
@@ -206,8 +203,15 @@ export default function LeaderboardPage() {
       return;
     }
 
-    apiGet<{ leaderboard: CountryLeaderboardDTO[] }>("/api/leaderboard/country?limit=100")
-      .then((result) => {
+    let cancelled = false;
+
+    Promise.all([
+      apiGet<UserSettingsDTO>("/api/settings"),
+      apiGet<{ leaderboard: CountryLeaderboardDTO[] }>("/api/leaderboard/country?limit=100"),
+    ])
+      .then(([settings, result]) => {
+        if (cancelled) return;
+        setLeaderboardHidden(settings.leaderboardOptOut);
         const userCountry = profile?.countryCode.toLowerCase() ?? null;
         const leaderboard: CountryEntry[] = result.leaderboard.map((row) => ({
           countryCode: row.countryCode,
@@ -227,12 +231,13 @@ export default function LeaderboardPage() {
         });
         setLoading(false);
       })
-      .catch((error) => {
-        if (error instanceof ApiClientError) {
-          console.error("[leaderboard]", error.message);
-        }
-        setLoading(false);
+      .catch(() => {
+        if (!cancelled) setLoading(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [isAuthenticated, profile?.countryCode]);
 
   return (
@@ -375,7 +380,7 @@ export default function LeaderboardPage() {
                           <div className="flex items-center gap-1.5">
                             <Flame className="h-3.5 w-3.5 text-orange-400/70 transition-all duration-300 group-hover:scale-125 group-hover:text-orange-300" />
                             <span className="text-sm font-bold text-orange-300">
-                              <AnimatedNumber value={entry.totalStreak} duration={2000} />
+                              {formatStreak(entry.totalStreak)}
                             </span>
                           </div>
                         </div>

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { assertAdminMfa } from "@/lib/auth/admin-mfa";
 
 export default async function AdminLayout({
   children,
@@ -28,14 +29,9 @@ export default async function AdminLayout({
     redirect("/welcome");
   }
 
-  const { data: aal, error: aalError } =
-    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-
-  if (aalError) {
-    redirect("/login/mfa");
-  }
-
-  if (aal?.nextLevel === "aal2" && aal?.currentLevel !== "aal2") {
+  try {
+    await assertAdminMfa(supabase);
+  } catch {
     redirect("/login/mfa");
   }
 

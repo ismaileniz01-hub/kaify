@@ -29,6 +29,7 @@ export const CASCADE_ON_DELETE_TABLES: readonly DeletionTableSpec[] = [
   { table: "user_market_inventory", column: "user_id", behavior: "cascade", notes: "" },
   { table: "user_settings", column: "user_id", behavior: "cascade", notes: "" },
   { table: "referral_events", column: "referrer_id", behavior: "cascade", notes: "" },
+  { table: "streak_gem_claims", column: "user_id", behavior: "cascade", notes: "" },
   { table: "consent_records", column: "user_id", behavior: "cascade", notes: "" },
   { table: "consent_revocations", column: "user_id", behavior: "cascade", notes: "" },
   { table: "notifications", column: "user_id", behavior: "cascade", notes: "" },

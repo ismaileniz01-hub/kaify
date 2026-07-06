@@ -76,6 +76,8 @@ flowchart LR
 - [autoscaling-runbook.md](./autoscaling-runbook.md)
 - [supavisor-pooling.md](./supavisor-pooling.md)
 - [RUNBOOK.md](../RUNBOOK.md)
+- [Reliability track](../reliability/README.md)
+- [Enterprise scorecard](../enterprise/README.md)
 - [Supabase Postgres best practices](https://supabase.com/docs/guides/database/postgres)
 
 Contact: support@kaifyai.org

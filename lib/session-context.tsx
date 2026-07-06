@@ -27,6 +27,8 @@ import type { CheckInDTO } from "@/lib/types/domain.types";
 import type { HomeDTO } from "@/lib/services/home.service";
 import type { GemBalanceDTO } from "@/lib/services/gem-balance.service";
 import type { StreakStatusDTO } from "@/lib/services/streak-status.service";
+import type { KaiStateDTO } from "@/lib/services/kai-state.service";
+import type { SessionBundleDTO } from "@/lib/services/session.service";
 import type { ProfileUpdateInput } from "@/lib/validations/profile.schema";
 
 type SessionContextValue = {
@@ -41,6 +43,7 @@ type SessionContextValue = {
   gemBalance: GemBalanceDTO;
   streak: StreakStatusDTO;
   home: HomeDTO | null;
+  kai: KaiStateDTO | null;
   referralCode: string;
   refreshSession: () => Promise<void>;
   updateProfile: (form: UserProfile) => Promise<void>;
@@ -63,21 +66,6 @@ const DEFAULT_STREAK: StreakStatusDTO = {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
-async function loadCoreSession(): Promise<{
-  profile: ProfileDTO;
-  gems: GemBalanceDTO;
-  streak: StreakStatusDTO;
-  referral: { referralCode: string };
-}> {
-  const [profile, gems, streak, referral] = await Promise.all([
-    apiGet<ProfileDTO>("/api/profile"),
-    apiGet<GemBalanceDTO>("/api/gems"),
-    apiGet<StreakStatusDTO>("/api/streak"),
-    apiGet<{ referralCode: string }>("/api/referral"),
-  ]);
-  return { profile, gems, streak, referral };
-}
-
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasHydrated, setHasHydrated] = useState(false);
@@ -88,6 +76,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [gemBalance, setGemBalance] = useState<GemBalanceDTO>(DEFAULT_GEMS);
   const [streak, setStreak] = useState<StreakStatusDTO>(DEFAULT_STREAK);
   const [home, setHome] = useState<HomeDTO | null>(null);
+  const [kai, setKai] = useState<KaiStateDTO | null>(null);
   const [referralCode, setReferralCode] = useState("");
   const [sessionError, setSessionError] = useState(false);
 
@@ -109,6 +98,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setGemBalance(DEFAULT_GEMS);
         setStreak(DEFAULT_STREAK);
         setHome(null);
+        setKai(null);
         setReferralCode("");
         return;
       }
@@ -122,11 +112,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setGemBalance(DEFAULT_GEMS);
         setStreak(DEFAULT_STREAK);
         setHome(null);
+        setKai(null);
         setReferralCode("");
         return;
       }
 
-      const bundle = await loadCoreSession();
+      const bundle = await apiGet<SessionBundleDTO>("/api/session");
       setIsAuthenticated(true);
       setIsPreviewMode(false);
       setProfile(bundle.profile);
@@ -134,10 +125,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setGemBalance(bundle.gems);
       setStreak(bundle.streak);
       setReferralCode(bundle.referral.referralCode);
-
-      void apiGet<HomeDTO>("/api/home")
-        .then((homeData) => setHome(homeData))
-        .catch(() => setHome(null));
+      setHome(bundle.home);
+      setKai(bundle.kai);
     } catch (error) {
       if (error instanceof ApiClientError && error.code === "UNAUTHORIZED") {
         setIsAuthenticated(false);
@@ -197,9 +186,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       lastCheckInDate: result.checkedInDate,
       kaiUnlockedLevel: result.kaiUnlockedLevel,
     }));
-    await refreshSession();
+    void apiGet<HomeDTO>("/api/home")
+      .then((homeData) => setHome(homeData))
+      .catch(() => undefined);
     return result;
-  }, [refreshSession]);
+  }, []);
 
   const displayName = useMemo(
     () =>
@@ -222,6 +213,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       gemBalance,
       streak,
       home,
+      kai,
       referralCode,
       refreshSession,
       updateProfile,
@@ -239,6 +231,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       gemBalance,
       streak,
       home,
+      kai,
       referralCode,
       refreshSession,
       updateProfile,

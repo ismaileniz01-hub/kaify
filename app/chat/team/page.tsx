@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { ChatMessageText } from "@/components/chat/ChatMessageText";
 import { ArrowLeft, Send, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { InlineAlert } from "@/components/InlineAlert";
@@ -170,7 +171,7 @@ export default function TeamChatPage() {
                 }}
               >
                 <p className="mb-0.5 text-[10px] font-bold text-zinc-400">{c.name}</p>
-                <p>{msg.text}</p>
+                <ChatMessageText text={msg.text} className="" />
                 <p className="mt-1 text-[10px] text-zinc-600">{msg.time}</p>
               </div>
             </div>

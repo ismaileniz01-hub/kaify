@@ -9,7 +9,8 @@ export type CronJobName =
   | "notifications"
   | "retention-purge"
   | "outbox"
-  | "leaderboard-snapshot";
+  | "leaderboard-snapshot"
+  | "backup-verification";
 
 export type CronRunStatus = "ok" | "error";
 

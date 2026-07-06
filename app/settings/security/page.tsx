@@ -324,7 +324,7 @@ export default function SecuritySettingsPage() {
               maxLength={6}
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-              placeholder="000000"
+              placeholder={t("mfa.enroll.code_placeholder")}
               className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-center text-lg tracking-widest"
             />
             <button
@@ -342,9 +342,9 @@ export default function SecuritySettingsPage() {
         {message && <p className="text-sm text-emerald-400">{message}</p>}
 
         <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
-          <p className="font-semibold">Oturum yönetimi</p>
+          <p className="font-semibold">{t("settings.security.sessions.title")}</p>
           <p className="mt-1 text-sm text-zinc-400">
-            Kayıp cihaz veya şüpheli erişim durumunda diğer oturumları kapatın.
+            {t("settings.security.sessions.desc")}
           </p>
           <div className="mt-4 flex flex-col gap-2">
             <button
@@ -353,7 +353,7 @@ export default function SecuritySettingsPage() {
               disabled={loading}
               className="w-full rounded-xl border border-white/10 py-3 text-sm font-medium disabled:opacity-50"
             >
-              Diğer cihazlardaki oturumları kapat
+              {t("settings.security.sessions.revoke_others")}
             </button>
             <button
               type="button"
@@ -361,7 +361,7 @@ export default function SecuritySettingsPage() {
               disabled={loading}
               className="w-full rounded-xl border border-red-500/30 py-3 text-sm text-red-300 disabled:opacity-50"
             >
-              Tüm oturumları kapat (çıkış yap)
+              {t("settings.security.sessions.revoke_all")}
             </button>
           </div>
         </section>
@@ -404,9 +404,9 @@ export default function SecuritySettingsPage() {
           <div className="flex items-start gap-3">
             <Download className="mt-0.5 h-6 w-6 text-zinc-400" />
             <div className="flex-1">
-              <p className="font-semibold">Veri dışa aktarma</p>
+              <p className="font-semibold">{t("settings.export.title")}</p>
               <p className="mt-1 text-sm text-zinc-400">
-                KVKK/GDPR kapsamında hesabınızdaki tüm verileri JSON olarak indirin.
+                {t("settings.export.desc")}
               </p>
             </div>
           </div>
@@ -416,7 +416,7 @@ export default function SecuritySettingsPage() {
             disabled={loading}
             className="mt-4 w-full rounded-xl border border-white/10 py-3 text-sm font-medium disabled:opacity-50"
           >
-            JSON indir
+            {t("settings.export.action")}
           </button>
         </section>
 

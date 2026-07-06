@@ -22,6 +22,7 @@ export const USER_EXPORT_TABLES: readonly ExportTableSpec[] = [
   { table: "user_market_inventory", column: "user_id", description: "Purchased market items" },
   { table: "user_settings", column: "user_id", description: "Notification and display preferences" },
   { table: "referral_events", column: "referrer_id", description: "Referral reward events you triggered" },
+  { table: "streak_gem_claims", column: "user_id", description: "Streak milestone gem reward claims" },
   { table: "consent_records", column: "user_id", description: "Legal and AI consent acceptance log" },
   { table: "consent_revocations", column: "user_id", description: "Consent withdrawal log" },
   { table: "notifications", column: "user_id", description: "In-app notifications" },
@@ -34,7 +35,7 @@ export const USER_EXPORT_TABLES: readonly ExportTableSpec[] = [
   { table: "data_export_logs", column: "user_id", description: "History of your data export requests" },
 ] as const;
 
-export const EXPORT_SCHEMA_VERSION = "2026-07-05";
+export const EXPORT_SCHEMA_VERSION = "2026-07-06";
 
 export function exportSchemaReadme(): Record<string, string> {
   return Object.fromEntries(

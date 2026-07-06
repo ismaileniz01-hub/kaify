@@ -72,5 +72,8 @@ Full gate checklist: [verification-2026-07.md](./verification-2026-07.md)
 - [developer-onboarding.md](./developer-onboarding.md)
 - [api-versioning.md](./api-versioning.md)
 - [Scalability track](../scalability/README.md)
+- [Reliability track](../reliability/README.md)
+- [Sustainability track](../sustainability/README.md)
+- [Enterprise scorecard](../enterprise/README.md)
 
 Contact: support@kaifyai.org

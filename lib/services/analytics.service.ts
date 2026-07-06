@@ -322,7 +322,8 @@ export async function getAnalyticsBundle(userId: string): Promise<AnalyticsBundl
   );
 }
 
-async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBundleDTO> {
+/** Uncached loader — use from HTTP routes wrapped in cachedWithStale. */
+export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBundleDTO> {
   const readClient = await createAnalyticsReadClient();
   const timezone = await resolveUserTimezone(userId);
   const today = localTodayDate(timezone);

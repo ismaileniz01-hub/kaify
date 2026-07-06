@@ -175,7 +175,7 @@ async function main() {
   const allCodes = readdirSync(LANG_DIR)
     .filter((f) => f.endsWith(".json"))
     .map((f) => f.replace(/\.json$/, ""))
-    .filter((c) => c !== SOURCE);
+    .filter((c) => c !== SOURCE && c !== "zh"); // orphan legacy file
 
   let targets = allCodes;
   const localeArg = args.indexOf("--locale");
@@ -190,14 +190,23 @@ async function main() {
   console.log(`Source: en.json (${Object.keys(source).length} keys)`);
   console.log(`Targets: ${targets.length} locale(s)${dry ? " [dry run]" : ""}\n`);
 
+  let incomplete = 0;
   for (const code of targets) {
     try {
+      const target = readJson(code);
+      const missing = Object.keys(source).filter((k) => target[k] === undefined);
+      if (missing.length > 0) incomplete++;
       await fillLocale(code, source, dry);
     } catch (err) {
       console.error(`✗ ${code}: ${err.message}`);
+      incomplete++;
     }
   }
   console.log("\nDone.");
+  if (dry && incomplete > 0) {
+    console.error(`\ni18n parity failed: ${incomplete} locale(s) missing keys. Run: npm run i18n:fill`);
+    process.exit(1);
+  }
 }
 
 main();

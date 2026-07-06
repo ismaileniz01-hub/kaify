@@ -21,6 +21,69 @@ export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
 export const FALLBACK_LOCALE: SupportedLocale = "en";
 
+/** Human-readable names for AI copy prompts (subset mirrors scripts/i18n-fill.mjs). */
+export const LOCALE_DISPLAY_NAMES: Record<SupportedLocale, string> = {
+  tr: "Turkish",
+  en: "English",
+  de: "German",
+  fr: "French",
+  es: "Spanish (Spain)",
+  "es-mx": "Spanish (Mexico)",
+  "es-ar": "Spanish (Argentina)",
+  it: "Italian",
+  pt: "Portuguese",
+  nl: "Dutch",
+  ru: "Russian",
+  pl: "Polish",
+  ro: "Romanian",
+  el: "Greek",
+  sv: "Swedish",
+  cs: "Czech",
+  hu: "Hungarian",
+  uk: "Ukrainian",
+  da: "Danish",
+  no: "Norwegian",
+  fi: "Finnish",
+  lt: "Lithuanian",
+  lv: "Latvian",
+  et: "Estonian",
+  sk: "Slovak",
+  sl: "Slovenian",
+  hr: "Croatian",
+  bg: "Bulgarian",
+  sr: "Serbian",
+  is: "Icelandic",
+  mt: "Maltese",
+  sq: "Albanian",
+  bs: "Bosnian",
+  mk: "Macedonian",
+  be: "Belarusian",
+  lb: "Luxembourgish",
+  kk: "Kazakh",
+  uz: "Uzbek",
+  az: "Azerbaijani",
+  ar: "Arabic",
+  he: "Hebrew",
+  fa: "Persian",
+  ur: "Urdu",
+  af: "Afrikaans",
+  yo: "Yoruba",
+  hi: "Hindi",
+  "zh-CN": "Simplified Chinese",
+  ja: "Japanese",
+  ko: "Korean",
+  vi: "Vietnamese",
+  th: "Thai",
+  id: "Indonesian",
+  ms: "Malay",
+  bn: "Bengali",
+};
+
+export function localeDisplayName(input?: string | null): string {
+  const code = resolveLocale(input);
+  return LOCALE_DISPLAY_NAMES[code] ?? code;
+}
+
 /**
  * Maps an arbitrary locale tag (e.g. "es-419", "PT-BR", "zh-Hant") to the best
  * available dictionary: exact match first, then the base language, else English.

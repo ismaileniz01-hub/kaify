@@ -1,25 +1,58 @@
-# K.aify — Mobil Sohbet Prototipi
+# Kaify
 
-Next.js, Tailwind CSS ve Lucide React ile hazırlanmış görsel taslak. Backend veya gerçek kimlik doğrulama yoktur.
+AI fitness coach (Kai) — Next.js 15, Supabase, Vercel.
 
-## Sayfalar
+Production: **https://kaifyai.org**
 
-- `/` — Giriş ekranı (Google simgesi, **K.aify** markası)
-- `/chat` — Sohbet ekranı (mor/siyah tema, Kai avatarı, balonlar, mesaj girişi)
+## Stack
 
-## Kurulum
+| Layer | Technology |
+|-------|------------|
+| Web + API | Next.js 15 (App Router) on Vercel |
+| Database / Auth | Supabase (Postgres 17, RLS, OTP auth) |
+| Cache / rate limit | Upstash Redis |
+| AI | DeepSeek + Gemini (quota-gated, circuit breakers) |
+| Mobile | Capacitor (iOS / Android) |
+| Observability | Sentry, structured logging |
 
-Node.js 18+ gerekir.
+## Quick start
+
+Node.js 20+ required.
 
 ```bash
-cd kaify
 npm install
+cp .env.example .env.local   # fill Supabase + Upstash keys
 npm run dev
 ```
 
-Tarayıcıda [http://localhost:3000](http://localhost:3000) adresini açın. Girişte **Prototipi önizle** veya `/chat` ile sohbet ekranına geçin.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Notlar
+Full setup: [docs/architecture/developer-onboarding.md](docs/architecture/developer-onboarding.md)
 
-- Masaüstünde uygulama telefon çerçevesi içinde gösterilir.
-- Tüm metinler ve placeholder statiktir; API bağlantısı yoktur.
+## Scripts
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Local dev server |
+| `npm run ci` | Full quality gate (lint, typecheck, tests, build) |
+| `npm run test` | Vitest unit + integration |
+| `npm run load-test:k6` | k6 smoke against local or prod |
+
+## Documentation
+
+| Track | README |
+|-------|--------|
+| Enterprise scorecard | [docs/enterprise/README.md](docs/enterprise/README.md) |
+| Architecture | [docs/architecture/README.md](docs/architecture/README.md) |
+| Scalability | [docs/scalability/README.md](docs/scalability/README.md) |
+| Reliability | [docs/reliability/README.md](docs/reliability/README.md) |
+| Sustainability | [docs/sustainability/README.md](docs/sustainability/README.md) |
+| Compliance | [docs/compliance/README.md](docs/compliance/README.md) |
+| Security | [docs/SECURITY.md](docs/SECURITY.md) |
+| Operations | [docs/RUNBOOK.md](docs/RUNBOOK.md) |
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Contact: support@kaifyai.org · Privacy: privacy@kaifyai.org

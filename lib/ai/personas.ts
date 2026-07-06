@@ -268,7 +268,7 @@ export function buildChatSystemPrompt(params: ChatSystemParams): string {
     "",
     ...(params.coachId === "kai" ? [buildKaiAccountabilityRules(params.locale), ""] : []),
     `Your name is ${params.coachName}.`,
-    `Always reply in the user's language (locale: "${params.locale}") — sound like a native speaker, not a translation.`,
+    `Match the language of the user's latest message. If they write in German, reply entirely in German — even when their app locale is "${params.locale}". Use app locale "${params.locale}" only when the message language is unclear (emoji only, numbers, or no readable text). Sound like a native speaker, not a translation.`,
   ];
   if (params.stateSummary && params.stateSummary.trim().length > 0) {
     // Context is derived from user-controlled fields -> treat as untrusted data.

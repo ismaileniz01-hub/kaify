@@ -1,4 +1,6 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { cacheGet, cacheSet } from "@/lib/cache";
+import { CacheKeys, CacheTTL } from "@/lib/cache/keys";
 import { logger } from "@/lib/logger";
 
 const BUCKET = "avatars";
@@ -40,6 +42,20 @@ export async function createSignedAvatarUrlsBatch(
   if (uniquePaths.size === 0) return result;
 
   const paths = [...uniquePaths.keys()];
+  const uncachedPaths: string[] = [];
+
+  for (const path of paths) {
+    const cachedUrl = await cacheGet<string>(CacheKeys.avatarSigned(path));
+    if (cachedUrl) {
+      const originalRef = uniquePaths.get(path);
+      if (originalRef) result.set(originalRef, cachedUrl);
+    } else {
+      uncachedPaths.push(path);
+    }
+  }
+
+  if (uncachedPaths.length === 0) return result;
+
   const admin = createAdminSupabaseClient();
   const bucket = admin.storage.from(BUCKET);
 
@@ -50,13 +66,18 @@ export async function createSignedAvatarUrlsBatch(
     ) => Promise<{ data: { path: string; signedUrl: string }[] | null; error: Error | null }>;
   };
 
+  const storeSigned = async (path: string, signedUrl: string) => {
+    const originalRef = uniquePaths.get(path);
+    if (originalRef) result.set(originalRef, signedUrl);
+    await cacheSet(CacheKeys.avatarSigned(path), signedUrl, CacheTTL.avatarSigned);
+  };
+
   if (typeof batchApi.createSignedUrls === "function") {
-    const { data, error } = await batchApi.createSignedUrls(paths, SIGNED_URL_TTL_SEC);
+    const { data, error } = await batchApi.createSignedUrls(uncachedPaths, SIGNED_URL_TTL_SEC);
     if (!error && data) {
       for (const item of data) {
         if (!item.path || !item.signedUrl) continue;
-        const originalRef = uniquePaths.get(item.path);
-        if (originalRef) result.set(originalRef, item.signedUrl);
+        await storeSigned(item.path, item.signedUrl);
       }
       return result;
     }
@@ -68,7 +89,7 @@ export async function createSignedAvatarUrlsBatch(
   }
 
   const signed = await Promise.all(
-    paths.map(async (path) => {
+    uncachedPaths.map(async (path) => {
       const { data, error } = await bucket.createSignedUrl(path, SIGNED_URL_TTL_SEC);
       if (error) {
         logger.warn("[avatar-storage] signed url failed", { path, error: error.message });
@@ -80,8 +101,7 @@ export async function createSignedAvatarUrlsBatch(
 
   for (const item of signed) {
     if (!item?.signedUrl) continue;
-    const originalRef = uniquePaths.get(item.path);
-    if (originalRef) result.set(originalRef, item.signedUrl);
+    await storeSigned(item.path, item.signedUrl);
   }
 
   return result;
@@ -97,6 +117,9 @@ export async function createSignedAvatarUrl(
   const path = normalizeAvatarStorageRef(stored);
   if (!path) return null;
 
+  const cachedUrl = await cacheGet<string>(CacheKeys.avatarSigned(path));
+  if (cachedUrl) return cachedUrl;
+
   const admin = createAdminSupabaseClient();
   const { data, error } = await admin.storage
     .from(BUCKET)
@@ -107,6 +130,7 @@ export async function createSignedAvatarUrl(
     return null;
   }
 
+  await cacheSet(CacheKeys.avatarSigned(path), data.signedUrl, CacheTTL.avatarSigned);
   return data.signedUrl;
 }
 

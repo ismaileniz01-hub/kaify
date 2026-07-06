@@ -694,6 +694,26 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["cron_job_runs"]["Row"]>;
         Relationships: [];
       };
+      backup_verification_runs: {
+        Row: {
+          id: string;
+          ran_at: string;
+          status: "ok" | "error" | "degraded";
+          migration_count: number | null;
+          manifest: Json;
+          detail: string | null;
+        };
+        Insert: {
+          id?: string;
+          ran_at?: string;
+          status: "ok" | "error" | "degraded";
+          migration_count?: number | null;
+          manifest?: Json;
+          detail?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["backup_verification_runs"]["Row"]>;
+        Relationships: [];
+      };
       idempotency_keys: {
         Row: {
           id: string;

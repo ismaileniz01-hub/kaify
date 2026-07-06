@@ -13,6 +13,7 @@ Last updated: 2026-07-05 · Scalability Faz 1
 
 | Endpoint | p95 target | Primary cost |
 |----------|------------|--------------|
+| `GET /api/session` | 400 ms | 6 parallel reads (bootstrap bundle) |
 | `GET /api/home` | 500 ms | 3 DB reads + optional AI (cached daily) |
 | `GET /api/analytics` | 400 ms | 4–6 DB reads (cached 120s) |
 | `GET /api/leaderboard` | 200 ms | Redis hit or RPC + avatar sign |
@@ -37,6 +38,7 @@ Last updated: 2026-07-05 · Scalability Faz 1
 | `market:items:v2` | 300s | Admin catalog change |
 | `lb:global:v1:*` | 60s hot / 3600s stale | TTL |
 | `analytics:bundle:v1:{userId}` | 120s | Write + patch |
+| `avatar:signed:v1:{path}` | 1800s | TTL |
 | `analytics:today:v1:{userId}` | 120s | Write + patch |
 
 ## Cron throughput

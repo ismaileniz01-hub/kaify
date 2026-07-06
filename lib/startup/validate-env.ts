@@ -49,6 +49,9 @@ export function validateEnvAtBoot(): void {
     if (isProd && !hasUpstash) {
       problems.push("UPSTASH_REDIS_REST_URL/TOKEN missing in production (rate limits fail-closed)");
     }
+    if (isProd && (!process.env.CRON_SECRET || process.env.CRON_SECRET.includes("your_"))) {
+      problems.push("CRON_SECRET missing or placeholder in production");
+    }
     logger.warn("env validation: optional vars missing/placeholder", {
       missing: missingSoft,
     });

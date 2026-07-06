@@ -9,6 +9,7 @@ import type { MessageType } from "@/lib/types/database.types";
 import type { ContactId } from "@/lib/contacts";
 import { CONTACTS } from "@/lib/contacts";
 import { ChatRichCard } from "@/components/chat/ChatRichCard";
+import { ChatMessageText } from "@/components/chat/ChatMessageText";
 import { InlineAlert } from "@/components/InlineAlert";
 import { LegalDisclaimerBanner } from "@/components/consent/LegalDisclaimerBanner";
 import { PhotoAnalyzeConsentModal } from "@/components/consent/PhotoAnalyzeConsentModal";
@@ -59,6 +60,8 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const streamTextRef = useRef("");
+  const streamRafRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,6 +127,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     abortRef.current?.abort();
     abortRef.current = new AbortController();
     onCoachTyping?.(true);
+    streamTextRef.current = "";
 
     try {
       await streamChatMessage(
@@ -131,13 +135,19 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         text,
         {
           onDelta: (content) => {
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === coachMsgId
-                  ? { ...msg, text: msg.text + content, streaming: true }
-                  : msg,
-              ),
-            );
+            streamTextRef.current += content;
+            if (streamRafRef.current !== null) return;
+            streamRafRef.current = window.requestAnimationFrame(() => {
+              streamRafRef.current = null;
+              const nextText = streamTextRef.current;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === coachMsgId
+                    ? { ...msg, text: nextText, streaming: true }
+                    : msg,
+                ),
+              );
+            });
           },
           onDone: (data) => {
             if (data.warning_trigger === "LIMIT_80" || data.warning_trigger === "LIMIT_100") {
@@ -385,7 +395,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                             }
                       }
                     >
-                      <p className="whitespace-pre-wrap">{msg.text}</p>
+                      <ChatMessageText text={msg.text} />
                       <p className="mt-1 text-[10px] opacity-60">{msg.time}</p>
                     </div>
                     {isCoach && msg.messageType && msg.payload != null ? (

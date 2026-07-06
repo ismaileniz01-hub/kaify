@@ -96,7 +96,7 @@ export default function LoginPage() {
         <div className="flex w-full max-w-xs flex-col gap-4">
           {sent ? (
             <p className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-center text-sm text-emerald-200">
-              E-postana giriş bağlantısı gönderildi. Linke tıklayarak devam et.
+              {t("login.magic_link.sent")}
             </p>
           ) : (
             <>
@@ -106,7 +106,7 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="E-posta adresin"
+                  placeholder={t("login.email_placeholder")}
                   className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none"
                 />
               </div>
@@ -116,7 +116,7 @@ export default function LoginPage() {
                 disabled={loading || !email.trim()}
                 className="flex w-full items-center justify-center gap-3 rounded-full bg-white px-6 py-4 text-sm font-semibold text-zinc-900 shadow-xl disabled:opacity-50"
               >
-                {loading ? "Gönderiliyor…" : "Magic Link ile Giriş"}
+                {loading ? t("login.magic_link.loading") : t("login.magic_link.submit")}
                 <ArrowRight className="h-5 w-5" />
               </button>
             </>

@@ -64,6 +64,7 @@ export async function middleware(request: NextRequest) {
 
   if (
     pathname.startsWith("/api/") &&
+    !pathname.startsWith("/api/webhooks/") &&
     ["POST", "PUT", "DELETE", "PATCH"].includes(request.method) &&
     !isAllowedOrigin(request)
   ) {

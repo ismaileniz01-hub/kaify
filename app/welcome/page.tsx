@@ -10,6 +10,7 @@ import { GemBalance } from "@/components/GemBalance";
 import { ProfileModal } from "@/components/ProfileModal";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { WelcomeSkeleton } from "@/components/welcome/WelcomeSkeleton";
+import { DailyMotivationQuote } from "@/components/welcome/DailyMotivationQuote";
 import { useSession } from "@/lib/session-context";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -120,7 +121,10 @@ function WelcomeContent() {
             {t("welcome.title", { name: displayName })}
           </h1>
           <p className="mt-4 max-w-[280px] text-sm font-medium leading-relaxed text-purple-100/80">
-            {home?.motivation ?? t("welcome.subtitle")}
+            <DailyMotivationQuote
+              serverQuote={home?.motivation}
+              fallback={t("welcome.subtitle")}
+            />
           </p>
           {isPreviewMode && (
             <div className="mt-3 space-y-2">

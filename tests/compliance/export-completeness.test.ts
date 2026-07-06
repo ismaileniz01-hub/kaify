@@ -16,6 +16,7 @@ const REQUIRED_EXPORT_TABLES = [
   "user_market_inventory",
   "user_settings",
   "referral_events",
+  "streak_gem_claims",
   "consent_records",
   "consent_revocations",
   "notifications",

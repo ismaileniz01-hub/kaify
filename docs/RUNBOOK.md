@@ -97,19 +97,26 @@ After changing an env var in Vercel, **redeploy** for it to take effect.
 
 ## 6. Scheduled jobs
 
-- **Notifications** — Supabase `pg_cron`, every 2h, calls
+All times **UTC**. Vercel Hobby plan limits crons to **once daily** — see [`vercel.json`](../vercel.json).
+
+| Job | Schedule | Path | Notes |
+|-----|----------|------|-------|
+| Retention purge | Sun 02:00 | `/api/cron/retention-purge` | GDPR automated purge |
+| **Cleanup + backup manifest** | Daily 03:00 | `/api/cron/cleanup` | Idempotency prune + **DR row-count snapshot** |
+| Cost check | Daily 04:00 | `/api/cron/cost-check` | AI spend anomaly |
+| Self-recovery | Daily 05:00 | `/api/cron/self-recovery` | DB probe, clear degraded mode |
+| Notifications | Daily 06:00 | `/api/cron/notifications` | Also pg_cron every 2h (see below) |
+| Outbox | Daily 07:00 | `/api/cron/outbox` | Domain event processor |
+| Leaderboard snapshot | Daily 08:00 | `/api/cron/leaderboard-snapshot` | Warm Redis leaderboard |
+
+Manual backup manifest: `GET /api/cron/backup-verification` with `CRON_SECRET`.
+
+**Disaster recovery:** see [`docs/operations/disaster-recovery.md`](./operations/disaster-recovery.md).
+
+- **Notifications (pg_cron)** — Supabase `pg_cron`, every 2h, calls
   `GET /api/cron/notifications` with `Authorization: Bearer $CRON_SECRET` via
   `pg_net` (30s timeout). Timezone-aware, paginates profiles in pages of 1000,
   dedup keys make re-runs idempotent.
-- **Cleanup** — Vercel Cron `GET /api/cron/cleanup` (daily 03:00 UTC): prunes
-  expired idempotency keys, etc.
-- **Cost check** — Vercel Cron `GET /api/cron/cost-check` (every 6h): compares
-  today's AI spend vs 7-day average, flags heavy users and quota blocks into
-  `cost_alerts`.
-- **Self-recovery** — Vercel Cron `GET /api/cron/self-recovery` (every 15m):
-  probes DB and clears degraded mode / open circuit breakers when healthy.
-- **Leaderboard snapshot** — Vercel Cron `GET /api/cron/leaderboard-snapshot` (every 15m):
-  refreshes `leaderboard_snapshots` and warms Redis leaderboard keys.
 
 Check pg_cron status in Supabase SQL editor:
 
@@ -173,3 +180,13 @@ npm run dev
 
 Before pushing: `npm run ci` must pass. New logic needs unit tests; the coverage
 gate is enforced in `vitest.config.ts`.
+
+## 11. Disaster recovery & backups
+
+Full procedures: [`docs/operations/disaster-recovery.md`](./operations/disaster-recovery.md)
+
+- **Daily manifest:** `/api/cron/cleanup` (03:00 UTC) writes row-count snapshot to `backup_verification_runs`.
+- **Supabase backups:** enable daily backups + PITR in Supabase dashboard (Database → Backups).
+- **Code rollback:** Vercel promote previous deployment (§3).
+- **DB restore:** Supabase dashboard → restore to point-in-time; then redeploy matching commit.
+- **Quarterly drill:** restore staging clone and document RTO in DR runbook.

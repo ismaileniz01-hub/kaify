@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import enFallback from "@/lib/lang/en.json";
 
 // Sadece JSON dosyası olan diller
 export type LangCode =
@@ -290,7 +291,11 @@ export function LangProvider({ children }: { children: ReactNode }) {
       if (text === undefined) {
         text = enDict[key];
       }
-      // 3. Onda da yoksa anahtarın kendisini göster
+      // 3. Onda da yoksa statik en.json (SSR / ilk paint)
+      if (text === undefined) {
+        text = enFallback[key as keyof typeof enFallback];
+      }
+      // 4. Onda da yoksa anahtarın kendisini göster
       if (text === undefined) {
         return key;
       }
@@ -304,10 +309,24 @@ export function LangProvider({ children }: { children: ReactNode }) {
     [dict, enDict],
   );
 
+  const ssrT = useCallback(
+    (key: string, params?: Record<string, string | number>): string => {
+      let text = enFallback[key as keyof typeof enFallback];
+      if (text === undefined) return key;
+      if (params) {
+        for (const [k, v] of Object.entries(params)) {
+          text = text.replace(`{${k}}`, String(v));
+        }
+      }
+      return text;
+    },
+    [],
+  );
+
   if (!mounted) {
-    // SSR sırasında boş bir context ver
+    // SSR / hydration: İngilizce fallback — ham anahtar gösterme
     return (
-      <LangContext.Provider value={{ lang: "en", setLang, unit: "metric", setUnit, t: (key) => key }}>
+      <LangContext.Provider value={{ lang: "en", setLang, unit: "metric", setUnit, t: ssrT }}>
         {children}
       </LangContext.Provider>
     );
