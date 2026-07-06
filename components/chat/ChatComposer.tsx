@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { Camera, Mic, Send } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
@@ -29,6 +29,26 @@ export function ChatComposer({
   compactSend = false,
 }: ChatComposerProps) {
   const { t, lang } = useLang();
+
+  const voiceErrorMessage = useCallback(
+    (code: string) => {
+      switch (code) {
+        case "not-allowed":
+        case "permission-denied":
+          return t("chat.error.voicePermission");
+        case "service-not-allowed":
+          return t("chat.error.voiceService");
+        case "network":
+          return t("chat.error.voiceNetwork");
+        case "unsupported":
+          return t("chat.error.voiceUnsupported");
+        default:
+          return t("chat.error.voiceFailed");
+      }
+    },
+    [t],
+  );
+
   const {
     isListening,
     transcript,
@@ -37,7 +57,9 @@ export function ChatComposer({
     stopListening,
     clearTranscript,
     supported: voiceSupported,
-  } = useSpeechRecognition(speechLocaleForLang(lang));
+  } = useSpeechRecognition(speechLocaleForLang(lang), {
+    onError: (code) => onVoiceError?.(voiceErrorMessage(code)),
+  });
 
   useEffect(() => {
     if (!transcript) return;

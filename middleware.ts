@@ -144,6 +144,10 @@ export async function middleware(request: NextRequest) {
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-XSS-Protection", "1; mode=block");
+  response.headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(self), geolocation=(), browsing-topics=(), interest-cohort=()",
+  );
   response.headers.set("X-RateLimit-Limit", String(rateLimit.limit));
   response.headers.set("X-RateLimit-Remaining", String(rateLimit.remaining));
 

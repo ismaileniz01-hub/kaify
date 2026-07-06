@@ -17,8 +17,13 @@ describe("buildContentSecurityPolicy", () => {
   });
 
   it("allows service workers and manifest for PWA push", () => {
-    expect(csp).toContain("worker-src 'self'");
+    expect(csp).toContain("worker-src 'self' blob:");
     expect(csp).toContain("manifest-src 'self'");
+  });
+
+  it("allows blob media and workers for Web Speech API", () => {
+    expect(csp).toContain("media-src 'self' blob:");
+    expect(csp).toContain("https://*.google.com");
   });
 
   it("permits Supabase in connect-src", () => {
