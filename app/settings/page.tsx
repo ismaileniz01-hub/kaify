@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  Fingerprint,
   ArrowLeft,
   Bell,
   EyeOff,
@@ -182,6 +183,7 @@ export default function SettingsPage() {
 
   const [referralCode, setReferralCode] = useState("");
   const [referralCopied, setReferralCopied] = useState(false);
+  const [userIdCopied, setUserIdCopied] = useState(false);
   const [langPickerOpen, setLangPickerOpen] = useState(false);
   const [langSearch, setLangSearch] = useState("");
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -274,6 +276,17 @@ export default function SettingsPage() {
           setTimeout(() => setReferralCopied(false), 2000);
         }
       }
+    }
+  };
+
+  const handleCopyUserId = async () => {
+    if (!profile?.id) return;
+    try {
+      await navigator.clipboard.writeText(profile.id);
+      setUserIdCopied(true);
+      setTimeout(() => setUserIdCopied(false), 2000);
+    } catch {
+      // clipboard unavailable
     }
   };
 
@@ -427,7 +440,10 @@ export default function SettingsPage() {
                 <div
                   key={item.label}
                   className={`flex items-center gap-3 px-4 py-3.5 ${
-                    ii < group.items.length - 1 ? "border-b border-white/5" : ""
+                    ii < group.items.length - 1 ||
+                    (group.title === "settings.profile" && isAuthenticated && profile?.id)
+                      ? "border-b border-white/5"
+                      : ""
                   }`}
                 >
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5">
@@ -569,6 +585,24 @@ export default function SettingsPage() {
                   </div>
                 </div>
               ))}
+              {group.title === "settings.profile" && isAuthenticated && profile?.id && (
+                <div className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5">
+                    <Fingerprint className="h-4 w-4 text-zinc-400" strokeWidth={1.5} />
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="text-sm font-medium text-white">{t("settings.user_id")}</span>
+                    <span className="truncate font-mono text-[11px] text-zinc-500">{profile.id}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleCopyUserId()}
+                    className="shrink-0 text-xs font-medium text-purple-400 transition hover:text-purple-300"
+                  >
+                    {userIdCopied ? t("settings.user_id.copied") : t("settings.user_id.copy")}
+                  </button>
+                </div>
+              )}
             </div>
           </section>
         ))}
