@@ -62,7 +62,10 @@ export function ChatComposer({
     ? interimTranscript || t("chat.voice.listening")
     : t("chat.placeholder.chat");
 
-  const displayValue = isListening && interimTranscript ? interimTranscript : input;
+  const displayValue =
+    isListening && interimTranscript
+      ? [input, interimTranscript].filter(Boolean).join(input ? " " : "")
+      : input;
 
   return (
     <footer className="chat-composer shrink-0 border-t border-white/10 bg-[#0a0812]/95 px-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl">

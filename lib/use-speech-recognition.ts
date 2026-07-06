@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+
+/** Stop listening after this many ms without speech activity. */
+export const SPEECH_SILENCE_CLOSE_MS = 4000;
 
 type SpeechRecognitionHook = {
   isListening: boolean;
@@ -42,6 +45,8 @@ export function useSpeechRecognition(locale = "tr-TR"): SpeechRecognitionHook {
   const [transcript, setTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const interimRef = useRef("");
 
   const SpeechRecognition: SpeechRecognitionConstructor | null =
     typeof window !== "undefined"
@@ -52,20 +57,73 @@ export function useSpeechRecognition(locale = "tr-TR"): SpeechRecognitionHook {
 
   const supported = SpeechRecognition !== null;
 
+  const clearSilenceTimer = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  }, []);
+
+  const finishListening = useCallback(() => {
+    clearSilenceTimer();
+    recognitionRef.current = null;
+    setIsListening(false);
+    setInterimTranscript("");
+    interimRef.current = "";
+  }, [clearSilenceTimer]);
+
+  const scheduleSilenceClose = useCallback(() => {
+    clearSilenceTimer();
+    silenceTimerRef.current = setTimeout(() => {
+      const pending = interimRef.current.trim();
+      if (pending) {
+        setTranscript((prev) => (prev ? `${prev} ${pending}` : pending).trim());
+      }
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          /* already stopped */
+        }
+      }
+      finishListening();
+    }, SPEECH_SILENCE_CLOSE_MS);
+  }, [clearSilenceTimer, finishListening]);
+
   const clearTranscript = useCallback(() => {
     setTranscript("");
     setInterimTranscript("");
+    interimRef.current = "";
   }, []);
+
+  const stopListening = useCallback(() => {
+    clearSilenceTimer();
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        /* already stopped */
+      }
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+    setInterimTranscript("");
+    interimRef.current = "";
+  }, [clearSilenceTimer]);
 
   const startListening = useCallback(() => {
     if (!SpeechRecognition) return;
 
+    stopListening();
+
     const recognition = new SpeechRecognition();
     recognition.lang = locale;
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
+      scheduleSilenceClose();
+
       let interim = "";
       let finalText = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -77,21 +135,24 @@ export function useSpeechRecognition(locale = "tr-TR"): SpeechRecognitionHook {
           interim += chunk;
         }
       }
-      if (interim) setInterimTranscript(interim);
+
+      if (interim) {
+        interimRef.current = interim;
+        setInterimTranscript(interim);
+      }
       if (finalText) {
-        setTranscript((prev) => (prev ? `${prev} ${finalText}` : finalText).trim());
+        interimRef.current = "";
         setInterimTranscript("");
+        setTranscript((prev) => (prev ? `${prev} ${finalText}` : finalText).trim());
       }
     };
 
     recognition.onend = () => {
-      setIsListening(false);
-      setInterimTranscript("");
+      finishListening();
     };
 
     recognition.onerror = () => {
-      setIsListening(false);
-      setInterimTranscript("");
+      finishListening();
     };
 
     recognitionRef.current = recognition;
@@ -99,16 +160,29 @@ export function useSpeechRecognition(locale = "tr-TR"): SpeechRecognitionHook {
     setIsListening(true);
     setTranscript("");
     setInterimTranscript("");
-  }, [SpeechRecognition, locale]);
+    interimRef.current = "";
+    scheduleSilenceClose();
+  }, [
+    SpeechRecognition,
+    locale,
+    stopListening,
+    scheduleSilenceClose,
+    finishListening,
+  ]);
 
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
-    }
-    setIsListening(false);
-    setInterimTranscript("");
-  }, []);
+  useEffect(
+    () => () => {
+      clearSilenceTimer();
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          /* unmount */
+        }
+      }
+    },
+    [clearSilenceTimer],
+  );
 
   return {
     isListening,
@@ -119,4 +193,4 @@ export function useSpeechRecognition(locale = "tr-TR"): SpeechRecognitionHook {
     clearTranscript,
     supported,
   };
-}
+};
