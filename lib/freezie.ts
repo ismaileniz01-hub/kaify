@@ -15,6 +15,12 @@ function setFreezieBalance(val: number) {
   localStorage.setItem(BALANCE_KEY, String(val));
 }
 
+/** Sunucudaki freezie bakiyesini localStorage ile hizala (legacy UI). */
+export function syncFreezieBalanceFromServer(balance: number) {
+  if (typeof window === "undefined") return;
+  setFreezieBalance(Math.max(0, Math.floor(balance)));
+}
+
 /** Daha önce claim edilmiş günleri getir */
 function getClaimedDays(): number[] {
   if (typeof window === "undefined") return [];

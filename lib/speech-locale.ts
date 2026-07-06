@@ -1,0 +1,57 @@
+/** BCP-47 locale for Web Speech API from app lang code. */
+export function speechLocaleForLang(lang: string): string {
+  const direct: Record<string, string> = {
+    tr: "tr-TR",
+    en: "en-US",
+    de: "de-DE",
+    fr: "fr-FR",
+    es: "es-ES",
+    "es-mx": "es-MX",
+    "es-ar": "es-AR",
+    it: "it-IT",
+    pt: "pt-PT",
+    nl: "nl-NL",
+    ru: "ru-RU",
+    pl: "pl-PL",
+    ro: "ro-RO",
+    el: "el-GR",
+    sv: "sv-SE",
+    cs: "cs-CZ",
+    hu: "hu-HU",
+    uk: "uk-UA",
+    da: "da-DK",
+    no: "nb-NO",
+    fi: "fi-FI",
+    lt: "lt-LT",
+    lv: "lv-LV",
+    et: "et-EE",
+    sk: "sk-SK",
+    sl: "sl-SI",
+    hr: "hr-HR",
+    bg: "bg-BG",
+    sr: "sr-RS",
+    is: "is-IS",
+    ar: "ar-SA",
+    he: "he-IL",
+    fa: "fa-IR",
+    ur: "ur-PK",
+    hi: "hi-IN",
+    "zh-CN": "zh-CN",
+    ja: "ja-JP",
+    ko: "ko-KR",
+    th: "th-TH",
+    vi: "vi-VN",
+    id: "id-ID",
+    ms: "ms-MY",
+    bn: "bn-BD",
+    uz: "uz-UZ",
+    kk: "kk-KZ",
+    az: "az-AZ",
+    af: "af-ZA",
+  };
+
+  if (direct[lang]) return direct[lang];
+  const base = lang.split("-")[0];
+  if (direct[base]) return direct[base];
+  return "en-US";
+}

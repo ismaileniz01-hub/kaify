@@ -30,6 +30,7 @@ import type { StreakStatusDTO } from "@/lib/services/streak-status.service";
 import type { KaiStateDTO } from "@/lib/services/kai-state.service";
 import type { SessionBundleDTO } from "@/lib/services/session.service";
 import type { ProfileUpdateInput } from "@/lib/validations/profile.schema";
+import { syncFreezieBalanceFromServer } from "@/lib/freezie";
 
 type SessionContextValue = {
   isLoading: boolean;
@@ -47,6 +48,8 @@ type SessionContextValue = {
   kai: KaiStateDTO | null;
   referralCode: string;
   refreshSession: () => Promise<void>;
+  /** Sandık claim yanıtındaki güncel bakiyeleri oturuma yansıt. */
+  applyChestClaim: (balances: { gemBalance: number; freezieBalance: number }) => void;
   updateProfile: (form: UserProfile) => Promise<void>;
   checkIn: () => Promise<CheckInDTO>;
 };
@@ -129,6 +132,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setUserProfile(profileDtoToUserProfile(bundle.profile));
       setGemBalance(bundle.gems);
       setStreak(bundle.streak);
+      syncFreezieBalanceFromServer(bundle.streak.freezieBalance);
       setReferralCode(bundle.referral.referralCode);
       setHome(bundle.home);
       setKai(bundle.kai);
@@ -180,6 +184,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [profile, isAuthenticated],
   );
 
+  const applyChestClaim = useCallback(
+    (balances: { gemBalance: number; freezieBalance: number }) => {
+      setGemBalance((prev) => ({ ...prev, balance: balances.gemBalance }));
+      setStreak((prev) => ({ ...prev, freezieBalance: balances.freezieBalance }));
+      syncFreezieBalanceFromServer(balances.freezieBalance);
+    },
+    [],
+  );
+
   const checkIn = useCallback(async () => {
     const result = await apiPost<CheckInDTO>("/api/check-in");
     setGemBalance((prev) => ({ ...prev, balance: result.gemBalance }));
@@ -191,6 +204,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       lastCheckInDate: result.checkedInDate,
       kaiUnlockedLevel: result.kaiUnlockedLevel,
     }));
+    syncFreezieBalanceFromServer(result.freezieBalance);
     void apiGet<HomeDTO>("/api/home")
       .then((homeData) => setHome(homeData))
       .catch(() => undefined);
@@ -222,6 +236,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       kai,
       referralCode,
       refreshSession,
+      applyChestClaim,
       updateProfile,
       checkIn,
     }),
@@ -241,6 +256,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       kai,
       referralCode,
       refreshSession,
+      applyChestClaim,
       updateProfile,
       checkIn,
     ],

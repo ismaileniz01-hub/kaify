@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 
-import { ArrowLeft, Camera, Mic, Send } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useState, useRef } from "react";
 import { ChatBubbles } from "@/components/ChatBubbles";
+import { ChatComposer } from "@/components/chat/ChatComposer";
 import { ContactAvatar } from "@/components/ContactAvatar";
 import { ImagePickerModal } from "@/components/ImagePickerModal";
 import { getContact, type ContactId } from "@/lib/contacts";
@@ -17,7 +18,7 @@ import { LiveChatPanel } from "@/components/chat/LiveChatPanel";
 
 export default function ChatPage() {
   const { t } = useLang();
-  const { isAuthenticated } = useSession();
+  const { isAuthenticated, isLoading: sessionLoading } = useSession();
   const params = useParams();
   const id = params.id as string;
   const contact = getContact(id);
@@ -147,7 +148,12 @@ export default function ChatPage() {
       </header>
 
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
-        {isAuthenticated ? (
+        {sessionLoading ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6">
+            <div className="h-10 w-full max-w-xs animate-pulse rounded-2xl bg-white/5" />
+            <p className="text-xs text-zinc-500">{t("common.loading")}</p>
+          </div>
+        ) : isAuthenticated ? (
           <LiveChatPanel
             coachId={contactId}
             onCoachTyping={(typing) => {
@@ -173,55 +179,20 @@ export default function ChatPage() {
                 userMessages={userMessages}
               />
             </div>
-            <footer className="relative z-30 px-3 pb-6 pt-2">
-              <div className="glass-input flex items-center gap-2 rounded-full px-2 py-2">
-                {contactId !== "kai" && contactId !== "alex" && (
-                  <button
-                    type="button"
-                    onClick={() => setShowImagePicker(true)}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:bg-white/5 hover:text-purple-400"
-                    aria-label={t("chat.aria.photo")}
-                  >
-                    <Camera className="h-5 w-5" />
-                  </button>
-                )}
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                  placeholder={t("chat.placeholder.chat")}
-                  className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:bg-white/5 hover:text-purple-400"
-                  aria-label={t("chat.aria.voice")}
-                >
-                  <Mic className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSend}
-                  disabled={!inputValue.trim()}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-500 text-white shadow-md shadow-purple-500/40 transition active:scale-95 disabled:opacity-40"
-                  aria-label={t("chat.aria.send")}
-                >
-                  <Send className="h-4 w-4" />
-                </button>
-              </div>
-              <p
-                role="note"
-                className="mt-2 px-2 text-center text-[10px] leading-snug text-zinc-500"
-              >
-                {t("chat.disclaimer.footer")}
-              </p>
-            </footer>
+            <ChatComposer
+              input={inputValue}
+              onInputChange={setInputValue}
+              onSend={handleSend}
+              showCamera={contactId !== "kai" && contactId !== "alex"}
+              onCameraClick={() => setShowImagePicker(true)}
+              compactSend
+            />
           </>
         )}
       </div>
 
-      <div className="pointer-events-none absolute bottom-32 -left-8 z-20">
+      {!sessionLoading && !isAuthenticated && (
+      <div className="pointer-events-none absolute bottom-32 -left-8 z-10">
         <ContactAvatar
           src={
             contactId === "alex" && avatarState === "typing"
@@ -247,6 +218,7 @@ export default function ChatPage() {
           auraColor={contactId === "kai" ? auraColor : "default"}
         />
       </div>
+      )}
 
       <ImagePickerModal
         isOpen={showImagePicker}

@@ -15,7 +15,7 @@ import type {
 import { DailyChestOpening } from "./DailyChestOpening";
 
 type Props = {
-  onClaimed?: () => void;
+  onClaimed?: (claim: DailyChestClaimDTO) => void;
 };
 
 function formatCountdown(iso: string): string {
@@ -35,7 +35,7 @@ function nextUtcMidnightIso(): string {
 
 export function DailyChestBanner({ onClaimed }: Props) {
   const { t } = useLang();
-  const { isAuthenticated } = useSession();
+  const { isAuthenticated, applyChestClaim } = useSession();
   const [status, setStatus] = useState<DailyChestStatusDTO | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [statusError, setStatusError] = useState(false);
@@ -112,9 +112,14 @@ export function DailyChestBanner({ onClaimed }: Props) {
     setInfoMessage(null);
     try {
       const result = await apiPost<DailyChestClaimDTO>("/api/market/chest");
+      applyChestClaim({
+        gemBalance: result.gemBalance,
+        freezieBalance: result.freezieBalance,
+      });
       if (result.alreadyClaimed) {
         markClaimedToday();
         setInfoMessage(t("chest.already_claimed"));
+        onClaimed?.(result);
         loadStatus();
         return;
       }
@@ -136,8 +141,11 @@ export function DailyChestBanner({ onClaimed }: Props) {
 
   const handleClose = () => {
     setOpening(false);
+    const claimed = claimData;
     setClaimData(null);
-    onClaimed?.();
+    if (claimed) {
+      onClaimed?.(claimed);
+    }
     loadStatus();
   };
 

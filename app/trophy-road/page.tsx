@@ -7,6 +7,7 @@ import { InlineAlert } from "@/components/InlineAlert";
 import { useSession } from "@/lib/session-context";
 import { apiGet, apiPost, apiPatch } from "@/lib/api/client";
 import { GemBalance } from "@/components/GemBalance";
+import { FreezieBalance } from "@/components/FreezieBalance";
 import { GemIcon } from "@/components/GemIcon";
 import { useGem } from "@/lib/gem-context";
 import { useKai, type AuraColor } from "@/lib/kai-context";
@@ -26,7 +27,7 @@ export default function MarketPage() {
   const { t } = useLang();
   const { gemState, spend, refreshBalance } = useGem();
   const { ownedEffects, purchaseEffect, setAuraColor, auraColor, syncFromServer } = useKai();
-  const { isAuthenticated, isLoading, refreshSession } = useSession();
+  const { isAuthenticated, isLoading, refreshSession, streak } = useSession();
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [applying, setApplying] = useState<string | null>(null);
   const [successEffect, setSuccessEffect] = useState<EffectColor | null>(null);
@@ -209,6 +210,9 @@ export default function MarketPage() {
           {t("market.title")}
         </h1>
         <GemBalance balance={gemState.balance} size="sm" animate />
+        {isAuthenticated && (
+          <FreezieBalance size="sm" animate balance={streak.freezieBalance} />
+        )}
       </header>
 
       <main className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-8 pt-4">

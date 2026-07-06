@@ -5,8 +5,10 @@ import { useState, useRef, useCallback } from "react";
 type SpeechRecognitionHook = {
   isListening: boolean;
   transcript: string;
+  interimTranscript: string;
   startListening: () => void;
   stopListening: () => void;
+  clearTranscript: () => void;
   supported: boolean;
 };
 
@@ -35,9 +37,10 @@ interface SpeechRecognitionConstructor {
   new (): SpeechRecognitionInstance;
 }
 
-export function useSpeechRecognition(): SpeechRecognitionHook {
+export function useSpeechRecognition(locale = "tr-TR"): SpeechRecognitionHook {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
   const SpeechRecognition: SpeechRecognitionConstructor | null =
@@ -49,40 +52,54 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
 
   const supported = SpeechRecognition !== null;
 
+  const clearTranscript = useCallback(() => {
+    setTranscript("");
+    setInterimTranscript("");
+  }, []);
+
   const startListening = useCallback(() => {
     if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
-    recognition.lang = "tr-TR";
+    recognition.lang = locale;
     recognition.continuous = false;
     recognition.interimResults = true;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      let finalTranscript = "";
+      let interim = "";
+      let finalText = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
+        const chunk = result[0].transcript;
         if (result.isFinal) {
-          finalTranscript += result[0].transcript;
+          finalText += chunk;
+        } else {
+          interim += chunk;
         }
       }
-      if (finalTranscript) {
-        setTranscript(finalTranscript);
+      if (interim) setInterimTranscript(interim);
+      if (finalText) {
+        setTranscript((prev) => (prev ? `${prev} ${finalText}` : finalText).trim());
+        setInterimTranscript("");
       }
     };
 
     recognition.onend = () => {
       setIsListening(false);
+      setInterimTranscript("");
     };
 
     recognition.onerror = () => {
       setIsListening(false);
+      setInterimTranscript("");
     };
 
     recognitionRef.current = recognition;
     recognition.start();
     setIsListening(true);
     setTranscript("");
-  }, [SpeechRecognition]);
+    setInterimTranscript("");
+  }, [SpeechRecognition, locale]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
@@ -90,7 +107,16 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
       recognitionRef.current = null;
     }
     setIsListening(false);
+    setInterimTranscript("");
   }, []);
 
-  return { isListening, transcript, startListening, stopListening, supported };
+  return {
+    isListening,
+    transcript,
+    interimTranscript,
+    startListening,
+    stopListening,
+    clearTranscript,
+    supported,
+  };
 }

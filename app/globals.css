@@ -720,6 +720,11 @@ a, button, input, select, textarea, label {
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.chat-composer {
+  position: relative;
+  z-index: 40;
+}
+
 @media (max-width: 767px) {
   .glass-input {
     backdrop-filter: none;
