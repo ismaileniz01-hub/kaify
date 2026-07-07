@@ -39,13 +39,14 @@ function buildSummary(patch: Record<string, number>): string {
   return parts.join(", ");
 }
 
-async function insertConfirmationMessage(params: {
+async function attachConfirmationToMessage(params: {
   userId: string;
   coachId: string;
   pendingId: string;
   summary: string;
   patch: Record<string, number>;
-}): Promise<void> {
+  attachToMessageId?: string | null;
+}): Promise<{ content: string; messageId: string }> {
   const admin = createAdminSupabaseClient();
   const { data: profile } = await admin
     .from("profiles")
@@ -59,22 +60,50 @@ async function insertConfirmationMessage(params: {
       ? `Harika iş! Analiz sayfana şunu eklememi onaylıyor musun? ${params.summary}`
       : `Great work! Should I add this to your analytics? ${params.summary}`;
 
-  await admin.from("chat_messages").insert({
-    user_id: params.userId,
-    coach_id: params.coachId,
-    thread_type: "direct",
-    sender: "coach",
-    message_type: "text",
-    content,
-    payload: {
-      confirmation: {
-        pendingId: params.pendingId,
-        summary: params.summary,
-        patch: params.patch,
-      },
-    } as unknown as Json,
-    locale,
-  });
+  const confirmationPayload = {
+    confirmation: {
+      pendingId: params.pendingId,
+      summary: params.summary,
+      patch: params.patch,
+    },
+  } as unknown as Json;
+
+  if (params.attachToMessageId) {
+    const { data: existing } = await admin
+      .from("chat_messages")
+      .select("payload")
+      .eq("id", params.attachToMessageId)
+      .maybeSingle();
+
+    const merged =
+      existing?.payload && typeof existing.payload === "object" && !Array.isArray(existing.payload)
+        ? { ...(existing.payload as Record<string, unknown>), ...confirmationPayload }
+        : confirmationPayload;
+
+    await admin
+      .from("chat_messages")
+      .update({ payload: merged as unknown as Json })
+      .eq("id", params.attachToMessageId);
+
+    return { content, messageId: params.attachToMessageId };
+  }
+
+  const { data: inserted } = await admin
+    .from("chat_messages")
+    .insert({
+      user_id: params.userId,
+      coach_id: params.coachId,
+      thread_type: "direct",
+      sender: "coach",
+      message_type: "text",
+      content,
+      payload: confirmationPayload,
+      locale,
+    })
+    .select("id")
+    .single();
+
+  return { content, messageId: inserted?.id ?? "" };
 }
 
 export async function applyCoachAnalyticsFromChat(params: {
@@ -131,7 +160,7 @@ export async function applyCoachAnalyticsFromChat(params: {
       payload: { summary, patch },
     });
 
-    await insertConfirmationMessage({
+    await attachConfirmationToMessage({
       userId: params.userId,
       coachId: params.coachId,
       pendingId,
@@ -143,12 +172,20 @@ export async function applyCoachAnalyticsFromChat(params: {
   }
 }
 
+export type PhotoAnalyticsConfirmation = {
+  pendingId: string;
+  summary: string;
+  content: string;
+  messageId: string;
+};
+
 export async function requestPhotoAnalyticsConfirmation(params: {
   userId: string;
   coachId: string;
   meal?: { calories: number; protein: number; carbs: number; fat: number };
   bodyScore?: number;
-}): Promise<void> {
+  attachToMessageId?: string | null;
+}): Promise<PhotoAnalyticsConfirmation | null> {
   const summary = params.meal
     ? buildSummary({
         caloriesConsumed: params.meal.calories,
@@ -160,7 +197,7 @@ export async function requestPhotoAnalyticsConfirmation(params: {
       ? `body score ${params.bodyScore}/100`
       : "";
 
-  if (!summary) return;
+  if (!summary) return null;
 
   const patch = params.meal
     ? {
@@ -182,11 +219,14 @@ export async function requestPhotoAnalyticsConfirmation(params: {
     },
   });
 
-  await insertConfirmationMessage({
+  const { content, messageId } = await attachConfirmationToMessage({
     userId: params.userId,
     coachId: params.coachId,
     pendingId,
     summary,
     patch: patch ?? {},
+    attachToMessageId: params.attachToMessageId,
   });
+
+  return { pendingId, summary, content, messageId };
 }

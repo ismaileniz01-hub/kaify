@@ -2,6 +2,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/api/errors";
 import { mapProfileRow, type ProfileDTO } from "@/lib/types/domain.types";
+import { createNotification } from "@/lib/services/notifications.service";
 
 export type SupportTicketDTO = {
   id: string;
@@ -195,6 +196,14 @@ export async function sendAdminSupportReply(
   if (!trimmed) throw new ApiError("VALIDATION_ERROR", "Mesaj boş olamaz.");
 
   const admin = supportDb();
+  const { data: ticket } = await admin
+    .from("support_tickets")
+    .select("user_id")
+    .eq("id", ticketId)
+    .maybeSingle();
+
+  if (!ticket) throw new ApiError("NOT_FOUND", "Talep bulunamadı.");
+
   const { error } = await admin.from("support_messages").insert({
     ticket_id: ticketId,
     sender: "admin",
@@ -206,4 +215,16 @@ export async function sendAdminSupportReply(
     .from("support_tickets")
     .update({ updated_at: new Date().toISOString(), status: "open" })
     .eq("id", ticketId);
+
+  const preview =
+    trimmed.length > 120 ? `${trimmed.slice(0, 117)}…` : trimmed;
+
+  await createNotification({
+    userId: ticket.user_id,
+    type: "system",
+    titleKey: "notif.support_reply.title",
+    bodyKey: "notif.support_reply.body",
+    params: { preview },
+    dedupKey: `support_reply:${ticketId}:${Date.now()}`,
+  });
 }

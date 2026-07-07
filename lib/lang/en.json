@@ -542,6 +542,8 @@
   "notif.water_reminder.body": "Drink a glass of water to hit today's goal.",
   "notif.praise.title": "You're crushing it!",
   "notif.praise.body": "{streak} days strong with K.AIFY — that's something most people never manage. Proud of you!",
+  "notif.support_reply.title": "Support replied",
+  "notif.support_reply.body": "{preview}",
   "notif.push.enable_title": "Enable phone notifications",
   "notif.push.enable_desc": "Get your streak and reminders on your phone even when the app is closed.",
   "notif.push.enable_button": "Enable",

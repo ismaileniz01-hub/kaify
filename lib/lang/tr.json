@@ -542,6 +542,8 @@
   "notif.water_reminder.body": "Bugünkü hedefine ulaşmak için bir bardak su iç.",
   "notif.praise.title": "Harika gidiyorsun!",
   "notif.praise.body": "K.AIFY ile {streak} gündür istikrarlısın — bu çoğu insanın başaramadığı bir şey. Seninle gurur duyuyoruz!",
+  "notif.support_reply.title": "Destek yanıt verdi",
+  "notif.support_reply.body": "{preview}",
   "notif.push.enable_title": "Telefon bildirimlerini aç",
   "notif.push.enable_desc": "Uygulama kapalıyken bile serini ve hatırlatmaları telefonundan al.",
   "notif.push.enable_button": "Aç",

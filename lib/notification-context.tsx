@@ -15,6 +15,7 @@ import type {
   NotificationDTO,
   NotificationListDTO,
 } from "./services/notifications.service";
+import { playNotificationChime } from "./notifications/sound";
 
 type NotificationContextValue = {
   notifications: NotificationDTO[];
@@ -27,7 +28,7 @@ type NotificationContextValue = {
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
 
-const POLL_INTERVAL_MS = 60_000;
+const POLL_INTERVAL_MS = 30_000;
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const session = useSession();
@@ -35,6 +36,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const inFlight = useRef(false);
+  const knownIds = useRef<Set<string>>(new Set());
+  const hasPrimed = useRef(false);
 
   const refresh = useCallback(async () => {
     if (!session.isAuthenticated || inFlight.current) return;
@@ -42,8 +45,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const res = await apiGet<NotificationListDTO>("/api/notifications");
+      const incomingIds = new Set(res.items.map((n) => n.id));
+      const hasNew =
+        hasPrimed.current &&
+        res.items.some((n) => !knownIds.current.has(n.id) && !n.read);
+
       setNotifications(res.items);
       setUnreadCount(res.unreadCount);
+      knownIds.current = incomingIds;
+      hasPrimed.current = true;
+
+      if (hasNew) {
+        playNotificationChime();
+      }
     } catch {
       // Silent: notifications are non-critical; keep last known state.
     } finally {
@@ -57,6 +71,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (!session.isAuthenticated) {
       setNotifications([]);
       setUnreadCount(0);
+      knownIds.current = new Set();
+      hasPrimed.current = false;
       return;
     }
     void refresh();

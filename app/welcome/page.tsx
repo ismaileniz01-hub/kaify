@@ -62,7 +62,7 @@ function WelcomeContent() {
   }, [isAuthenticated, profile?.locale, setLang]);
 
   useEffect(() => {
-    if (isAuthenticated) void refreshHome();
+    if (isAuthenticated) void refreshHome(lang);
   }, [lang, isAuthenticated, refreshHome]);
 
   if (isLoading && isAuthenticated) {
@@ -96,11 +96,11 @@ function WelcomeContent() {
         {/* Center — Leaderboard button */}
         <Link
           href="/leaderboard"
-          className="flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1.5 text-amber-400 ring-2 ring-amber-400/30 transition-all duration-300 hover:bg-amber-500/25 hover:text-amber-300 hover:scale-105"
+          className="flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-amber-400 ring-2 ring-amber-400/30 transition-all duration-300 hover:bg-amber-500/25 hover:text-amber-300 hover:scale-105"
           aria-label={t("nav.leaderboard")}
         >
-          <Globe className="h-3.5 w-3.5" />
-          <span className="text-[11px] font-semibold">{t("nav.leaderboard")}</span>
+          <Globe className="h-3 w-3" />
+          <span className="text-[10px] font-semibold">{t("nav.leaderboard")}</span>
         </Link>
 
         <div className="flex items-center gap-2">

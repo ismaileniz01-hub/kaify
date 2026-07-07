@@ -7,6 +7,10 @@ import { refundQuota, reserveQuota } from "@/lib/ai/quota-guard";
 import { toApiError } from "@/lib/ai/errors";
 import { prepareVisionImage } from "@/lib/security/image";
 import { getCoachOrThrow } from "@/lib/services/coach.service";
+import {
+  requestPhotoAnalyticsConfirmation,
+  type PhotoAnalyticsConfirmation,
+} from "@/lib/ai/coach-analytics";
 import type { ScoreDrift } from "@/lib/ai/consistency";
 import type {
   AnalysisMimeType,
@@ -37,6 +41,7 @@ export type AnalyzePhotoResult = {
   quality: ImageQuality;
   warningTrigger: WarningTrigger | null;
   messageId: string | null;
+  confirmation: PhotoAnalyticsConfirmation | null;
 };
 
 function resourceForCoach(coachId: "maya" | "leo"): UsageResource {
@@ -185,27 +190,28 @@ export async function analyzePhoto(
     logger.error("[analysis.service] persist error", { error: insertError.message });
   }
 
+  let confirmation: PhotoAnalyticsConfirmation | null = null;
+
   // Reflect a logged meal onto today's analytics after user confirmation.
   if (persona.kind === "food" && result.analysis.food_analysis) {
     const food = result.analysis.food_analysis;
-    void import("@/lib/ai/coach-analytics")
-      .then(({ requestPhotoAnalyticsConfirmation }) =>
-        requestPhotoAnalyticsConfirmation({
-          userId: params.userId,
-          coachId: params.coachId,
-          meal: {
-            calories: food.calories,
-            protein: food.protein,
-            carbs: food.carb,
-            fat: food.fat,
-          },
-        }),
-      )
-      .catch((error) => {
-        logger.error("[analysis.service] meal confirmation failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
+    try {
+      confirmation = await requestPhotoAnalyticsConfirmation({
+        userId: params.userId,
+        coachId: params.coachId,
+        attachToMessageId: inserted?.id ?? null,
+        meal: {
+          calories: food.calories,
+          protein: food.protein,
+          carbs: food.carb,
+          fat: food.fat,
+        },
       });
+    } catch (error) {
+      logger.error("[analysis.service] meal confirmation failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   return {
@@ -215,5 +221,6 @@ export async function analyzePhoto(
     quality: result.quality,
     warningTrigger: usage.warning_trigger,
     messageId: inserted?.id ?? null,
+    confirmation,
   };
 }

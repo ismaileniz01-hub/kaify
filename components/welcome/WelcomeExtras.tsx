@@ -15,7 +15,7 @@ export function WelcomeExtras() {
   const { home, refreshHome } = useSession();
 
   useEffect(() => {
-    void refreshHome();
+    void refreshHome(lang);
   }, [lang, refreshHome]);
 
   useEffect(() => {

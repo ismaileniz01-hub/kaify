@@ -49,7 +49,7 @@ type SessionContextValue = {
   kai: KaiStateDTO | null;
   referralCode: string;
   refreshSession: () => Promise<void>;
-  refreshHome: () => Promise<void>;
+  refreshHome: (locale?: string) => Promise<void>;
   signOut: () => Promise<boolean>;
   /** Sandık claim yanıtındaki güncel bakiyeleri oturuma yansıt. */
   applyChestClaim: (balances: { gemBalance: number; freezieBalance: number }) => void;
@@ -235,10 +235,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const refreshHome = useCallback(async () => {
+  const refreshHome = useCallback(async (locale?: string) => {
     if (!isAuthenticated) return;
     try {
-      const homeData = await apiGet<HomeDTO>("/api/home");
+      const qs = locale ? `?locale=${encodeURIComponent(locale)}` : "";
+      const homeData = await apiGet<HomeDTO>(`/api/home${qs}`);
       setHome(homeData);
     } catch {
       // non-fatal

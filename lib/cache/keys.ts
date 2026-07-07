@@ -26,8 +26,8 @@ export const CacheKeys = {
   analyticsToday: (userId: string) => `analytics:today:v1:${userId}`,
   /** @deprecated use analyticsBundle — kept for invalidation compat */
   analyticsUser: (userId: string) => `analytics:bundle:v1:${userId}`,
-  homeBundle: (userId: string, day = utcDayKey()) =>
-    `home:bundle:v1:${userId}:${day}`,
+  homeBundle: (userId: string, day = utcDayKey(), locale = "default") =>
+    `home:bundle:v2:${userId}:${day}:${locale}`,
   coachesCatalog: () => "coaches:catalog:v1",
   coachById: (coachId: string) => `coaches:item:v1:${coachId}`,
   leaderboardGlobal: (limit: number, offset: number) =>

@@ -17,5 +17,5 @@ export function DailyMotivationQuote({
     [lang],
   );
 
-  return <>{serverQuote || clientQuote || fallback}</>;
+  return <>{clientQuote || serverQuote || fallback}</>;
 }

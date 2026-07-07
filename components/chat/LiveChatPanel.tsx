@@ -243,6 +243,12 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           summary: string;
           messageId: string | null;
           analysis: unknown;
+          confirmation?: {
+            pendingId: string;
+            summary: string;
+            content: string;
+            messageId: string;
+          } | null;
         }>(`/api/chat/${coachId}/analyze`, {
           imageBase64: base64,
           mimeType,
@@ -257,7 +263,17 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                   text: analysis.summary,
                   streaming: false,
                   messageType: coachId === "leo" ? "score" : "analysis",
-                  payload: { analysis: analysis.analysis },
+                  payload: {
+                    analysis: analysis.analysis,
+                    ...(analysis.confirmation
+                      ? {
+                          confirmation: {
+                            pendingId: analysis.confirmation.pendingId,
+                            summary: analysis.confirmation.summary,
+                          },
+                        }
+                      : {}),
+                  },
                 }
               : msg,
           ),

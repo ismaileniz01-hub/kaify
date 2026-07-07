@@ -18,14 +18,17 @@ export type HomeDTO = {
   kaiLevel: number;
 };
 
-export async function getHomeData(userId: string): Promise<HomeDTO> {
+export async function getHomeData(
+  userId: string,
+  localeOverride?: string | null,
+): Promise<HomeDTO> {
   const [profile, streakStatus, todayNutrition] = await Promise.all([
     getOwnProfile(userId),
     getStreakStatus(userId),
     getTodayNutritionSnapshot(userId).catch(() => null),
   ]);
 
-  const resolvedLocale = resolveLocale(profile.locale);
+  const resolvedLocale = resolveLocale(localeOverride ?? profile.locale);
 
   const [motivation, dailyTip] = await Promise.all([
     getDailyMotivationQuote(resolvedLocale),
@@ -47,7 +50,7 @@ export async function getHomeData(userId: string): Promise<HomeDTO> {
     displayName: profile.displayName,
     motivation,
     dailyTip,
-    kaiFoodInsight: buildKaiFoodInsight(todayNutrition ?? null, profile.locale),
+    kaiFoodInsight: buildKaiFoodInsight(todayNutrition ?? null, resolvedLocale),
     stats: {
       steps,
       streak: streakStatus.currentStreak,
