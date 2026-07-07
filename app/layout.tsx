@@ -35,7 +35,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "K.AIFY — Your Personal Coach Team",
   description:
-    "Four expert coaches, smart analytics, and Kai your dragon companion. Join the waitlist for the fitness app that finally sticks.",
+    "Four expert coaches, smart analytics, and Kai your dragon companion. Plans from $14.99/month.",
   manifest: "/manifest.json",
   icons: {
     icon: [

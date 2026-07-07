@@ -7,7 +7,7 @@ import { LandingCoaches } from "./LandingCoaches";
 import { LandingFeatures } from "./LandingFeatures";
 import { LandingStreak } from "./LandingStreak";
 import { LandingLeaderboard } from "./LandingLeaderboard";
-import { LandingCTA } from "./LandingCTA";
+import { LandingPricingCTA } from "./LandingPricingCTA";
 import { LandingFooter } from "./LandingFooter";
 import { useLang } from "@/lib/lang-context";
 
@@ -23,7 +23,7 @@ export function LandingPage() {
         <LandingFeatures />
         <LandingStreak />
         <LandingLeaderboard />
-        <LandingCTA />
+        <LandingPricingCTA />
       </main>
       <LandingFooter />
     </div>

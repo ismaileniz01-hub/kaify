@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { useParallax } from "@/hooks/useParallax";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
@@ -91,12 +92,12 @@ export function LandingHero() {
             </ScrollReveal>
 
             <ScrollReveal delay={320} className="mt-12 flex flex-col items-center gap-6 sm:mt-10 sm:gap-4 lg:items-start">
-              <a
-                href="#waitlist"
+              <Link
+                href="/pricing"
                 className="landing-btn landing-btn--primary landing-btn--lg w-full sm:w-auto"
               >
-                Get Early Access
-              </a>
+                {t("landing.pricing.explore_plans")}
+              </Link>
               <p className="text-base font-semibold tracking-[0.2em] text-purple-300/90">
                 ↓ Scroll to explore
               </p>
