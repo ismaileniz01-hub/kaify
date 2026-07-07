@@ -49,6 +49,7 @@ type SessionContextValue = {
   kai: KaiStateDTO | null;
   referralCode: string;
   refreshSession: () => Promise<void>;
+  refreshHome: () => Promise<void>;
   signOut: () => Promise<boolean>;
   /** Sandık claim yanıtındaki güncel bakiyeleri oturuma yansıt. */
   applyChestClaim: (balances: { gemBalance: number; freezieBalance: number }) => void;
@@ -134,6 +135,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setReferralCode(bundle.referral.referralCode);
       setHome(bundle.home);
       setKai(bundle.kai);
+
+      void apiPost<CheckInDTO>("/api/check-in")
+        .then((result) => {
+          setGemBalance((prev) => ({ ...prev, balance: result.gemBalance }));
+          setStreak((prev) => ({
+            ...prev,
+            currentStreak: result.currentStreak,
+            longestStreak: result.longestStreak,
+            freezieBalance: result.freezieBalance,
+            lastCheckInDate: result.checkedInDate,
+            kaiUnlockedLevel: result.kaiUnlockedLevel,
+          }));
+          syncFreezieBalanceFromServer(result.freezieBalance);
+        })
+        .catch(() => undefined);
     } catch (error) {
       if (error instanceof ApiClientError && error.code === "UNAUTHORIZED") {
         applyGuestState();
@@ -219,6 +235,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const refreshHome = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const homeData = await apiGet<HomeDTO>("/api/home");
+      setHome(homeData);
+    } catch {
+      // non-fatal
+    }
+  }, [isAuthenticated]);
+
   const checkIn = useCallback(async () => {
     const result = await apiPost<CheckInDTO>("/api/check-in");
     setGemBalance((prev) => ({ ...prev, balance: result.gemBalance }));
@@ -262,6 +288,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       kai,
       referralCode,
       refreshSession,
+      refreshHome,
       signOut,
       applyChestClaim,
       updateProfile,
@@ -283,6 +310,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       kai,
       referralCode,
       refreshSession,
+      refreshHome,
       signOut,
       applyChestClaim,
       updateProfile,

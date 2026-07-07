@@ -8,6 +8,7 @@ import type { MessageType } from "@/lib/types/database.types";
 import type { ContactId } from "@/lib/contacts";
 import { CONTACTS } from "@/lib/contacts";
 import { ChatRichCard } from "@/components/chat/ChatRichCard";
+import { AnalyticsConfirmationCard } from "@/components/chat/AnalyticsConfirmationCard";
 import { ChatMessageText } from "@/components/chat/ChatMessageText";
 import { InlineAlert } from "@/components/InlineAlert";
 import { PhotoAnalyzeConsentModal } from "@/components/consent/PhotoAnalyzeConsentModal";
@@ -396,6 +397,17 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                       <ChatMessageText text={msg.text} />
                       <p className="mt-1 text-[10px] opacity-60">{msg.time}</p>
                     </div>
+                    {isCoach &&
+                    msg.payload &&
+                    typeof msg.payload === "object" &&
+                    "confirmation" in (msg.payload as object) ? (
+                      <AnalyticsConfirmationCard
+                        payload={
+                          (msg.payload as { confirmation: { pendingId: string; summary: string } })
+                            .confirmation
+                        }
+                      />
+                    ) : null}
                     {isCoach && msg.messageType && msg.payload != null ? (
                       <ChatRichCard
                         contactId={coachId}

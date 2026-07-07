@@ -6,12 +6,12 @@ import {
   Fingerprint,
   ArrowLeft,
   Bell,
-  EyeOff,
   Globe,
   LogOut,
   Search,
   Shield,
   LayoutDashboard,
+  MessageCircle,
   User,
   Volume2,
   Check,
@@ -26,6 +26,7 @@ import { useSession } from "@/lib/session-context";
 import { apiGet, apiPatch } from "@/lib/api/client";
 import type { UserSettingsDTO } from "@/lib/services/settings.service";
 import { UsageQuotaSection } from "@/components/settings/UsageQuotaSection";
+import { DeleteAccountSection } from "@/components/settings/DeleteAccountSection";
 
 type SettingItem = {
   icon: typeof Bell;
@@ -48,31 +49,6 @@ const SETTINGS_GROUPS: { title: string; items: SettingItem[] }[] = [
         type: "link",
         value: "settings.personal.action",
         href: "/welcome?profile=1",
-      },
-      {
-        icon: Shield,
-        label: "settings.privacy",
-        description: "settings.privacy.desc",
-        type: "link",
-        value: "settings.privacy.action",
-        href: "/settings/security",
-      },
-    ],
-  },
-  {
-    title: "settings.privacy_section",
-    items: [
-      {
-        icon: EyeOff,
-        label: "settings.leaderboard_opt_out",
-        description: "settings.leaderboard_opt_out.desc",
-        type: "toggle",
-      },
-      {
-        icon: Bell,
-        label: "settings.marketing_emails",
-        description: "settings.marketing_emails.desc",
-        type: "toggle",
       },
     ],
   },
@@ -136,6 +112,14 @@ const SETTINGS_GROUPS: { title: string; items: SettingItem[] }[] = [
   {
     title: "settings.account",
     items: [
+      {
+        icon: MessageCircle,
+        label: "settings.contact",
+        description: "settings.contact.desc",
+        type: "link",
+        value: "settings.contact.action",
+        href: "/settings/contact",
+      },
       {
         icon: LogOut,
         label: "settings.logout",
@@ -382,13 +366,10 @@ export default function SettingsPage() {
   const currentLangLabel = LANG_OPTIONS.find((o) => o.code === lang)?.label ?? lang;
 
   const settingsGroups = useMemo(() => {
-    const groups = SETTINGS_GROUPS.filter(
-      (group) => group.title !== "settings.privacy_section" || isAuthenticated,
-    );
     if (isAuthenticated && isAdmin) {
-      return [ADMIN_SETTINGS_GROUP, ...groups];
+      return [ADMIN_SETTINGS_GROUP, ...SETTINGS_GROUPS];
     }
-    return groups;
+    return SETTINGS_GROUPS;
   }, [isAuthenticated, isAdmin]);
 
   return (
@@ -627,6 +608,15 @@ export default function SettingsPage() {
             </div>
           </section>
         ))}
+
+        <section className="animate-in mt-5" style={{ animationDelay: "0.45s" }}>
+          <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
+            {t("settings.delete.section")}
+          </h2>
+          <div className="rounded-2xl border border-red-500/15 bg-red-500/5 px-4 py-3.5">
+            {isAuthenticated && <DeleteAccountSection />}
+          </div>
+        </section>
 
         <section className="animate-in mt-5" style={{ animationDelay: "0.5s" }}>
           <div className="rounded-2xl border border-white/5 bg-white/[0.03]">

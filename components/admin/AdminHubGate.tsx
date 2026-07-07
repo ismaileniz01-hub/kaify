@@ -1,12 +1,10 @@
 "use client";
 
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Loader2, Lock } from "lucide-react";
-import { apiGet, apiPost } from "@/lib/api/client";
+import { apiPost } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
 import { InlineAlert } from "@/components/InlineAlert";
-
-type HubStatus = { unlocked: boolean };
 
 export function AdminHubGate({ children }: { children: ReactNode }) {
   const { t } = useLang();
@@ -16,23 +14,18 @@ export function AdminHubGate({ children }: { children: ReactNode }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refreshStatus = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const status = await apiGet<HubStatus>("/api/admin/hub/status");
-      setUnlocked(status.unlocked);
-    } catch {
-      setUnlocked(false);
-      setError(t("admin.gate.error"));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
   useEffect(() => {
-    void refreshStatus();
-  }, [refreshStatus]);
+    void apiPost("/api/admin/hub/lock", {})
+      .catch(() => undefined)
+      .finally(() => {
+        setUnlocked(false);
+        setLoading(false);
+      });
+
+    return () => {
+      void apiPost("/api/admin/hub/lock", {}).catch(() => undefined);
+    };
+  }, []);
 
   const handleUnlock = async () => {
     if (!password.trim() || busy) return;

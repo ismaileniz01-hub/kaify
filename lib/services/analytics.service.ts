@@ -51,6 +51,7 @@ export type WeeklyFitnessScoreDTO = {
   combinedScore: number;
   foodDaysLogged: number;
   bodyScansCount: number;
+  weeklyGoalPercent: number;
 };
 
 export type AnalyticsBundleDTO = {
@@ -168,6 +169,8 @@ async function computeWeeklyScore(
 
   let foodDaysLogged = 0;
   let foodDayScoreSum = 0;
+  let goalPctSum = 0;
+  let goalDays = 0;
 
   for (const row of weekAnalytics) {
     const calGoal = Number(row.calorie_goal) || 2100;
@@ -175,6 +178,15 @@ async function computeWeeklyScore(
     const proteinGoal = Number(row.protein_goal_g) || 150;
     const protein = Number(row.protein_g) || 0;
     const workouts = Number(row.workouts_completed) || 0;
+    const workoutTarget = 5;
+
+    if (cal > 0 || protein > 0 || workouts > 0) {
+      goalDays += 1;
+      const calPct = calGoal > 0 ? Math.min(100, (cal / calGoal) * 100) : 0;
+      const workoutPct =
+        workoutTarget > 0 ? Math.min(100, (workouts / workoutTarget) * 100) : 0;
+      goalPctSum += (calPct + workoutPct) / 2;
+    }
 
     if (cal <= 0 && protein <= 0 && workouts <= 0) continue;
     foodDaysLogged += 1;
@@ -215,6 +227,7 @@ async function computeWeeklyScore(
     combinedScore,
     foodDaysLogged,
     bodyScansCount: bodyScores.length,
+    weeklyGoalPercent: goalDays > 0 ? Math.round(goalPctSum / goalDays) : 0,
   };
 }
 

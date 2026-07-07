@@ -4,19 +4,25 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiGet } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
+import { formatTierLabel } from "@/lib/billing/tier-labels";
 import type { UsageStatusDTO } from "@/lib/types/domain.types";
 
 function UsageBar({
   label,
   percent,
+  used,
+  limit,
   warning,
   warningLabel,
 }: {
   label: string;
   percent: number;
+  used: number;
+  limit: number;
   warning?: string | null;
   warningLabel?: string;
 }) {
+  const { t } = useLang();
   const pct = Math.min(100, Math.max(0, percent));
   const color =
     pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-purple-500";
@@ -27,6 +33,12 @@ function UsageBar({
         <span className="text-zinc-400">{label}</span>
         <span className="font-medium text-zinc-300">%{pct}</span>
       </div>
+      <p className="mb-1 text-[10px] text-zinc-500">
+        {t("usage.used_of", {
+          used: used.toLocaleString(),
+          limit: limit.toLocaleString(),
+        })}
+      </p>
       <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
@@ -37,7 +49,6 @@ function UsageBar({
   );
 }
 
-/** Shows the authenticated user's AI/chat usage quotas. */
 export function UsageQuotaSection() {
   const { t } = useLang();
   const [usage, setUsage] = useState<UsageStatusDTO | null>(null);
@@ -70,11 +81,13 @@ export function UsageQuotaSection() {
       <div className="space-y-3 rounded-2xl border border-white/5 bg-white/[0.03] p-4">
         <p className="text-xs text-zinc-500">
           {t("usage.plan")}:{" "}
-          <span className="capitalize text-zinc-300">{usage.tier}</span>
+          <span className="font-medium text-zinc-300">{formatTierLabel(usage.tier)}</span>
         </p>
         <UsageBar
-          label={t("usage.text_tokens")}
+          label={t("usage.token_usage")}
           percent={usage.textTokens.percent}
+          used={usage.textTokens.used}
+          limit={usage.textTokens.limit}
           warning={usage.textTokens.warning}
           warningLabel={
             usage.textTokens.warning === "LIMIT_100"
@@ -87,6 +100,8 @@ export function UsageQuotaSection() {
         <UsageBar
           label={t("usage.maya_photo")}
           percent={usage.mayaPhoto.percent}
+          used={usage.mayaPhoto.used}
+          limit={usage.mayaPhoto.limit}
           warning={usage.mayaPhoto.warning}
           warningLabel={
             usage.mayaPhoto.warning === "LIMIT_100"
@@ -99,6 +114,8 @@ export function UsageQuotaSection() {
         <UsageBar
           label={t("usage.leo_photo")}
           percent={usage.leoPhoto.percent}
+          used={usage.leoPhoto.used}
+          limit={usage.leoPhoto.limit}
           warning={usage.leoPhoto.warning}
           warningLabel={
             usage.leoPhoto.warning === "LIMIT_100"

@@ -7,6 +7,7 @@ import { WelcomeCard } from "@/components/welcome/WelcomeCard";
 import { WelcomeExtras } from "@/components/welcome/WelcomeExtras";
 import { StreakAtRiskBanner } from "@/components/streak/StreakAtRiskBanner";
 import { GemBalance } from "@/components/GemBalance";
+import { FreezieBalance } from "@/components/FreezieBalance";
 import { ProfileModal } from "@/components/ProfileModal";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { WelcomeSkeleton } from "@/components/welcome/WelcomeSkeleton";
@@ -23,7 +24,7 @@ function WelcomeContent() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [pendingReferral, setPendingReferral] = useState<string | null>(null);
   const searchParams = useSearchParams();
-  const { t, setLang } = useLang();
+  const { t, setLang, lang } = useLang();
   const {
     displayName,
     userProfile,
@@ -35,6 +36,7 @@ function WelcomeContent() {
     updateProfile,
     profile,
     isAuthenticated,
+    refreshHome,
   } = useSession();
 
   // ?profile=1 query param'ı ile gelindiyse profil modal'ını otomatik aç
@@ -58,6 +60,10 @@ function WelcomeContent() {
     const match = LANG_OPTIONS.find((opt) => opt.code === base);
     if (match) setLang(match.code);
   }, [isAuthenticated, profile?.locale, setLang]);
+
+  useEffect(() => {
+    if (isAuthenticated) void refreshHome();
+  }, [lang, isAuthenticated, refreshHome]);
 
   if (isLoading && isAuthenticated) {
     return <WelcomeSkeleton />;
@@ -99,6 +105,7 @@ function WelcomeContent() {
 
         <div className="flex items-center gap-2">
           <GemBalance balance={gemBalance.balance} size="sm" animate />
+          <FreezieBalance balance={streak.freezieBalance} size="sm" animate />
           <NotificationCenter />
           <Link
             href="/settings"

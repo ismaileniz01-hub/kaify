@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { AdminHubGate } from "@/components/admin/AdminHubGate";
+import { resolveIsHubAdmin } from "@/lib/auth/admin-access";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 export default async function AdminLayout({
   children,
@@ -18,14 +18,8 @@ export default async function AdminLayout({
     redirect("/login");
   }
 
-  const admin = createAdminSupabaseClient();
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (profile?.role !== "admin") {
+  const isHubAdmin = await resolveIsHubAdmin(user.id);
+  if (!isHubAdmin) {
     redirect("/welcome");
   }
 

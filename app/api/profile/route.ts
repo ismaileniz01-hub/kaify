@@ -8,7 +8,10 @@ import { profileUpdateSchema } from "@/lib/validations/profile.schema";
 
 export const dynamic = "force-dynamic";
 
-const deleteSchema = z.object({ confirm: z.literal("DELETE") });
+const deleteSchema = z.object({
+  confirm: z.literal("DELETE"),
+  reason: z.string().max(2000).optional(),
+});
 
 /**
  * GET /api/profile

@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { BellRing, Gift, Loader2, Send, Snowflake, User } from "lucide-react";
+import { BellRing, Gift, Loader2, MessageCircle, Send, Snowflake, User } from "lucide-react";
 import { apiPost, ApiClientError } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { InlineAlert } from "@/components/InlineAlert";
+import { AdminSupportPanel } from "@/components/admin/AdminSupportPanel";
 import { normalizeUserId } from "@/lib/utils/user-id";
 
-type Tab = "broadcast" | "single" | "gift";
+type Tab = "broadcast" | "single" | "gift" | "support";
 type GiftKind = "gems" | "freezie";
 
 type BroadcastResult = {
@@ -49,6 +50,7 @@ export default function AdminHubPage() {
     { id: "broadcast", label: t("admin.tab.broadcast"), icon: BellRing },
     { id: "single", label: t("admin.tab.single"), icon: User },
     { id: "gift", label: t("admin.tab.gift"), icon: Gift },
+    { id: "support", label: t("admin.tab.support"), icon: MessageCircle },
   ];
 
   const handleBroadcast = async () => {
@@ -361,6 +363,8 @@ export default function AdminHubPage() {
             </button>
           </div>
         )}
+
+        {tab === "support" && <AdminSupportPanel />}
       </div>
     </div>
   );

@@ -286,14 +286,6 @@ export function EmailOtpLogin({ onStepChange }: EmailOtpLoginProps) {
         </p>
       )}
 
-      {isNativeApp === false && (
-        <a
-          href="/welcome"
-          className="flex w-full items-center justify-center rounded-full border border-white/15 bg-white/[0.05] px-6 py-4 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/10"
-        >
-          {t("login.preview")}
-        </a>
-      )}
     </div>
   );
 }

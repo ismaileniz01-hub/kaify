@@ -98,11 +98,13 @@ function PodiumStep({
   rank,
   barHeight,
   delay,
+  usersLabel,
 }: {
   entry: CountryEntry;
   rank: number;
   barHeight: string;
   delay: number;
+  usersLabel: string;
 }) {
   const colors = [
     {
@@ -163,7 +165,7 @@ function PodiumStep({
       </span>
 
       {/* Kullanıcı sayısı */}
-      <span className="text-[10px] text-zinc-500">{entry.userCount} users</span>
+      <span className="text-[10px] text-zinc-500">{usersLabel}</span>
 
       {/* Streak */}
       <div className="flex items-center gap-1 text-sm text-orange-400">
@@ -301,13 +303,31 @@ export default function LeaderboardPage() {
                 {/* Podyum basamakları */}
                 <div className="flex items-end justify-center gap-4">
                   {data.leaderboard[1] && (
-                    <PodiumStep entry={data.leaderboard[1]} rank={2} barHeight="4rem" delay={300} />
+                    <PodiumStep
+                      entry={data.leaderboard[1]}
+                      rank={2}
+                      barHeight="4rem"
+                      delay={300}
+                      usersLabel={t("leaderboard.country_users", { count: data.leaderboard[1].userCount })}
+                    />
                   )}
                   {data.leaderboard[0] && (
-                    <PodiumStep entry={data.leaderboard[0]} rank={1} barHeight="6rem" delay={150} />
+                    <PodiumStep
+                      entry={data.leaderboard[0]}
+                      rank={1}
+                      barHeight="6rem"
+                      delay={150}
+                      usersLabel={t("leaderboard.country_users", { count: data.leaderboard[0].userCount })}
+                    />
                   )}
                   {data.leaderboard[2] && (
-                    <PodiumStep entry={data.leaderboard[2]} rank={3} barHeight="3rem" delay={450} />
+                    <PodiumStep
+                      entry={data.leaderboard[2]}
+                      rank={3}
+                      barHeight="3rem"
+                      delay={450}
+                      usersLabel={t("leaderboard.country_users", { count: data.leaderboard[2].userCount })}
+                    />
                   )}
                 </div>
               </div>
