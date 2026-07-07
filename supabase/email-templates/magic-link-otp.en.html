@@ -1,20 +1,17 @@
 <!--
   Paste into Supabase Dashboard → Authentication → Email Templates → Magic Link
 
-  Subject (English only):
-  Your K.AIFY login code
+  Subject: Your KAIFY login code
 
-  Important: remove {{ .ConfirmationURL }} / any magic-link button from the template.
+  BEFORE pasting: Authentication → Providers → Email → Email OTP length → 6
+  (Template cannot change digit count — only that setting does.)
 -->
 <h2 style="margin:0 0 16px;font-family:system-ui,sans-serif;color:#111;">
-  Your login code
+  Your login code. Thank you for choosing us.
 </h2>
 <p style="margin:0 0 20px;font-family:system-ui,sans-serif;color:#444;line-height:1.5;">
-  Enter this one-time code in the K.AIFY app to sign in. It expires shortly and can only be used once.
+  Enter this one-time code in the KAIFY app to sign in. It expires shortly and can only be used once.
 </p>
-<!--
-  Supabase Dashboard → Authentication → Providers → Email → Email OTP length → 6
--->
 <p style="margin:0 0 24px;font-family:ui-monospace,monospace;font-size:32px;font-weight:700;letter-spacing:0.35em;color:#7c3aed;">
   {{ .Token }}
 </p>
