@@ -11,7 +11,7 @@ describe("legacy API deprecation", () => {
     expect(isLegacyPublicApi("/api/v1/profile")).toBe(false);
     expect(isLegacyPublicApi("/api/cron/cleanup")).toBe(false);
     expect(isLegacyPublicApi("/api/admin/overview")).toBe(false);
-    expect(isLegacyPublicApi("/api/webhooks/lemon-squeezy")).toBe(false);
+    expect(isLegacyPublicApi("/api/webhooks/paddle")).toBe(false);
   });
 
   it("provides Sunset and Deprecation headers", () => {

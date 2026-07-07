@@ -10,7 +10,7 @@ Last updated: 2026-07-05 · **Draft**
 | **DeepSeek** | CN / US API | Text prompts | SCC or supplementary measures — **legal review required** |
 | **Vercel** | Global edge | HTTP logs | SCC |
 | **Sentry** | EU/US | Scrubbed stack traces | SCC, `sendDefaultPii: false` |
-| **Lemon Squeezy** | US | Billing email, order metadata | SCC / MoR DPA |
+| **Paddle** | US / UK | Billing email, order metadata | SCC / MoR DPA |
 | **Sender.net** | US | Waitlist email | Consent + SCC |
 | **Supabase** | EU (Frankfurt) | Primary database | EU hosting — no third-country transfer for DB |
 

@@ -37,7 +37,7 @@ As defined in Controller's Kaify deployment (typically: email, profile, health/f
 
 ## Subprocessors
 
-See `docs/compliance/subprocessors.md` — Supabase (EU), Vercel, Google Gemini, DeepSeek, Sentry, Lemon Squeezy.
+See `docs/compliance/subprocessors.md` — Supabase (EU), Vercel, Google Gemini, DeepSeek, Sentry, Paddle.
 
 ## International transfers
 

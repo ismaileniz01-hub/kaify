@@ -9,7 +9,7 @@ Last updated: 2026-07-05
 | **Google (Gemini)** | AI vision & text | US | Prompts, images (transient) |
 | **DeepSeek** | AI text synthesis | CN/US API | Prompts (no raw image storage) |
 | **Sentry** | Error monitoring | EU/US | Stack traces, scrubbed context |
-| **Lemon Squeezy** | Payments (MoR) | US | Billing email, subscription status |
+| **Paddle** | Payments (MoR) | US / UK | Billing email, subscription status |
 | **Google reCAPTCHA** | Bot protection | US | IP, interaction signals |
 | **Sender.net** | Email marketing (waitlist) | US | Email, preferences |
 | **Termly** | Policy hosting/embed | US | Page views on legal pages |

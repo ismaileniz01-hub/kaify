@@ -23,7 +23,7 @@ export function KvkkDisclosureContent() {
           <li>Profil: boy, kilo, cinsiyet, deneyim, ülke, şehir</li>
           <li>Sağlık/fitness: adım, antrenman notları, AI sohbet, fotoğraf analizi (onaylı)</li>
           <li>İşlem güvenliği: IP, oturum, cihaz bilgisi</li>
-          <li>Ödeme: abonelik durumu, fatura e-postası (kart verisi Lemon Squeezy&apos;de)</li>
+          <li>Ödeme: abonelik durumu, fatura e-postası (kart verisi Paddle&apos;da)</li>
         </ul>
       </section>
 
@@ -46,7 +46,7 @@ export function KvkkDisclosureContent() {
       <section id="aktarim" className="mb-10">
         <h2>5. Aktarım</h2>
         <p className="text-zinc-300">
-          Veriler Supabase (AB/Frankfurt), Vercel, Google Gemini, DeepSeek, Sentry, Lemon Squeezy
+          Veriler Supabase (AB/Frankfurt), Vercel, Google Gemini, DeepSeek, Sentry, Paddle
           gibi alt işleyicilere aktarılabilir. Yurt dışı aktarımda KVKK m.9 hükümleri ve
           Standart Sözleşme Maddeleri uygulanır.
         </p>

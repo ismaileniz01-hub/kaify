@@ -8,7 +8,7 @@ Last updated: 2026-07-05
 | **Coaching / AI** | `lib/domains/ai` | chat_messages, coaching_memory | DeepSeek + Gemini |
 | **Gamification** | `lib/services/streak.service`, `gem.service` | user_streaks, gem_ledger | Check-in RPC |
 | **Market** | `lib/domains/market` | market_items, user_market_inventory | Catalog from DB |
-| **Billing** | `lib/domains/billing` | billing_events, profiles.tier | Lemon Squeezy webhook |
+| **Billing** | `lib/domains/billing` | billing_events, profiles.tier | Paddle webhook |
 | **Analytics** | `lib/services/analytics.service` | analytics_daily, health_steps | Cached read models |
 | **Social** | `lib/services/leaderboard.service` | RPC leaderboards | Public masked IDs |
 | **Compliance** | `lib/domains/compliance` | consent_*, data_export_logs | Export / delete |

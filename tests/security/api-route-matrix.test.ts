@@ -9,7 +9,7 @@ const ROUTE_FILE = "route.ts";
 /** Webhooks — raw body required for HMAC signature verification. */
 const ROUTE_ALLOWLIST = new Set([
   "app/api/auth/callback/route.ts",
-  "app/api/webhooks/lemon-squeezy/route.ts",
+  "app/api/webhooks/paddle/route.ts",
 ]);
 
 const WRAPPER_MARKERS = [

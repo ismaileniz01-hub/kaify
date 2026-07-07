@@ -1,17 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense, useCallback, useEffect, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Minus, Sparkles, Shield, Zap, Crown } from "lucide-react";
 import { LandingNav } from "./LandingNav";
 import { LandingFooter } from "./LandingFooter";
 import { ScrollReveal } from "./ScrollReveal";
 import { FloatingOrbs } from "./FloatingOrbs";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
+import { usePaddle } from "@/components/billing/PaddleProvider";
 import {
   PLAN_COMPARISON,
-  PRICING_PLANS,
+  PRICING_PLANS_WITH_PADDLE,
   formatPrice,
   type PlanId,
+  type PricingPlan,
 } from "@/lib/marketing/pricing-plans";
 
 function FeatureValue({ value }: { value: string | boolean }) {
@@ -38,9 +42,60 @@ function PlanIcon({ id }: { id: PlanId }) {
   return <Sparkles className="h-5 w-5 text-zinc-400" />;
 }
 
+function PaddleCheckoutResume() {
+  const searchParams = useSearchParams();
+  const { paddle, ready } = usePaddle();
+
+  useEffect(() => {
+    if (!ready || !paddle) return;
+    const txn =
+      searchParams.get("_ptxn") ??
+      searchParams.get("transaction_id") ??
+      searchParams.get("transactionId");
+    if (txn) {
+      paddle.Checkout.open({ transactionId: txn });
+    }
+  }, [paddle, ready, searchParams]);
+
+  return null;
+}
+
+function PlanCheckoutButton({
+  plan,
+  className,
+  children,
+}: {
+  plan: PricingPlan;
+  className: string;
+  children: ReactNode;
+}) {
+  const router = useRouter();
+  const { paddle, ready, configured } = usePaddle();
+
+  const handleClick = useCallback(() => {
+    const priceId = plan.paddlePriceId;
+    if (configured && ready && paddle && priceId) {
+      paddle.Checkout.open({
+        items: [{ priceId, quantity: 1 }],
+      });
+      return;
+    }
+    router.push("/login");
+  }, [configured, paddle, plan.paddlePriceId, ready, router]);
+
+  return (
+    <button type="button" onClick={handleClick} className={className}>
+      {children}
+    </button>
+  );
+}
+
 export function PricingPage() {
   return (
     <div className="landing-site">
+      <Suspense fallback={null}>
+        <PaddleCheckoutResume />
+      </Suspense>
       <LandingNav pricingPage />
       <main>
         <section className="pricing-hero relative overflow-hidden pb-8 pt-28 sm:pt-36">
@@ -73,7 +128,7 @@ export function PricingPage() {
               <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-sm text-zinc-500">
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2">
                   <Shield className="h-4 w-4 text-emerald-400" />
-                  Secure checkout
+                  Secure checkout via Paddle
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2">
                   <Sparkles className="h-4 w-4 text-purple-400" />
@@ -87,7 +142,7 @@ export function PricingPage() {
         <section className="landing-section !pt-4">
           <div className="landing-container">
             <div className="pricing-cards">
-              {PRICING_PLANS.map((plan, index) => (
+              {PRICING_PLANS_WITH_PADDLE.map((plan, index) => (
                 <ScrollReveal key={plan.id} delay={index * 120} direction="up">
                   <article
                     className={`pricing-card pricing-card--${plan.accent} ${
@@ -129,14 +184,14 @@ export function PricingPage() {
                       ))}
                     </ul>
 
-                    <Link
-                      href="/login"
+                    <PlanCheckoutButton
+                      plan={plan}
                       className={`landing-btn mt-8 w-full ${
                         plan.popular ? "landing-btn--primary" : "landing-btn--ghost"
                       }`}
                     >
                       {plan.popular ? "Start with Pro" : `Get ${plan.name}`}
-                    </Link>
+                    </PlanCheckoutButton>
                   </article>
                 </ScrollReveal>
               ))}
@@ -215,7 +270,7 @@ export function PricingPage() {
                   </Link>
                 </div>
                 <p className="mt-6 text-center text-xs text-zinc-600">
-                  Prices in USD. Billed monthly. Manage or cancel anytime in Settings.
+                  Prices in USD. Billed monthly via Paddle. Manage or cancel anytime in Settings.
                 </p>
               </div>
             </ScrollReveal>

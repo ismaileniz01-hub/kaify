@@ -77,7 +77,7 @@ export const EXPLICIT_CLEANUP: readonly DeletionTableSpec[] = [
 export const THIRD_PARTY_POST_DELETE = [
   "Sentry (scrubbed events, vendor retention ~90d)",
   "Vercel logs (HTTP, vendor retention)",
-  "Lemon Squeezy (MoR billing records)",
+  "Paddle (MoR billing records)",
 ] as const;
 
 export function allUserOwnedExportTablesCovered(): string[] {

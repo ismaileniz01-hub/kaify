@@ -52,7 +52,7 @@ const sections: LegalSection[] = [
             session cookies
           </li>
           <li>
-            <strong>Payments:</strong> processed by Lemon Squeezy (MoR) — we receive subscription
+            <strong>Payments:</strong> processed by Paddle (Merchant of Record) — we receive subscription
             status and billing email, not card numbers
           </li>
         </ul>
@@ -102,7 +102,7 @@ const sections: LegalSection[] = [
           <li>Vercel (hosting)</li>
           <li>Google Gemini / DeepSeek (AI inference)</li>
           <li>Sentry (error monitoring)</li>
-          <li>Lemon Squeezy (payments)</li>
+          <li>Paddle (payments)</li>
           <li>Google reCAPTCHA (bot protection on waitlist)</li>
         </ul>
         <p>

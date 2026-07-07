@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PricingPage } from "@/components/landing/PricingPage";
+import { PaddleProvider } from "@/components/billing/PaddleProvider";
 
 export const metadata: Metadata = {
   title: "Pricing — K.AIFY",
@@ -13,5 +14,9 @@ export const metadata: Metadata = {
 };
 
 export default function PricingRoute() {
-  return <PricingPage />;
+  return (
+    <PaddleProvider>
+      <PricingPage />
+    </PaddleProvider>
+  );
 }

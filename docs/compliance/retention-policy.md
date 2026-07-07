@@ -38,7 +38,7 @@ When a user deletes their account:
 
 ## Payment data split
 
-- **Card data:** never stored by Kaify — Lemon Squeezy (Merchant of Record)
+- **Card data:** never stored by Kaify — Paddle (Merchant of Record)
 - **Kaify stores:** subscription tier, webhook metadata, billing email from webhooks
 
 Contact: privacy@kaifyai.org

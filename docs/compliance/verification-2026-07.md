@@ -11,7 +11,7 @@ Compliance Faz 4 · Target score: **90+**
 - [ ] Faz 2 compliance migration applied (`compliance_faz2`)
 - [ ] Faz 3 compliance migration applied (`compliance_faz3`)
 - [ ] Retention purge cron scheduled (Vercel `0 2 * * 0`)
-- [ ] Lemon Squeezy webhook HMAC verified
+- [ ] Paddle webhook signature verified
 - [ ] AI consent gate on chat + analyze + team meeting
 - [ ] Push consent on subscribe + native
 - [ ] Cookie banner Accept/Reject only

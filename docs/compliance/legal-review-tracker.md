@@ -17,7 +17,7 @@ Last updated: 2026-07-05 · Compliance Faz 4
 | L4 | Art. 9 AI health consent text | ☐ Pending | | | In-app modal + policy |
 | L5 | Photo analysis consent | ☐ Pending | | | |
 | L6 | Cookie policy | ☐ Pending | | | ePrivacy alignment |
-| L7 | Lemon Squeezy refund / subscription | ☐ Pending | | | MoR terms sync |
+| L7 | Paddle refund / subscription | ☐ Pending | | | MoR terms sync |
 | L8 | DeepSeek CN transfer | ☐ Pending | | | SCC / supplementary measures |
 | L9 | B2B DPA template | ☐ Pending | | | dpa-template.md |
 | L10 | VERBİS requirement | ☐ Pending | | | KVKK registration |

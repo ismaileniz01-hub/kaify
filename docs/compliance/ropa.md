@@ -20,7 +20,7 @@ Last updated: 2026-07-05 · Version **2026-07-05** · Compliance Faz 4
 | P6 | Gamification | Streaks, gems, Kai state, market inventory | Users | Engagement | Contract | Supabase | Until deletion | RLS, ledger append-only |
 | P7 | Push notifications | Device tokens, preferences | Consenting users | Reminders | Consent | FCM, Web Push, Supabase | Until opt-out / deletion | Push consent required |
 | P8 | In-app notifications | Notification content, read state | Users | UX / streak alerts | Contract | Supabase | 12 months | RLS |
-| P9 | Subscriptions & billing | Tier, order IDs, billing email, webhook payload | Paying users | Payment & tier | Contract | Lemon Squeezy, Supabase | 7 years (billing_events) | HMAC webhook, no card storage |
+| P9 | Subscriptions & billing | Tier, order IDs, billing email, webhook payload | Paying users | Payment & tier | Contract | Paddle, Supabase | 7 years (billing_events) | Signed webhook, no card storage |
 | P10 | Referral program | Referral codes, events | Users | Growth | Legitimate interest / contract | Supabase | Until deletion | Abuse guards |
 | P11 | Waitlist / marketing | Email, name, contact prefs | Prospects | Launch comms | Consent | Sender.net, reCAPTCHA | Until unsubscribe | reCAPTCHA disclosed |
 | P12 | Cookie / analytics (optional) | Cookie consent choice | Web visitors | Product improvement | Consent | Vercel Analytics (if accepted) | Per vendor | Banner Accept/Reject |
@@ -51,7 +51,7 @@ DPIA: [dpia-ai-fitness.md](./dpia-ai-fitness.md)
 | Supabase | EU (Frankfurt) | EU hosting | No third-country DB transfer |
 | Google Gemini | US | SCC / Google DPA | [transfer-impact-assessment.md](./transfer-impact-assessment.md) |
 | DeepSeek | CN / US API | SCC + supplementary measures | Legal review pending |
-| Vercel, Sentry, Lemon Squeezy, Sender.net | US / global | SCC | Vendor DPAs |
+| Vercel, Sentry, Paddle, Sender.net | US / global | SCC | Vendor DPAs |
 
 Cross-border signing checklist: [transfer-signing-checklist.md](./transfer-signing-checklist.md)
 

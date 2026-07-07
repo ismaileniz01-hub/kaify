@@ -14,7 +14,7 @@ Related: [transfer-impact-assessment.md](./transfer-impact-assessment.md)
 | **Google Cloud (Gemini)** | Google Cloud Console | Google DPA + SCC | ☐ | | |
 | **DeepSeek** | API provider terms | **Legal review required** | ☐ | | CN routing risk |
 | **Sentry** | sentry.io settings | DPA + SCC | ☐ | | EU region preferred |
-| **Lemon Squeezy** | Seller dashboard → Legal | MoR DPA | ☐ | | |
+| **Paddle** | Seller dashboard → Legal | MoR DPA | ☐ | | |
 | **Sender.net** | Account legal | SCC | ☐ | | Waitlist only |
 | **Upstash** | Console → Legal | SCC | ☐ | | Rate limiting |
 

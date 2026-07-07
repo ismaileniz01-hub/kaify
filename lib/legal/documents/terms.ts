@@ -63,7 +63,7 @@ export const TERMS_DOCUMENT: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Paid plans are processed by Lemon Squeezy as Merchant of Record (tax, invoicing, payment collection). Subscriptions renew automatically unless cancelled before the renewal date. Unless mandatory law provides otherwise, fees are non-refundable once digital access is granted.",
+          text: "Paid plans are processed by Paddle as Merchant of Record (tax, invoicing, payment collection). Subscriptions renew automatically unless cancelled before the renewal date. Unless mandatory law provides otherwise, fees are non-refundable once digital access is granted.",
         },
         {
           type: "p",
@@ -111,7 +111,7 @@ export const TERMS_DOCUMENT: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "We rely on subprocessors including Supabase, Google (Gemini), DeepSeek, Vercel, Sentry, Lemon Squeezy, and reCAPTCHA. Their availability affects ours; we are not liable for third-party outages beyond mandatory law.",
+          text: "We rely on subprocessors including Supabase, Google (Gemini), DeepSeek, Vercel, Sentry, Paddle, and reCAPTCHA. Their availability affects ours; we are not liable for third-party outages beyond mandatory law.",
         },
       ],
     },

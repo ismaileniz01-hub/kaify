@@ -1,3 +1,5 @@
+import { getPaddlePriceIdForPlan } from "@/lib/billing/paddle-config";
+
 export type PlanId = "essential" | "pro" | "premium";
 
 export type PlanFeature = {
@@ -17,6 +19,7 @@ export type PricingPlan = {
   popular?: boolean;
   accent: "zinc" | "purple" | "amber";
   perks: string[];
+  paddlePriceId?: string;
 };
 
 export const PRICING_PLANS: PricingPlan[] = [
@@ -72,6 +75,11 @@ export const PRICING_PLANS: PricingPlan[] = [
     ],
   },
 ];
+
+export const PRICING_PLANS_WITH_PADDLE: PricingPlan[] = PRICING_PLANS.map((plan) => ({
+  ...plan,
+  paddlePriceId: getPaddlePriceIdForPlan(plan.id),
+}));
 
 export const PLAN_COMPARISON: PlanFeature[] = [
   {

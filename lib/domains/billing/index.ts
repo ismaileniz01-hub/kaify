@@ -1,5 +1,6 @@
-/** Subscriptions & Lemon Squeezy webhooks. */
+/** Subscriptions & Paddle webhooks. */
 export {
-  handleLemonSqueezyWebhook,
-  verifyLemonSqueezySignature,
+  handlePaddleWebhook,
+  verifyPaddleSignature,
+  type PaddleWebhookPayload,
 } from "@/lib/services/billing.service";

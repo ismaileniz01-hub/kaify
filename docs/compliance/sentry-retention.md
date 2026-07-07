@@ -29,7 +29,7 @@ HTTP access logs may contain IP and URL paths for ~30 days. No chat body content
 
 ---
 
-## Lemon Squeezy
+## Paddle
 
 Billing records retained by MoR per tax law (~7 years). Kaify `billing_events` uses `ON DELETE SET NULL` — see [deletion-behavior.md](./deletion-behavior.md).
 

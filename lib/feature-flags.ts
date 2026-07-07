@@ -18,9 +18,9 @@ export const featureFlags = {
   teamMeeting: () => envFlag("FEATURE_TEAM_MEETING", true),
   /** Native push registration UI. */
   nativePush: () => envFlag("FEATURE_NATIVE_PUSH", true),
-  /** Lemon Squeezy billing webhook processing. */
-  lemonSqueezyBilling: () =>
-    envFlag("FEATURE_LEMON_SQUEEZY", Boolean(process.env.LEMON_SQUEEZY_WEBHOOK_SECRET?.trim())),
+  /** Paddle billing webhook processing. */
+  paddleBilling: () =>
+    envFlag("FEATURE_PADDLE", Boolean(process.env.PADDLE_NOTIFICATION_WEBHOOK_SECRET?.trim())),
 } as const;
 
 export type FeatureFlag = keyof typeof featureFlags;

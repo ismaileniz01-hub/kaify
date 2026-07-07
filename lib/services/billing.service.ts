@@ -1,104 +1,86 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createHmac, timingSafeEqual } from "crypto";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { ApiError } from "@/lib/api/errors";
-import { logger } from "@/lib/logger";
-import { createDomainEvent } from "@/lib/events/types";
-import { emitDomainEvent } from "@/lib/events/emit";
+import { buildPaddlePriceTierMap } from "@/lib/billing/paddle-config";
 import type { SubscriptionTier } from "@/lib/types/database.types";
 
-type LemonWebhookPayload = {
-  meta?: {
-    event_name?: string;
-    custom_data?: Record<string, unknown>;
-  };
-  data?: {
-    id?: string;
-    type?: string;
-    attributes?: Record<string, unknown>;
-    relationships?: Record<string, unknown>;
-  };
+type BillingCycle = "monthly" | "yearly";
+
+type PaddleCustomData = {
+  user_id?: string;
+  userId?: string;
 };
 
-const TIER_EVENTS = new Set([
-  "subscription_created",
-  "subscription_updated",
-  "subscription_payment_success",
-]);
+type PaddleSubscriptionData = {
+  id?: string;
+  status?: string;
+  custom_data?: PaddleCustomData | null;
+  items?: Array<{ price?: { id?: string } }>;
+  billing_cycle?: { interval?: string };
+  customer_id?: string;
+};
 
-const DOWNGRADE_EVENTS = new Set([
-  "subscription_cancelled",
-  "subscription_expired",
-  "subscription_payment_failed",
-]);
+export type PaddleWebhookPayload = {
+  event_id: string;
+  event_type: string;
+  occurred_at?: string;
+  data?: PaddleSubscriptionData;
+};
 
-function envVariantMap(): Record<string, SubscriptionTier> {
-  const map: Record<string, SubscriptionTier> = {};
-  const pairs: [string | undefined, SubscriptionTier][] = [
-    [process.env.LEMON_SQUEEZY_VARIANT_ESSENTIAL, "essential"],
-    [process.env.LEMON_SQUEEZY_VARIANT_PRO, "pro"],
-    [process.env.LEMON_SQUEEZY_VARIANT_PREMIUM_MAX, "premium_max"],
-  ];
-  for (const [variantId, tier] of pairs) {
-    if (variantId?.trim()) map[variantId.trim()] = tier;
-  }
-  return map;
-}
-
-/** Verifies Lemon Squeezy webhook HMAC signature (hex digest). */
-export function verifyLemonSqueezySignature(
+/** Verifies Paddle Billing webhook signature (`Paddle-Signature` header). */
+export function verifyPaddleSignature(
   rawBody: string,
-  signature: string | null,
+  signatureHeader: string | null,
   secret: string,
 ): boolean {
-  if (!signature?.trim()) return false;
-  const digest = createHmac("sha256", secret).update(rawBody).digest("hex");
+  if (!signatureHeader?.trim()) return false;
+
+  const parts = Object.fromEntries(
+    signatureHeader.split(";").map((part) => {
+      const eq = part.indexOf("=");
+      if (eq === -1) return [part, ""];
+      return [part.slice(0, eq), part.slice(eq + 1)];
+    }),
+  );
+
+  const ts = parts.ts;
+  const h1 = parts.h1;
+  if (!ts || !h1) return false;
+
+  const ageMs = Date.now() - Number(ts) * 1000;
+  if (!Number.isFinite(ageMs) || ageMs > 5 * 60 * 1000 || ageMs < -60_000) {
+    return false;
+  }
+
+  const expected = createHmac("sha256", secret)
+    .update(`${ts}:${rawBody}`)
+    .digest("hex");
+
   try {
-    return timingSafeEqual(Buffer.from(digest), Buffer.from(signature.trim()));
+    const a = Buffer.from(h1, "hex");
+    const b = Buffer.from(expected, "hex");
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
   } catch {
     return false;
   }
 }
 
-function resolveUserId(payload: LemonWebhookPayload): string | null {
-  const custom = payload.meta?.custom_data;
+async function resolveUserId(
+  admin: ReturnType<typeof createAdminSupabaseClient>,
+  data: PaddleSubscriptionData,
+): Promise<string | null> {
+  const custom = data.custom_data;
   const fromCustom = custom?.user_id ?? custom?.userId;
-  if (typeof fromCustom === "string" && fromCustom.length > 0) return fromCustom;
-  return null;
-}
-
-function resolveCustomerEmail(payload: LemonWebhookPayload): string | null {
-  const attrs = payload.data?.attributes ?? {};
-  const email = attrs.user_email ?? attrs.customer_email ?? attrs.email;
-  return typeof email === "string" ? email.toLowerCase() : null;
-}
-
-function resolveVariantId(payload: LemonWebhookPayload): string | null {
-  const attrs = payload.data?.attributes ?? {};
-  const record = attrs as Record<string, unknown>;
-  const firstItem = record.first_subscription_item as Record<string, unknown> | undefined;
-  const variant =
-    record.variant_id ??
-    firstItem?.variant_id ??
-    record.product_id;
-  return variant != null ? String(variant) : null;
-}
-
-async function findUserIdByEmail(email: string): Promise<string | null> {
-  const admin = createAdminSupabaseClient();
-  const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
-  if (error) {
-    logger.warn("billing.lookup email failed", { error: error.message });
-    return null;
+  if (typeof fromCustom === "string" && fromCustom.trim()) {
+    return fromCustom.trim();
   }
-  const match = data.users.find((u) => u.email?.toLowerCase() === email);
-  return match?.id ?? null;
+  return null;
 }
 
 async function applyTier(
   userId: string,
   tier: SubscriptionTier,
-  billingCycle: "monthly" | "yearly",
+  billingCycle: BillingCycle,
 ): Promise<void> {
   const admin = createAdminSupabaseClient();
   const { error } = await admin.rpc("apply_subscription", {
@@ -107,99 +89,141 @@ async function applyTier(
     p_billing_cycle: billingCycle,
   });
   if (error) {
-    logger.error("billing.apply_subscription failed", {
+    console.error("[billing] apply_subscription failed", {
       userId,
       tier,
       error: error.message,
     });
-    throw new ApiError("INTERNAL_ERROR", "Abonelik güncellenemedi.");
+    throw error;
   }
 }
 
-async function downgradeToEssential(userId: string): Promise<void> {
-  await applyTier(userId, "essential", "monthly");
+async function revokeSubscription(userId: string): Promise<void> {
+  const admin = createAdminSupabaseClient();
+  const { error } = await admin
+    .from("profiles")
+    .update({
+      tier: "essential",
+      tier_expires_at: null,
+    })
+    .eq("id", userId);
+  if (error) {
+    console.error("[billing] revoke_subscription failed", {
+      userId,
+      error: error.message,
+    });
+    throw error;
+  }
+}
+
+type BillingEventRow = {
+  provider_event_id: string;
+  event_type: string;
+  user_id: string | null;
+  payload: unknown;
+};
+
+async function upsertBillingEvent(
+  admin: ReturnType<typeof createAdminSupabaseClient>,
+  eventId: string,
+  eventType: string,
+  userId: string | null,
+  payload: unknown,
+): Promise<boolean> {
+  const billingDb = admin as unknown as {
+    from: (table: "billing_events") => {
+      upsert: (
+        row: BillingEventRow,
+        options: { onConflict: string; ignoreDuplicates: boolean },
+      ) => Promise<{ error: { code?: string; message: string } | null }>;
+    };
+  };
+
+  const { error } = await billingDb.from("billing_events").upsert(
+    {
+      provider_event_id: eventId,
+      event_type: eventType,
+      user_id: userId,
+      payload,
+    },
+    { onConflict: "provider_event_id", ignoreDuplicates: true },
+  );
+
+  if (error?.code === "23505") return false;
+  if (error) throw error;
+  return true;
+}
+
+function billingCycleFromData(data: PaddleSubscriptionData): BillingCycle {
+  const interval = data.billing_cycle?.interval?.toLowerCase();
+  if (interval === "year") return "yearly";
+  return "monthly";
+}
+
+function priceIdFromData(data: PaddleSubscriptionData): string | undefined {
+  const id = data.items?.[0]?.price?.id;
+  return typeof id === "string" && id.trim() ? id.trim() : undefined;
 }
 
 /**
- * Processes a verified Lemon Squeezy webhook. Idempotent via lemon_event_id.
+ * Processes a verified Paddle Billing webhook. Idempotent via provider_event_id.
  */
-export async function handleLemonSqueezyWebhook(
+export async function handlePaddleWebhook(
   eventId: string,
-  payload: LemonWebhookPayload,
-): Promise<{ processed: boolean; userId: string | null }> {
+  payload: PaddleWebhookPayload,
+): Promise<{ ok: true; skipped?: boolean } | { ok: false; reason: string }> {
   const admin = createAdminSupabaseClient();
-  const db = admin as unknown as SupabaseClient;
+  const eventType = payload.event_type ?? "unknown";
+  const data = payload.data;
 
-  const eventName = payload.meta?.event_name ?? "unknown";
-  const attrs = payload.data?.attributes ?? {};
-
-  let userId = resolveUserId(payload);
-  const customerEmail = resolveCustomerEmail(payload);
-
-  if (!userId && customerEmail) {
-    userId = await findUserIdByEmail(customerEmail);
+  if (!data) {
+    return { ok: false, reason: "missing_data" };
   }
 
-  const { error: insertError } = await db.from("billing_events").insert({
-    lemon_event_id: eventId,
-    event_name: eventName,
-    user_id: userId,
-    order_id: attrs.order_id != null ? String(attrs.order_id) : null,
-    subscription_id:
-      payload.data?.type === "subscriptions" && payload.data.id
-        ? String(payload.data.id)
-        : attrs.subscription_id != null
-          ? String(attrs.subscription_id)
-          : null,
-    customer_email: customerEmail,
+  const userId = await resolveUserId(admin, data);
+  const inserted = await upsertBillingEvent(
+    admin,
+    eventId,
+    eventType,
+    userId,
     payload,
-    processed_at: new Date().toISOString(),
-  });
-
-  if (insertError?.code === "23505") {
-    return { processed: false, userId };
-  }
-  if (insertError) {
-    logger.error("billing.event insert failed", { error: insertError.message });
-    throw new ApiError("INTERNAL_ERROR", "Ödeme kaydı oluşturulamadı.");
-  }
-
-  emitDomainEvent(
-    createDomainEvent(
-      "billing.webhook.received",
-      eventId,
-      { eventName, userId },
-      userId ?? undefined,
-    ),
   );
-
-  if (!userId) {
-    logger.warn("billing.webhook no user match", { eventName, customerEmail });
-    return { processed: true, userId: null };
+  if (!inserted) {
+    return { ok: true, skipped: true };
   }
 
-  if (DOWNGRADE_EVENTS.has(eventName)) {
-    await downgradeToEssential(userId);
-    return { processed: true, userId };
+  const priceMap = buildPaddlePriceTierMap();
+  const priceId = priceIdFromData(data);
+  const tier = priceId ? priceMap[priceId] : undefined;
+  const status = (data.status ?? "").toLowerCase();
+  const billingCycle = billingCycleFromData(data);
+
+  switch (eventType) {
+    case "subscription.created":
+    case "subscription.updated":
+    case "subscription.activated":
+    case "subscription.resumed": {
+      if (!userId) return { ok: false, reason: "user_not_found" };
+      if (!tier) return { ok: false, reason: "unknown_price" };
+      if (status === "active" || status === "trialing") {
+        await applyTier(userId, tier, billingCycle);
+      } else if (status === "canceled" || status === "cancelled") {
+        await revokeSubscription(userId);
+      }
+      break;
+    }
+    case "subscription.canceled":
+    case "subscription.cancelled": {
+      if (!userId) return { ok: false, reason: "user_not_found" };
+      await revokeSubscription(userId);
+      break;
+    }
+    case "subscription.past_due":
+    case "subscription.paused":
+      break;
+    default:
+      break;
   }
 
-  if (!TIER_EVENTS.has(eventName)) {
-    return { processed: true, userId };
-  }
-
-  const variantMap = envVariantMap();
-  const variantId = resolveVariantId(payload);
-  const tier = variantId ? variantMap[variantId] : undefined;
-
-  if (!tier) {
-    logger.warn("billing.webhook unknown variant", { variantId, eventName });
-    return { processed: true, userId };
-  }
-
-  const interval = attrs.variant_interval ?? attrs.billing_interval;
-  const billingCycle =
-    interval === "year" || interval === "yearly" ? "yearly" : "monthly";
-
-  await applyTier(userId, tier, billingCycle);
-  return { processed: true, userId };
+  return { ok: true };
 }
