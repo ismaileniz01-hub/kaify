@@ -2,6 +2,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types/database.types";
+import { isCompleteOtp, normalizeOtpInput } from "@/lib/auth/otp";
 
 type AuthClient = SupabaseClient<Database>;
 
@@ -16,19 +17,23 @@ export async function sendEmailLoginCode(
       shouldCreateUser: true,
       // Auth emails use the Supabase Magic Link template — keep it English-only
       // (see supabase/email-templates/magic-link-otp.en.html).
+      // Dashboard: Auth → Providers → Email → OTP length should be 6.
     },
   });
   if (error) return { ok: false, message: error.message };
   return { ok: true };
 }
 
-/** Verify the 6-digit code from email and establish a session. */
+/** Verify the email OTP and establish a session. */
 export async function verifyEmailLoginCode(
   supabase: AuthClient,
   email: string,
   token: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const normalized = token.replace(/\s/g, "");
+  const normalized = normalizeOtpInput(token);
+  if (!isCompleteOtp(normalized)) {
+    return { ok: false, message: "invalid_length" };
+  }
   const { error } = await supabase.auth.verifyOtp({
     email,
     token: normalized,
@@ -38,6 +43,4 @@ export async function verifyEmailLoginCode(
   return { ok: true };
 }
 
-export function normalizeOtpInput(value: string): string {
-  return value.replace(/\D/g, "").slice(0, 6);
-}
+export { normalizeOtpInput, isCompleteOtp } from "@/lib/auth/otp";

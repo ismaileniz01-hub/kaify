@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { normalizeOtpInput } from "@/lib/auth/email-otp";
+import { OTP_LENGTH, normalizeOtpInput } from "@/lib/auth/otp";
+import { isCompleteOtp } from "@/lib/auth/otp";
 
 type OtpDigitInputProps = {
   value: string;
@@ -18,11 +19,12 @@ export function OtpDigitInput({
   disabled = false,
   autoFocus = false,
 }: OtpDigitInputProps) {
+  const length = OTP_LENGTH;
   const refs = useRef<(HTMLInputElement | null)[]>([]);
-  const digits = Array.from({ length: 6 }, (_, i) => value[i] ?? "");
+  const digits = Array.from({ length }, (_, i) => value[i] ?? "");
 
   const focusIndex = (index: number) => {
-    const el = refs.current[Math.max(0, Math.min(5, index))];
+    const el = refs.current[Math.max(0, Math.min(length - 1, index))];
     el?.focus();
     el?.select();
   };
@@ -31,7 +33,7 @@ export function OtpDigitInput({
     (next: string) => {
       const normalized = normalizeOtpInput(next);
       onChange(normalized);
-      if (normalized.length === 6) {
+      if (isCompleteOtp(normalized)) {
         onComplete?.(normalized);
       }
       return normalized;
@@ -50,20 +52,20 @@ export function OtpDigitInput({
 
     if (chunk.length > 1) {
       const merged = digits.slice();
-      for (let i = 0; i < chunk.length && index + i < 6; i++) {
+      for (let i = 0; i < chunk.length && index + i < length; i++) {
         merged[index + i] = chunk[i]!;
       }
       const next = applyValue(merged.join(""));
-      focusIndex(Math.min(index + chunk.length, 5));
-      if (next.length < 6) focusIndex(next.length);
+      focusIndex(Math.min(index + chunk.length, length - 1));
+      if (!isCompleteOtp(next)) focusIndex(Math.min(next.length, length - 1));
       return;
     }
 
     const arr = digits.slice();
     arr[index] = chunk;
     const next = applyValue(arr.join(""));
-    if (chunk && index < 5) focusIndex(index + 1);
-    else if (next.length < 6) focusIndex(next.length);
+    if (chunk && index < length - 1) focusIndex(index + 1);
+    else if (!isCompleteOtp(next)) focusIndex(Math.min(next.length, length - 1));
   };
 
   const onKeyDown = (index: number, key: string) => {
@@ -71,7 +73,7 @@ export function OtpDigitInput({
       focusIndex(index - 1);
     }
     if (key === "ArrowLeft" && index > 0) focusIndex(index - 1);
-    if (key === "ArrowRight" && index < 5) focusIndex(index + 1);
+    if (key === "ArrowRight" && index < length - 1) focusIndex(index + 1);
   };
 
   useEffect(() => {
@@ -79,7 +81,7 @@ export function OtpDigitInput({
   }, [autoFocus]);
 
   return (
-    <div className="otp-digit-row" role="group" aria-label="6-digit login code">
+    <div className="otp-digit-row" role="group" aria-label="Email login code">
       {digits.map((digit, index) => (
         <input
           key={index}
@@ -89,10 +91,10 @@ export function OtpDigitInput({
           type="text"
           inputMode="numeric"
           autoComplete={index === 0 ? "one-time-code" : "off"}
-          maxLength={6}
+          maxLength={index === 0 ? OTP_LENGTH : 1}
           value={digit}
           disabled={disabled}
-          aria-label={`Digit ${index + 1}`}
+          aria-label={`Digit ${index + 1} of ${length}`}
           className={`otp-digit-cell ${digit ? "otp-digit-cell--filled" : ""}`}
           onChange={(e) => setDigitAt(index, e.target.value)}
           onKeyDown={(e) => onKeyDown(index, e.key)}
@@ -103,7 +105,7 @@ export function OtpDigitInput({
             const next = applyValue(
               digits.slice(0, index).join("") + normalizeOtpInput(pasted),
             );
-            focusIndex(Math.min(next.length, 5));
+            focusIndex(Math.min(next.length, length - 1));
           }}
         />
       ))}

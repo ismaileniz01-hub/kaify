@@ -1,0 +1,16 @@
+---
+description: Commit and push code changes automatically without waiting for the user to ask
+alwaysApply: true
+---
+
+# Auto commit and push
+
+After completing meaningful code changes in this repo:
+
+1. Commit with a concise message focused on why (do not include secrets or `.env` files).
+2. Push to the current branch immediately — do not wait for the user to say "deploy" or "push".
+3. Skip empty commits; if nothing changed, do not commit.
+4. Do not force-push to `main`/`master`.
+5. Briefly tell the user what was pushed (commit message + branch).
+
+Exception: if the user explicitly says not to push in that message, honor that instead.

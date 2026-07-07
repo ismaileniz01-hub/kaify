@@ -7,7 +7,10 @@ import { OtpDigitInput } from "@/components/auth/OtpDigitInput";
 import {
   sendEmailLoginCode,
   verifyEmailLoginCode,
+  normalizeOtpInput,
+  isCompleteOtp,
 } from "@/lib/auth/email-otp";
+import { OTP_LENGTH } from "@/lib/auth/otp";
 import { maskEmail } from "@/lib/auth/mask-email";
 import { useLang } from "@/lib/lang-context";
 import {
@@ -111,7 +114,7 @@ export function EmailOtpLogin({ onStepChange }: EmailOtpLoginProps) {
 
   const verifyCode = useCallback(
     async (token = code) => {
-      if (token.length !== 6) return;
+      if (!isCompleteOtp(token)) return;
 
       setLoading(true);
       setError(null);
@@ -201,23 +204,23 @@ export function EmailOtpLogin({ onStepChange }: EmailOtpLoginProps) {
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
-            maxLength={6}
+            maxLength={OTP_LENGTH}
             value={code}
             onChange={(e) => {
-              const next = e.target.value.replace(/\D/g, "").slice(0, 6);
+              const next = normalizeOtpInput(e.target.value);
               setCode(next);
-              if (next.length === 6) void verifyCode(next);
+              if (isCompleteOtp(next)) void verifyCode(next);
             }}
             placeholder={t("login.otp.code_placeholder")}
             aria-label={t("login.otp.code_placeholder")}
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-center text-lg font-semibold tracking-[0.4em] text-white placeholder:tracking-normal placeholder:text-zinc-500 focus:border-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-center text-lg font-semibold tracking-[0.35em] text-white placeholder:tracking-normal placeholder:text-zinc-500 focus:border-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
           />
         </div>
 
         <button
           type="button"
           onClick={() => void verifyCode()}
-          disabled={loading || code.length !== 6}
+          disabled={loading || !isCompleteOtp(code)}
           className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-violet-600 px-6 py-4 text-sm font-semibold text-white shadow-[0_12px_40px_rgba(124,58,237,0.45)] transition hover:from-purple-400 hover:to-violet-500 disabled:opacity-45"
         >
           {loading ? t("login.otp.verifying") : t("login.otp.verify")}
