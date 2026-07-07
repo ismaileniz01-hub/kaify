@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import type { PluginListenerHandle } from "@capacitor/core";
+import {
+  isNativeSpeechAvailable,
+  removeSpeechListeners,
+} from "@/lib/native/speech-platform";
 
 /** Stop listening after this many ms without speech activity. */
 export const SPEECH_SILENCE_CLOSE_MS = 4000;
@@ -49,6 +54,28 @@ interface SpeechRecognitionConstructor {
   new (): SpeechRecognitionInstance;
 }
 
+function webSpeechCtor(): SpeechRecognitionConstructor | null {
+  if (typeof window === "undefined") return null;
+  return (
+    (window as unknown as { SpeechRecognition?: SpeechRecognitionConstructor })
+      .SpeechRecognition ??
+    (
+      window as unknown as {
+        webkitSpeechRecognition?: SpeechRecognitionConstructor;
+      }
+    ).webkitSpeechRecognition ??
+    null
+  );
+}
+
+function webSpeechSupported(): boolean {
+  return (
+    webSpeechCtor() !== null &&
+    typeof navigator !== "undefined" &&
+    Boolean(navigator.mediaDevices?.getUserMedia)
+  );
+}
+
 export function useSpeechRecognition(
   locale = "tr-TR",
   options?: SpeechRecognitionOptions,
@@ -56,25 +83,17 @@ export function useSpeechRecognition(
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
+  const [supported, setSupported] = useState(false);
+
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const interimRef = useRef("");
   const stoppingRef = useRef(false);
   const sessionActiveRef = useRef(false);
+  const nativeModeRef = useRef(false);
+  const nativeListenersRef = useRef<PluginListenerHandle[]>([]);
   const onErrorRef = useRef(options?.onError);
   onErrorRef.current = options?.onError;
-
-  const SpeechRecognition: SpeechRecognitionConstructor | null =
-    typeof window !== "undefined"
-      ? (window as unknown as { SpeechRecognition?: SpeechRecognitionConstructor }).SpeechRecognition ??
-        (window as unknown as { webkitSpeechRecognition?: SpeechRecognitionConstructor }).webkitSpeechRecognition ??
-        null
-      : null;
-
-  const supported =
-    SpeechRecognition !== null &&
-    typeof navigator !== "undefined" &&
-    Boolean(navigator.mediaDevices?.getUserMedia);
 
   const clearSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current) {
@@ -93,13 +112,31 @@ export function useSpeechRecognition(
     interimRef.current = "";
   }, [clearSilenceTimer]);
 
+  const commitInterimToTranscript = useCallback(() => {
+    const pending = interimRef.current.trim();
+    if (!pending) return;
+    setTranscript((prev) => (prev ? `${prev} ${pending}` : pending).trim());
+    interimRef.current = "";
+    setInterimTranscript("");
+  }, []);
+
   const scheduleSilenceClose = useCallback(() => {
     clearSilenceTimer();
     silenceTimerRef.current = setTimeout(() => {
       stoppingRef.current = true;
-      const pending = interimRef.current.trim();
-      if (pending) {
-        setTranscript((prev) => (prev ? `${prev} ${pending}` : pending).trim());
+      commitInterimToTranscript();
+      if (nativeModeRef.current) {
+        void (async () => {
+          try {
+            const { SpeechRecognition } = await import(
+              "@capgo/capacitor-speech-recognition"
+            );
+            await SpeechRecognition.stop();
+          } catch {
+            finishListening();
+          }
+        })();
+        return;
       }
       if (recognitionRef.current) {
         try {
@@ -111,7 +148,7 @@ export function useSpeechRecognition(
         finishListening();
       }
     }, SPEECH_SILENCE_CLOSE_MS);
-  }, [clearSilenceTimer, finishListening]);
+  }, [clearSilenceTimer, commitInterimToTranscript, finishListening]);
 
   const clearTranscript = useCallback(() => {
     setTranscript("");
@@ -119,10 +156,37 @@ export function useSpeechRecognition(
     interimRef.current = "";
   }, []);
 
+  const teardownNativeListeners = useCallback(async () => {
+    const handles = nativeListenersRef.current;
+    nativeListenersRef.current = [];
+    await removeSpeechListeners(handles);
+  }, []);
+
   const stopListening = useCallback(() => {
     stoppingRef.current = true;
     sessionActiveRef.current = false;
     clearSilenceTimer();
+
+    if (nativeModeRef.current) {
+      void (async () => {
+        commitInterimToTranscript();
+        try {
+          const { SpeechRecognition } = await import(
+            "@capgo/capacitor-speech-recognition"
+          );
+          await SpeechRecognition.stop();
+        } catch {
+          /* already stopped */
+        }
+        await teardownNativeListeners();
+        setIsListening(false);
+        setInterimTranscript("");
+        interimRef.current = "";
+        stoppingRef.current = false;
+      })();
+      return;
+    }
+
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -135,9 +199,105 @@ export function useSpeechRecognition(
     setInterimTranscript("");
     interimRef.current = "";
     stoppingRef.current = false;
-  }, [clearSilenceTimer]);
+  }, [clearSilenceTimer, commitInterimToTranscript, teardownNativeListeners]);
 
-  const startListening = useCallback(() => {
+  const startNativeListening = useCallback(async () => {
+    try {
+      const { SpeechRecognition } = await import(
+        "@capgo/capacitor-speech-recognition"
+      );
+
+      const perms = await SpeechRecognition.checkPermissions();
+      if (perms.speechRecognition !== "granted") {
+        const requested = await SpeechRecognition.requestPermissions();
+        if (requested.speechRecognition !== "granted") {
+          onErrorRef.current?.("not-allowed");
+          return;
+        }
+      }
+
+      await teardownNativeListeners();
+      stoppingRef.current = false;
+      sessionActiveRef.current = true;
+
+      const partialHandle = await SpeechRecognition.addListener(
+        "partialResults",
+        (event) => {
+          scheduleSilenceClose();
+          const text =
+            event.accumulatedText?.trim() ||
+            event.matches?.[0]?.trim() ||
+            "";
+          if (!text) return;
+          interimRef.current = text;
+          setInterimTranscript(text);
+        },
+      );
+
+      const stateHandle = await SpeechRecognition.addListener(
+        "listeningState",
+        (event) => {
+          const stopped =
+            event.state === "stopped" || event.status === "stopped";
+          if (!stopped) return;
+          if (stoppingRef.current || !sessionActiveRef.current) {
+            void teardownNativeListeners().then(finishListening);
+            return;
+          }
+          if (event.reason === "silence") {
+            commitInterimToTranscript();
+            stoppingRef.current = true;
+            sessionActiveRef.current = false;
+            void SpeechRecognition.stop().catch(() => {});
+          }
+        },
+      );
+
+      const errorHandle = await SpeechRecognition.addListener("error", (event) => {
+        const benign =
+          event.code === "no-speech" || event.code === "aborted";
+        if (!benign) {
+          onErrorRef.current?.(event.code || "failed");
+        }
+        stoppingRef.current = true;
+        void teardownNativeListeners().then(finishListening);
+      });
+
+      nativeListenersRef.current = [
+        partialHandle,
+        stateHandle,
+        errorHandle,
+      ];
+
+      await SpeechRecognition.start({
+        language: locale,
+        partialResults: true,
+        popup: false,
+        addPunctuation: true,
+        allowForSilence: SPEECH_SILENCE_CLOSE_MS,
+        contextualStrings: ["Kaify", "K.AIFY", "freezie", "streak"],
+      });
+
+      setIsListening(true);
+      setTranscript("");
+      setInterimTranscript("");
+      interimRef.current = "";
+      scheduleSilenceClose();
+    } catch {
+      onErrorRef.current?.("start-failed");
+      await teardownNativeListeners();
+      finishListening();
+    }
+  }, [
+    locale,
+    scheduleSilenceClose,
+    finishListening,
+    teardownNativeListeners,
+    commitInterimToTranscript,
+  ]);
+
+  const startWebListening = useCallback(() => {
+    const SpeechRecognition = webSpeechCtor();
     if (!SpeechRecognition || !navigator.mediaDevices?.getUserMedia) {
       onErrorRef.current?.("unsupported");
       return;
@@ -178,7 +338,9 @@ export function useSpeechRecognition(
           if (finalText) {
             interimRef.current = "";
             setInterimTranscript("");
-            setTranscript((prev) => (prev ? `${prev} ${finalText}` : finalText).trim());
+            setTranscript((prev) =>
+              (prev ? `${prev} ${finalText}` : finalText).trim(),
+            );
           }
         };
 
@@ -200,7 +362,8 @@ export function useSpeechRecognition(
         };
 
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-          const benign = event.error === "no-speech" || event.error === "aborted";
+          const benign =
+            event.error === "no-speech" || event.error === "aborted";
           if (!benign) {
             onErrorRef.current?.(event.error);
           }
@@ -227,12 +390,32 @@ export function useSpeechRecognition(
         finishListening();
       });
   }, [
-    SpeechRecognition,
     locale,
     stopListening,
     scheduleSilenceClose,
     finishListening,
   ]);
+
+  const startListening = useCallback(() => {
+    if (nativeModeRef.current) {
+      void startNativeListening();
+      return;
+    }
+    startWebListening();
+  }, [startNativeListening, startWebListening]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const native = await isNativeSpeechAvailable();
+      if (cancelled) return;
+      nativeModeRef.current = native;
+      setSupported(native || webSpeechSupported());
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(
     () => () => {
@@ -246,8 +429,21 @@ export function useSpeechRecognition(
           /* unmount */
         }
       }
+      void (async () => {
+        try {
+          if (nativeModeRef.current) {
+            const { SpeechRecognition } = await import(
+              "@capgo/capacitor-speech-recognition"
+            );
+            await SpeechRecognition.stop();
+          }
+        } catch {
+          /* unmount */
+        }
+        await teardownNativeListeners();
+      })();
     },
-    [clearSilenceTimer],
+    [clearSilenceTimer, teardownNativeListeners],
   );
 
   return {
@@ -259,4 +455,4 @@ export function useSpeechRecognition(
     clearTranscript,
     supported,
   };
-};
+}

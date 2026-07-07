@@ -110,9 +110,9 @@ export default function ChatPage() {
   const { primary, primaryLight, secondary, text: coachText, ring, shadow } = contact.color;
 
   return (
-    <div className={`phone-shell chat-gradient ${patternClass} relative flex h-[100dvh] flex-col`}>
+    <div className={`phone-shell chat-shell chat-gradient ${patternClass} relative flex h-[100dvh] flex-col`}>
 
-      <header className="relative z-20 flex items-center gap-3 px-4 pb-2 pt-16">
+      <header className="pt-app-header relative z-20 flex items-center gap-3 px-4 pb-2">
         <Link
           href="/messages"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"

@@ -1,27 +1,27 @@
 import type { CapacitorConfig } from "@capacitor/cli";
+import { KeyboardResize, KeyboardStyle } from "@capacitor/keyboard";
+import { resolveNativeServerUrl } from "./lib/native/app-entry";
 
 /**
  * Capacitor native shell for K.AIFY.
  *
- * This Next.js app uses API routes and SSR, so we run in **remote URL mode**:
- * the WebView loads your deployed backend (Vercel). Native plugins (push, splash,
- * status bar) still run in the shell.
+ * **Remote URL mode** — WebView loads the deployed Next.js app (Vercel).
+ * Web and native share one codebase; Vercel deploy updates the app UI without
+ * a store resubmit. Native plugins (push, speech, keyboard) run in the shell.
  *
- * Local dev: set CAPACITOR_SERVER_URL=http://10.0.2.2:3000 (Android emulator)
- * or your LAN IP for a physical device, then `npm run cap:sync`.
+ * Sync before store builds:
+ *   npm run cap:sync:prod
+ *
+ * Local device against dev server:
+ *   npm run cap:sync:dev
  */
-const serverUrl =
-  process.env.CAPACITOR_SERVER_URL ??
-  process.env.NEXT_PUBLIC_APP_URL ??
-  "https://kaify.org";
-
+const serverUrl = resolveNativeServerUrl();
 const isLocal = serverUrl.startsWith("http://");
 
 const config: CapacitorConfig = {
   appId: "org.kaify.app",
   appName: "K.AIFY",
   webDir: "public",
-  // Silence native logs in production; only verbose in local dev.
   loggingBehavior: isLocal ? "debug" : "none",
   server: {
     url: serverUrl,
@@ -30,11 +30,9 @@ const config: CapacitorConfig = {
   },
   android: {
     allowMixedContent: isLocal,
-    // Never expose the remote WebView to Chrome DevTools inspection in release.
     webContentsDebuggingEnabled: isLocal,
   },
   ios: {
-    // Block WKWebView remote inspection in release builds.
     webContentsDebuggingEnabled: isLocal,
   },
   plugins: {
@@ -51,6 +49,10 @@ const config: CapacitorConfig = {
     StatusBar: {
       style: "DARK",
       backgroundColor: "#0a0a0a",
+    },
+    Keyboard: {
+      resize: KeyboardResize.None,
+      style: KeyboardStyle.Dark,
     },
   },
 };

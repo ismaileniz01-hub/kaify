@@ -12,7 +12,7 @@ export function SessionErrorBanner() {
   if (!sessionError) return null;
 
   return (
-    <div className="fixed left-0 right-0 top-0 z-[90] px-4 pt-3">
+    <div className="session-error-banner fixed left-0 right-0 top-0 z-[90] px-4 pt-3">
       <InlineAlert
         message={t("session.error")}
         onRetry={() => void refreshSession()}

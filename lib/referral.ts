@@ -1,5 +1,7 @@
 "use client";
 
+import { referralShareUrl } from "@/lib/native/deep-links";
+
 const STORAGE_KEY = "kaify-referral-code";
 const PENDING_REF_KEY = "kaify-pending-referral";
 
@@ -59,7 +61,7 @@ export async function copyReferralCode(): Promise<boolean> {
 /** Kodu paylaş (Web Share API) */
 export async function shareReferralCode(): Promise<boolean> {
   const code = getReferralCode();
-  const text = `🎫 Join me on Kaify! Use my referral code: ${code}\n\nhttps://kaify.app`;
+  const text = `🎫 Join me on Kaify! Use my referral code: ${code}\n\n${referralShareUrl(code)}`;
   
   try {
     if (navigator.share) {

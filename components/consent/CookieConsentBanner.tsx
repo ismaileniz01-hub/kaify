@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { useLang } from "@/lib/lang-context";
+import { useNativeApp } from "@/lib/native/platform";
 import {
   hasCookieConsentChoice,
   writeCookieConsent,
@@ -20,6 +21,7 @@ const LEGAL_ONLY_PREFIXES = ["/privacy", "/terms", "/terms&conditions", "/cookie
 export function CookieConsentBanner() {
   const { t } = useLang();
   const pathname = usePathname();
+  const isNativeApp = useNativeApp();
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
 
@@ -28,6 +30,11 @@ export function CookieConsentBanner() {
   }, []);
 
   useEffect(() => {
+    if (isNativeApp !== false) {
+      setVisible(false);
+      document.documentElement.removeAttribute("data-cookie-banner");
+      return;
+    }
     if (LEGAL_ONLY_PREFIXES.some((p) => pathname.startsWith(p))) {
       setVisible(false);
       document.documentElement.removeAttribute("data-cookie-banner");
@@ -40,7 +47,7 @@ export function CookieConsentBanner() {
     } else {
       document.documentElement.removeAttribute("data-cookie-banner");
     }
-  }, [pathname]);
+  }, [pathname, isNativeApp]);
 
   const choose = (choice: "accepted" | "rejected") => {
     writeCookieConsent(choice);
@@ -48,7 +55,7 @@ export function CookieConsentBanner() {
     document.documentElement.removeAttribute("data-cookie-banner");
   };
 
-  if (!mounted || !visible) return null;
+  if (!mounted || !visible || isNativeApp !== false) return null;
 
   return createPortal(
     <div

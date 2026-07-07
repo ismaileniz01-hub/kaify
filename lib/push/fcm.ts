@@ -8,6 +8,7 @@ import {
 } from "firebase-admin/app";
 import { getMessaging } from "firebase-admin/messaging";
 import { logger } from "@/lib/logger";
+import { resolveAppUrl } from "@/lib/app-url";
 
 /**
  * Firebase Cloud Messaging (FCM) — native push for Capacitor iOS/Android.
@@ -78,7 +79,7 @@ export async function sendFcmMessage(
     return { ok: false, invalidToken: false };
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://kaify.org";
+  const appUrl = resolveAppUrl();
   const iconPath = payload.icon ?? "/icons/icon-192.png";
   const iconUrl = iconPath.startsWith("http") ? iconPath : `${appUrl}${iconPath}`;
 

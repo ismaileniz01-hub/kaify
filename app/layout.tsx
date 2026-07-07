@@ -11,6 +11,7 @@ import { NotificationProvider } from "@/lib/notification-context";
 import { KaiSync } from "@/components/KaiSync";
 import { SessionErrorBanner } from "@/components/SessionErrorBanner";
 import { CapacitorShell } from "@/components/CapacitorShell";
+import { NativeAppEntry } from "@/components/NativeAppEntry";
 import { MfaGate } from "@/components/auth/MfaGate";
 import { LegalConsentSync } from "@/components/consent/LegalConsentSync";
 import { AiConsentGate } from "@/components/consent/AiConsentGate";
@@ -55,6 +56,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
   themeColor: "#0a0a0a",
 };
 
@@ -78,6 +80,7 @@ export default async function RootLayout({
                 <KaiProvider>
                   <NotificationProvider>
                     <CapacitorShell />
+                    <NativeAppEntry />
                     <MfaGate />
                     <LegalConsentSync />
                     <AiConsentGate />

@@ -23,6 +23,23 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Deep links: https://kaifyai.org/... (App Links) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="kaifyai.org" />
+                <data android:scheme="https" android:host="www.kaifyai.org" />
+            </intent-filter>
+
+            <!-- Custom scheme: kaify://chat/kai -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="kaify" />
+            </intent-filter>
+
         </activity>
 
         <provider
@@ -39,6 +56,8 @@
     <!-- Permissions (least privilege: only what the app actually needs) -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Coach chat voice input (@capgo/capacitor-speech-recognition). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Android 13+ runtime permission for push notifications. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

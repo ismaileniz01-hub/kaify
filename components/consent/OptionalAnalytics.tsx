@@ -5,6 +5,7 @@ import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { hasAnalyticsConsent } from "@/lib/legal/cookie-consent";
+import { useNativeApp } from "@/lib/native/platform";
 
 type OptionalAnalyticsProps = {
   nonce?: string;
@@ -13,16 +14,18 @@ type OptionalAnalyticsProps = {
 /** Loads marketing/analytics only after explicit cookie consent. */
 export function OptionalAnalytics({ nonce }: OptionalAnalyticsProps) {
   const [allowed, setAllowed] = useState(false);
+  const isNativeApp = useNativeApp();
 
   useEffect(() => {
+    if (isNativeApp) return;
     setAllowed(hasAnalyticsConsent());
 
     const onConsent = () => setAllowed(hasAnalyticsConsent());
     window.addEventListener("kaify:cookie-consent", onConsent);
     return () => window.removeEventListener("kaify:cookie-consent", onConsent);
-  }, []);
+  }, [isNativeApp]);
 
-  if (!allowed) return null;
+  if (isNativeApp === null || isNativeApp || !allowed) return null;
 
   return (
     <>

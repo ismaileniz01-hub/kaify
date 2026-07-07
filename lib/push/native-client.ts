@@ -14,15 +14,8 @@ import {
   waitForNativeToken,
 } from "@/lib/push/native-token-store";
 
-export async function isNativePlatform(): Promise<boolean> {
-  if (typeof window === "undefined") return false;
-  try {
-    const { Capacitor } = await import("@capacitor/core");
-    return Capacitor.isNativePlatform();
-  } catch {
-    return false;
-  }
-}
+export { isNativePlatform } from "@/lib/native/platform";
+import { isNativePlatform } from "@/lib/native/platform";
 
 export async function getNativePermission(): Promise<
   "granted" | "denied" | "prompt" | "unsupported"
