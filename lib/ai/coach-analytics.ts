@@ -60,13 +60,13 @@ async function attachConfirmationToMessage(params: {
       ? `Harika iş! Analiz sayfana şunu eklememi onaylıyor musun? ${params.summary}`
       : `Great work! Should I add this to your analytics? ${params.summary}`;
 
-  const confirmationPayload = {
+  const confirmationData = {
     confirmation: {
       pendingId: params.pendingId,
       summary: params.summary,
       patch: params.patch,
     },
-  } as unknown as Json;
+  };
 
   if (params.attachToMessageId) {
     const { data: existing } = await admin
@@ -75,10 +75,10 @@ async function attachConfirmationToMessage(params: {
       .eq("id", params.attachToMessageId)
       .maybeSingle();
 
-    const merged =
+    const merged: Record<string, unknown> =
       existing?.payload && typeof existing.payload === "object" && !Array.isArray(existing.payload)
-        ? { ...(existing.payload as Record<string, unknown>), ...confirmationPayload }
-        : confirmationPayload;
+        ? { ...(existing.payload as Record<string, unknown>), ...confirmationData }
+        : confirmationData;
 
     await admin
       .from("chat_messages")
@@ -97,7 +97,7 @@ async function attachConfirmationToMessage(params: {
       sender: "coach",
       message_type: "text",
       content,
-      payload: confirmationPayload,
+      payload: confirmationData as unknown as Json,
       locale,
     })
     .select("id")

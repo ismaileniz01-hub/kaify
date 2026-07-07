@@ -24,15 +24,15 @@ export function LandingFooter() {
         </div>
 
         <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-zinc-500">
-          <a href="/#about" className="transition hover:text-white">
+          <Link href="/#about" className="transition hover:text-white">
             {t("landing.nav.about")}
-          </a>
-          <a href="/#coaches" className="transition hover:text-white">
+          </Link>
+          <Link href="/#coaches" className="transition hover:text-white">
             {t("landing.nav.coaches")}
-          </a>
-          <a href="/#features" className="transition hover:text-white">
+          </Link>
+          <Link href="/#features" className="transition hover:text-white">
             {t("landing.nav.features")}
-          </a>
+          </Link>
           <Link href="/pricing" className="transition hover:text-white">
             {t("landing.nav.pricing")}
           </Link>
