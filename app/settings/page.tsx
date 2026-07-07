@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Fingerprint,
   ArrowLeft,
@@ -177,9 +178,11 @@ function saveBoolean(key: string, value: boolean) {
 }
 
 export default function SettingsPage() {
+  const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const { lang, setLang, unit, setUnit, t } = useLang();
-  const { referralCode: sessionReferralCode, isAuthenticated, profile, isAdmin } = useSession();
+  const { referralCode: sessionReferralCode, isAuthenticated, profile, isAdmin, signOut } =
+    useSession();
 
   const [referralCode, setReferralCode] = useState("");
   const [referralCopied, setReferralCopied] = useState(false);
@@ -189,6 +192,7 @@ export default function SettingsPage() {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const [toggles, setToggles] = useState<Record<string, boolean>>({
     "settings.workout": true,
     "settings.water": false,
@@ -248,6 +252,14 @@ export default function SettingsPage() {
       .catch(() => setLoadError(t("settings.load_error")))
       .finally(() => setSettingsLoaded(true));
   }, [isAuthenticated, setUnit, t]);
+
+  const handleLogout = useCallback(async () => {
+    if (logoutLoading) return;
+    setLogoutLoading(true);
+    await signOut();
+    router.replace("/login");
+    setLogoutLoading(false);
+  }, [logoutLoading, router, signOut]);
 
   useEffect(() => {
     reloadSettings();
@@ -572,7 +584,16 @@ export default function SettingsPage() {
                       </select>
                     )}
                     {item.type === "link" &&
-                      (item.href ? (
+                      (item.label === "settings.logout" ? (
+                        <button
+                          type="button"
+                          onClick={() => void handleLogout()}
+                          disabled={logoutLoading}
+                          className="text-xs font-medium text-purple-400 transition hover:text-purple-300 disabled:opacity-50"
+                        >
+                          {logoutLoading ? "…" : t(item.value || "")}
+                        </button>
+                      ) : item.href ? (
                         <Link
                           href={item.href}
                           className="text-xs font-medium text-purple-400 transition hover:text-purple-300"

@@ -15,12 +15,12 @@ import {
   PRIVACY_VERSION,
   TERMS_VERSION,
 } from "@/lib/legal/constants";
+import { PENDING_OTP_EMAIL_KEY } from "@/lib/auth/logout";
 import { useNativeApp } from "@/lib/native/platform";
 import { useSession } from "@/lib/session-context";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 
 const RESEND_COOLDOWN_SEC = 60;
-const PENDING_OTP_EMAIL_KEY = "kaify-pending-otp-email";
 
 function storePendingLegalConsent(): void {
   localStorage.setItem(

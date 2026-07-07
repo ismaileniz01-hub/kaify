@@ -31,6 +31,7 @@ import type { KaiStateDTO } from "@/lib/services/kai-state.service";
 import type { SessionBundleDTO } from "@/lib/services/session.service";
 import type { ProfileUpdateInput } from "@/lib/validations/profile.schema";
 import { syncFreezieBalanceFromServer } from "@/lib/freezie";
+import { clearAuthLocalState, signOutUser } from "@/lib/auth/logout";
 
 type SessionContextValue = {
   isLoading: boolean;
@@ -48,6 +49,7 @@ type SessionContextValue = {
   kai: KaiStateDTO | null;
   referralCode: string;
   refreshSession: () => Promise<void>;
+  signOut: () => Promise<boolean>;
   /** Sandık claim yanıtındaki güncel bakiyeleri oturuma yansıt. */
   applyChestClaim: (balances: { gemBalance: number; freezieBalance: number }) => void;
   updateProfile: (form: UserProfile) => Promise<void>;
@@ -87,6 +89,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const clearSessionError = useCallback(() => setSessionError(false), []);
 
+  const applyGuestState = useCallback(() => {
+    setIsAuthenticated(false);
+    setIsPreviewMode(true);
+    setProfile(null);
+    setUserProfile(DEMO_USER_PROFILE);
+    setGemBalance(DEFAULT_GEMS);
+    setStreak(DEFAULT_STREAK);
+    setHome(null);
+    setKai(null);
+    setReferralCode("");
+    setIsAdmin(false);
+    setSessionError(false);
+  }, []);
+
   const refreshSession = useCallback(async () => {
     const isBackgroundRefresh = hasHydrated && isAuthenticated;
     if (!isBackgroundRefresh) {
@@ -96,31 +112,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     try {
       const supabase = tryCreateBrowserSupabaseClient();
       if (!supabase) {
-        setIsAuthenticated(false);
-        setIsPreviewMode(true);
-        setProfile(null);
-        setUserProfile(DEMO_USER_PROFILE);
-        setGemBalance(DEFAULT_GEMS);
-        setStreak(DEFAULT_STREAK);
-        setHome(null);
-        setKai(null);
-        setReferralCode("");
-        setIsAdmin(false);
+        applyGuestState();
         return;
       }
 
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
-        setIsAuthenticated(false);
-        setIsPreviewMode(true);
-        setProfile(null);
-        setUserProfile(DEMO_USER_PROFILE);
-        setGemBalance(DEFAULT_GEMS);
-        setStreak(DEFAULT_STREAK);
-        setHome(null);
-        setKai(null);
-        setReferralCode("");
-        setIsAdmin(false);
+        applyGuestState();
         return;
       }
 
@@ -138,8 +136,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setKai(bundle.kai);
     } catch (error) {
       if (error instanceof ApiClientError && error.code === "UNAUTHORIZED") {
-        setIsAuthenticated(false);
-        setIsPreviewMode(true);
+        applyGuestState();
       } else {
         setSessionError(true);
       }
@@ -147,11 +144,40 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       setHasHydrated(true);
     }
-  }, [hasHydrated, isAuthenticated]);
+  }, [hasHydrated, isAuthenticated, applyGuestState]);
+
+  const signOut = useCallback(async () => {
+    const result = await signOutUser();
+    applyGuestState();
+    setIsLoading(false);
+    setHasHydrated(true);
+    return result.ok;
+  }, [applyGuestState]);
 
   useEffect(() => {
+    const supabase = tryCreateBrowserSupabaseClient();
+    if (!supabase) {
+      void refreshSession();
+      return;
+    }
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        clearAuthLocalState();
+        applyGuestState();
+        return;
+      }
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        void refreshSession();
+      }
+    });
+
     void refreshSession();
-  }, [refreshSession]);
+
+    return () => subscription.unsubscribe();
+  }, [applyGuestState, refreshSession]);
 
   const updateProfile = useCallback(
     async (form: UserProfile) => {
@@ -236,6 +262,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       kai,
       referralCode,
       refreshSession,
+      signOut,
       applyChestClaim,
       updateProfile,
       checkIn,
@@ -256,6 +283,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       kai,
       referralCode,
       refreshSession,
+      signOut,
       applyChestClaim,
       updateProfile,
       checkIn,

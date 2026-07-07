@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, Shield, ShieldCheck, ShieldOff, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLang } from "@/lib/lang-context";
+import { signOutUser } from "@/lib/auth/logout";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
   enrollTotp,
@@ -161,11 +162,9 @@ export default function SecuritySettingsPage() {
     setError(null);
     setMessage(null);
     try {
-      const supabase = tryCreateBrowserSupabaseClient();
-      if (!supabase) return;
-      const { error: signOutError } = await supabase.auth.signOut({ scope: "global" });
-      if (signOutError) {
-        setError(signOutError.message);
+      const result = await signOutUser();
+      if (!result.ok) {
+        setError(result.message);
         return;
       }
       window.location.href = "/login";
