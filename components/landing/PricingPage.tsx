@@ -8,6 +8,7 @@ import { LandingNav } from "./LandingNav";
 import { LandingFooter } from "./LandingFooter";
 import { ScrollReveal } from "./ScrollReveal";
 import { FloatingOrbs } from "./FloatingOrbs";
+import { StoreDownloadButtons } from "./StoreDownloadButtons";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { usePaddle } from "@/components/billing/PaddleProvider";
 import {
@@ -18,7 +19,13 @@ import {
   type PricingPlan,
 } from "@/lib/marketing/pricing-plans";
 
-function FeatureValue({ value }: { value: string | boolean }) {
+function FeatureValue({
+  value,
+  emphasize,
+}: {
+  value: string | boolean;
+  emphasize?: boolean;
+}) {
   if (value === true) {
     return (
       <span className="pricing-check" aria-label="Included">
@@ -33,7 +40,15 @@ function FeatureValue({ value }: { value: string | boolean }) {
       </span>
     );
   }
-  return <span className="text-sm font-medium text-zinc-200">{value}</span>;
+  return (
+    <span
+      className={`text-sm font-medium ${
+        emphasize ? "text-white" : "text-zinc-200"
+      }`}
+    >
+      {value}
+    </span>
+  );
 }
 
 function PlanIcon({ id }: { id: PlanId }) {
@@ -96,7 +111,7 @@ export function PricingPage() {
       <Suspense fallback={null}>
         <PaddleCheckoutResume />
       </Suspense>
-      <LandingNav pricingPage />
+      <LandingNav pricingPage forceEnglish />
       <main>
         <section className="pricing-hero relative overflow-hidden pb-8 pt-28 sm:pt-36">
           <div className="absolute inset-0">
@@ -175,7 +190,7 @@ export function PricingPage() {
                       {plan.description}
                     </p>
 
-                    <ul className="mt-6 flex flex-col gap-2.5">
+                    <ul className="mt-6 flex flex-1 flex-col gap-2.5">
                       {plan.perks.map((perk) => (
                         <li key={perk} className="flex items-start gap-2 text-sm text-zinc-300">
                           <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
@@ -203,9 +218,10 @@ export function PricingPage() {
           <div className="landing-container">
             <ScrollReveal>
               <div className="text-center">
-                <h2 className="landing-section-title">Compare every plan</h2>
+                <h2 className="landing-section-title">See how each plan climbs</h2>
                 <p className="mx-auto mt-4 max-w-xl text-zinc-400">
-                  No hidden tiers. No surprise paywalls. What you see is what your coaching team delivers.
+                  Essential gets you started. Pro unlocks serious training power.
+                  Premium takes every limit higher — a clear ladder, no guesswork.
                 </p>
               </div>
             </ScrollReveal>
@@ -235,10 +251,10 @@ export function PricingPage() {
                           <FeatureValue value={row.essential} />
                         </td>
                         <td className="pricing-td-popular">
-                          <FeatureValue value={row.pro} />
+                          <FeatureValue value={row.pro} emphasize />
                         </td>
                         <td>
-                          <FeatureValue value={row.premium} />
+                          <FeatureValue value={row.premium} emphasize />
                         </td>
                       </tr>
                     ))}
@@ -258,14 +274,14 @@ export function PricingPage() {
                   Your future self is already thanking you.
                 </h2>
                 <p className="mx-auto mt-4 max-w-lg text-center text-lg text-zinc-400">
-                  Join thousands building consistency with coaches who remember your goals,
+                  Download K.AIFY free and start training with coaches who remember your goals,
                   celebrate your streaks, and never judge a bad day.
                 </p>
-                <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-                  <Link href="/login" className="landing-btn landing-btn--primary landing-btn--lg">
-                    Create free account
-                  </Link>
-                  <Link href="/" className="landing-btn landing-btn--ghost landing-btn--lg">
+                <div className="mt-10">
+                  <StoreDownloadButtons />
+                </div>
+                <div className="mt-6 flex justify-center">
+                  <Link href="/" className="landing-btn landing-btn--ghost">
                     Back to home
                   </Link>
                 </div>
@@ -277,7 +293,7 @@ export function PricingPage() {
           </div>
         </section>
       </main>
-      <LandingFooter />
+      <LandingFooter forceEnglish />
     </div>
   );
 }

@@ -29,14 +29,14 @@ export const PRICING_PLANS: PricingPlan[] = [
     price: 14.99,
     tagline: "Start strong",
     description:
-      "Everything you need to build the habit — four expert coaches, real analytics, and Kai by your side.",
+      "Build the habit with your full coaching team, real analytics, and Kai by your side.",
     accent: "zinc",
     perks: [
       "All 4 AI coaches unlocked",
-      "1M coaching messages / month",
-      "1 Maya meal scan per day",
-      "1 Leo physique scan per week",
-      "Streaks, gems & Kai evolution",
+      "Great Capacity coaching",
+      "1 Maya meal scan / day",
+      "1 Leo physique scan / week",
+      "Streaks, gems & Kai",
     ],
   },
   {
@@ -45,16 +45,17 @@ export const PRICING_PLANS: PricingPlan[] = [
     price: 24.99,
     tagline: "Most chosen",
     description:
-      "For people who train seriously and want deeper guidance, more scans, and faster coach replies.",
+      "Train with more depth — higher capacity, more scans, priority replies, and team chat.",
     popular: true,
     accent: "purple",
     perks: [
       "Everything in Essential",
-      "2.5M coaching messages / month",
-      "3 Maya meal scans per day",
-      "2 Leo physique scans per week",
+      "2.5× Capacity coaching",
+      "3 Maya meal scans / day",
+      "2 Leo physique scans / week",
       "Priority AI responses",
-      "Team chat with your coaches",
+      "Team chat with coaches",
+      "Advanced coach memory",
     ],
   },
   {
@@ -63,15 +64,17 @@ export const PRICING_PLANS: PricingPlan[] = [
     price: 34.99,
     tagline: "No limits mindset",
     description:
-      "Maximum coach depth for athletes, founders, and anyone who wants the full K.AIFY experience.",
+      "Maximum coaching power for athletes and ambitious builders who want every advantage.",
     accent: "amber",
     perks: [
       "Everything in Pro",
-      "5M coaching messages / month",
-      "5 Maya meal scans per day",
-      "3 Leo physique scans per week",
-      "Deepest coach memory & context",
+      "5× Capacity coaching",
+      "5 Maya meal scans / day",
+      "3 Leo physique scans / week",
+      "Deepest coach memory",
+      "Fastest priority responses",
       "VIP support priority",
+      "Full K.AIFY experience",
     ],
   },
 ];
@@ -81,7 +84,18 @@ export const PRICING_PLANS_WITH_PADDLE: PricingPlan[] = PRICING_PLANS.map((plan)
   paddlePriceId: getPaddlePriceIdForPlan(plan.id),
 }));
 
+/**
+ * Ladder-style comparison: each step clearly outgrows the one before it.
+ * Ordered so shared foundations sit first, then escalating differentiators.
+ */
 export const PLAN_COMPARISON: PlanFeature[] = [
+  {
+    label: "Best for",
+    essential: "Getting consistent",
+    pro: "Training seriously",
+    premium: "Going all-in",
+    highlight: true,
+  },
   {
     label: "AI coaching team (Alex, Maya, Leo & Kai)",
     essential: true,
@@ -89,14 +103,14 @@ export const PLAN_COMPARISON: PlanFeature[] = [
     premium: true,
   },
   {
-    label: "Monthly AI coaching capacity",
-    essential: "1M tokens",
-    pro: "2.5M tokens",
-    premium: "5M tokens",
+    label: "Monthly coaching capacity",
+    essential: "Great Capacity",
+    pro: "2.5× Capacity",
+    premium: "5× Capacity",
     highlight: true,
   },
   {
-    label: "Maya food photo analysis",
+    label: "Maya meal photo scans",
     essential: "1 / day",
     pro: "3 / day",
     premium: "5 / day",
@@ -140,34 +154,45 @@ export const PLAN_COMPARISON: PlanFeature[] = [
     premium: true,
   },
   {
-    label: "Team chat with coaches",
-    essential: false,
-    pro: true,
-    premium: true,
-  },
-  {
-    label: "Coach memory & conversation context",
-    essential: "Standard",
-    pro: "Advanced",
-    premium: "Premium",
-  },
-  {
-    label: "Priority AI response speed",
-    essential: false,
-    pro: true,
-    premium: true,
-  },
-  {
     label: "Push notifications & reminders",
     essential: true,
     pro: true,
     premium: true,
   },
   {
+    label: "Team chat with coaches",
+    essential: false,
+    pro: true,
+    premium: true,
+    highlight: true,
+  },
+  {
+    label: "Priority AI response speed",
+    essential: false,
+    pro: "Priority",
+    premium: "Fastest",
+    highlight: true,
+  },
+  {
+    label: "Coach memory & conversation depth",
+    essential: "Standard",
+    pro: "Advanced",
+    premium: "Deepest",
+    highlight: true,
+  },
+  {
     label: "Support",
     essential: "Standard",
     pro: "Priority",
     premium: "VIP",
+    highlight: true,
+  },
+  {
+    label: "Why upgrade",
+    essential: "Solid start",
+    pro: "Best value",
+    premium: "Maximum power",
+    highlight: true,
   },
 ];
 

@@ -6,15 +6,31 @@ import { useEffect, useState } from "react";
 import { useLang } from "@/lib/lang-context";
 
 const LINKS = [
-  { href: "#about", labelKey: "landing.nav.about" },
-  { href: "#coaches", labelKey: "landing.nav.coaches" },
-  { href: "#features", labelKey: "landing.nav.features" },
-  { href: "#streak", labelKey: "landing.nav.streak" },
-  { href: "#kai", labelKey: "landing.nav.kai" },
+  { href: "#about", labelKey: "landing.nav.about", en: "About" },
+  { href: "#coaches", labelKey: "landing.nav.coaches", en: "Coaches" },
+  { href: "#features", labelKey: "landing.nav.features", en: "Features" },
+  { href: "#streak", labelKey: "landing.nav.streak", en: "Streak" },
+  { href: "#kai", labelKey: "landing.nav.kai", en: "Dragon Kai" },
 ] as const;
 
-export function LandingNav({ pricingPage = false }: { pricingPage?: boolean }) {
+const EN = {
+  about: "About",
+  coaches: "Coaches",
+  features: "Features",
+  pricing: "Pricing",
+  login: "Login",
+  explore: "Explore Plans",
+} as const;
+
+export function LandingNav({
+  pricingPage = false,
+  forceEnglish = false,
+}: {
+  pricingPage?: boolean;
+  forceEnglish?: boolean;
+}) {
   const { t } = useLang();
+  const label = (key: string, english: string) => (forceEnglish ? english : t(key));
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -46,19 +62,19 @@ export function LandingNav({ pricingPage = false }: { pricingPage?: boolean }) {
                 href="/#about"
                 className="text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-white"
               >
-                {t("landing.nav.about")}
+                {label("landing.nav.about", EN.about)}
               </Link>
               <Link
                 href="/#coaches"
                 className="text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-white"
               >
-                {t("landing.nav.coaches")}
+                {label("landing.nav.coaches", EN.coaches)}
               </Link>
               <Link
                 href="/#features"
                 className="text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-white"
               >
-                {t("landing.nav.features")}
+                {label("landing.nav.features", EN.features)}
               </Link>
             </>
           ) : (
@@ -68,7 +84,7 @@ export function LandingNav({ pricingPage = false }: { pricingPage?: boolean }) {
                 href={`${homePrefix}${link.href}`}
                 className="text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-white focus-visible:outline-2 focus-visible:outline-purple-400 focus-visible:outline-offset-4 rounded-sm"
               >
-                {t(link.labelKey)}
+                {label(link.labelKey, link.en)}
               </a>
             ))
           )}
@@ -78,7 +94,7 @@ export function LandingNav({ pricingPage = false }: { pricingPage?: boolean }) {
               pricingPage ? "text-purple-300" : "text-zinc-400"
             }`}
           >
-            {t("landing.nav.pricing")}
+            {label("landing.nav.pricing", EN.pricing)}
           </Link>
         </nav>
 
@@ -87,13 +103,13 @@ export function LandingNav({ pricingPage = false }: { pricingPage?: boolean }) {
             href="/login"
             className="hidden text-sm font-medium text-zinc-400 transition hover:text-white sm:inline"
           >
-            {t("landing.nav.login")}
+            {label("landing.nav.login", EN.login)}
           </Link>
           <Link
             href="/pricing"
             className="landing-btn landing-btn--primary shrink-0 text-sm active:scale-[0.97]"
           >
-            {t("landing.pricing.explore_plans")}
+            {label("landing.pricing.explore_plans", EN.explore)}
           </Link>
         </div>
       </div>

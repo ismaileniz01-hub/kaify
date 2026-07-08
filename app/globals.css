@@ -3702,7 +3702,7 @@ select:active {
   .pricing-cards {
     grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
-    align-items: center;
+    align-items: stretch;
   }
 }
 
@@ -3739,12 +3739,12 @@ select:active {
 
 @media (min-width: 900px) {
   .pricing-card--popular {
-    transform: scale(1.04);
+    transform: scale(1.02);
     z-index: 2;
   }
 
   .pricing-card--popular:hover {
-    transform: scale(1.04) translateY(-6px);
+    transform: scale(1.02) translateY(-6px);
   }
 }
 

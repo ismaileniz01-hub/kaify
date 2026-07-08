@@ -4,8 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useLang } from "@/lib/lang-context";
 
-export function LandingFooter() {
+const EN = {
+  about: "About",
+  coaches: "Coaches",
+  features: "Features",
+  pricing: "Pricing",
+} as const;
+
+export function LandingFooter({ forceEnglish = false }: { forceEnglish?: boolean }) {
   const { t } = useLang();
+  const label = (key: string, english: string) => (forceEnglish ? english : t(key));
 
   return (
     <footer className="landing-footer">
@@ -25,16 +33,16 @@ export function LandingFooter() {
 
         <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-zinc-500">
           <Link href="/#about" className="transition hover:text-white">
-            {t("landing.nav.about")}
+            {label("landing.nav.about", EN.about)}
           </Link>
           <Link href="/#coaches" className="transition hover:text-white">
-            {t("landing.nav.coaches")}
+            {label("landing.nav.coaches", EN.coaches)}
           </Link>
           <Link href="/#features" className="transition hover:text-white">
-            {t("landing.nav.features")}
+            {label("landing.nav.features", EN.features)}
           </Link>
           <Link href="/pricing" className="transition hover:text-white">
-            {t("landing.nav.pricing")}
+            {label("landing.nav.pricing", EN.pricing)}
           </Link>
           <Link href="/privacy" className="transition hover:text-white">
             Privacy
