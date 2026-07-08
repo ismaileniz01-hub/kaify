@@ -11,6 +11,7 @@ import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { apiGet, apiPost, ApiClientError } from "@/lib/api/client";
+import { canUseTeamChat } from "@/lib/billing/team-chat-access";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import type { ChatMessageDTO } from "@/lib/types/domain.types";
 
@@ -42,10 +43,24 @@ export default function TeamChatPage() {
   const [meetingDone, setMeetingDone] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const unlocked = !isAuthenticated || profile?.teamChatUnlocked;
+  const unlocked =
+    !isAuthenticated ||
+    canUseTeamChat({
+      tier: profile?.tier,
+      teamChatUnlocked: profile?.teamChatUnlocked,
+    });
 
   useEffect(() => {
     if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
+    if (
+      !canUseTeamChat({
+        tier: profile?.tier,
+        teamChatUnlocked: profile?.teamChatUnlocked,
+      })
+    ) {
       setLoading(false);
       return;
     }
@@ -66,7 +81,7 @@ export default function TeamChatPage() {
       })
       .catch(() => setError(t("team.error.load")))
       .finally(() => setLoading(false));
-  }, [isAuthenticated, t]);
+  }, [isAuthenticated, profile?.tier, profile?.teamChatUnlocked, t]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -125,7 +140,11 @@ export default function TeamChatPage() {
         <InlineAlert
           variant="info"
           className="mx-4"
-          message={t("team.locked")}
+          message={
+            profile?.tier === "essential"
+              ? t("team.locked_plan")
+              : t("team.locked")
+          }
           dismissLabel={t("common.dismiss")}
         />
       )}

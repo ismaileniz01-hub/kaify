@@ -11,6 +11,7 @@ import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { apiGet } from "@/lib/api/client";
+import { canUseTeamChat, isTeamChatPlan } from "@/lib/billing/team-chat-access";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import type { InboxCoachDTO } from "@/lib/services/messages.service";
 import { CONTACTS, CONTACT_LIST } from "@/lib/contacts";
@@ -58,7 +59,13 @@ export default function MessagesPage() {
         })
       : []);
 
-  const teamUnlocked = profile?.teamChatUnlocked || !isAuthenticated;
+  const planAllowsTeam = !isAuthenticated || isTeamChatPlan(profile?.tier);
+  const teamUnlocked =
+    !isAuthenticated ||
+    canUseTeamChat({
+      tier: profile?.tier,
+      teamChatUnlocked: profile?.teamChatUnlocked,
+    });
 
   return (
     <div className="phone-shell messages-gradient messages-pattern relative flex flex-col">
@@ -129,38 +136,40 @@ export default function MessagesPage() {
             );
           })}
 
-        <Link
-          href={teamUnlocked ? "/chat/team" : "/streak"}
-          className={`animate-in mt-4 flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition ${
-            teamUnlocked
-              ? "border-purple-500/20 bg-purple-500/10 hover:bg-purple-500/15"
-              : "border-zinc-700/50 bg-zinc-900/50 opacity-60"
-          }`}
-        >
-          <div className="flex -space-x-2">
-            {(["alex", "maya", "leo", "kai"] as ContactId[]).map((id) => (
-              <div
-                key={id}
-                className="relative h-8 w-8 overflow-hidden rounded-full border-2 border-zinc-900"
-              >
-                <Image
-                  src={id === "kai" ? kaiAvatar : CONTACTS[id].avatar}
-                  alt=""
-                  width={32}
-                  height={32}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            ))}
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-white">{t("messages.team_title")}</p>
-            <p className="text-[11px] text-zinc-400">
-              {teamUnlocked ? t("messages.team_sub") : t("messages.team_locked")}
-            </p>
-          </div>
-          <ChevronRight className="h-4 w-4 text-zinc-500" />
-        </Link>
+        {planAllowsTeam && (
+          <Link
+            href={teamUnlocked ? "/chat/team" : "/streak"}
+            className={`animate-in mt-4 flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition ${
+              teamUnlocked
+                ? "border-purple-500/20 bg-purple-500/10 hover:bg-purple-500/15"
+                : "border-zinc-700/50 bg-zinc-900/50 opacity-60"
+            }`}
+          >
+            <div className="flex -space-x-2">
+              {(["alex", "maya", "leo", "kai"] as ContactId[]).map((id) => (
+                <div
+                  key={id}
+                  className="relative h-8 w-8 overflow-hidden rounded-full border-2 border-zinc-900"
+                >
+                  <Image
+                    src={id === "kai" ? kaiAvatar : CONTACTS[id].avatar}
+                    alt=""
+                    width={32}
+                    height={32}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-white">{t("messages.team_title")}</p>
+              <p className="text-[11px] text-zinc-400">
+                {teamUnlocked ? t("messages.team_sub") : t("messages.team_locked")}
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-zinc-500" />
+          </Link>
+        )}
       </main>
     </div>
   );

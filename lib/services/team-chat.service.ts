@@ -1,5 +1,6 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
+import { canUseTeamChat } from "@/lib/billing/team-chat-access";
 import { ModelRouter } from "@/lib/ai/model-router";
 import { TOKEN_BUDGET } from "@/lib/ai/budget";
 import {
@@ -44,14 +45,17 @@ export async function assertTeamChatUnlocked(userId: string): Promise<void> {
   const admin = createAdminSupabaseClient();
   const { data } = await admin
     .from("profiles")
-    .select("team_chat_unlocked")
+    .select("team_chat_unlocked, tier")
     .eq("id", userId)
     .single();
 
-  if (!data?.team_chat_unlocked) {
+  if (!canUseTeamChat({ tier: data?.tier, teamChatUnlocked: data?.team_chat_unlocked })) {
+    const isEssential = !data?.tier || data.tier === "essential";
     throw new ApiError(
       "FORBIDDEN",
-      "Takım sohbeti 7 günlük seriden sonra açılır.",
+      isEssential
+        ? "Team chat is available on Pro and Premium plans."
+        : "Team chat unlocks after a 7-day streak.",
     );
   }
 }

@@ -726,6 +726,7 @@
   "messages.empty.title": "Henüz sohbet yok",
   "messages.empty.subtitle": "Yukarıdaki listeden bir koçla sohbete başla.",
   "team.locked": "Takım sohbeti 7 günlük seriden sonra açılır. Serini sürdür!",
+  "team.locked_plan": "Takım sohbeti Pro ve Premium planlarda. Koç ekibi sohbetini açmak için yükselt.",
   "team.empty": "Koçlarının sohbetini görmek için haftalık takım toplantısını başlat.",
   "team.error.meeting_done": "Bu haftanın takım toplantısı zaten yapıldı.",
   "team.meeting_done_btn": "Bu hafta toplantı yapıldı",

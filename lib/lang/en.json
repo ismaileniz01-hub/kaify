@@ -726,6 +726,7 @@
   "messages.empty.title": "No conversations yet",
   "messages.empty.subtitle": "Start chatting with a coach from the list above.",
   "team.locked": "Team chat unlocks after a 7-day streak. Keep your streak going!",
+  "team.locked_plan": "Team chat is available on Pro and Premium. Upgrade to unlock your coaching crew chat.",
   "team.empty": "Start the weekly team meeting to see your coaches chat.",
   "team.error.meeting_done": "You've already had this week's team meeting.",
   "team.meeting_done_btn": "Meeting done this week",
