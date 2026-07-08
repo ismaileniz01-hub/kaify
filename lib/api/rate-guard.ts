@@ -15,7 +15,9 @@ export const AI_RATE_LIMITS = {
   analyze: { requests: 10, windowMs: 60 * 1000 },
   team_meeting: { requests: 3, windowMs: 60 * 1000 },
   avatar: { requests: 5, windowMs: 60 * 1000 },
-  checkin: { requests: 10, windowMs: 60 * 1000 },
+  /** App bootstrap / bundle reads — must stay well above auth refresh storms. */
+  session: { requests: 90, windowMs: 60 * 1000 },
+  checkin: { requests: 20, windowMs: 60 * 1000 },
   steps: { requests: 30, windowMs: 60 * 1000 },
   chest: { requests: 5, windowMs: 60 * 1000 },
   referral: { requests: 5, windowMs: 60 * 60 * 1000 },
@@ -28,13 +30,16 @@ export const AI_RATE_LIMITS = {
 
 export type AiRateAction = keyof typeof AI_RATE_LIMITS;
 
+/** Soft reads: if Upstash is down, prefer memory fallback over blanking the app. */
+const FAIL_OPEN_ACTIONS = new Set<AiRateAction>(["session"]);
+
 export async function enforceUserRateLimit(
   userId: string,
   action: AiRateAction,
 ): Promise<void> {
   const config = AI_RATE_LIMITS[action];
   const result = await checkRateLimit(`ai:${action}:${userId}`, config, {
-    failClosedInProduction: true,
+    failClosedInProduction: !FAIL_OPEN_ACTIONS.has(action),
   });
 
   if (!result.allowed) {

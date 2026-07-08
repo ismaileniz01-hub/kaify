@@ -24,6 +24,18 @@ describe("enforceUserRateLimit", () => {
     });
   });
 
+  it("fail-opens session bootstrap when Upstash is unavailable", async () => {
+    checkRateLimit.mockResolvedValue({ allowed: true, remaining: 80, limit: 90, resetMs: 0 });
+    await enforceUserRateLimit("u1", "session");
+    expect(checkRateLimit).toHaveBeenCalledWith("ai:session:u1", AI_RATE_LIMITS.session, {
+      failClosedInProduction: false,
+    });
+  });
+
+  it("keeps session limits high enough for auth refresh storms", () => {
+    expect(AI_RATE_LIMITS.session.requests).toBeGreaterThanOrEqual(60);
+  });
+
   it("throws RATE_LIMITED when the limit is exceeded", async () => {
     checkRateLimit.mockResolvedValue({ allowed: false, remaining: 0, limit: 3, resetMs: 5000 });
     await expect(enforceUserRateLimit("u1", "team_meeting")).rejects.toMatchObject({

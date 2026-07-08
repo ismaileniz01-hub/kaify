@@ -10,8 +10,8 @@ import {
   legacyApiDeprecationHeaders,
 } from "@/lib/api/v1-manifest";
 const RATE_LIMIT_CONFIG = {
-  api: { requests: 60, windowMs: 60 * 1000 },
-  page: { requests: 120, windowMs: 60 * 1000 },
+  api: { requests: 180, windowMs: 60 * 1000 },
+  page: { requests: 180, windowMs: 60 * 1000 },
   health: { requests: 10, windowMs: 60 * 1000 },
 };
 
@@ -32,6 +32,15 @@ function getRateLimitBucket(pathname: string) {
   return pathname.startsWith("/api/") ? "api" : "page";
 }
 
+/**
+ * Edge middleware covers every navigation + API call. Fail-closed here blanks
+ * the whole product when Upstash flaps; expensive routes still fail-closed in
+ * enforceUserRateLimit. Health probes stay fail-closed below.
+ */
+const RATE_LIMIT_SOFT =
+  process.env.NODE_ENV === "production"
+    ? ({ failClosedInProduction: false } as const)
+    : undefined;
 const RATE_LIMIT_FAIL_CLOSED =
   process.env.NODE_ENV === "production"
     ? ({ failClosedInProduction: true } as const)
@@ -115,7 +124,7 @@ export async function middleware(request: NextRequest) {
   const rateLimit = await checkRateLimit(
     `${bucket}:${ip}`,
     config,
-    RATE_LIMIT_FAIL_CLOSED,
+    RATE_LIMIT_SOFT,
   );
 
   if (!rateLimit.allowed) {

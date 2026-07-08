@@ -5,6 +5,6 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/session — authenticated bootstrap bundle (profile, gems, streak, home, kai). */
 export const GET = defineRoute(
-  { route: "GET /api/session", rateLimit: "checkin" },
+  { route: "GET /api/session", rateLimit: "session" },
   async ({ user }) => getSessionBundle(user.id),
 );

@@ -175,11 +175,13 @@ export async function checkRateLimit(
     };
   }
 
+  // Keep a usable floor when Redis is down so auth refresh storms don't 429
+  // the whole app on a single serverless instance.
   const memoryConfig =
     isProduction && upstashFailed
       ? {
           ...config,
-          requests: Math.max(1, Math.ceil(config.requests / 10)),
+          requests: Math.max(30, Math.ceil(config.requests / 3)),
         }
       : config;
 

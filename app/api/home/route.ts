@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const GET = defineRoute(
   {
     route: "GET /api/home",
-    rateLimit: "checkin",
+    rateLimit: "session",
     requireAi: true,
     dailyAiBudget: true,
   },
