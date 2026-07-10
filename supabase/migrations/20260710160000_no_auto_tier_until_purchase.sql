@@ -22,19 +22,42 @@ begin
   ) then
     alter table public.profiles
       alter column subscription_tier drop not null;
+  end if;
+end $$;
 
+-- Remove auto-assigned essential (never purchased via Paddle)
+do $$
+declare
+  r record;
+begin
+  for r in
+    select id
+    from public.profiles
+    where tier = 'essential'
+      and tier_started_at is null
+  loop
+    perform set_config('app.guard_bypass', 'on', true);
+    update public.profiles
+    set tier = null
+    where id = r.id;
+  end loop;
+end $$;
+
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'profiles'
+      and column_name = 'subscription_tier'
+  ) then
+    perform set_config('app.guard_bypass', 'on', true);
     update public.profiles
     set subscription_tier = null
     where tier is null
       and subscription_tier is not null;
   end if;
 end $$;
-
--- Remove auto-assigned essential (never purchased via Paddle)
-update public.profiles
-set tier = null
-where tier = 'essential'
-  and tier_started_at is null;
 
 -- ---------------------------------------------------------------------------
 -- 2. apply_subscription — tier + billing + activate onboarding
