@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 
 /** POST /api/auth/otp/send — email OTP for sign-in / sign-up (server-side Supabase). */
 export const POST = defineRouteRaw(
-  { route: "POST /api/auth/otp/send", auth: "none", publicRateLimit: "subscribe" },
+  { route: "POST /api/auth/otp/send", auth: "none", publicRateLimit: "otp_send" },
   async ({ request }) => {
     const body = await request.json().catch(() => null);
     const parsed = otpSendSchema.safeParse(body);

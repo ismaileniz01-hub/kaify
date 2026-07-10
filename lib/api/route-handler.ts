@@ -28,10 +28,10 @@ export type DefineRouteOptions = {
   route: string;
   auth?: RouteAuth;
   rateLimit?: AiRateAction;
-  /** IP-scoped limit for auth:none routes (waitlist, subscribe, health). */
+  /** IP-scoped limit for auth:none routes (waitlist, subscribe, OTP, health). */
   publicRateLimit?: Extract<
     AiRateAction,
-    "waitlist" | "subscribe" | "health_probe"
+    "waitlist" | "subscribe" | "otp_send" | "otp_verify" | "health_probe"
   >;
   requireAi?: boolean;
   dailyAiBudget?: boolean;

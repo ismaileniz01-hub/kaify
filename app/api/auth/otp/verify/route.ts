@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 
 /** POST /api/auth/otp/verify — verify email OTP and set session cookies on the response. */
 export const POST = defineRouteRaw(
-  { route: "POST /api/auth/otp/verify", auth: "none", publicRateLimit: "subscribe" },
+  { route: "POST /api/auth/otp/verify", auth: "none", publicRateLimit: "otp_verify" },
   async ({ request }) => {
     const body = await request.json().catch(() => null);
     const parsed = otpVerifySchema.safeParse(body);

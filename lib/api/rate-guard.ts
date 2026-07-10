@@ -25,6 +25,10 @@ export const AI_RATE_LIMITS = {
   profile_delete: { requests: 2, windowMs: 24 * 60 * 60 * 1000 },
   waitlist: { requests: 5, windowMs: 60 * 60 * 1000 },
   subscribe: { requests: 5, windowMs: 60 * 60 * 1000 },
+  /** Email OTP send — separate from waitlist subscribe to avoid shared IP buckets. */
+  otp_send: { requests: 12, windowMs: 15 * 60 * 1000 },
+  /** Email OTP verify attempts (wrong codes, retries). */
+  otp_verify: { requests: 24, windowMs: 15 * 60 * 1000 },
   health_probe: { requests: 30, windowMs: 60 * 1000 },
 } as const;
 
@@ -57,7 +61,7 @@ export async function enforcePublicRateLimit(
   ip: string,
   action: Extract<
     AiRateAction,
-    "waitlist" | "subscribe" | "health_probe"
+    "waitlist" | "subscribe" | "otp_send" | "otp_verify" | "health_probe"
   >,
 ): Promise<void> {
   const config = AI_RATE_LIMITS[action];
