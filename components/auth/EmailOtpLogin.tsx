@@ -24,7 +24,6 @@ import {
 } from "@/lib/legal/constants";
 import { PENDING_OTP_EMAIL_KEY } from "@/lib/auth/logout";
 import { useSession } from "@/lib/session-context";
-import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import { apiPost } from "@/lib/api/client";
 import { clearPendingReferral, getPendingReferral } from "@/lib/referral";
 
@@ -119,12 +118,7 @@ export function EmailOtpLogin({
     setError(null);
     try {
       storePendingLegalConsent();
-      const supabase = tryCreateBrowserSupabaseClient();
-      if (!supabase) {
-        setError(t("login.error.failed"));
-        return;
-      }
-      const result = await sendEmailLoginCode(supabase, trimmed);
+      const result = await sendEmailLoginCode(trimmed);
       if (!result.ok) {
         setError(result.message);
         return;
@@ -159,12 +153,7 @@ export function EmailOtpLogin({
       setLoading(true);
       setError(null);
       try {
-        const supabase = tryCreateBrowserSupabaseClient();
-        if (!supabase) {
-          setError(t("login.error.otp_invalid"));
-          return;
-        }
-        const result = await verifyEmailLoginCode(supabase, email, token);
+        const result = await verifyEmailLoginCode(email, token);
         if (!result.ok) {
           setError(t("login.error.otp_invalid"));
           return;

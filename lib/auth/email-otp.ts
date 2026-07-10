@@ -1,32 +1,27 @@
 "use client";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/types/database.types";
+import { apiPost, ApiClientError } from "@/lib/api/client";
 import { isCompleteOtp, normalizeOtpInput } from "@/lib/auth/otp";
 
-type AuthClient = SupabaseClient<Database>;
-
-/** Request a one-time email code (English template in supabase/email-templates/). */
+/** Request a one-time email code via the server (avoids missing browser Supabase keys). */
 export async function sendEmailLoginCode(
-  supabase: AuthClient,
   email: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      shouldCreateUser: true,
-      // Auth emails use the Supabase Magic Link template — keep it English-only
-      // (see supabase/email-templates/magic-link-otp.en.html).
-      // Dashboard: Auth → Providers → Email → OTP length should be 6.
-    },
-  });
-  if (error) return { ok: false, message: error.message };
-  return { ok: true };
+  try {
+    await apiPost<{ sent: true }>("/api/auth/otp/send", {
+      email: email.trim().toLowerCase(),
+    });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiClientError) {
+      return { ok: false, message: error.message };
+    }
+    return { ok: false, message: "failed" };
+  }
 }
 
-/** Verify the email OTP and establish a session. */
+/** Verify the email OTP and establish a session (cookies set server-side). */
 export async function verifyEmailLoginCode(
-  supabase: AuthClient,
   email: string,
   token: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
@@ -34,13 +29,19 @@ export async function verifyEmailLoginCode(
   if (!isCompleteOtp(normalized)) {
     return { ok: false, message: "invalid_length" };
   }
-  const { error } = await supabase.auth.verifyOtp({
-    email,
-    token: normalized,
-    type: "email",
-  });
-  if (error) return { ok: false, message: error.message };
-  return { ok: true };
+
+  try {
+    await apiPost<{ verified: true }>("/api/auth/otp/verify", {
+      email: email.trim().toLowerCase(),
+      token: normalized,
+    });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiClientError) {
+      return { ok: false, message: error.message };
+    }
+    return { ok: false, message: "invalid" };
+  }
 }
 
 export { normalizeOtpInput, isCompleteOtp } from "@/lib/auth/otp";

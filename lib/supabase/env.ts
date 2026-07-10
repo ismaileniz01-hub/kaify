@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const PLACEHOLDER_PATTERNS = ["your_", "_here", "changeme", "replace_me"] as const;
+const PLACEHOLDER_PATTERNS = ["your_", "_here", "changeme", "replace_me", "placeholder"] as const;
 
 function isPlaceholderValue(value: string): boolean {
   const normalized = value.trim().toLowerCase();
