@@ -1,0 +1,20 @@
+<!--
+  Paste into Supabase Dashboard → Authentication → Email Templates → Confirm signup
+
+  Subject: Your KAIFY verification code
+
+  New signups can use this template when "Confirm email" is enabled.
+  Must include {{ .Token }} and must NOT include {{ .ConfirmationURL }}.
+-->
+<h2 style="margin:0 0 16px;font-family:system-ui,sans-serif;color:#111;">
+  Your verification code
+</h2>
+<p style="margin:0 0 20px;font-family:system-ui,sans-serif;color:#444;line-height:1.5;">
+  Enter this one-time code in KAIFY to finish creating your account.
+</p>
+<p style="margin:0 0 24px;font-family:ui-monospace,monospace;font-size:32px;font-weight:700;letter-spacing:0.35em;color:#7c3aed;">
+  {{ .Token }}
+</p>
+<p style="margin:0;font-family:system-ui,sans-serif;font-size:13px;color:#888;line-height:1.5;">
+  If you didn&apos;t request this code, you can safely ignore this email.
+</p>

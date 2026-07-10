@@ -1,8 +1,8 @@
 import { defineRouteRaw } from "@/lib/api/route-handler";
 import { ApiError } from "@/lib/api/errors";
 import { fail, ok } from "@/lib/api/response";
-import { mapOtpSendError } from "@/lib/auth/map-otp-send-error";
-import { createRouteHandlerSupabase } from "@/lib/supabase/route-handler";
+import { mapGoTrueOtpSendError } from "@/lib/auth/map-otp-send-error";
+import { sendAuthEmailOtp } from "@/lib/auth/send-otp-server";
 import { SupabaseEnvError } from "@/lib/supabase/env";
 import { otpSendSchema } from "@/lib/validations/auth-otp.schema";
 import { logger } from "@/lib/logger";
@@ -22,20 +22,15 @@ export const POST = defineRouteRaw(
     }
 
     try {
-      const { supabase } = createRouteHandlerSupabase(request);
+      const result = await sendAuthEmailOtp(parsed.data.email);
 
-      const { error } = await supabase.auth.signInWithOtp({
-        email: parsed.data.email.toLowerCase(),
-        options: { shouldCreateUser: true },
-      });
-
-      if (error) {
+      if (!result.ok) {
         logger.warn("otp send failed", {
-          code: error.code,
-          message: error.message,
-          status: error.status,
+          code: result.error.code,
+          message: result.error.message,
+          status: result.error.status,
         });
-        return fail(mapOtpSendError(error));
+        return fail(mapGoTrueOtpSendError(result.error));
       }
 
       return ok({ sent: true as const });

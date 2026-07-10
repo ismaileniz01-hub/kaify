@@ -22,18 +22,26 @@ export const POST = defineRouteRaw(
     try {
       const { supabase, withCookies } = createRouteHandlerSupabase(request);
 
-      const { error } = await supabase.auth.verifyOtp({
+      const emailAttempt = await supabase.auth.verifyOtp({
         email: parsed.data.email.toLowerCase(),
         token: parsed.data.token,
         type: "email",
       });
 
-      if (error) {
-        return withCookies(
-          fail(
-            new ApiError("UNAUTHORIZED", "Invalid or expired code. Please try again."),
-          ),
-        );
+      if (emailAttempt.error) {
+        const signupAttempt = await supabase.auth.verifyOtp({
+          email: parsed.data.email.toLowerCase(),
+          token: parsed.data.token,
+          type: "signup",
+        });
+
+        if (signupAttempt.error) {
+          return withCookies(
+            fail(
+              new ApiError("UNAUTHORIZED", "Invalid or expired code. Please try again."),
+            ),
+          );
+        }
       }
 
       return withCookies(ok({ verified: true as const }));

@@ -1,5 +1,6 @@
 import type { AuthError } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/api/errors";
+import type { GoTrueOtpError } from "@/lib/auth/send-otp-server";
 
 /** Maps Supabase signInWithOtp failures to stable API errors. */
 export function mapOtpSendError(error: AuthError): ApiError {
@@ -58,4 +59,14 @@ export function mapOtpSendError(error: AuthError): ApiError {
     "SERVICE_UNAVAILABLE",
     "Could not send verification code. Please try again in a moment.",
   );
+}
+
+/** Maps direct GoTrue /otp API failures to stable API errors. */
+export function mapGoTrueOtpSendError(error: GoTrueOtpError): ApiError {
+  const authLike = {
+    message: error.message ?? "",
+    code: error.code,
+    status: error.status,
+  } as AuthError;
+  return mapOtpSendError(authLike);
 }

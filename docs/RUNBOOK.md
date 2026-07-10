@@ -87,12 +87,12 @@ sends a **magic link** if the **Magic Link** email template contains
 
 **One-time setup (production):**
 
-1. Supabase → **Authentication → Email Templates → Magic Link**
-2. Subject: `Your KAIFY login code` (or paste from
-   `supabase/email-templates/magic-link-otp.en.subject.txt`)
-3. Body: paste `supabase/email-templates/magic-link-otp.en.html` (must include
-   `{{ .Token }}`, must **not** include `{{ .ConfirmationURL }}`)
-4. **Authentication → Providers → Email → Email OTP length → 6**
+1. Supabase → **Authentication → Email Templates**
+2. **Magic Link** — paste `supabase/email-templates/magic-link-otp.en.html`
+3. **Confirm signup** — paste `supabase/email-templates/confirm-signup-otp.en.html`  
+   (yeni kayıtlarda link geliyorsa bu şablon da güncellenmeli)
+4. Her iki şablonda **`{{ .Token }}` olmalı**, `{{ .ConfirmationURL }}` **olmamalı**
+5. **Authentication → Providers → Email → Email OTP length → 6**
 
 Or apply via Management API (needs personal access token):
 

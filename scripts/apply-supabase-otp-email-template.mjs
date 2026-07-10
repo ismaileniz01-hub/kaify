@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Apply the 6-digit OTP Magic Link email template to Supabase Auth.
+ * Apply 6-digit OTP email templates to Supabase Auth.
  *
  * Requires a Supabase personal access token with auth_config_write:
  *   https://supabase.com/dashboard/account/tokens
@@ -24,15 +24,20 @@ if (!TOKEN) {
   process.exit(1);
 }
 
+function readTemplate(fileName) {
+  const raw = fs.readFileSync(path.join(templateDir, fileName), "utf8");
+  return raw.replace(/<!--[\s\S]*?-->/g, "").trim();
+}
+
 const templateDir = path.join(process.cwd(), "supabase/email-templates");
-const subject = fs
+const magicSubject = fs
   .readFileSync(path.join(templateDir, "magic-link-otp.en.subject.txt"), "utf8")
   .trim();
-let content = fs.readFileSync(
-  path.join(templateDir, "magic-link-otp.en.html"),
-  "utf8",
-);
-content = content.replace(/<!--[\s\S]*?-->/g, "").trim();
+const confirmSubject = fs
+  .readFileSync(path.join(templateDir, "confirm-signup-otp.en.subject.txt"), "utf8")
+  .trim();
+const magicContent = readTemplate("magic-link-otp.en.html");
+const confirmContent = readTemplate("confirm-signup-otp.en.html");
 
 const response = await fetch(
   `https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth`,
@@ -43,8 +48,10 @@ const response = await fetch(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      mailer_subjects_magic_link: subject,
-      mailer_templates_magic_link_content: content,
+      mailer_subjects_magic_link: magicSubject,
+      mailer_templates_magic_link_content: magicContent,
+      mailer_subjects_confirmation: confirmSubject,
+      mailer_templates_confirmation_content: confirmContent,
       mailer_otp_length: 6,
     }),
   },
@@ -56,6 +63,7 @@ if (!response.ok) {
   process.exit(1);
 }
 
-console.log("Supabase Magic Link template updated for 6-digit OTP.");
+console.log("Supabase email templates updated for 6-digit OTP.");
 console.log(`Project: ${PROJECT_REF}`);
-console.log(`Subject: ${subject}`);
+console.log(`Magic link subject: ${magicSubject}`);
+console.log(`Confirm signup subject: ${confirmSubject}`);
