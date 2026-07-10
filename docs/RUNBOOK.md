@@ -79,6 +79,29 @@ Important (degraded behaviour if missing):
 
 After changing an env var in Vercel, **redeploy** for it to take effect.
 
+### Email OTP (6-digit code, not magic link)
+
+Signup/login uses `signInWithOtp` **without** `emailRedirectTo`. Supabase still
+sends a **magic link** if the **Magic Link** email template contains
+`{{ .ConfirmationURL }}`. It must use `{{ .Token }}` instead.
+
+**One-time setup (production):**
+
+1. Supabase → **Authentication → Email Templates → Magic Link**
+2. Subject: `Your KAIFY login code` (or paste from
+   `supabase/email-templates/magic-link-otp.en.subject.txt`)
+3. Body: paste `supabase/email-templates/magic-link-otp.en.html` (must include
+   `{{ .Token }}`, must **not** include `{{ .ConfirmationURL }}`)
+4. **Authentication → Providers → Email → Email OTP length → 6**
+
+Or apply via Management API (needs personal access token):
+
+```bash
+SUPABASE_ACCESS_TOKEN=... npm run auth:otp-template
+```
+
+Dashboard: https://supabase.com/dashboard/project/urnetodzvszmddzdazdj/auth/templates
+
 ## 5. Database & migrations
 
 - Migrations live in `supabase/migrations/*.sql`, timestamp-prefixed, applied in
