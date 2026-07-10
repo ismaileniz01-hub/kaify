@@ -55,7 +55,7 @@ export function mapOtpSendError(error: AuthError): ApiError {
   }
 
   return new ApiError(
-    "VALIDATION_ERROR",
-    "Could not send verification code. Check your email and try again.",
+    "SERVICE_UNAVAILABLE",
+    "Could not send verification code. Please try again in a moment.",
   );
 }
