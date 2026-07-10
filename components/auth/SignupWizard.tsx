@@ -26,9 +26,11 @@ import {
 import { apiPost } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
-import { maximumBirthDateForMinimumAge } from "@/lib/compliance/age";
 import {
-  GENDERS,
+  maximumBirthDateForMinimumAge,
+  meetsMinimumAge,
+} from "@/lib/compliance/age";
+import {
   EXPERIENCE_LEVELS,
   type Gender,
   type ExperienceLevel,
@@ -69,6 +71,21 @@ const AUTHED_FLOW: WizardStepId[] = [
   "bio",
 ];
 
+const SIGNUP_GENDERS = ["male", "female"] as const satisfies readonly Gender[];
+
+type UnitSystem = "metric" | "imperial";
+
+const CM_PER_IN = 2.54;
+const KG_PER_LB = 0.453592;
+
+function inchesToCm(feet: number, inches: number): number {
+  return Math.round((feet * 12 + inches) * CM_PER_IN);
+}
+
+function lbsToKg(lbs: number): number {
+  return Math.round(lbs * KG_PER_LB * 10) / 10;
+}
+
 type Props = {
   redirectTo?: string;
 };
@@ -103,10 +120,14 @@ export function SignupWizard({ redirectTo = "/welcome" }: Props) {
   const [email, setEmail] = useState("");
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [displayName, setDisplayName] = useState("");
-  const [gender, setGender] = useState<Gender>("prefer_not_to_say");
+  const [gender, setGender] = useState<Gender>("male");
   const [birthDate, setBirthDate] = useState("");
+  const [unitSystem, setUnitSystem] = useState<UnitSystem>("metric");
   const [heightCm, setHeightCm] = useState("");
   const [weightKg, setWeightKg] = useState("");
+  const [heightFt, setHeightFt] = useState("");
+  const [heightIn, setHeightIn] = useState("");
+  const [weightLbs, setWeightLbs] = useState("");
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>("beginner");
   const [isNatural, setIsNatural] = useState(true);
   const [bio, setBio] = useState("");
@@ -114,8 +135,24 @@ export function SignupWizard({ redirectTo = "/welcome" }: Props) {
   const currentStep = flow[stepIndex] ?? "email";
   const progressPct = Math.round(((stepIndex + 1) / flow.length) * 100);
 
-  const heightNum = Number.parseInt(heightCm, 10);
-  const weightNum = Number.parseFloat(weightKg);
+  const heightNum = useMemo(() => {
+    if (unitSystem === "metric") {
+      return Number.parseInt(heightCm, 10);
+    }
+    const ft = Number.parseInt(heightFt, 10) || 0;
+    const inches = Number.parseInt(heightIn, 10) || 0;
+    if (ft <= 0 && inches <= 0) return Number.NaN;
+    return inchesToCm(ft, inches);
+  }, [heightCm, heightFt, heightIn, unitSystem]);
+
+  const weightNum = useMemo(() => {
+    if (unitSystem === "metric") {
+      return Number.parseFloat(weightKg);
+    }
+    const lbs = Number.parseFloat(weightLbs);
+    if (!Number.isFinite(lbs)) return Number.NaN;
+    return lbsToKg(lbs);
+  }, [unitSystem, weightKg, weightLbs]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -176,7 +213,7 @@ export function SignupWizard({ redirectTo = "/welcome" }: Props) {
       case "gender":
         return true;
       case "birth":
-        return birthDate.length > 0;
+        return birthDate.length > 0 && meetsMinimumAge(birthDate);
       case "body":
         return (
           Number.isFinite(heightNum) &&
@@ -245,11 +282,17 @@ export function SignupWizard({ redirectTo = "/welcome" }: Props) {
       return;
     }
 
+    if (currentStep === "birth" && birthDate && !meetsMinimumAge(birthDate)) {
+      setError(t("signup.wizard.birth.underage"));
+      return;
+    }
+
     if (stepIndex < flow.length - 1) {
       setDirection("forward");
       setStepIndex((i) => i + 1);
     }
   }, [
+    birthDate,
     alreadyAuthedNeedsProfile,
     buildPayload,
     completeOnboarding,
@@ -385,7 +428,7 @@ export function SignupWizard({ redirectTo = "/welcome" }: Props) {
 
                 {currentStep === "gender" && (
                   <div className="signup-wizard-options">
-                    {GENDERS.map((g) => (
+                    {SIGNUP_GENDERS.map((g) => (
                       <button
                         key={g}
                         type="button"
@@ -405,41 +448,123 @@ export function SignupWizard({ redirectTo = "/welcome" }: Props) {
                     type="date"
                     value={birthDate}
                     max={maximumBirthDateForMinimumAge()}
-                    onChange={(e) => setBirthDate(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setBirthDate(value);
+                      if (value && !meetsMinimumAge(value)) {
+                        setError(t("signup.wizard.birth.underage"));
+                      } else {
+                        setError(null);
+                      }
+                    }}
                     autoFocus
-                    className="signup-field-input text-center text-lg"
+                    className="signup-wizard-field signup-wizard-field--center text-lg"
                   />
                 )}
 
                 {currentStep === "body" && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex flex-col gap-2">
-                      <label className="signup-field-label text-center">
-                        {t("onboarding.height")}
-                      </label>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        value={heightCm}
-                        onChange={(e) => setHeightCm(e.target.value)}
-                        placeholder={t("onboarding.height_placeholder")}
-                        autoFocus
-                        className="signup-field-input text-center text-lg"
-                      />
+                  <div className="flex flex-col gap-4">
+                    <div className="signup-unit-toggle" role="group" aria-label={t("signup.wizard.units.label")}>
+                      <button
+                        type="button"
+                        onClick={() => setUnitSystem("metric")}
+                        className={`signup-unit-toggle__btn ${
+                          unitSystem === "metric" ? "signup-unit-toggle__btn--active" : ""
+                        }`}
+                      >
+                        {t("signup.wizard.units.metric")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUnitSystem("imperial")}
+                        className={`signup-unit-toggle__btn ${
+                          unitSystem === "imperial" ? "signup-unit-toggle__btn--active" : ""
+                        }`}
+                      >
+                        {t("signup.wizard.units.imperial")}
+                      </button>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <label className="signup-field-label text-center">
-                        {t("onboarding.weight")}
-                      </label>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        value={weightKg}
-                        onChange={(e) => setWeightKg(e.target.value)}
-                        placeholder={t("onboarding.weight_placeholder")}
-                        className="signup-field-input text-center text-lg"
-                      />
-                    </div>
+
+                    {unitSystem === "metric" ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex flex-col gap-2">
+                          <label className="signup-field-label text-center">
+                            {t("signup.wizard.height_cm")}
+                          </label>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            value={heightCm}
+                            onChange={(e) => setHeightCm(e.target.value)}
+                            placeholder={t("onboarding.height_placeholder")}
+                            autoFocus
+                            className="signup-wizard-field signup-wizard-field--center text-lg"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <label className="signup-field-label text-center">
+                            {t("signup.wizard.weight_kg")}
+                          </label>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            value={weightKg}
+                            onChange={(e) => setWeightKg(e.target.value)}
+                            placeholder={t("onboarding.weight_placeholder")}
+                            className="signup-wizard-field signup-wizard-field--center text-lg"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="flex flex-col gap-2">
+                            <label className="signup-field-label text-center">
+                              {t("signup.wizard.height_ft")}
+                            </label>
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              max={9}
+                              value={heightFt}
+                              onChange={(e) => setHeightFt(e.target.value)}
+                              placeholder="5"
+                              autoFocus
+                              className="signup-wizard-field signup-wizard-field--center text-lg"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <label className="signup-field-label text-center">
+                              {t("signup.wizard.height_in")}
+                            </label>
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              max={11}
+                              value={heightIn}
+                              onChange={(e) => setHeightIn(e.target.value)}
+                              placeholder="10"
+                              className="signup-wizard-field signup-wizard-field--center text-lg"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <label className="signup-field-label text-center">
+                            {t("signup.wizard.weight_lbs")}
+                          </label>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            value={weightLbs}
+                            onChange={(e) => setWeightLbs(e.target.value)}
+                            placeholder="165"
+                            className="signup-wizard-field signup-wizard-field--center text-lg"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -466,7 +591,9 @@ export function SignupWizard({ redirectTo = "/welcome" }: Props) {
                       type="button"
                       onClick={() => setIsNatural(true)}
                       className={`signup-wizard-option signup-wizard-option--tile ${
-                        isNatural ? "signup-wizard-option--natural" : ""
+                        isNatural
+                          ? "signup-wizard-option--active signup-wizard-option--natural"
+                          : ""
                       }`}
                     >
                       <Leaf className="h-6 w-6" />
@@ -476,7 +603,9 @@ export function SignupWizard({ redirectTo = "/welcome" }: Props) {
                       type="button"
                       onClick={() => setIsNatural(false)}
                       className={`signup-wizard-option signup-wizard-option--tile ${
-                        !isNatural ? "signup-wizard-option--enhanced" : ""
+                        !isNatural
+                          ? "signup-wizard-option--active signup-wizard-option--enhanced"
+                          : ""
                       }`}
                     >
                       <Sparkles className="h-6 w-6" />
@@ -493,7 +622,7 @@ export function SignupWizard({ redirectTo = "/welcome" }: Props) {
                     maxLength={1000}
                     placeholder={t("onboarding.bio_placeholder")}
                     autoFocus
-                    className="signup-field-input resize-none text-base"
+                    className="signup-wizard-field resize-none text-base"
                   />
                 )}
 

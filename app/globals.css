@@ -4454,6 +4454,20 @@ select:active {
   position: relative;
   display: flex;
   align-items: center;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.signup-wizard-input-wrap:focus-within {
+  border-color: rgba(168, 85, 247, 0.5);
+  background: rgba(124, 58, 237, 0.1);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
 }
 
 .signup-wizard-input-icon {
@@ -4467,17 +4481,13 @@ select:active {
 
 .signup-wizard-input {
   width: 100%;
-  border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.25);
+  border: none;
+  border-radius: 0;
+  background: transparent;
   padding: 0.9rem 1rem 0.9rem 2.75rem;
   font-size: 1rem;
   color: white;
   outline: none;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    background 0.2s ease;
 }
 
 .signup-wizard-input--lg {
@@ -4487,13 +4497,71 @@ select:active {
 }
 
 .signup-wizard-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.signup-wizard-input::placeholder {
+  color: rgb(113 113 122);
+}
+
+.signup-wizard-field {
+  width: 100%;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.9rem 1rem;
+  font-size: 1rem;
+  color: white;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.signup-wizard-field--center {
+  text-align: center;
+}
+
+.signup-wizard-field:focus {
   border-color: rgba(168, 85, 247, 0.5);
   background: rgba(124, 58, 237, 0.1);
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
 }
 
-.signup-wizard-input::placeholder {
+.signup-wizard-field::placeholder {
   color: rgb(113 113 122);
+}
+
+.signup-unit-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  padding: 0.25rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.signup-unit-toggle__btn {
+  border-radius: 0.65rem;
+  border: none;
+  background: transparent;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgb(161 161 170);
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.signup-unit-toggle__btn--active {
+  background: rgba(124, 58, 237, 0.22);
+  color: white;
+  box-shadow: 0 0 16px rgba(124, 58, 237, 0.2);
 }
 
 .signup-wizard-options {
