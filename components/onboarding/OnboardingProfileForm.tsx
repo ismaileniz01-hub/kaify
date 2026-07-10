@@ -7,6 +7,7 @@ import { useLang } from "@/lib/lang-context";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import { InlineAlert } from "@/components/InlineAlert";
 import type { ProfileDTO } from "@/lib/types/domain.types";
+import type { OnboardingInput } from "@/lib/validations/onboarding.schema";
 import {
   GENDERS,
   EXPERIENCE_LEVELS,
@@ -19,6 +20,8 @@ type Props = {
   initialDisplayName?: string;
   submitLabel?: string;
   className?: string;
+  /** When set, skips API call and returns validated form data to the parent. */
+  onSubmitData?: (data: OnboardingInput) => void | Promise<void>;
   onSuccess: () => void | Promise<void>;
 };
 
@@ -26,6 +29,7 @@ export function OnboardingProfileForm({
   initialDisplayName = "",
   submitLabel,
   className = "",
+  onSubmitData,
   onSuccess,
 }: Props) {
   const { lang, t } = useLang();
@@ -66,18 +70,30 @@ export function OnboardingProfileForm({
     if (!valid || submitting) return;
     setSubmitting(true);
     setError(null);
+
+    const payload: OnboardingInput = {
+      displayName: displayName.trim(),
+      gender,
+      birthDate,
+      heightCm: heightNum,
+      weightKg: weightNum,
+      experienceLevel,
+      isNatural,
+      bio: bio.trim(),
+      locale: lang,
+    };
+
     try {
-      await apiPost<ProfileDTO>("/api/onboarding", {
-        displayName: displayName.trim(),
-        gender,
-        birthDate,
-        heightCm: heightNum,
-        weightKg: weightNum,
-        experienceLevel,
-        isNatural,
-        bio: bio.trim(),
-        locale: lang,
-      });
+      if (onSubmitData) {
+        try {
+          await onSubmitData(payload);
+        } finally {
+          setSubmitting(false);
+        }
+        return;
+      }
+
+      await apiPost<ProfileDTO>("/api/onboarding", payload);
       await onSuccess();
     } catch (err) {
       if (err instanceof ApiClientError) {
