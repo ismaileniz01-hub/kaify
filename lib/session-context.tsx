@@ -111,35 +111,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
     setSessionError(false);
     try {
-      const supabase = tryCreateBrowserSupabaseClient();
-      if (supabase) {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (!sessionData.session) {
-          // Server may have set cookies via /api/auth/otp/verify — still try API bundle.
-          try {
-            const bundle = await apiGet<SessionBundleDTO>("/api/session");
-            setIsAuthenticated(true);
-            setIsPreviewMode(false);
-            setProfile(bundle.profile);
-            setIsAdmin(bundle.isAdmin);
-            setUserProfile(profileDtoToUserProfile(bundle.profile));
-            setGemBalance(bundle.gems);
-            setStreak(bundle.streak);
-            syncFreezieBalanceFromServer(bundle.streak.freezieBalance);
-            setReferralCode(bundle.referral.referralCode);
-            setHome(bundle.home);
-            setKai(bundle.kai);
-            return;
-          } catch (error) {
-            if (error instanceof ApiClientError && error.code === "UNAUTHORIZED") {
-              applyGuestState();
-              return;
-            }
-            throw error;
-          }
-        }
-      }
-
       const bundle = await apiGet<SessionBundleDTO>("/api/session");
       setIsAuthenticated(true);
       setIsPreviewMode(false);
