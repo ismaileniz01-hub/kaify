@@ -29,7 +29,7 @@ export function PricingBillingToggle({ value, onChange }: Props) {
         aria-pressed={value === "yearly"}
       >
         Yearly
-        <span className="pricing-billing-toggle__badge">2 months free</span>
+        <span className="pricing-billing-toggle__badge">1 month free</span>
       </button>
     </div>
   );

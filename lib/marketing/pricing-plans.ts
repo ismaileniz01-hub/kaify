@@ -9,19 +9,40 @@ export type ElsewhereStackItem = {
   icon: string;
 };
 
-/** What users typically pay when hiring separate coaches/tools (editable). */
-export const ELSEWHERE_STACK_ITEMS: ElsewhereStackItem[] = [
-  { label: "Personal Trainer", priceLabel: "$50+", icon: "🏋️" },
-  { label: "Nutrition Coach", priceLabel: "$40+", icon: "🥗" },
-  { label: "Calorie Tracking", priceLabel: "$10+", icon: "📊" },
-  { label: "Posture Coach", priceLabel: "$40+", icon: "🧍" },
-];
+/** What users typically pay when hiring separate coaches/tools — scales by plan tier. */
+export const ELSEWHERE_STACK_BY_PLAN: Record<PlanId, ElsewhereStackItem[]> = {
+  essential: [
+    { label: "Personal Trainer", priceLabel: "$50+", icon: "🏋️" },
+    { label: "Nutrition Coach", priceLabel: "$40+", icon: "🥗" },
+    { label: "Calorie Tracking", priceLabel: "$10+", icon: "📊" },
+    { label: "Posture Coach", priceLabel: "$40+", icon: "🧍" },
+  ],
+  pro: [
+    { label: "Personal Trainer (2× sessions)", priceLabel: "$80+", icon: "🏋️" },
+    { label: "Nutrition Coach (weekly check-ins)", priceLabel: "$60+", icon: "🥗" },
+    { label: "Calorie & macro tracking", priceLabel: "$15+", icon: "📊" },
+    { label: "Posture & mobility coach", priceLabel: "$50+", icon: "🧍" },
+    { label: "Priority coaching & team chat", priceLabel: "$45+", icon: "💬" },
+  ],
+  premium: [
+    { label: "VIP Personal Trainer", priceLabel: "$110+", icon: "🏋️" },
+    { label: "Dedicated Nutrition Coach", priceLabel: "$85+", icon: "🥗" },
+    { label: "Advanced macro analytics", priceLabel: "$20+", icon: "📊" },
+    { label: "Physique & posture specialist", priceLabel: "$65+", icon: "🧍" },
+    { label: "Priority team + fastest replies", priceLabel: "$60+", icon: "💬" },
+    { label: "VIP support & deep coaching", priceLabel: "$50+", icon: "⭐" },
+  ],
+};
 
-/** Baseline monthly stack used for savings math — update if market rates change. */
-export const ELSEWHERE_MONTHLY_BASE = 140;
+/** Monthly stack total used for savings math — higher tiers = more you'd spend elsewhere. */
+export const ELSEWHERE_MONTHLY_BY_PLAN: Record<PlanId, number> = {
+  essential: 140,
+  pro: 250,
+  premium: 390,
+};
 
-/** Annual billing = pay for 10 months, get 12 (2 months free). */
-export const YEARLY_BILLING_MONTHS_PAID = 10;
+/** Annual billing = pay for 11 months, get 12 (1 month free). */
+export const YEARLY_BILLING_MONTHS_PAID = 11;
 
 export type PlanFeature = {
   label: string;
@@ -133,7 +154,7 @@ export function getDisplayPrice(
   return {
     amount: getYearlyMonthlyEquivalent(plan),
     suffix: "/ month",
-    billedNote: `${formatPrice(yearlyTotal)} billed yearly · 2 months free`,
+    billedNote: `${formatPrice(yearlyTotal)} billed yearly · 1 month free`,
   };
 }
 
@@ -146,13 +167,21 @@ export type PlanSavings = {
   kaifyYearly: number;
 };
 
+export function getElsewhereStackItems(planId: PlanId): ElsewhereStackItem[] {
+  return ELSEWHERE_STACK_BY_PLAN[planId];
+}
+
+export function getElsewhereMonthlyBase(planId: PlanId): number {
+  return ELSEWHERE_MONTHLY_BY_PLAN[planId];
+}
+
 export function getPlanSavings(
-  plan: Pick<PricingPlan, "priceMonthly" | "priceYearlyTotal">,
+  plan: Pick<PricingPlan, "id" | "priceMonthly" | "priceYearlyTotal">,
 ): PlanSavings {
   const kaifyMonthly = plan.priceMonthly;
   const kaifyYearly = getYearlyTotal(plan);
-  const elsewhereMonthly = ELSEWHERE_MONTHLY_BASE;
-  const elsewhereYearly = ELSEWHERE_MONTHLY_BASE * 12;
+  const elsewhereMonthly = getElsewhereMonthlyBase(plan.id);
+  const elsewhereYearly = elsewhereMonthly * 12;
 
   return {
     monthlyVsElsewhere: Math.max(0, roundMoney(elsewhereMonthly - kaifyMonthly)),

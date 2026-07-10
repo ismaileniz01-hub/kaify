@@ -1,10 +1,10 @@
 "use client";
 
 import {
-  ELSEWHERE_STACK_ITEMS,
   formatPrice,
   formatSavings,
   getDisplayPrice,
+  getElsewhereStackItems,
   getPlanSavings,
   type BillingInterval,
   type PricingPlan,
@@ -18,6 +18,7 @@ type Props = {
 export function PlanSavingsCard({ plan, interval }: Props) {
   const savings = getPlanSavings(plan);
   const display = getDisplayPrice(plan, interval);
+  const stackItems = getElsewhereStackItems(plan.id);
   const showYearlySavings = interval === "yearly";
 
   return (
@@ -28,7 +29,7 @@ export function PlanSavingsCard({ plan, interval }: Props) {
       </p>
 
       <div className="pricing-savings-card__stack">
-        {ELSEWHERE_STACK_ITEMS.map((item) => (
+        {stackItems.map((item) => (
           <div key={item.label} className="pricing-savings-card__stack-row">
             <div className="pricing-savings-card__stack-label">
               <span className="pricing-savings-card__stack-x" aria-hidden>
