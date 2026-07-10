@@ -10,34 +10,49 @@ export function isLegalContentPath(pathname: string): boolean {
   );
 }
 
+/** Paddle Billing (checkout overlay + Paddle.js CDN assets). */
+const PADDLE_CSP = {
+  script: ["https://cdn.paddle.com", "https://sandbox-cdn.paddle.com"],
+  style: ["https://cdn.paddle.com", "https://sandbox-cdn.paddle.com"],
+  connect: [
+    "https://cdn.paddle.com",
+    "https://sandbox-cdn.paddle.com",
+    "https://api.paddle.com",
+    "https://sandbox-api.paddle.com",
+    "https://buy.paddle.com",
+    "https://sandbox-buy.paddle.com",
+    "https://*.paddle.com",
+  ],
+  frame: [
+    "https://buy.paddle.com",
+    "https://sandbox-buy.paddle.com",
+    "https://*.paddle.com",
+  ],
+} as const;
+
 export function buildContentSecurityPolicy(
   nonce: string,
   options?: { legalEmbed?: boolean },
 ): string {
   const styleSrc = options?.legalEmbed
-    ? "style-src 'self' 'unsafe-inline' https://app.termly.io"
-    : "style-src 'self' 'unsafe-inline'";
+    ? ["style-src", "'self'", "'unsafe-inline'", "https://app.termly.io", ...PADDLE_CSP.style].join(
+        " ",
+      )
+    : ["style-src", "'self'", "'unsafe-inline'", ...PADDLE_CSP.style].join(" ");
 
+  const scriptBase = [
+    "script-src",
+    "'self'",
+    `'nonce-${nonce}'`,
+    "'strict-dynamic'",
+    "https://www.google.com",
+    "https://www.gstatic.com",
+    "https://cdn.sender.net",
+    ...PADDLE_CSP.script,
+  ];
   const scriptSrc = options?.legalEmbed
-    ? [
-        "script-src",
-        "'self'",
-        `'nonce-${nonce}'`,
-        "'strict-dynamic'",
-        "https://www.google.com",
-        "https://www.gstatic.com",
-        "https://cdn.sender.net",
-        "https://app.termly.io",
-      ].join(" ")
-    : [
-        "script-src",
-        "'self'",
-        `'nonce-${nonce}'`,
-        "'strict-dynamic'",
-        "https://www.google.com",
-        "https://www.gstatic.com",
-        "https://cdn.sender.net",
-      ].join(" ");
+    ? [...scriptBase, "https://app.termly.io"].join(" ")
+    : scriptBase.join(" ");
 
   const directives = [
     "default-src 'self'",
@@ -62,8 +77,15 @@ export function buildContentSecurityPolicy(
       "https://*.ingest.sentry.io",
       "https://*.ingest.us.sentry.io",
       "https://*.ingest.de.sentry.io",
+      ...PADDLE_CSP.connect,
     ].join(" "),
-    "frame-src https://www.google.com https://recaptcha.google.com https://app.termly.io",
+    [
+      "frame-src",
+      "https://www.google.com",
+      "https://recaptcha.google.com",
+      "https://app.termly.io",
+      ...PADDLE_CSP.frame,
+    ].join(" "),
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

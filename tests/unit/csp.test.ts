@@ -34,6 +34,12 @@ describe("buildContentSecurityPolicy", () => {
     const legal = buildContentSecurityPolicy(nonce, { legalEmbed: true });
     expect(legal).toContain("https://app.termly.io");
   });
+
+  it("allows Paddle checkout CDN and API hosts", () => {
+    expect(csp).toContain("https://cdn.paddle.com");
+    expect(csp).toContain("https://buy.paddle.com");
+    expect(csp).toContain("https://api.paddle.com");
+  });
 });
 
 describe("generateCspNonce", () => {
