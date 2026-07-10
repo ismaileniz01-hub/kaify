@@ -220,7 +220,7 @@ export type UsageNodeDTO = {
 };
 
 export type UsageStatusDTO = {
-  tier: SubscriptionTier;
+  tier: SubscriptionTier | null;
   textTokens: UsageNodeDTO;
   mayaPhoto: UsageNodeDTO;
   leoPhoto: UsageNodeDTO;

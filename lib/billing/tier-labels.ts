@@ -6,7 +6,8 @@ const TIER_LABELS: Record<SubscriptionTier, string> = {
   premium_max: "Premium",
 };
 
-export function formatTierLabel(tier: string): string {
+export function formatTierLabel(tier: string | null | undefined): string {
+  if (!tier) return "—";
   if (tier in TIER_LABELS) {
     return TIER_LABELS[tier as SubscriptionTier];
   }

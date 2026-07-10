@@ -71,7 +71,7 @@ export function UsageQuotaSection() {
 
   if (!usage) return null;
 
-  const showUpgrade = usage.tier === "essential";
+  const showUpgrade = !usage.tier || usage.tier === "essential";
 
   return (
     <section className="animate-in mt-5">

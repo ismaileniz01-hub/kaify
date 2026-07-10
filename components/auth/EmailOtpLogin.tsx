@@ -108,7 +108,6 @@ export function EmailOtpLogin({
     safeRedirect,
     skipAutoRedirect,
   ]);
-  }, [isAuthenticated, isLoading, onAuthSuccess, router, safeRedirect, skipAutoRedirect]);
 
   useEffect(() => {
     if (resendIn <= 0) return;

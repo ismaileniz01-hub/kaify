@@ -103,7 +103,7 @@ type ProfileInsert = {
   timezone?: string;
   timezone_updated_at?: string;
   onboarding_status?: OnboardingStatus;
-  tier?: SubscriptionTier;
+  tier?: SubscriptionTier | null;
   billing_cycle?: BillingCycle;
   tier_started_at?: string | null;
   tier_expires_at?: string | null;
@@ -131,7 +131,7 @@ type ProfileUpdate = {
   timezone?: string;
   timezone_updated_at?: string;
   onboarding_status?: OnboardingStatus;
-  tier?: SubscriptionTier;
+  tier?: SubscriptionTier | null;
   billing_cycle?: BillingCycle;
   tier_started_at?: string | null;
   tier_expires_at?: string | null;
