@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { AuthMode } from "@/lib/auth/safe-redirect";
 import { useLang } from "@/lib/lang-context";
 
@@ -12,42 +11,42 @@ type Props = {
 
 export function AuthModeToggle({ mode, redirectTo }: Props) {
   const { t } = useLang();
-  const router = useRouter();
 
-  const setMode = (next: AuthMode) => {
-    if (next === mode) return;
-    const params = new URLSearchParams({ mode: next });
+  const signinHref = (() => {
+    const params = new URLSearchParams({ mode: "signin" });
     if (redirectTo && redirectTo !== "/welcome") {
       params.set("next", redirectTo);
     }
-    router.replace(`/login?${params.toString()}`);
-  };
+    return `/login?${params.toString()}`;
+  })();
+
+  const signupHref = (() => {
+    const params = new URLSearchParams();
+    if (redirectTo && redirectTo !== "/welcome") {
+      params.set("next", redirectTo);
+    }
+    const q = params.toString();
+    return q ? `/signup?${q}` : "/signup";
+  })();
+
+  if (mode === "signup") {
+    return (
+      <p className="text-center text-sm text-zinc-400">
+        {t("signup.already_account")}{" "}
+        <Link href={signinHref} className="font-medium text-purple-300 hover:text-white">
+          {t("login.mode.signin")}
+        </Link>
+      </p>
+    );
+  }
 
   return (
-    <div className="auth-mode-toggle" role="tablist" aria-label={t("login.mode.label")}>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={mode === "signup"}
-        className={`auth-mode-toggle__btn ${
-          mode === "signup" ? "auth-mode-toggle__btn--active" : ""
-        }`}
-        onClick={() => setMode("signup")}
-      >
+    <p className="text-center text-sm text-zinc-400">
+      {t("signup.no_account")}{" "}
+      <Link href={signupHref} className="font-medium text-purple-300 hover:text-white">
         {t("login.mode.signup")}
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={mode === "signin"}
-        className={`auth-mode-toggle__btn ${
-          mode === "signin" ? "auth-mode-toggle__btn--active" : ""
-        }`}
-        onClick={() => setMode("signin")}
-      >
-        {t("login.mode.signin")}
-      </button>
-    </div>
+      </Link>
+    </p>
   );
 }
 

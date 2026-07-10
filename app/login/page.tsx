@@ -21,8 +21,25 @@ function LoginPageContent() {
     captureReferralFromUrl(searchParams);
   }, [searchParams]);
 
-  const subtitle =
-    mode === "signup" ? t("login.signup.subtitle") : t("login.subtitle");
+  // Sign-up lives on the marketing site at /signup
+  useEffect(() => {
+    if (mode === "signup") {
+      const params = new URLSearchParams();
+      if (redirectTo !== "/welcome") params.set("next", redirectTo);
+      const q = params.toString();
+      window.location.replace(q ? `/signup?${q}` : "/signup");
+    }
+  }, [mode, redirectTo]);
+
+  if (mode === "signup") {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-black">
+        <div className="h-9 w-9 animate-spin rounded-full border-2 border-white/15 border-t-purple-400" />
+      </div>
+    );
+  }
+
+  const subtitle = t("login.subtitle");
 
   return (
     <div className="phone-shell login-page relative flex min-h-dvh flex-col">
@@ -54,13 +71,13 @@ function LoginPageContent() {
                 <p className="max-w-[300px] text-sm font-medium leading-snug tracking-wide text-purple-100/85 sm:text-base">
                   {subtitle}
                 </p>
-                <AuthModeToggle mode={mode} redirectTo={redirectTo} />
+                <AuthModeToggle mode="signin" redirectTo={redirectTo} />
               </div>
             </div>
 
             <div className="mx-auto mt-8 w-full max-w-sm shrink-0">
               <EmailOtpLogin
-                mode={mode}
+                mode="signin"
                 redirectTo={redirectTo}
                 onStepChange={setStep}
               />
@@ -69,7 +86,7 @@ function LoginPageContent() {
         ) : (
           <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-4">
             <EmailOtpLogin
-              mode={mode}
+              mode="signin"
               redirectTo={redirectTo}
               onStepChange={setStep}
             />

@@ -44,12 +44,17 @@ function storePendingLegalConsent(): void {
 type EmailOtpLoginProps = {
   mode?: AuthMode;
   redirectTo?: string;
+  /** When true, caller handles post-auth navigation (e.g. website signup profile step). */
+  skipAutoRedirect?: boolean;
+  onAuthSuccess?: () => void;
   onStepChange?: (step: "email" | "code") => void;
 };
 
 export function EmailOtpLogin({
   mode = "signup",
   redirectTo = "/welcome",
+  skipAutoRedirect = false,
+  onAuthSuccess,
   onStepChange,
 }: EmailOtpLoginProps) {
   const { t } = useLang();
@@ -86,9 +91,13 @@ export function EmailOtpLogin({
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       sessionStorage.removeItem(PENDING_OTP_EMAIL_KEY);
+      if (skipAutoRedirect) {
+        onAuthSuccess?.();
+        return;
+      }
       router.replace(safeRedirect);
     }
-  }, [isAuthenticated, isLoading, router, safeRedirect]);
+  }, [isAuthenticated, isLoading, onAuthSuccess, router, safeRedirect, skipAutoRedirect]);
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -163,6 +172,10 @@ export function EmailOtpLogin({
         await refreshSession();
         await applyPendingReferral();
         sessionStorage.removeItem(PENDING_OTP_EMAIL_KEY);
+        if (skipAutoRedirect) {
+          onAuthSuccess?.();
+          return;
+        }
         router.replace(safeRedirect);
       } catch {
         setError(t("login.error.otp_invalid"));
@@ -170,16 +183,29 @@ export function EmailOtpLogin({
         setLoading(false);
       }
     },
-    [applyPendingReferral, code, email, refreshSession, router, safeRedirect, t],
+    [applyPendingReferral, code, email, onAuthSuccess, refreshSession, router, safeRedirect, skipAutoRedirect, t],
   );
 
-  if (isLoading || isAuthenticated) {
+  if (isLoading) {
     return (
       <div className="login-otp-panel flex w-full max-w-sm flex-col items-center gap-3 py-8">
         <div className="h-9 w-9 animate-spin rounded-full border-2 border-white/15 border-t-purple-400" />
         <p className="text-xs text-zinc-500">{t("login.otp.verifying")}</p>
       </div>
     );
+  }
+
+  if (isAuthenticated && !skipAutoRedirect) {
+    return (
+      <div className="login-otp-panel flex w-full max-w-sm flex-col items-center gap-3 py-8">
+        <div className="h-9 w-9 animate-spin rounded-full border-2 border-white/15 border-t-purple-400" />
+        <p className="text-xs text-zinc-500">{t("login.otp.verifying")}</p>
+      </div>
+    );
+  }
+
+  if (isAuthenticated && skipAutoRedirect) {
+    return null;
   }
 
   if (step === "code") {

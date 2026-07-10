@@ -1,0 +1,245 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Leaf, Sparkles, ArrowRight } from "lucide-react";
+import { apiPost, ApiClientError } from "@/lib/api/client";
+import { useLang } from "@/lib/lang-context";
+import { errorToMessage } from "@/lib/i18n/api-error";
+import { InlineAlert } from "@/components/InlineAlert";
+import type { ProfileDTO } from "@/lib/types/domain.types";
+import {
+  GENDERS,
+  EXPERIENCE_LEVELS,
+  type Gender,
+  type ExperienceLevel,
+} from "@/lib/validations/onboarding.schema";
+import { maximumBirthDateForMinimumAge } from "@/lib/compliance/age";
+
+type Props = {
+  initialDisplayName?: string;
+  submitLabel?: string;
+  className?: string;
+  onSuccess: () => void | Promise<void>;
+};
+
+export function OnboardingProfileForm({
+  initialDisplayName = "",
+  submitLabel,
+  className = "",
+  onSuccess,
+}: Props) {
+  const { lang, t } = useLang();
+
+  const [displayName, setDisplayName] = useState(initialDisplayName);
+  const [gender, setGender] = useState<Gender>("prefer_not_to_say");
+  const [birthDate, setBirthDate] = useState("");
+  const [heightCm, setHeightCm] = useState("");
+  const [weightKg, setWeightKg] = useState("");
+  const [experienceLevel, setExperienceLevel] =
+    useState<ExperienceLevel>("beginner");
+  const [isNatural, setIsNatural] = useState(true);
+  const [bio, setBio] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const genderLabel = (g: Gender) => t(`onboarding.gender.${g}` as "onboarding.gender.male");
+  const experienceLabel = (level: ExperienceLevel) =>
+    t(`onboarding.experience.${level}` as "onboarding.experience.beginner");
+
+  const heightNum = Number.parseInt(heightCm, 10);
+  const weightNum = Number.parseFloat(weightKg);
+
+  const valid = useMemo(() => {
+    return (
+      displayName.trim().length >= 1 &&
+      birthDate.length > 0 &&
+      Number.isFinite(heightNum) &&
+      heightNum >= 50 &&
+      heightNum <= 280 &&
+      Number.isFinite(weightNum) &&
+      weightNum >= 20 &&
+      weightNum <= 500
+    );
+  }, [displayName, birthDate, heightNum, weightNum]);
+
+  const handleSubmit = async () => {
+    if (!valid || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await apiPost<ProfileDTO>("/api/onboarding", {
+        displayName: displayName.trim(),
+        gender,
+        birthDate,
+        heightCm: heightNum,
+        weightKg: weightNum,
+        experienceLevel,
+        isNatural,
+        bio: bio.trim(),
+        locale: lang,
+      });
+      await onSuccess();
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        setError(errorToMessage(err, t));
+      } else {
+        setError(t("onboarding.error"));
+      }
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className={`flex flex-col gap-4 ${className}`}>
+      <div className="flex flex-col gap-1.5">
+        <label className="signup-field-label">{t("onboarding.name")}</label>
+        <input
+          type="text"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          maxLength={80}
+          className="signup-field-input"
+          placeholder={t("onboarding.name_placeholder")}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="signup-field-label">{t("onboarding.gender")}</label>
+        <select
+          value={gender}
+          onChange={(e) => setGender(e.target.value as Gender)}
+          className="signup-field-input"
+        >
+          {GENDERS.map((g) => (
+            <option key={g} value={g} className="bg-zinc-900">
+              {genderLabel(g)}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="signup-field-label">{t("onboarding.birth_date")}</label>
+        <input
+          type="date"
+          value={birthDate}
+          max={maximumBirthDateForMinimumAge()}
+          onChange={(e) => setBirthDate(e.target.value)}
+          className="signup-field-input"
+        />
+        <p className="text-[10px] text-zinc-500">{t("onboarding.birth_date_hint")}</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label className="signup-field-label">{t("onboarding.height")}</label>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={heightCm}
+            onChange={(e) => setHeightCm(e.target.value)}
+            className="signup-field-input"
+            placeholder={t("onboarding.height_placeholder")}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="signup-field-label">{t("onboarding.weight")}</label>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={weightKg}
+            onChange={(e) => setWeightKg(e.target.value)}
+            className="signup-field-input"
+            placeholder={t("onboarding.weight_placeholder")}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="signup-field-label">{t("onboarding.experience")}</label>
+        <div className="grid grid-cols-3 gap-2">
+          {EXPERIENCE_LEVELS.map((level) => (
+            <button
+              key={level}
+              type="button"
+              onClick={() => setExperienceLevel(level)}
+              className={`rounded-xl border py-2.5 text-xs font-medium transition ${
+                experienceLevel === level
+                  ? "border-purple-500/50 bg-purple-500/15 text-purple-300"
+                  : "border-white/10 bg-white/5 text-zinc-400 hover:border-white/20"
+              }`}
+            >
+              {experienceLabel(level)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="signup-field-label">{t("onboarding.status")}</label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setIsNatural(true)}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium transition ${
+              isNatural
+                ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400"
+                : "border-white/10 bg-white/5 text-zinc-400 hover:border-white/20"
+            }`}
+          >
+            <Leaf className="h-4 w-4" />
+            {t("onboarding.natural")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsNatural(false)}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium transition ${
+              !isNatural
+                ? "border-amber-500/50 bg-amber-500/15 text-amber-400"
+                : "border-white/10 bg-white/5 text-zinc-400 hover:border-white/20"
+            }`}
+          >
+            <Sparkles className="h-4 w-4" />
+            {t("onboarding.enhanced")}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="signup-field-label">{t("onboarding.bio")}</label>
+        <textarea
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          rows={2}
+          maxLength={1000}
+          className="signup-field-input resize-none"
+          placeholder={t("onboarding.bio_placeholder")}
+        />
+      </div>
+
+      {!valid && !submitting && (
+        <p className="text-center text-[11px] text-zinc-500">
+          {t("onboarding.validation.hint")}
+        </p>
+      )}
+
+      {error && (
+        <InlineAlert
+          message={error}
+          dismissLabel={t("common.dismiss")}
+          onDismiss={() => setError(null)}
+        />
+      )}
+
+      <button
+        type="button"
+        onClick={() => void handleSubmit()}
+        disabled={!valid || submitting}
+        className="landing-btn landing-btn--primary mt-1 flex w-full items-center justify-center gap-2 disabled:opacity-40"
+      >
+        {submitting ? t("onboarding.submitting") : (submitLabel ?? t("onboarding.submit"))}
+        <ArrowRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}

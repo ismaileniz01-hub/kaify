@@ -1,14 +1,42 @@
-import { redirect } from "next/navigation";
+"use client";
 
-type Props = {
-  searchParams: Promise<{ next?: string; ref?: string }>;
-};
+import { Suspense, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { LandingNav } from "@/components/landing/LandingNav";
+import { LandingFooter } from "@/components/landing/LandingFooter";
+import { WebsiteSignupFlow } from "@/components/auth/WebsiteSignupFlow";
+import { captureReferralFromUrl } from "@/lib/referral";
+import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 
-/** Convenience route — same auth UI as /login with signup mode selected. */
-export default async function SignupPage({ searchParams }: Props) {
-  const params = await searchParams;
-  const query = new URLSearchParams({ mode: "signup" });
-  if (params.next) query.set("next", params.next);
-  if (params.ref) query.set("ref", params.ref);
-  redirect(`/login?${query.toString()}`);
+function SignupPageContent() {
+  const searchParams = useSearchParams();
+  const redirectTo = sanitizeAuthRedirect(searchParams.get("next"));
+
+  useEffect(() => {
+    captureReferralFromUrl(searchParams);
+  }, [searchParams]);
+
+  return (
+    <div className="landing-site">
+      <LandingNav />
+      <main>
+        <WebsiteSignupFlow redirectTo={redirectTo} />
+      </main>
+      <LandingFooter />
+    </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="landing-site flex min-h-dvh items-center justify-center bg-black">
+          <div className="h-9 w-9 animate-spin rounded-full border-2 border-white/15 border-t-purple-400" />
+        </div>
+      }
+    >
+      <SignupPageContent />
+    </Suspense>
+  );
 }

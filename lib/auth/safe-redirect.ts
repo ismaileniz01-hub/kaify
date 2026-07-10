@@ -10,5 +10,5 @@ export function sanitizeAuthRedirect(next: string | null | undefined): string {
 export type AuthMode = "signin" | "signup";
 
 export function parseAuthMode(value: string | null | undefined): AuthMode {
-  return value === "signin" ? "signin" : "signup";
+  return value === "signup" ? "signup" : "signin";
 }

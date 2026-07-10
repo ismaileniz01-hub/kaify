@@ -102,7 +102,7 @@ function PlanCheckoutButton({
       });
       return;
     }
-    router.push("/login?mode=signup");
+    router.push("/signup");
   }, [
     configured,
     interval,

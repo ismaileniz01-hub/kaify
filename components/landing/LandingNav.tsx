@@ -121,7 +121,7 @@ export function LandingNav({
             </Link>
           )}
           <Link
-            href={isAuthenticated ? "/welcome" : "/login?mode=signup"}
+            href={isAuthenticated ? "/welcome" : "/signup"}
             className="landing-btn landing-btn--primary shrink-0 text-sm active:scale-[0.97]"
           >
             {!isLoading && isAuthenticated
