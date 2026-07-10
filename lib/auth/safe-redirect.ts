@@ -1,6 +1,8 @@
 /** Same-origin path only — blocks open-redirect via protocol-relative URLs. */
-export function sanitizeAuthRedirect(next: string | null | undefined): string {
-  const fallback = "/welcome";
+export function sanitizeAuthRedirect(
+  next: string | null | undefined,
+  fallback = "/welcome",
+): string {
   if (!next) return fallback;
   if (!next.startsWith("/")) return fallback;
   if (next.startsWith("//") || next.startsWith("/\\")) return fallback;

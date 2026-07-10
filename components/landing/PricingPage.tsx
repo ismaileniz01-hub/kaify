@@ -13,6 +13,7 @@ import { PlanSavingsCard } from "./PlanSavingsCard";
 import { PricingBillingToggle } from "./PricingBillingToggle";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { usePaddle } from "@/components/billing/PaddleProvider";
+import { useSession } from "@/lib/session-context";
 import {
   PLAN_COMPARISON,
   PRICING_PLANS_WITH_PADDLE,
@@ -92,23 +93,31 @@ function PlanCheckoutButton({
 }) {
   const router = useRouter();
   const { paddle, ready, configured } = usePaddle();
+  const { isAuthenticated, profile } = useSession();
 
   const handleClick = useCallback(() => {
     const priceId =
       interval === "yearly" ? plan.paddlePriceIdYearly : plan.paddlePriceId;
+    if (!isAuthenticated || !profile?.id) {
+      router.push("/signup?next=/pricing");
+      return;
+    }
     if (configured && ready && paddle && priceId) {
       paddle.Checkout.open({
         items: [{ priceId, quantity: 1 }],
+        customData: { user_id: profile.id },
       });
       return;
     }
-    router.push("/signup");
+    router.push("/signup?next=/pricing");
   }, [
     configured,
     interval,
+    isAuthenticated,
     paddle,
     plan.paddlePriceId,
     plan.paddlePriceIdYearly,
+    profile?.id,
     ready,
     router,
   ]);

@@ -18,6 +18,7 @@ import { FloatingOrbs } from "@/components/landing/FloatingOrbs";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { sendEmailLoginCode } from "@/lib/auth/email-otp";
 import { apiErrorMessage } from "@/lib/i18n/api-error";
+import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
 import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 import {
   PENDING_LEGAL_CONSENT_KEY,
@@ -103,11 +104,11 @@ function storePendingLegalConsent(): void {
   );
 }
 
-export function SignupWizard({ redirectTo = "/welcome" }: Props) {
+export function SignupWizard({ redirectTo = "/pricing" }: Props) {
   const { lang, t } = useLang();
   const router = useRouter();
   const { isAuthenticated, isLoading, profile, refreshSession } = useSession();
-  const safeRedirect = sanitizeAuthRedirect(redirectTo);
+  const safeRedirect = sanitizeAuthRedirect(redirectTo, "/pricing");
 
   const alreadyAuthedNeedsProfile =
     isAuthenticated && !isLoading && profile?.onboardingStatus === "PAID";
@@ -162,7 +163,7 @@ export function SignupWizard({ redirectTo = "/welcome" }: Props) {
       setDisplayName(profile.displayName);
     }
     if (isAuthenticated && profile && profile.onboardingStatus !== "PAID") {
-      router.replace(safeRedirect);
+      router.replace(resolvePostAuthRedirect(profile, safeRedirect));
     }
   }, [
     alreadyAuthedNeedsProfile,

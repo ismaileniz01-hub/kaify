@@ -45,7 +45,7 @@ export type ProfileDTO = {
   timezone: string;
   role: ProfileRole;
   onboardingStatus: Database["public"]["Enums"]["onboarding_status"];
-  tier: Database["public"]["Enums"]["subscription_tier"];
+  tier: Database["public"]["Enums"]["subscription_tier"] | null;
   billingCycle: BillingCycle;
   referralCode: string;
   referredByCode: string | null;

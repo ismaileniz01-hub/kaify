@@ -14,6 +14,10 @@ describe("profile-compat", () => {
     expect(resolveDisplayName({ full_name: "Legacy" })).toBe("Legacy");
   });
 
+  it("returns null when no tier is set", () => {
+    expect(resolveTier({})).toBeNull();
+  });
+
   it("resolves tier from subscription_tier", () => {
     expect(resolveTier({ subscription_tier: "pro" })).toBe("pro");
   });

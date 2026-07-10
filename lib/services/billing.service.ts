@@ -103,8 +103,9 @@ async function revokeSubscription(userId: string): Promise<void> {
   const { error } = await admin
     .from("profiles")
     .update({
-      tier: "essential",
+      tier: null,
       tier_expires_at: null,
+      tier_started_at: null,
     })
     .eq("id", userId);
   if (error) {

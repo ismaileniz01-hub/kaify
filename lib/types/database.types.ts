@@ -72,7 +72,7 @@ type ProfileRow = {
   timezone: string;
   timezone_updated_at: string;
   onboarding_status: OnboardingStatus;
-  tier: SubscriptionTier;
+  tier: SubscriptionTier | null;
   billing_cycle: BillingCycle;
   tier_started_at: string | null;
   tier_expires_at: string | null;
@@ -231,7 +231,7 @@ type GemMutationArgs = {
 };
 
 type TierLimitsRow = {
-  tier: SubscriptionTier;
+  tier: SubscriptionTier | null;
   monthly_text_tokens: number;
   maya_photos_daily: number;
   leo_photos_weekly: number;
@@ -289,7 +289,7 @@ export type UsageCheckResult = {
   allowed: boolean;
   warning_trigger: WarningTrigger | null;
   resource: UsageResource;
-  tier: SubscriptionTier;
+  tier: SubscriptionTier | null;
   used: number;
   limit: number;
   remaining: number;
@@ -305,7 +305,7 @@ export type UsageNode = {
 };
 
 export type UsageStatusResult = {
-  tier: SubscriptionTier;
+  tier: SubscriptionTier | null;
   text_tokens: UsageNode;
   maya_photo: UsageNode;
   leo_photo: UsageNode;

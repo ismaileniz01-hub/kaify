@@ -10,7 +10,7 @@ import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 
 function SignupPageContent() {
   const searchParams = useSearchParams();
-  const redirectTo = sanitizeAuthRedirect(searchParams.get("next"));
+  const redirectTo = sanitizeAuthRedirect(searchParams.get("next"), "/pricing");
 
   useEffect(() => {
     captureReferralFromUrl(searchParams);

@@ -18,6 +18,7 @@ import { AiConsentGate } from "@/components/consent/AiConsentGate";
 import { CookieConsentBanner } from "@/components/consent/CookieConsentBanner";
 import { OptionalAnalytics } from "@/components/consent/OptionalAnalytics";
 import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
+import { SubscriptionGate } from "@/components/billing/SubscriptionGate";
 import { ReferralApplySync } from "@/components/referral/ReferralApplySync";
 import { ThemeProvider } from "@/lib/theme-context";
 import { LangProvider } from "@/lib/lang-context";
@@ -87,6 +88,7 @@ export default async function RootLayout({
                     <ReferralApplySync />
                     <AiConsentGate />
                     <OnboardingGate />
+                    <SubscriptionGate />
                     <KaiSync />
                     <SessionErrorBanner />
                     {children}

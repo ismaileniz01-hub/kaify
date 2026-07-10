@@ -30,8 +30,8 @@ export function resolveDisplayName(row: ProfileRowLike): string {
   );
 }
 
-export function resolveTier(row: ProfileRowLike): SubscriptionTier {
-  return row.tier ?? row.subscription_tier ?? "essential";
+export function resolveTier(row: ProfileRowLike): SubscriptionTier | null {
+  return row.tier ?? row.subscription_tier ?? null;
 }
 
 export function resolveCountryCode(row: ProfileRowLike): string {

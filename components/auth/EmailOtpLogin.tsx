@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth/email-otp";
 import { OTP_LENGTH } from "@/lib/auth/otp";
 import { maskEmail } from "@/lib/auth/mask-email";
+import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
 import type { AuthMode } from "@/lib/auth/safe-redirect";
 import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 import { useLang } from "@/lib/lang-context";
@@ -60,7 +61,7 @@ export function EmailOtpLogin({
 }: EmailOtpLoginProps) {
   const { t } = useLang();
   const router = useRouter();
-  const { isAuthenticated, isLoading, refreshSession } = useSession();
+  const { isAuthenticated, isLoading, profile, refreshSession } = useSession();
 
   const safeRedirect = sanitizeAuthRedirect(redirectTo);
   const isSignup = mode === "signup";
@@ -96,8 +97,17 @@ export function EmailOtpLogin({
         onAuthSuccess?.();
         return;
       }
-      router.replace(safeRedirect);
+      router.replace(resolvePostAuthRedirect(profile, safeRedirect));
     }
+  }, [
+    isAuthenticated,
+    isLoading,
+    onAuthSuccess,
+    profile,
+    router,
+    safeRedirect,
+    skipAutoRedirect,
+  ]);
   }, [isAuthenticated, isLoading, onAuthSuccess, router, safeRedirect, skipAutoRedirect]);
 
   useEffect(() => {
