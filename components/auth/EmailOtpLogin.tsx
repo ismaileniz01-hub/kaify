@@ -26,6 +26,8 @@ import { PENDING_OTP_EMAIL_KEY } from "@/lib/auth/logout";
 import { useSession } from "@/lib/session-context";
 import { apiPost } from "@/lib/api/client";
 import { clearPendingReferral, getPendingReferral } from "@/lib/referral";
+import { apiErrorMessage } from "@/lib/i18n/api-error";
+import { otpSendSchema } from "@/lib/validations/auth-otp.schema";
 
 const RESEND_COOLDOWN_SEC = 60;
 
@@ -104,7 +106,9 @@ export function EmailOtpLogin({
     return () => clearTimeout(timer);
   }, [resendIn]);
 
-  const canSendCode = email.trim().length > 0 && (!isSignup || legalAccepted);
+  const canSendCode =
+    otpSendSchema.safeParse({ email: email.trim() }).success &&
+    (!isSignup || legalAccepted);
 
   const sendCode = useCallback(async () => {
     const trimmed = email.trim().toLowerCase();
@@ -120,7 +124,7 @@ export function EmailOtpLogin({
       storePendingLegalConsent();
       const result = await sendEmailLoginCode(trimmed);
       if (!result.ok) {
-        setError(result.message);
+        setError(apiErrorMessage(result.code, t));
         return;
       }
       setEmail(trimmed);

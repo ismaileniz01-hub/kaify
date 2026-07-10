@@ -11,6 +11,7 @@ import {
 } from "@/lib/auth/email-otp";
 import { OTP_LENGTH } from "@/lib/auth/otp";
 import { maskEmail } from "@/lib/auth/mask-email";
+import { apiErrorMessage } from "@/lib/i18n/api-error";
 import { useLang } from "@/lib/lang-context";
 
 type Props = {
@@ -38,7 +39,7 @@ export function SignupVerifyStep({ email, onVerified, onBack }: Props) {
     try {
       const result = await sendEmailLoginCode(email);
       if (!result.ok) {
-        setError(result.message);
+        setError(apiErrorMessage(result.code, t));
         return;
       }
       setCode("");

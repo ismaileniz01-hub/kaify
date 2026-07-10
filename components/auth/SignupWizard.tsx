@@ -17,6 +17,7 @@ import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { FloatingOrbs } from "@/components/landing/FloatingOrbs";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { sendEmailLoginCode } from "@/lib/auth/email-otp";
+import { apiErrorMessage } from "@/lib/i18n/api-error";
 import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 import {
   PENDING_LEGAL_CONSENT_KEY,
@@ -36,6 +37,7 @@ import {
   type ExperienceLevel,
   type OnboardingInput,
 } from "@/lib/validations/onboarding.schema";
+import { otpSendSchema } from "@/lib/validations/auth-otp.schema";
 import type { ProfileDTO } from "@/lib/types/domain.types";
 
 type WizardStepId =
@@ -207,7 +209,7 @@ export function SignupWizard({ redirectTo = "/welcome" }: Props) {
   const canContinue = useMemo(() => {
     switch (currentStep) {
       case "email":
-        return email.trim().includes("@") && legalAccepted;
+        return otpSendSchema.safeParse({ email: email.trim() }).success && legalAccepted;
       case "name":
         return displayName.trim().length >= 1;
       case "gender":
@@ -270,7 +272,7 @@ export function SignupWizard({ redirectTo = "/welcome" }: Props) {
         storePendingLegalConsent();
         const result = await sendEmailLoginCode(trimmedEmail);
         if (!result.ok) {
-          setError(result.message);
+          setError(apiErrorMessage(result.code, t));
           setBusy(false);
           return;
         }

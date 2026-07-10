@@ -6,7 +6,7 @@ import { isCompleteOtp, normalizeOtpInput } from "@/lib/auth/otp";
 /** Request a one-time email code via the server (avoids missing browser Supabase keys). */
 export async function sendEmailLoginCode(
   email: string,
-): Promise<{ ok: true } | { ok: false; message: string }> {
+): Promise<{ ok: true } | { ok: false; code: string; message: string }> {
   try {
     await apiPost<{ sent: true }>("/api/auth/otp/send", {
       email: email.trim().toLowerCase(),
@@ -14,9 +14,9 @@ export async function sendEmailLoginCode(
     return { ok: true };
   } catch (error) {
     if (error instanceof ApiClientError) {
-      return { ok: false, message: error.message };
+      return { ok: false, code: error.code, message: error.message };
     }
-    return { ok: false, message: "failed" };
+    return { ok: false, code: "INTERNAL_ERROR", message: "failed" };
   }
 }
 
