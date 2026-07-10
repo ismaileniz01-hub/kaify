@@ -54,9 +54,12 @@ function isAmbiguousShortMessage(text: string): boolean {
   return cleaned.length > 0 && cleaned.length <= 24;
 }
 
-/** Global English gym/internet slang — often the whole message (e.g. "broo"). */
+/** Global English gym/internet slang — often the whole message (e.g. "broo", "ohh cute"). */
 const ENGLISH_SLANG =
-  /\b(bro{1,4}|bruh|dude|man|yeah|yep|nope|nah|lol|lmao|wtf|idk|tbh|ngl|sup|hey|hi|hello|ok|okay|cool|nice|thanks|thx|pls|please|yo|lets|let's|go|gym|workout|legday|push|pull|rest|day)\b/i;
+  /\b(bro{1,4}|bruh|dude|man|yeah|yep|nope|nah|lol|lmao|wtf|idk|tbh|ngl|sup|hey|hi|hello|ok|okay|cool|nice|cute|aww|awww|ohh|oh|omg|wow|haha|hahaha|thanks|thx|pls|please|yo|lets|let's|go|gym|workout|legday|push|pull|rest|day|love|sweet|adorable|damn|shit|sorry|yup|sure|fine|same|true|facts|bet|lit|fire|slay)\b/i;
+
+/** Skip franc on tiny strings — it often mislabels casual Latin chat (e.g. "ohh cute" → French). */
+const FRANC_MIN_CHARS = 20;
 
 function localeFromEnglishSlang(text: string): SupportedLocale | null {
   return ENGLISH_SLANG.test(normalizeForDetection(text)) ? "en" : null;
@@ -123,10 +126,23 @@ function localeFromWordHints(text: string): SupportedLocale | null {
 }
 
 function localeFromFranc(text: string): SupportedLocale | null {
-  const candidates = francAll(text, { minLength: 3 });
+  const cleaned = normalizeForDetection(text);
+  if (cleaned.length < FRANC_MIN_CHARS) return null;
+
+  const candidates = francAll(cleaned, { minLength: 3 });
   for (const [iso3, score] of candidates) {
     const mapped = FRANC_TO_LOCALE[iso3];
     if (mapped && score >= 0.5) return mapped;
+  }
+  return null;
+}
+
+function inheritLocaleFromPriorMessages(
+  messages: string[],
+): SupportedLocale | null {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const prior = detectWithoutFallback(messages[i] ?? "");
+    if (prior) return prior;
   }
   return null;
 }
@@ -147,11 +163,14 @@ function detectWithoutFallback(text: string): SupportedLocale | null {
  * Best-effort locale for the user's latest chat message.
  * Falls back to profile/app locale when the text is too ambiguous.
  * Pass recent user turns so short replies like "broo" inherit the thread language.
+ * Pass recentThreadMessages (user + coach) so replies like "ohh cute" follow the
+ * language the coach already used in the same thread.
  */
 export function detectMessageLocale(
   text: string,
   profileLocale?: string | null,
   recentUserMessages: string[] = [],
+  recentThreadMessages: string[] = [],
 ): SupportedLocale {
   const fallback = resolveLocale(profileLocale ?? FALLBACK_LOCALE);
   const cleaned = normalizeForDetection(text);
@@ -161,10 +180,11 @@ export function detectMessageLocale(
   if (direct) return direct;
 
   if (isAmbiguousShortMessage(cleaned)) {
-    for (let i = recentUserMessages.length - 1; i >= 0; i--) {
-      const prior = detectWithoutFallback(recentUserMessages[i] ?? "");
-      if (prior) return prior;
-    }
+    const fromUser = inheritLocaleFromPriorMessages(recentUserMessages);
+    if (fromUser) return fromUser;
+
+    const fromThread = inheritLocaleFromPriorMessages(recentThreadMessages);
+    if (fromThread) return fromThread;
   }
 
   return fallback;

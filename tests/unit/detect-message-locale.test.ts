@@ -25,6 +25,17 @@ describe("detectMessageLocale", () => {
     expect(detectMessageLocale("ok", "es", history)).toBe("en");
   });
 
+  it("detects casual English short replies (ohh cute) even when profile is French", () => {
+    expect(detectMessageLocale("ohh cute", "fr")).toBe("en");
+    expect(detectMessageLocale("aww cute", "fr")).toBe("en");
+  });
+
+  it("inherits coach thread language for ambiguous replies after English coach message", () => {
+    const coachEnglish =
+      "I don't cuss at you, man — I push you. Get off that couch and into the gym.";
+    expect(detectMessageLocale("ohh cute", "fr", [], [coachEnglish])).toBe("en");
+  });
+
   it("falls back to profile locale for emoji-only messages", () => {
     expect(detectMessageLocale("😊💪", "tr")).toBe("tr");
   });

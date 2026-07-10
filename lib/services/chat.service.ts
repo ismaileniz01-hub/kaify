@@ -275,7 +275,13 @@ export async function* streamCoachReply(
     const recentUserTexts = history
       .filter((turn) => turn.role === "user")
       .map((turn) => turn.content);
-    const replyLocale = detectMessageLocale(cleanMessage, locale, recentUserTexts);
+    const recentThreadTexts = history.map((turn) => turn.content);
+    const replyLocale = detectMessageLocale(
+      cleanMessage,
+      locale,
+      recentUserTexts,
+      recentThreadTexts,
+    );
     const currentTurn = `${buildCanaryReminder(canary)}\n\n${buildReplyLanguageDirective(replyLocale)}\n\n${wrapUntrustedInput(
       "USER_MESSAGE",
       cleanMessage,
