@@ -4353,3 +4353,222 @@ select:active {
   border-color: rgba(168, 85, 247, 0.45);
   background: rgba(124, 58, 237, 0.08);
 }
+
+/* Signup wizard — step-by-step flow */
+.signup-wizard-progress {
+  height: 4px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.signup-wizard-progress__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7c3aed, #a855f7, #c084fc);
+  transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.45);
+}
+
+.signup-wizard-card {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(12, 6, 24, 0.92) 55%,
+    rgba(8, 4, 16, 0.98) 100%
+  );
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  padding: 1.75rem 1.5rem 1.5rem;
+  backdrop-filter: blur(12px);
+}
+
+.signup-wizard-header {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.signup-wizard-step-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(192, 132, 252, 0.75);
+}
+
+.signup-wizard-title {
+  margin-top: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: white;
+}
+
+.signup-wizard-subtitle {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: rgb(161 161 170);
+}
+
+.signup-wizard-track {
+  position: relative;
+  min-height: 11rem;
+  overflow: hidden;
+}
+
+.signup-wizard-panel {
+  animation: signup-wizard-in 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.signup-wizard-panel--back {
+  animation-name: signup-wizard-in-back;
+}
+
+@keyframes signup-wizard-in {
+  from {
+    opacity: 0;
+    transform: translateX(32px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes signup-wizard-in-back {
+  from {
+    opacity: 0;
+    transform: translateX(-32px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.signup-wizard-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.signup-wizard-input-icon {
+  position: absolute;
+  left: 1rem;
+  height: 1.15rem;
+  width: 1.15rem;
+  color: rgba(192, 132, 252, 0.8);
+  pointer-events: none;
+}
+
+.signup-wizard-input {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.9rem 1rem 0.9rem 2.75rem;
+  font-size: 1rem;
+  color: white;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.signup-wizard-input--lg {
+  font-size: 1.15rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+.signup-wizard-input:focus {
+  border-color: rgba(168, 85, 247, 0.5);
+  background: rgba(124, 58, 237, 0.1);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.signup-wizard-input::placeholder {
+  color: rgb(113 113 122);
+}
+
+.signup-wizard-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.signup-wizard-option {
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.75rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgb(212 212 216);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.15s ease,
+    color 0.2s ease;
+}
+
+.signup-wizard-option:hover {
+  border-color: rgba(168, 85, 247, 0.3);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.signup-wizard-option--active {
+  border-color: rgba(168, 85, 247, 0.55);
+  background: rgba(124, 58, 237, 0.18);
+  color: white;
+  box-shadow: 0 0 24px rgba(124, 58, 237, 0.2);
+}
+
+.signup-wizard-option--row {
+  grid-column: 1 / -1;
+  text-align: left;
+  padding: 0.85rem 1rem;
+}
+
+.signup-wizard-option--tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 6.5rem;
+  padding: 1rem;
+}
+
+.signup-wizard-option--natural.signup-wizard-option--active {
+  border-color: rgba(16, 185, 129, 0.5);
+  background: rgba(16, 185, 129, 0.12);
+  color: rgb(110 231 183);
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.15);
+}
+
+.signup-wizard-option--enhanced.signup-wizard-option--active {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.12);
+  color: rgb(252 211 77);
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.15);
+}
+
+.signup-wizard-back {
+  width: fit-content;
+}
+
+@media (min-width: 640px) {
+  .signup-wizard-card {
+    padding: 2rem 2rem 1.75rem;
+  }
+
+  .signup-wizard-title {
+    font-size: 1.65rem;
+  }
+}

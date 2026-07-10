@@ -4,7 +4,7 @@ import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { LandingFooter } from "@/components/landing/LandingFooter";
-import { WebsiteSignupFlow } from "@/components/auth/WebsiteSignupFlow";
+import { SignupWizard } from "@/components/auth/SignupWizard";
 import { captureReferralFromUrl } from "@/lib/referral";
 import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 
@@ -20,7 +20,7 @@ function SignupPageContent() {
     <div className="landing-site">
       <LandingNav />
       <main>
-        <WebsiteSignupFlow redirectTo={redirectTo} />
+        <SignupWizard redirectTo={redirectTo} />
       </main>
       <LandingFooter />
     </div>
