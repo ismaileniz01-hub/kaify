@@ -18,7 +18,13 @@ export function OnboardingGate() {
   const needsOnboarding =
     isAuthenticated && !isLoading && profile?.onboardingStatus === "PAID";
 
-  if (pathname.startsWith("/signup") || !needsOnboarding) return null;
+  if (
+    pathname.startsWith("/signup") ||
+    pathname.startsWith("/myaccount") ||
+    !needsOnboarding
+  ) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm">

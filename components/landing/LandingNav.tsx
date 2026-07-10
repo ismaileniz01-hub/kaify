@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { hasActiveSubscription } from "@/lib/auth/post-auth-redirect";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 
@@ -27,13 +28,15 @@ const EN = {
 
 export function LandingNav({
   pricingPage = false,
+  accountPage = false,
   forceEnglish = false,
 }: {
   pricingPage?: boolean;
+  accountPage?: boolean;
   forceEnglish?: boolean;
 }) {
   const { t } = useLang();
-  const { isAuthenticated, isLoading, displayName } = useSession();
+  const { isAuthenticated, isLoading, displayName, profile } = useSession();
   const label = (key: string, english: string) => (forceEnglish ? english : t(key));
   const [scrolled, setScrolled] = useState(false);
 
@@ -45,6 +48,8 @@ export function LandingNav({
   }, []);
 
   const homePrefix = pricingPage ? "/" : "";
+  const appHref =
+    isAuthenticated && hasActiveSubscription(profile?.tier) ? "/welcome" : "/pricing";
 
   return (
     <header className={`landing-nav ${scrolled ? "landing-nav--scrolled" : ""}`}>
@@ -103,29 +108,35 @@ export function LandingNav({
         </nav>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          {!isLoading && isAuthenticated ? (
+          {!isLoading && isAuthenticated && !accountPage ? (
             <Link
-              href="/welcome"
+              href="/myaccount"
               className="hidden text-sm font-medium text-zinc-300 transition hover:text-white sm:inline"
             >
-              {displayName
-                ? label("landing.nav.my_account", EN.myAccount)
-                : label("landing.nav.my_account", EN.myAccount)}
+              {displayName || label("landing.nav.my_account", EN.myAccount)}
             </Link>
-          ) : (
+          ) : !isLoading && !isAuthenticated ? (
             <Link
               href="/login?mode=signin"
               className="hidden text-sm font-medium text-zinc-400 transition hover:text-white sm:inline"
             >
               {label("landing.nav.login", EN.login)}
             </Link>
-          )}
+          ) : null}
           <Link
-            href={isAuthenticated ? "/welcome" : "/signup"}
+            href={
+              isAuthenticated
+                ? accountPage
+                  ? appHref
+                  : "/myaccount"
+                : "/signup"
+            }
             className="landing-btn landing-btn--primary shrink-0 text-sm active:scale-[0.97]"
           >
             {!isLoading && isAuthenticated
-              ? label("landing.nav.my_account", EN.myAccount)
+              ? accountPage
+                ? label("myaccount.open_app", "Open app")
+                : label("landing.nav.my_account", EN.myAccount)
               : label("landing.nav.signup", EN.signup)}
           </Link>
         </div>

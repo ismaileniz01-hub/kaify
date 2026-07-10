@@ -3751,6 +3751,122 @@ select:active {
   min-height: auto;
 }
 
+/* ===== MY ACCOUNT PAGE ===== */
+
+.account-hero {
+  min-height: auto;
+}
+
+.account-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(
+    165deg,
+    rgba(24, 24, 27, 0.92) 0%,
+    rgba(9, 9, 11, 0.96) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(168, 85, 247, 0.08),
+    0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+.account-card__glow {
+  position: absolute;
+  inset: -40% 20% auto;
+  height: 280px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(168, 85, 247, 0.18) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.account-input {
+  border-radius: 0.875rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 0.75rem 1rem;
+  color: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.account-input:focus {
+  border-color: rgba(168, 85, 247, 0.55);
+}
+
+.account-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.875rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.account-btn--primary {
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.25);
+}
+
+.account-btn--primary:hover {
+  filter: brightness(1.08);
+}
+
+.account-btn--ghost {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #e4e4e7;
+}
+
+.account-btn--ghost:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.account-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1rem 1.125rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.account-stat__label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #71717a;
+}
+
+.account-stat__value {
+  margin-top: 0.125rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #fafafa;
+}
+
+.account-info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.875rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.2);
+}
+
 .pricing-cards {
   display: grid;
   gap: 1.25rem;
