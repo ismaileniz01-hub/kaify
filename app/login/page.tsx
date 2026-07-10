@@ -1,19 +1,28 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
+import { AuthModeToggle } from "@/components/auth/AuthModeToggle";
 import { EmailOtpLogin } from "@/components/auth/EmailOtpLogin";
 import { useLang } from "@/lib/lang-context";
+import { parseAuthMode, sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 import { captureReferralFromUrl } from "@/lib/referral";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const { t } = useLang();
+  const searchParams = useSearchParams();
+  const mode = parseAuthMode(searchParams.get("mode"));
+  const redirectTo = sanitizeAuthRedirect(searchParams.get("next"));
   const [step, setStep] = useState<"email" | "code">("email");
 
   useEffect(() => {
-    captureReferralFromUrl();
-  }, []);
+    captureReferralFromUrl(searchParams);
+  }, [searchParams]);
+
+  const subtitle =
+    mode === "signup" ? t("login.signup.subtitle") : t("login.subtitle");
 
   return (
     <div className="phone-shell login-page relative flex min-h-dvh flex-col">
@@ -38,26 +47,49 @@ export default function LoginPage() {
                 />
               </div>
 
-              <div className="flex flex-col items-center gap-3 text-center">
+              <div className="flex w-full max-w-sm flex-col items-center gap-4 text-center">
                 <h1 className="text-5xl font-bold leading-none tracking-[0.08em] text-white sm:text-6xl">
                   {t("login.title")}
                 </h1>
                 <p className="max-w-[300px] text-sm font-medium leading-snug tracking-wide text-purple-100/85 sm:text-base">
-                  {t("login.subtitle")}
+                  {subtitle}
                 </p>
+                <AuthModeToggle mode={mode} redirectTo={redirectTo} />
               </div>
             </div>
 
-            <div className="mt-8 shrink-0">
-              <EmailOtpLogin onStepChange={setStep} />
+            <div className="mx-auto mt-8 w-full max-w-sm shrink-0">
+              <EmailOtpLogin
+                mode={mode}
+                redirectTo={redirectTo}
+                onStepChange={setStep}
+              />
             </div>
           </>
         ) : (
           <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-4">
-            <EmailOtpLogin onStepChange={setStep} />
+            <EmailOtpLogin
+              mode={mode}
+              redirectTo={redirectTo}
+              onStepChange={setStep}
+            />
           </div>
         )}
       </main>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-dvh items-center justify-center bg-black">
+          <div className="h-9 w-9 animate-spin rounded-full border-2 border-white/15 border-t-purple-400" />
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }

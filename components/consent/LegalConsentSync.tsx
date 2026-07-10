@@ -12,7 +12,7 @@ import {
 } from "@/lib/legal/constants";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 
-const SKIP_PREFIXES = ["/login", "/privacy", "/terms", "/cookies", "/api/"];
+const SKIP_PREFIXES = ["/login", "/signup", "/privacy", "/terms", "/cookies", "/api/"];
 
 /**
  * After login, persists clickwrap acceptance from localStorage into consent_records.

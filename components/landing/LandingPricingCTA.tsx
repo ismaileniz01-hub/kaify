@@ -95,7 +95,7 @@ export function LandingPricingCTA() {
                 {t("landing.pricing.explore_plans")}
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
-              <Link href="/login" className="landing-btn landing-btn--ghost landing-btn--lg">
+              <Link href="/login?mode=signup" className="landing-btn landing-btn--ghost landing-btn--lg">
                 {t("landing.nav.login")}
               </Link>
             </div>

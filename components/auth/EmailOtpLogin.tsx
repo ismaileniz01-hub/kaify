@@ -1,9 +1,11 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, CheckCircle2, Mail, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { OtpDigitInput } from "@/components/auth/OtpDigitInput";
+import { LegalConsentCheckbox } from "@/components/auth/AuthModeToggle";
 import {
   sendEmailLoginCode,
   verifyEmailLoginCode,
@@ -12,6 +14,8 @@ import {
 } from "@/lib/auth/email-otp";
 import { OTP_LENGTH } from "@/lib/auth/otp";
 import { maskEmail } from "@/lib/auth/mask-email";
+import type { AuthMode } from "@/lib/auth/safe-redirect";
+import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 import { useLang } from "@/lib/lang-context";
 import {
   PENDING_LEGAL_CONSENT_KEY,
@@ -19,9 +23,10 @@ import {
   TERMS_VERSION,
 } from "@/lib/legal/constants";
 import { PENDING_OTP_EMAIL_KEY } from "@/lib/auth/logout";
-import { useNativeApp } from "@/lib/native/platform";
 import { useSession } from "@/lib/session-context";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
+import { apiPost } from "@/lib/api/client";
+import { clearPendingReferral, getPendingReferral } from "@/lib/referral";
 
 const RESEND_COOLDOWN_SEC = 60;
 
@@ -37,14 +42,22 @@ function storePendingLegalConsent(): void {
 }
 
 type EmailOtpLoginProps = {
+  mode?: AuthMode;
+  redirectTo?: string;
   onStepChange?: (step: "email" | "code") => void;
 };
 
-export function EmailOtpLogin({ onStepChange }: EmailOtpLoginProps) {
+export function EmailOtpLogin({
+  mode = "signup",
+  redirectTo = "/welcome",
+  onStepChange,
+}: EmailOtpLoginProps) {
   const { t } = useLang();
   const router = useRouter();
-  const isNativeApp = useNativeApp();
   const { isAuthenticated, isLoading, refreshSession } = useSession();
+
+  const safeRedirect = sanitizeAuthRedirect(redirectTo);
+  const isSignup = mode === "signup";
 
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
@@ -52,6 +65,7 @@ export function EmailOtpLogin({ onStepChange }: EmailOtpLoginProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
+  const [legalAccepted, setLegalAccepted] = useState(false);
 
   const goToStep = useCallback(
     (next: "email" | "code") => {
@@ -72,9 +86,9 @@ export function EmailOtpLogin({ onStepChange }: EmailOtpLoginProps) {
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       sessionStorage.removeItem(PENDING_OTP_EMAIL_KEY);
-      router.replace("/welcome");
+      router.replace(safeRedirect);
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, router, safeRedirect]);
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -82,9 +96,15 @@ export function EmailOtpLogin({ onStepChange }: EmailOtpLoginProps) {
     return () => clearTimeout(timer);
   }, [resendIn]);
 
+  const canSendCode = email.trim().length > 0 && (!isSignup || legalAccepted);
+
   const sendCode = useCallback(async () => {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) return;
+    if (isSignup && !legalAccepted) {
+      setError(t("login.error.legal_required"));
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -110,7 +130,18 @@ export function EmailOtpLogin({ onStepChange }: EmailOtpLoginProps) {
     } finally {
       setLoading(false);
     }
-  }, [email, goToStep, t]);
+  }, [email, goToStep, isSignup, legalAccepted, t]);
+
+  const applyPendingReferral = useCallback(async () => {
+    const code = getPendingReferral();
+    if (!code) return;
+    try {
+      await apiPost("/api/referral", { code });
+      clearPendingReferral();
+    } catch {
+      // ReferralApplySync retries on next navigation
+    }
+  }, []);
 
   const verifyCode = useCallback(
     async (token = code) => {
@@ -130,15 +161,16 @@ export function EmailOtpLogin({ onStepChange }: EmailOtpLoginProps) {
           return;
         }
         await refreshSession();
+        await applyPendingReferral();
         sessionStorage.removeItem(PENDING_OTP_EMAIL_KEY);
-        router.replace("/welcome");
+        router.replace(safeRedirect);
       } catch {
         setError(t("login.error.otp_invalid"));
       } finally {
         setLoading(false);
       }
     },
-    [code, email, refreshSession, router, t],
+    [applyPendingReferral, code, email, refreshSession, router, safeRedirect, t],
   );
 
   if (isLoading || isAuthenticated) {
@@ -158,7 +190,7 @@ export function EmailOtpLogin({ onStepChange }: EmailOtpLoginProps) {
             {t("login.otp.title")}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-purple-100/80">
-            {t("login.otp.subtitle")}
+            {isSignup ? t("login.signup.otp_subtitle") : t("login.otp.subtitle")}
           </p>
         </div>
 
@@ -223,7 +255,11 @@ export function EmailOtpLogin({ onStepChange }: EmailOtpLoginProps) {
           disabled={loading || !isCompleteOtp(code)}
           className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-violet-600 px-6 py-4 text-sm font-semibold text-white shadow-[0_12px_40px_rgba(124,58,237,0.45)] transition hover:from-purple-400 hover:to-violet-500 disabled:opacity-45"
         >
-          {loading ? t("login.otp.verifying") : t("login.otp.verify")}
+          {loading
+            ? t("login.otp.verifying")
+            : isSignup
+              ? t("login.signup.verify")
+              : t("login.otp.verify")}
           <ArrowRight className="h-5 w-5" />
         </button>
 
@@ -262,7 +298,7 @@ export function EmailOtpLogin({ onStepChange }: EmailOtpLoginProps) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") void sendCode();
+            if (e.key === "Enter" && canSendCode) void sendCode();
           }}
           placeholder={t("login.email_placeholder")}
           autoComplete="email"
@@ -270,13 +306,34 @@ export function EmailOtpLogin({ onStepChange }: EmailOtpLoginProps) {
         />
       </div>
 
+      {isSignup && (
+        <LegalConsentCheckbox checked={legalAccepted} onChange={setLegalAccepted} />
+      )}
+
+      {!isSignup && (
+        <p className="text-center text-[11px] leading-relaxed text-zinc-500">
+          {t("login.terms")}{" "}
+          <Link href="/terms" className="text-purple-300/90 underline-offset-2 hover:underline">
+            {t("login.terms_link")}
+          </Link>{" "}
+          {t("login.legal_and")}{" "}
+          <Link href="/privacy" className="text-purple-300/90 underline-offset-2 hover:underline">
+            {t("login.privacy_link")}
+          </Link>
+        </p>
+      )}
+
       <button
         type="button"
         onClick={() => void sendCode()}
-        disabled={loading || !email.trim()}
+        disabled={loading || !canSendCode}
         className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-4 text-sm font-semibold text-zinc-900 shadow-xl transition hover:bg-zinc-100 disabled:opacity-50"
       >
-        {loading ? t("login.otp.loading") : t("login.otp.submit")}
+        {loading
+          ? t("login.otp.loading")
+          : isSignup
+            ? t("login.signup.submit")
+            : t("login.otp.submit")}
         <ArrowRight className="h-5 w-5" />
       </button>
 
@@ -285,7 +342,6 @@ export function EmailOtpLogin({ onStepChange }: EmailOtpLoginProps) {
           {error}
         </p>
       )}
-
     </div>
   );
 }

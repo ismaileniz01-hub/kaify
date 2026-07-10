@@ -6,7 +6,7 @@ import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import { getMfaAssurance } from "@/lib/auth/mfa";
 
 const MFA_VERIFY_PATH = "/login/mfa";
-const PUBLIC_PREFIXES = ["/login", "/api/auth"];
+const PUBLIC_PREFIXES = ["/login", "/signup", "/api/auth"];
 
 /**
  * Redirects authenticated users with pending MFA verification to /login/mfa.

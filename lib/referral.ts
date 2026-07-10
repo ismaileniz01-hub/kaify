@@ -3,7 +3,7 @@
 import { referralShareUrl } from "@/lib/native/deep-links";
 
 const STORAGE_KEY = "kaify-referral-code";
-const PENDING_REF_KEY = "kaify-pending-referral";
+export const PENDING_REF_KEY = "kaify-pending-referral";
 
 // Unique olması için: 29 karakter (I,O,0,1 çıkarıldı - karışma ihtimali azalsın)
 const CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -33,6 +33,11 @@ export function captureReferralFromUrl(search?: string | URLSearchParams | null)
 export function getPendingReferral(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(PENDING_REF_KEY);
+}
+
+export function clearPendingReferral(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(PENDING_REF_KEY);
 }
 
 /** Referral kodunu getir. Yoksa oluştur ve kaydet. */
