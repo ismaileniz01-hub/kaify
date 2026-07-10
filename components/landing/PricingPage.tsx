@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Minus, Sparkles, Shield, Zap, Crown } from "lucide-react";
 import { LandingNav } from "./LandingNav";
@@ -9,12 +9,16 @@ import { LandingFooter } from "./LandingFooter";
 import { ScrollReveal } from "./ScrollReveal";
 import { FloatingOrbs } from "./FloatingOrbs";
 import { StoreDownloadButtons } from "./StoreDownloadButtons";
+import { PlanSavingsCard } from "./PlanSavingsCard";
+import { PricingBillingToggle } from "./PricingBillingToggle";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { usePaddle } from "@/components/billing/PaddleProvider";
 import {
   PLAN_COMPARISON,
   PRICING_PLANS_WITH_PADDLE,
   formatPrice,
+  getDisplayPrice,
+  type BillingInterval,
   type PlanId,
   type PricingPlan,
 } from "@/lib/marketing/pricing-plans";
@@ -77,10 +81,12 @@ function PaddleCheckoutResume() {
 
 function PlanCheckoutButton({
   plan,
+  interval,
   className,
   children,
 }: {
   plan: PricingPlan;
+  interval: BillingInterval;
   className: string;
   children: ReactNode;
 }) {
@@ -88,7 +94,8 @@ function PlanCheckoutButton({
   const { paddle, ready, configured } = usePaddle();
 
   const handleClick = useCallback(() => {
-    const priceId = plan.paddlePriceId;
+    const priceId =
+      interval === "yearly" ? plan.paddlePriceIdYearly : plan.paddlePriceId;
     if (configured && ready && paddle && priceId) {
       paddle.Checkout.open({
         items: [{ priceId, quantity: 1 }],
@@ -96,7 +103,15 @@ function PlanCheckoutButton({
       return;
     }
     router.push("/login");
-  }, [configured, paddle, plan.paddlePriceId, ready, router]);
+  }, [
+    configured,
+    interval,
+    paddle,
+    plan.paddlePriceId,
+    plan.paddlePriceIdYearly,
+    ready,
+    router,
+  ]);
 
   return (
     <button type="button" onClick={handleClick} className={className}>
@@ -106,6 +121,8 @@ function PlanCheckoutButton({
 }
 
 export function PricingPage() {
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly");
+
   return (
     <div className="landing-site">
       <Suspense fallback={null}>
@@ -156,60 +173,76 @@ export function PricingPage() {
 
         <section className="landing-section !pt-4">
           <div className="landing-container">
-            <div className="pricing-cards">
-              {PRICING_PLANS_WITH_PADDLE.map((plan, index) => (
-                <ScrollReveal key={plan.id} delay={index * 120} direction="up">
-                  <article
-                    className={`pricing-card pricing-card--${plan.accent} ${
-                      plan.popular ? "pricing-card--popular" : ""
-                    }`}
-                  >
-                    {plan.popular && (
-                      <div className="pricing-popular-badge">
-                        <Zap className="h-3.5 w-3.5" />
-                        Most Popular
-                      </div>
-                    )}
+            <ScrollReveal className="flex justify-center">
+              <PricingBillingToggle value={billingInterval} onChange={setBillingInterval} />
+            </ScrollReveal>
 
-                    <div className="pricing-card-header">
-                      <div className="flex items-center gap-2">
-                        <PlanIcon id={plan.id} />
-                        <h2 className="text-xl font-bold text-white">{plan.name}</h2>
-                      </div>
-                      <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                        {plan.tagline}
-                      </p>
+            <div className="pricing-cards mt-10">
+              {PRICING_PLANS_WITH_PADDLE.map((plan, index) => {
+                const display = getDisplayPrice(plan, billingInterval);
+                return (
+                  <ScrollReveal key={plan.id} delay={index * 120} direction="up">
+                    <div className="pricing-plan-column">
+                      <article
+                        className={`pricing-card pricing-card--${plan.accent} ${
+                          plan.popular ? "pricing-card--popular" : ""
+                        }`}
+                      >
+                        {plan.popular && (
+                          <div className="pricing-popular-badge">
+                            <Zap className="h-3.5 w-3.5" />
+                            Most Popular
+                          </div>
+                        )}
+
+                        <div className="pricing-card-header">
+                          <div className="flex items-center gap-2">
+                            <PlanIcon id={plan.id} />
+                            <h2 className="text-xl font-bold text-white">{plan.name}</h2>
+                          </div>
+                          <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                            {plan.tagline}
+                          </p>
+                        </div>
+
+                        <div className="pricing-card-price">
+                          <span className="pricing-amount">{formatPrice(display.amount)}</span>
+                          <span className="text-sm text-zinc-500">{display.suffix}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-zinc-500">{display.billedNote}</p>
+
+                        <p className="mt-4 text-sm leading-relaxed text-zinc-400">
+                          {plan.description}
+                        </p>
+
+                        <ul className="mt-6 flex flex-1 flex-col gap-2.5">
+                          {plan.perks.map((perk) => (
+                            <li
+                              key={perk}
+                              className="flex items-start gap-2 text-sm text-zinc-300"
+                            >
+                              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                              <span>{perk}</span>
+                            </li>
+                          ))}
+                        </ul>
+
+                        <PlanCheckoutButton
+                          plan={plan}
+                          interval={billingInterval}
+                          className={`landing-btn mt-8 w-full ${
+                            plan.popular ? "landing-btn--primary" : "landing-btn--ghost"
+                          }`}
+                        >
+                          {plan.popular ? "Start with Pro" : `Get ${plan.name}`}
+                        </PlanCheckoutButton>
+                      </article>
+
+                      <PlanSavingsCard plan={plan} interval={billingInterval} />
                     </div>
-
-                    <div className="pricing-card-price">
-                      <span className="pricing-amount">{formatPrice(plan.price)}</span>
-                      <span className="text-sm text-zinc-500">/ month</span>
-                    </div>
-
-                    <p className="mt-4 text-sm leading-relaxed text-zinc-400">
-                      {plan.description}
-                    </p>
-
-                    <ul className="mt-6 flex flex-1 flex-col gap-2.5">
-                      {plan.perks.map((perk) => (
-                        <li key={perk} className="flex items-start gap-2 text-sm text-zinc-300">
-                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                          <span>{perk}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    <PlanCheckoutButton
-                      plan={plan}
-                      className={`landing-btn mt-8 w-full ${
-                        plan.popular ? "landing-btn--primary" : "landing-btn--ghost"
-                      }`}
-                    >
-                      {plan.popular ? "Start with Pro" : `Get ${plan.name}`}
-                    </PlanCheckoutButton>
-                  </article>
-                </ScrollReveal>
-              ))}
+                  </ScrollReveal>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -286,7 +319,8 @@ export function PricingPage() {
                   </Link>
                 </div>
                 <p className="mt-6 text-center text-xs text-zinc-600">
-                  Prices in USD. Billed monthly via Paddle. Manage or cancel anytime in Settings.
+                  Prices in USD. Billed {billingInterval === "yearly" ? "yearly" : "monthly"} via
+                  Paddle. Manage or cancel anytime in Settings.
                 </p>
               </div>
             </ScrollReveal>

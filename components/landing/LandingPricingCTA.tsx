@@ -44,7 +44,7 @@ export function LandingPricingCTA() {
                 )}
                 <p className="text-sm font-semibold text-zinc-400">{plan.name}</p>
                 <p className="mt-2 text-3xl font-bold text-white">
-                  {formatPrice(plan.price)}
+                  {formatPrice(plan.priceMonthly)}
                   <span className="text-sm font-normal text-zinc-500">/mo</span>
                 </p>
                 <p className="mt-3 text-xs leading-relaxed text-zinc-500">{plan.tagline}</p>
