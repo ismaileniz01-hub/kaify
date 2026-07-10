@@ -22,7 +22,6 @@ export const ELSEWHERE_STACK_BY_PLAN: Record<PlanId, ElsewhereStackItem[]> = {
     { label: "Nutrition Coach (weekly check-ins)", priceLabel: "$60+", icon: "🥗" },
     { label: "Calorie & macro tracking", priceLabel: "$15+", icon: "📊" },
     { label: "Posture & mobility coach", priceLabel: "$50+", icon: "🧍" },
-    { label: "Priority coaching & team chat", priceLabel: "$45+", icon: "💬" },
   ],
   premium: [
     { label: "VIP Personal Trainer", priceLabel: "$110+", icon: "🏋️" },
@@ -30,15 +29,14 @@ export const ELSEWHERE_STACK_BY_PLAN: Record<PlanId, ElsewhereStackItem[]> = {
     { label: "Advanced macro analytics", priceLabel: "$20+", icon: "📊" },
     { label: "Physique & posture specialist", priceLabel: "$65+", icon: "🧍" },
     { label: "Priority team + fastest replies", priceLabel: "$60+", icon: "💬" },
-    { label: "VIP support & deep coaching", priceLabel: "$50+", icon: "⭐" },
   ],
 };
 
 /** Monthly stack total used for savings math — higher tiers = more you'd spend elsewhere. */
 export const ELSEWHERE_MONTHLY_BY_PLAN: Record<PlanId, number> = {
   essential: 140,
-  pro: 250,
-  premium: 390,
+  pro: 205,
+  premium: 340,
 };
 
 /** Annual billing = pay for 11 months, get 12 (1 month free). */
