@@ -815,6 +815,52 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["notifications"]["Row"]>;
         Relationships: [];
       };
+      paddle_customers: {
+        Row: {
+          customer_id: string;
+          user_id: string | null;
+          email: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          customer_id: string;
+          email: string;
+          user_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["paddle_customers"]["Row"]>;
+        Relationships: [];
+      };
+      paddle_subscriptions: {
+        Row: {
+          subscription_id: string;
+          customer_id: string;
+          user_id: string | null;
+          status: string;
+          price_id: string;
+          product_id: string;
+          scheduled_change_action: string | null;
+          scheduled_change_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          subscription_id: string;
+          customer_id: string;
+          status: string;
+          price_id: string;
+          product_id?: string;
+          user_id?: string | null;
+          scheduled_change_action?: string | null;
+          scheduled_change_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["paddle_subscriptions"]["Row"]>;
+        Relationships: [];
+      };
       push_subscriptions: {
         Row: {
           id: string;

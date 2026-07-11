@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  handlePaddleWebhook,
-  verifyPaddleSignature,
-  type PaddleWebhookPayload,
+  handleNormalizedPaddleEvent,
+  verifyAndParsePaddleWebhook,
 } from "@/lib/services/billing.service";
 import { handleApiError } from "@/lib/api/response";
 
@@ -10,38 +9,32 @@ export const runtime = "nodejs";
 
 /**
  * POST /api/webhooks/paddle
- * Paddle Billing subscription lifecycle (signature-verified).
+ * Paddle Billing subscription lifecycle (SDK signature-verified, raw body).
  */
 export async function POST(request: NextRequest) {
   try {
-    const secret = process.env.PADDLE_NOTIFICATION_WEBHOOK_SECRET?.trim();
-    if (!secret) {
-      return NextResponse.json(
-        { error: "webhook_not_configured" },
-        { status: 503 },
-      );
-    }
-
     const rawBody = await request.text();
     const signature = request.headers.get("paddle-signature");
 
-    if (!verifyPaddleSignature(rawBody, signature, secret)) {
+    let event;
+    try {
+      event = await verifyAndParsePaddleWebhook(rawBody, signature);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "invalid_signature";
+      if (message === "webhook_not_configured") {
+        return NextResponse.json(
+          { error: "webhook_not_configured" },
+          { status: 503 },
+        );
+      }
+      if (message === "invalid_json" || message === "missing_event_id" || message === "missing_data") {
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
+      // Non-2xx so Paddle retries — never acknowledge a failed signature.
       return NextResponse.json({ error: "invalid_signature" }, { status: 401 });
     }
 
-    let payload: PaddleWebhookPayload;
-    try {
-      payload = JSON.parse(rawBody) as PaddleWebhookPayload;
-    } catch {
-      return NextResponse.json({ error: "invalid_json" }, { status: 400 });
-    }
-
-    const eventId = payload.event_id?.trim();
-    if (!eventId) {
-      return NextResponse.json({ error: "missing_event_id" }, { status: 400 });
-    }
-
-    const result = await handlePaddleWebhook(eventId, payload);
+    const result = await handleNormalizedPaddleEvent(event);
     if (!result.ok) {
       return NextResponse.json({ error: result.reason }, { status: 422 });
     }

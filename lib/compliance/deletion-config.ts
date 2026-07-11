@@ -50,6 +50,18 @@ export const RETAINED_AFTER_DELETE: readonly DeletionTableSpec[] = [
     notes: "Financial audit; customer_email may remain — legal retention 7y",
   },
   {
+    table: "paddle_customers",
+    column: "user_id",
+    behavior: "set_null",
+    notes: "Paddle customer mirror retained for billing reconciliation",
+  },
+  {
+    table: "paddle_subscriptions",
+    column: "user_id",
+    behavior: "set_null",
+    notes: "Paddle subscription mirror retained for billing reconciliation",
+  },
+  {
     table: "admin_audit_log",
     column: "admin_id",
     behavior: "set_null",

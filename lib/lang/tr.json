@@ -440,6 +440,8 @@
   "myaccount.choose_plan": "Plan seç",
   "myaccount.settings": "Ayarlar",
   "myaccount.sign_out": "Çıkış yap",
+  "myaccount.manage_billing": "Ödemeyi yönet",
+  "myaccount.portal_error": "Ödeme portalı açılamadı. Satın alma sonrası tekrar dene.",
   "messages.date": "Pzt, 3 Haz",
   "settings.dark_mode": "Karanlık Mod",
   "settings.animations": "Animasyonlar",

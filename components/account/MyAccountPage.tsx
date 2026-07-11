@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import {
   Camera,
   Check,
+  CreditCard,
   Crown,
   Flame,
   Gem,
@@ -29,6 +30,7 @@ import { FloatingOrbs } from "@/components/landing/FloatingOrbs";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { InlineAlert } from "@/components/InlineAlert";
+import { apiPost } from "@/lib/api/client";
 import { formatTierLabel } from "@/lib/billing/tier-labels";
 import { hasActiveSubscription } from "@/lib/auth/post-auth-redirect";
 import { useLang } from "@/lib/lang-context";
@@ -102,6 +104,7 @@ export function MyAccountPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -169,6 +172,19 @@ export function MyAccountPage() {
     setNameDraft(userProfile.name);
     setEditingName(false);
     setSaveError(null);
+  };
+
+  const openBillingPortal = async () => {
+    if (portalLoading) return;
+    setPortalLoading(true);
+    setSaveError(null);
+    try {
+      const { url } = await apiPost<{ url: string }>("/api/billing/portal", {});
+      window.location.assign(url);
+    } catch {
+      setSaveError(t("myaccount.portal_error"));
+      setPortalLoading(false);
+    }
   };
 
   const infoRows = [
@@ -394,10 +410,21 @@ export function MyAccountPage() {
                   </div>
                 ) : null}
 
-                <div className="flex flex-col gap-3 border-t border-white/8 px-6 py-6 sm:flex-row sm:px-10">
+                <div className="flex flex-col gap-3 border-t border-white/8 px-6 py-6 sm:flex-row sm:flex-wrap sm:px-10">
                   <Link href={appHref} className="account-btn account-btn--primary flex-1 justify-center">
                     {hasPlan ? t("myaccount.open_app") : t("myaccount.choose_plan")}
                   </Link>
+                  {hasPlan ? (
+                    <button
+                      type="button"
+                      onClick={() => void openBillingPortal()}
+                      disabled={portalLoading}
+                      className="account-btn account-btn--ghost flex-1 justify-center"
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      {portalLoading ? t("profile.saving") : t("myaccount.manage_billing")}
+                    </button>
+                  ) : null}
                   <Link
                     href="/settings"
                     className="account-btn account-btn--ghost flex-1 justify-center"

@@ -440,6 +440,8 @@
   "myaccount.choose_plan": "Choose a plan",
   "myaccount.settings": "Settings",
   "myaccount.sign_out": "Sign out",
+  "myaccount.manage_billing": "Manage billing",
+  "myaccount.portal_error": "Couldn't open the billing portal. Try again after a purchase.",
   "messages.date": "Mon, 3 Jun",
   "settings.dark_mode": "Dark Mode",
   "settings.animations": "Animations",
