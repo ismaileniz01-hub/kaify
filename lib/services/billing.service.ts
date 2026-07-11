@@ -51,6 +51,14 @@ function extractCustomUserId(custom: unknown): string | null {
 
 function entityToRecord(entity: unknown): Record<string, unknown> {
   if (!entity || typeof entity !== "object") return {};
+  // Prefer JSON round-trip so SDK class instances (camelCase getters) flatten.
+  try {
+    const json = JSON.parse(JSON.stringify(entity)) as unknown;
+    const record = asRecord(json);
+    if (record && Object.keys(record).length > 0) return record;
+  } catch {
+    // fall through
+  }
   const source = entity as Record<string, unknown>;
   const out: Record<string, unknown> = {};
   for (const key of Object.keys(source)) {

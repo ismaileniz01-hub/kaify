@@ -63,7 +63,13 @@ export async function middleware(request: NextRequest) {
     return new NextResponse(null, { status: 404 });
   }
 
-  if (pathname.startsWith("/api/") && isLikelyBot(request)) {
+  // Webhooks authenticate via signature — never bot-block them.
+  // Paddle's User-Agent can be short ("Paddle") and fails the length heuristic.
+  if (
+    pathname.startsWith("/api/") &&
+    !pathname.startsWith("/api/webhooks/") &&
+    isLikelyBot(request)
+  ) {
     logger.warn("middleware blocked bot request", { requestId, pathname, ip });
     return new NextResponse(
       JSON.stringify({ error: "Access denied" }),
