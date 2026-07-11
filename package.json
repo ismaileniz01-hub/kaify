@@ -85,7 +85,7 @@
     "@types/react-google-recaptcha": "^2.1.9",
     "@types/web-push": "^3.6.4",
     "@vitest/coverage-v8": "^4.1.9",
-    "eslint": "^9.27.0",
+    "eslint": "^10.6.0",
     "eslint-config-next": "^15.3.3",
     "google-translate-api-x": "^10.7.3",
     "pdfkit": "^0.17.1",
