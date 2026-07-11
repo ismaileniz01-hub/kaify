@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { publicAssetUrl } from "@/lib/public-asset-url";
 
 type MessageRowProps = {
   name: string;
@@ -56,7 +57,7 @@ export function MessageRow({
         style={{ boxShadow: `0 0 8px ${glowColor}` }}
       >
         <Image
-          src={avatarSrc}
+          src={publicAssetUrl(avatarSrc)}
           alt={name}
           width={52}
           height={52}

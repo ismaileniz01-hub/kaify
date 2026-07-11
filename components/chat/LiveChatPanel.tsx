@@ -7,6 +7,7 @@ import type { ChatMessageDTO } from "@/lib/types/domain.types";
 import type { MessageType } from "@/lib/types/database.types";
 import type { ContactId } from "@/lib/contacts";
 import { CONTACTS } from "@/lib/contacts";
+import { publicAssetUrl } from "@/lib/public-asset-url";
 import { ChatRichCard } from "@/components/chat/ChatRichCard";
 import { AnalyticsConfirmationCard } from "@/components/chat/AnalyticsConfirmationCard";
 import { ChatMessageText } from "@/components/chat/ChatMessageText";
@@ -368,7 +369,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
               {isCoach && (
                 <div className="relative h-8 w-8 shrink-0">
                   <Image
-                    src={coachAvatar}
+                    src={publicAssetUrl(coachAvatar)}
                     alt={contact.name}
                     width={32}
                     height={32}
@@ -437,7 +438,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
               {!isCoach && (
                 <div className="relative h-8 w-8 shrink-0">
                   <Image
-                    src={userAvatar}
+                    src={publicAssetUrl(userAvatar)}
                     alt={userProfile?.name ?? "Me"}
                     width={32}
                     height={32}

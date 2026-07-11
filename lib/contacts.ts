@@ -42,7 +42,7 @@ export const CONTACTS: Record<ContactId, Contact> = {
     id: "maya",
     name: "Dr. Maya",
     role: "Nutritionist",
-    avatar: "/avatars/dr maya 1.png",
+    avatar: "/avatars/maya.png",
     preview: "Your meal plan is ready 🥗",
     time: "08:15",
     badge: 1,

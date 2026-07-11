@@ -9,6 +9,9 @@ export const KAI_LEVEL_AVATARS: Record<KaiLevel, string> = {
   4: "/avatars/kai-level-4.png",
 };
 
+/** Fallback when a level asset is unavailable. */
+export const KAI_FALLBACK_AVATAR = "/kai-mascot-v2.png";
+
 export const KAI_LEVEL_THRESHOLDS: { level: KaiLevel; minStreak: number; label: string; labelKey: string }[] = [
   { level: 1, minStreak: 0, label: "Beginner", labelKey: "streak.segment.beginner" },
   { level: 2, minStreak: 31, label: "Veteran", labelKey: "streak.segment.veteran" },

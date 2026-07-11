@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { AuraColor } from "@/lib/kai-context";
 import { AuraEffectLayer } from "@/components/AuraEffectLayer";
 import { getAuraVisual, resolveAvatarEffect, type AvatarEffect } from "@/lib/aura-effects";
+import { publicAssetUrl } from "@/lib/public-asset-url";
 
 export type { AvatarEffect };
 
@@ -47,7 +48,7 @@ export function ContactAvatar({
       <div className={`relative ${box} flex items-center justify-center`}>
         <AuraEffectLayer effect={resolvedEffect} config={visual} scale={scale} />
         <Image
-          src={src}
+          src={publicAssetUrl(src)}
           alt={alt}
           width={img}
           height={img}

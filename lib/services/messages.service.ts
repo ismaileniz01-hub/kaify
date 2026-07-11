@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
+import { CONTACTS, type ContactId } from "@/lib/contacts";
 
 export type InboxCoachDTO = {
   coachId: string;
@@ -9,16 +10,6 @@ export type InboxCoachDTO = {
   preview: string;
   time: string;
   unreadCount: number;
-};
-
-const COACH_META: Record<
-  string,
-  { name: string; role: string; avatarUrl: string }
-> = {
-  alex: { name: "Alex", role: "Fitness Coach", avatarUrl: "/avatars/alex 1.png" },
-  maya: { name: "Dr. Maya", role: "Nutritionist", avatarUrl: "/avatars/dr maya 1.png" },
-  leo: { name: "Leo", role: "Body rater", avatarUrl: "/avatars/leo-1.png" },
-  kai: { name: "Kai", role: "Teammate", avatarUrl: "/avatars/kai-1.png" },
 };
 
 function formatRelativeTime(iso: string): string {
@@ -49,7 +40,7 @@ type InboxPreviewRow = {
 
 export async function getInbox(): Promise<InboxCoachDTO[]> {
   const supabase = await createServerSupabaseClient();
-  const coachIds = ["alex", "maya", "leo", "kai"] as const;
+  const coachIds = ["alex", "maya", "leo", "kai"] as const satisfies readonly ContactId[];
 
   // Single round-trip: latest direct message per coach (RLS-scoped RPC).
   const { data, error } = await supabase.rpc("get_inbox_previews", {
@@ -67,14 +58,14 @@ export async function getInbox(): Promise<InboxCoachDTO[]> {
 
   return coachIds.map((coachId) => {
     const latest = latestByCoach.get(coachId);
-    const meta = COACH_META[coachId];
+    const meta = CONTACTS[coachId];
     const preview = latest?.content ?? DEFAULT_PREVIEW[coachId];
 
     return {
       coachId,
       name: meta.name,
       role: meta.role,
-      avatarUrl: meta.avatarUrl,
+      avatarUrl: meta.avatar,
       preview: preview.slice(0, 60),
       time: latest ? formatRelativeTime(latest.created_at) : "",
       unreadCount: latest?.sender === "coach" ? 1 : 0,
