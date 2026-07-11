@@ -106,6 +106,9 @@ function PlanCheckoutButton({
       paddle.Checkout.open({
         items: [{ priceId, quantity: 1 }],
         customData: { user_id: profile.id },
+        settings: {
+          showAddDiscounts: true,
+        },
       });
       return;
     }

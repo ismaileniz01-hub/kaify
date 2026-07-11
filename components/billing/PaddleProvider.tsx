@@ -49,6 +49,9 @@ export function PaddleProvider({ children }: { children: ReactNode }) {
           displayMode: "overlay",
           theme: "dark",
           locale: "en",
+          // Requires Paddle Dashboard → Checkout → Checkout settings
+          // → "Display discount field on the checkout" enabled.
+          showAddDiscounts: true,
         },
       },
     }).then((instance) => {
