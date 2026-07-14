@@ -55,6 +55,19 @@ export async function checkAndIncrementUsage(
 
   if (error) {
     if (error.code === "P0001" || error.code === "P0002") {
+      // Null / unpaid tier has no tier_limits row — deny cleanly instead of 500.
+      if (/tier limits not configured/i.test(error.message)) {
+        throw new ApiError(
+          "FORBIDDEN",
+          "Aktif bir planın yok. Devam etmek için abone ol.",
+          {
+            warning_trigger: "LIMIT_100",
+            resource: params.resource,
+            used: 0,
+            limit: 0,
+          },
+        );
+      }
       throw new ApiError("VALIDATION_ERROR", error.message);
     }
     logger.error("[usage-limit.service:check] rpc error", { error: error.message });

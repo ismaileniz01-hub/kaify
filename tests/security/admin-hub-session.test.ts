@@ -29,9 +29,19 @@ describe("admin-hub-session", () => {
     vi.clearAllMocks();
   });
 
-  it("uses isoisking as default operator password", () => {
+  it("uses isoisking as default operator password outside production", () => {
     delete process.env.ADMIN_HUB_PASSWORD;
     expect(adminHubPassword()).toBe("isoisking");
+  });
+
+  it("fails closed when production has no ADMIN_HUB_PASSWORD", () => {
+    const prevVercel = process.env.VERCEL_ENV;
+    delete process.env.ADMIN_HUB_PASSWORD;
+    process.env.VERCEL_ENV = "production";
+    expect(adminHubPassword()).toBeNull();
+    expect(verifyAdminHubPassword("isoisking")).toBe(false);
+    if (prevVercel === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = prevVercel;
   });
 
   it("accepts the correct password and rejects wrong ones", () => {

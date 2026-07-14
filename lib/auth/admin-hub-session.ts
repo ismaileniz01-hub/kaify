@@ -3,17 +3,31 @@ import { cookies } from "next/headers";
 export const ADMIN_HUB_COOKIE_NAME = "kaify_admin_hub";
 const ADMIN_HUB_MAX_AGE_SEC = 60 * 60 * 8;
 
-function hubSecret(): string {
+function isProductionRuntime(): boolean {
+  return (
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL_ENV === "production"
+  );
+}
+
+/** Returns the hub HMAC secret, or null when production is misconfigured. */
+function hubSecret(): string | null {
   const secret =
     process.env.ADMIN_HUB_SECRET?.trim() ||
     process.env.CSRF_SECRET?.trim() ||
     process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
-    "dev-admin-hub-insecure";
-  return secret;
+    "";
+  if (secret) return secret;
+  if (isProductionRuntime()) return null;
+  return "dev-admin-hub-insecure";
 }
 
-export function adminHubPassword(): string {
-  return process.env.ADMIN_HUB_PASSWORD?.trim() || "isoisking";
+/** Returns the hub password, or null when production is misconfigured. */
+export function adminHubPassword(): string | null {
+  const password = process.env.ADMIN_HUB_PASSWORD?.trim() || "";
+  if (password) return password;
+  if (isProductionRuntime()) return null;
+  return "isoisking";
 }
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -46,17 +60,26 @@ async function hmacSha256Base64Url(secret: string, message: string): Promise<str
 }
 
 export function verifyAdminHubPassword(password: string): boolean {
-  return timingSafeEqualStrings(password, adminHubPassword());
+  const expected = adminHubPassword();
+  if (!expected) return false;
+  return timingSafeEqualStrings(password, expected);
 }
 
 export async function mintAdminHubToken(userId: string): Promise<string> {
+  const secret = hubSecret();
+  if (!secret) {
+    throw new Error("ADMIN_HUB_SECRET (or CSRF_SECRET) is required in production");
+  }
   const expiresAt = Math.floor(Date.now() / 1000) + ADMIN_HUB_MAX_AGE_SEC;
   const payload = `${userId}.${expiresAt}`;
-  const sig = await hmacSha256Base64Url(hubSecret(), payload);
+  const sig = await hmacSha256Base64Url(secret, payload);
   return `${payload}.${sig}`;
 }
 
 async function parseAdminHubToken(token: string): Promise<{ userId: string; expiresAt: number } | null> {
+  const secret = hubSecret();
+  if (!secret) return null;
+
   const parts = token.split(".");
   if (parts.length !== 3) return null;
   const [userId, expiresRaw, sig] = parts;
@@ -66,7 +89,7 @@ async function parseAdminHubToken(token: string): Promise<{ userId: string; expi
   if (!Number.isFinite(expiresAt)) return null;
 
   const payload = `${userId}.${expiresAt}`;
-  const expected = await hmacSha256Base64Url(hubSecret(), payload);
+  const expected = await hmacSha256Base64Url(secret, payload);
   if (!timingSafeEqualStrings(sig, expected)) return null;
 
   return { userId, expiresAt };

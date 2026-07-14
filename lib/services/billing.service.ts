@@ -213,6 +213,32 @@ async function applyTier(
 
 async function revokeSubscription(userId: string): Promise<void> {
   const admin = createAdminSupabaseClient();
+
+  // Plan change: Paddle cancels the old sub after the new one is active.
+  // Never wipe access while another granting subscription remains.
+  const { data: activeRows, error: activeError } = await admin
+    .from("paddle_subscriptions")
+    .select("subscription_id")
+    .eq("user_id", userId)
+    .in("status", ["active", "trialing"])
+    .limit(1);
+
+  if (activeError) {
+    console.error("[billing] revoke active-sub check failed", {
+      userId,
+      error: activeError.message,
+    });
+    throw activeError;
+  }
+
+  if (activeRows && activeRows.length > 0) {
+    console.info("[billing] skip revoke; other active subscription exists", {
+      userId,
+      keep: activeRows[0]?.subscription_id,
+    });
+    return;
+  }
+
   const updates = applyLegacyProfileWrites({
     tier: null,
     tier_expires_at: null,
@@ -241,7 +267,12 @@ type BillingEventRow = {
   processed_at?: string;
 };
 
-async function upsertBillingEvent(
+/**
+ * Claims a webhook event for processing. Returns false if already seen
+ * (unique on provider_event_id). Uses INSERT — not upsert+ignoreDuplicates,
+ * which silently no-ops without surfacing a duplicate.
+ */
+async function claimBillingEvent(
   admin: ReturnType<typeof createAdminSupabaseClient>,
   eventId: string,
   eventType: string,
@@ -251,25 +282,21 @@ async function upsertBillingEvent(
 ): Promise<boolean> {
   const billingDb = admin as unknown as {
     from: (table: "billing_events") => {
-      upsert: (
+      insert: (
         row: BillingEventRow,
-        options: { onConflict: string; ignoreDuplicates: boolean },
       ) => Promise<{ error: { code?: string; message: string } | null }>;
     };
   };
 
-  const { error } = await billingDb.from("billing_events").upsert(
-    {
-      provider_event_id: eventId,
-      event_name: eventType,
-      user_id: userId,
-      payload,
-      subscription_id: extras?.subscriptionId ?? null,
-      customer_email: extras?.customerEmail ?? null,
-      processed_at: new Date().toISOString(),
-    },
-    { onConflict: "provider_event_id", ignoreDuplicates: true },
-  );
+  const { error } = await billingDb.from("billing_events").insert({
+    provider_event_id: eventId,
+    event_name: eventType,
+    user_id: userId,
+    payload,
+    subscription_id: extras?.subscriptionId ?? null,
+    customer_email: extras?.customerEmail ?? null,
+    processed_at: new Date().toISOString(),
+  });
 
   if (error?.code === "23505") return false;
   if (error) throw error;
@@ -491,7 +518,7 @@ export async function handleNormalizedPaddleEvent(
   );
   const customerEmail = pickString(data.email);
 
-  const inserted = await upsertBillingEvent(
+  const inserted = await claimBillingEvent(
     admin,
     eventId,
     eventType,
