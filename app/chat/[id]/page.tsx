@@ -42,16 +42,32 @@ export default function ChatPage() {
   const getAvatarSrc = () => {
     if (contactId === "alex") {
       switch (avatarState) {
-        case "typing": return "/avatars/alex-typing.png";
-        case "sent": return "/avatars/alex-sent.png";
-        default: return contact.avatar;
+        case "typing":
+          return "/avatars/alex-typing.png";
+        case "sent":
+          return "/avatars/alex-sent.png";
+        default:
+          return contact.avatar;
+      }
+    }
+    if (contactId === "maya") {
+      switch (avatarState) {
+        case "typing":
+          return "/avatars/dr maya 1.png";
+        case "sent":
+          return "/avatars/dr maya 2.png";
+        default:
+          return contact.avatar;
       }
     }
     if (contactId === "leo") {
       switch (avatarState) {
-        case "typing": return "/avatars/leo-1.png";
-        case "sent": return "/avatars/leo-2.png";
-        default: return contact.avatar;
+        case "typing":
+          return "/avatars/leo-1.png";
+        case "sent":
+          return "/avatars/leo-2.png";
+        default:
+          return contact.avatar;
       }
     }
     if (contactId === "kai") {
@@ -191,26 +207,11 @@ export default function ChatPage() {
         )}
       </div>
 
-      {!sessionLoading && !isAuthenticated && (
+      {/* Large coach presence — shown for both guest demo and signed-in live chat */}
+      {!sessionLoading && (
       <div className="pointer-events-none absolute bottom-32 -left-8 z-10">
         <ContactAvatar
-          src={
-            contactId === "alex" && avatarState === "typing"
-              ? "/avatars/alex 1.png"
-              : contactId === "alex" && avatarState === "sent"
-                ? "/avatars/alex 2.png"
-                : contactId === "maya" && avatarState === "typing"
-                  ? "/avatars/dr maya 1.png"
-                  : contactId === "maya" && avatarState === "sent"
-                    ? "/avatars/dr maya 2.png"
-                    : contactId === "leo" && avatarState === "typing"
-                      ? "/avatars/leo-1.png"
-                      : contactId === "leo" && avatarState === "sent"
-                        ? "/avatars/leo-2.png"
-                        : contactId === "kai"
-                          ? kaiAvatar
-                          : contact.avatar
-          }
+          src={getAvatarSrc()}
           alt={contact.name}
           size="xl"
           pulse={false}

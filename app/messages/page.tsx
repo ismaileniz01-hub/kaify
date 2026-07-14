@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { MessageRow } from "@/components/messages/MessageRow";
 import { InlineAlert } from "@/components/InlineAlert";
 import { type ContactId } from "@/lib/contacts";
+import { publicAssetUrl } from "@/lib/public-asset-url";
 import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
@@ -152,7 +153,7 @@ export default function MessagesPage() {
                   className="relative h-8 w-8 overflow-hidden rounded-full border-2 border-zinc-900"
                 >
                   <Image
-                    src={id === "kai" ? kaiAvatar : CONTACTS[id].avatar}
+                    src={id === "kai" ? publicAssetUrl(kaiAvatar) : publicAssetUrl(CONTACTS[id].avatar)}
                     alt=""
                     width={32}
                     height={32}

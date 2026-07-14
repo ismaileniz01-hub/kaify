@@ -53,7 +53,7 @@ export function MessageRow({
       }}
     >
       <div
-        className="relative h-13 w-13 shrink-0 overflow-hidden rounded-full bg-zinc-900/80"
+        className="relative h-[52px] w-[52px] shrink-0 overflow-hidden rounded-full bg-zinc-900/80"
         style={{ boxShadow: `0 0 8px ${glowColor}` }}
       >
         <Image
