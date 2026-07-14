@@ -1,5 +1,3 @@
-import { NextRequest } from "next/server";
-import { getOptionalIdempotencyKey } from "@/lib/api/idempotency";
 import { withIdempotency } from "@/lib/api/idempotency-store";
 import { defineRoute } from "@/lib/api/route-handler";
 import {
@@ -35,10 +33,10 @@ export const POST = defineRoute(
     requireAiConsent: true,
     dailyAiBudget: true,
   },
-  async ({ user, request }) => {
-    const clientKey = getOptionalIdempotencyKey(request as NextRequest);
+  async ({ user }) => {
     const week = currentWeekKey();
-    const idempotencyKey = clientKey ?? `team_meeting:${user.id}:${week}`;
+    // Server-owned key only — client Idempotency-Key must not bypass the weekly lock.
+    const idempotencyKey = `team_meeting:${user.id}:${week}`;
 
     return withIdempotency({
       userId: user.id,

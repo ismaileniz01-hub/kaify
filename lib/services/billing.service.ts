@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { EventName } from "@paddle/paddle-node-sdk";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { buildPaddlePriceTierMap } from "@/lib/billing/paddle-config";
+import { buildPaddlePriceTierMap, buildPaddlePriceCycleMap } from "@/lib/billing/paddle-config";
 import {
   getPaddleServerClient,
   getPaddleWebhookSecret,
@@ -173,21 +173,35 @@ async function resolveUserId(
   admin: ReturnType<typeof createAdminSupabaseClient>,
   data: Record<string, unknown>,
 ): Promise<string | null> {
+  const customerId = pickString(data.customerId, data.customer_id);
   const fromCustom =
     extractCustomUserId(data.customData) ??
     extractCustomUserId(data.custom_data);
-  if (fromCustom) return fromCustom;
 
-  const customerId = pickString(data.customerId, data.customer_id);
-  if (!customerId) return null;
+  // Prefer the durable customer→user map over client-supplied customData.
+  if (customerId) {
+    const { data: row } = await admin
+      .from("paddle_customers")
+      .select("user_id")
+      .eq("customer_id", customerId)
+      .maybeSingle();
 
-  const { data: row } = await admin
-    .from("paddle_customers")
-    .select("user_id")
-    .eq("customer_id", customerId)
-    .maybeSingle();
+    if (typeof row?.user_id === "string" && row.user_id) {
+      return row.user_id;
+    }
+  }
 
-  return typeof row?.user_id === "string" ? row.user_id : null;
+  // First-time link only: accept customData when the profile exists.
+  if (fromCustom) {
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("id", fromCustom)
+      .maybeSingle();
+    if (profile?.id) return profile.id;
+  }
+
+  return null;
 }
 
 async function applyTier(
@@ -264,13 +278,50 @@ type BillingEventRow = {
   payload: unknown;
   subscription_id?: string | null;
   customer_email?: string | null;
-  processed_at?: string;
+  processed_at?: string | null;
+};
+
+type ClaimResult = "acquired" | "already_done" | "retry";
+
+type BillingEventsDb = {
+  from: (table: "billing_events") => {
+    insert: (
+      row: BillingEventRow,
+    ) => Promise<{ error: { code?: string; message: string } | null }>;
+    update: (row: Partial<BillingEventRow>) => {
+      eq: (
+        column: string,
+        value: string,
+      ) => Promise<{ error: { code?: string; message: string } | null }>;
+    };
+    delete: () => {
+      eq: (
+        column: string,
+        value: string,
+      ) => {
+        is: (
+          column: string,
+          value: null,
+        ) => Promise<{ error: { code?: string; message: string } | null }>;
+      };
+    };
+    select: (columns: string) => {
+      eq: (
+        column: string,
+        value: string,
+      ) => {
+        maybeSingle: () => Promise<{
+          data: { processed_at: string | null } | null;
+          error: { code?: string; message: string } | null;
+        }>;
+      };
+    };
+  };
 };
 
 /**
- * Claims a webhook event for processing. Returns false if already seen
- * (unique on provider_event_id). Uses INSERT — not upsert+ignoreDuplicates,
- * which silently no-ops without surfacing a duplicate.
+ * Acquires a webhook event claim with processed_at=null.
+ * finalized only after successful handling — failed attempts can retry.
  */
 async function claimBillingEvent(
   admin: ReturnType<typeof createAdminSupabaseClient>,
@@ -279,14 +330,8 @@ async function claimBillingEvent(
   userId: string | null,
   payload: unknown,
   extras?: { subscriptionId?: string | null; customerEmail?: string | null },
-): Promise<boolean> {
-  const billingDb = admin as unknown as {
-    from: (table: "billing_events") => {
-      insert: (
-        row: BillingEventRow,
-      ) => Promise<{ error: { code?: string; message: string } | null }>;
-    };
-  };
+): Promise<ClaimResult> {
+  const billingDb = admin as unknown as BillingEventsDb;
 
   const { error } = await billingDb.from("billing_events").insert({
     provider_event_id: eventId,
@@ -295,18 +340,70 @@ async function claimBillingEvent(
     payload,
     subscription_id: extras?.subscriptionId ?? null,
     customer_email: extras?.customerEmail ?? null,
-    processed_at: new Date().toISOString(),
+    processed_at: null,
   });
 
-  if (error?.code === "23505") return false;
+  if (!error) return "acquired";
+  if (error.code !== "23505") throw error;
+
+  const { data: existing, error: readError } = await billingDb
+    .from("billing_events")
+    .select("processed_at")
+    .eq("provider_event_id", eventId)
+    .maybeSingle();
+  if (readError) throw readError;
+  if (existing?.processed_at) return "already_done";
+  return "retry";
+}
+
+async function finalizeBillingEvent(
+  admin: ReturnType<typeof createAdminSupabaseClient>,
+  eventId: string,
+): Promise<void> {
+  const billingDb = admin as unknown as BillingEventsDb;
+  const { error } = await billingDb
+    .from("billing_events")
+    .update({ processed_at: new Date().toISOString() })
+    .eq("provider_event_id", eventId);
   if (error) throw error;
-  return true;
+}
+
+/** Drop an unfinished claim so Paddle can replay the event. */
+async function releaseBillingEvent(
+  admin: ReturnType<typeof createAdminSupabaseClient>,
+  eventId: string,
+): Promise<void> {
+  const billingDb = admin as unknown as BillingEventsDb;
+  const { error } = await billingDb
+    .from("billing_events")
+    .delete()
+    .eq("provider_event_id", eventId)
+    .is("processed_at", null);
+  if (error) {
+    console.error("[billing] release claim failed", {
+      eventId,
+      error: error.message,
+    });
+  }
 }
 
 function billingCycleFromData(data: Record<string, unknown>): BillingCycle {
-  const cycle = asRecord(data.billingCycle) ?? asRecord(data.billing_cycle);
-  const interval = pickString(cycle?.interval)?.toLowerCase();
-  if (interval === "year") return "yearly";
+  const priceId = priceIdFromData(data);
+  if (priceId) {
+    const fromMap = buildPaddlePriceCycleMap()[priceId];
+    if (fromMap) return fromMap;
+  }
+
+  const items = Array.isArray(data.items) ? data.items : [];
+  const first = asRecord(items[0]);
+  const price = asRecord(first?.price);
+  const nestedCycle =
+    asRecord(price?.billingCycle) ??
+    asRecord(price?.billing_cycle) ??
+    asRecord(data.billingCycle) ??
+    asRecord(data.billing_cycle);
+  const interval = pickString(nestedCycle?.interval)?.toLowerCase();
+  if (interval === "year" || interval === "yearly") return "yearly";
   return "monthly";
 }
 
@@ -348,21 +445,60 @@ async function upsertPaddleCustomer(
   email: string,
   userId: string | null,
 ): Promise<void> {
-  const { data: existing } = await admin
+  const now = new Date().toISOString();
+
+  const { data: byCustomer } = await admin
     .from("paddle_customers")
-    .select("user_id")
+    .select("customer_id, user_id, email")
     .eq("customer_id", customerId)
     .maybeSingle();
 
-  const { error } = await admin.from("paddle_customers").upsert(
-    {
-      customer_id: customerId,
-      email,
-      user_id: userId ?? existing?.user_id ?? null,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "customer_id" },
-  );
+  if (byCustomer) {
+    // Never overwrite an existing user_id with a different client-supplied one.
+    const linkedUserId =
+      byCustomer.user_id && userId && byCustomer.user_id !== userId
+        ? byCustomer.user_id
+        : (byCustomer.user_id ?? userId);
+    const { error } = await admin
+      .from("paddle_customers")
+      .update({
+        email: email || byCustomer.email,
+        user_id: linkedUserId,
+        updated_at: now,
+      })
+      .eq("customer_id", customerId);
+    if (error) throw error;
+    return;
+  }
+
+  if (userId) {
+    const { data: byUser } = await admin
+      .from("paddle_customers")
+      .select("customer_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (byUser && byUser.customer_id !== customerId) {
+      // Same Kaify user, new Paddle customer (re-checkout) — rebind.
+      const { error } = await admin
+        .from("paddle_customers")
+        .update({
+          customer_id: customerId,
+          email,
+          updated_at: now,
+        })
+        .eq("user_id", userId);
+      if (error) throw error;
+      return;
+    }
+  }
+
+  const { error } = await admin.from("paddle_customers").insert({
+    customer_id: customerId,
+    email,
+    user_id: userId,
+    updated_at: now,
+  });
   if (error) throw error;
 }
 
@@ -502,7 +638,10 @@ export async function handlePaddleWebhook(
 
 export async function handleNormalizedPaddleEvent(
   event: NormalizedEvent,
-): Promise<{ ok: true; skipped?: boolean } | { ok: false; reason: string }> {
+): Promise<
+  | { ok: true; skipped?: boolean }
+  | { ok: false; reason: string; retryable?: boolean }
+> {
   const admin = createAdminSupabaseClient();
   const { eventId, eventType, data, rawPayload } = event;
 
@@ -518,7 +657,7 @@ export async function handleNormalizedPaddleEvent(
   );
   const customerEmail = pickString(data.email);
 
-  const inserted = await claimBillingEvent(
+  const claim = await claimBillingEvent(
     admin,
     eventId,
     eventType,
@@ -526,74 +665,97 @@ export async function handleNormalizedPaddleEvent(
     rawPayload,
     { subscriptionId, customerEmail },
   );
-  if (!inserted) {
+  if (claim === "already_done") {
     return { ok: true, skipped: true };
   }
 
-  switch (eventType) {
-    case EventName.CustomerCreated:
-    case EventName.CustomerUpdated:
-    case "customer.created":
-    case "customer.updated": {
-      userId = (await handleCustomerEvent(admin, data)) ?? userId;
-      break;
-    }
+  const failRetryable = async (reason: string) => {
+    await releaseBillingEvent(admin, eventId);
+    return { ok: false as const, reason, retryable: true };
+  };
 
-    case EventName.SubscriptionCreated:
-    case EventName.SubscriptionUpdated:
-    case EventName.SubscriptionActivated:
-    case EventName.SubscriptionResumed:
-    case EventName.SubscriptionTrialing:
-    case "subscription.created":
-    case "subscription.updated":
-    case "subscription.activated":
-    case "subscription.resumed":
-    case "subscription.trialing": {
-      await syncSubscriptionMirror(admin, data, userId);
-      if (!userId) return { ok: false, reason: "user_not_found" };
-      const status = pickString(data.status) ?? "";
-      if (subscriptionGrantsAccess(status)) {
-        const result = await provisionFromPrice(userId, data);
-        if (!result.ok) return result;
-      } else if (subscriptionIsCanceled(status)) {
+  const failPermanent = async (reason: string) => {
+    await finalizeBillingEvent(admin, eventId);
+    return { ok: false as const, reason, retryable: false };
+  };
+
+  try {
+    switch (eventType) {
+      case EventName.CustomerCreated:
+      case EventName.CustomerUpdated:
+      case "customer.created":
+      case "customer.updated": {
+        userId = (await handleCustomerEvent(admin, data)) ?? userId;
+        break;
+      }
+
+      case EventName.SubscriptionCreated:
+      case EventName.SubscriptionUpdated:
+      case EventName.SubscriptionActivated:
+      case EventName.SubscriptionResumed:
+      case EventName.SubscriptionTrialing:
+      case "subscription.created":
+      case "subscription.updated":
+      case "subscription.activated":
+      case "subscription.resumed":
+      case "subscription.trialing": {
+        await syncSubscriptionMirror(admin, data, userId);
+        if (!userId) return failRetryable("user_not_found");
+        const status = pickString(data.status) ?? "";
+        if (subscriptionGrantsAccess(status)) {
+          const result = await provisionFromPrice(userId, data);
+          if (!result.ok) {
+            return result.reason === "unknown_price"
+              ? failPermanent(result.reason)
+              : failRetryable(result.reason);
+          }
+        } else if (subscriptionIsCanceled(status)) {
+          await revokeSubscription(userId);
+        }
+        break;
+      }
+
+      case EventName.SubscriptionCanceled:
+      case "subscription.canceled":
+      case "subscription.cancelled": {
+        await syncSubscriptionMirror(admin, data, userId);
+        if (!userId) return failRetryable("user_not_found");
         await revokeSubscription(userId);
+        break;
       }
-      // paused / past_due / scheduled_change: keep current access
-      break;
-    }
 
-    case EventName.SubscriptionCanceled:
-    case "subscription.canceled":
-    case "subscription.cancelled": {
-      await syncSubscriptionMirror(admin, data, userId);
-      if (!userId) return { ok: false, reason: "user_not_found" };
-      await revokeSubscription(userId);
-      break;
-    }
-
-    case EventName.SubscriptionPastDue:
-    case EventName.SubscriptionPaused:
-    case "subscription.past_due":
-    case "subscription.paused": {
-      await syncSubscriptionMirror(admin, data, userId);
-      break;
-    }
-
-    case EventName.TransactionCompleted:
-    case "transaction.completed": {
-      const customerId = pickString(data.customerId, data.customer_id);
-      if (customerId) {
-        await ensureCustomerStub(admin, customerId, userId, customerEmail);
+      case EventName.SubscriptionPastDue:
+      case EventName.SubscriptionPaused:
+      case "subscription.past_due":
+      case "subscription.paused": {
+        await syncSubscriptionMirror(admin, data, userId);
+        break;
       }
-      if (!userId) return { ok: false, reason: "user_not_found" };
-      const result = await provisionFromPrice(userId, data);
-      if (!result.ok) return result;
-      break;
+
+      case EventName.TransactionCompleted:
+      case "transaction.completed": {
+        const customerId = pickString(data.customerId, data.customer_id);
+        if (customerId) {
+          await ensureCustomerStub(admin, customerId, userId, customerEmail);
+        }
+        if (!userId) return failRetryable("user_not_found");
+        const result = await provisionFromPrice(userId, data);
+        if (!result.ok) {
+          return result.reason === "unknown_price"
+            ? failPermanent(result.reason)
+            : failRetryable(result.reason);
+        }
+        break;
+      }
+
+      default:
+        break;
     }
 
-    default:
-      break;
+    await finalizeBillingEvent(admin, eventId);
+    return { ok: true };
+  } catch (error) {
+    await releaseBillingEvent(admin, eventId);
+    throw error;
   }
-
-  return { ok: true };
 }

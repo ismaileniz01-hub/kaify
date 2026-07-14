@@ -43,31 +43,45 @@ export async function confirmPendingAnalytics(
   pendingId: string,
 ): Promise<void> {
   const admin = createAdminSupabaseClient() as SupabaseClient;
-  const { data: row, error } = await admin
+
+  // Atomic claim: only one concurrent confirm wins.
+  const { data: claimed, error } = await admin
     .from("analytics_pending_confirmations")
-    .select("*")
+    .update({
+      status: "confirmed",
+      resolved_at: new Date().toISOString(),
+    })
     .eq("id", pendingId)
     .eq("user_id", userId)
     .eq("status", "pending")
+    .select("*")
     .maybeSingle();
 
-  if (error || !row) {
+  if (error) {
+    throw new ApiError("INTERNAL_ERROR", "Onay uygulanamadı.");
+  }
+  if (!claimed) {
     throw new ApiError("NOT_FOUND", "Onay bekleyen kayıt bulunamadı.");
   }
 
-  const payload = row.payload as PendingAnalyticsPayload;
+  const payload = claimed.payload as PendingAnalyticsPayload;
 
-  if (payload.patch && Object.keys(payload.patch).length > 0) {
-    await patchAnalyticsDaily(userId, payload.patch);
+  try {
+    // Prefer additive meal path. Never SET then ADD the same macros.
+    if (payload.meal) {
+      await addMealToAnalytics(userId, payload.meal);
+    } else if (payload.patch && Object.keys(payload.patch).length > 0) {
+      await patchAnalyticsDaily(userId, payload.patch);
+    }
+  } catch (applyError) {
+    // Allow a later retry if side effects failed after the claim.
+    await admin
+      .from("analytics_pending_confirmations")
+      .update({ status: "pending", resolved_at: null })
+      .eq("id", pendingId)
+      .eq("user_id", userId);
+    throw applyError;
   }
-  if (payload.meal) {
-    await addMealToAnalytics(userId, payload.meal);
-  }
-
-  await admin
-    .from("analytics_pending_confirmations")
-    .update({ status: "confirmed", resolved_at: new Date().toISOString() })
-    .eq("id", pendingId);
 
   void invalidateHomeBundleCache(userId).catch(() => undefined);
 }

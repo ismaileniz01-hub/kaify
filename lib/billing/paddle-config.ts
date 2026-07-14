@@ -108,3 +108,15 @@ export function buildPaddlePriceTierMap(): Record<string, SubscriptionTier> {
     ...mergePriceTierMap(SERVER_PRICE_TIER_YEARLY),
   };
 }
+
+/** Maps Paddle price IDs → billing cycle (webhook expiry / apply_subscription). */
+export function buildPaddlePriceCycleMap(): Record<string, "monthly" | "yearly"> {
+  const map: Record<string, "monthly" | "yearly"> = {};
+  for (const [priceId] of SERVER_PRICE_TIER_MONTHLY) {
+    if (priceId.trim()) map[priceId.trim()] = "monthly";
+  }
+  for (const [priceId] of SERVER_PRICE_TIER_YEARLY) {
+    if (priceId.trim()) map[priceId.trim()] = "yearly";
+  }
+  return map;
+}

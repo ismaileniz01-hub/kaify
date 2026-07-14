@@ -199,23 +199,15 @@ export async function requestPhotoAnalyticsConfirmation(params: {
 
   if (!summary) return null;
 
-  const patch = params.meal
-    ? {
-        caloriesConsumed: params.meal.calories,
-        proteinG: params.meal.protein,
-        carbsG: params.meal.carbs,
-        fatG: params.meal.fat,
-      }
-    : undefined;
-
+  // Meal confirms are additive only — never also send an absolute SET patch
+  // (that double-counted macros: patch then addMeal).
   const pendingId = await createPendingAnalyticsConfirmation({
     userId: params.userId,
     coachId: params.coachId,
     source: "photo",
     payload: {
       summary,
-      patch,
-      meal: params.meal,
+      ...(params.meal ? { meal: params.meal } : {}),
     },
   });
 
@@ -224,7 +216,14 @@ export async function requestPhotoAnalyticsConfirmation(params: {
     coachId: params.coachId,
     pendingId,
     summary,
-    patch: patch ?? {},
+    patch: params.meal
+      ? {
+          caloriesConsumed: params.meal.calories,
+          proteinG: params.meal.protein,
+          carbsG: params.meal.carbs,
+          fatG: params.meal.fat,
+        }
+      : {},
     attachToMessageId: params.attachToMessageId,
   });
 

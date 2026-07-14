@@ -198,6 +198,8 @@ export async function* streamCoachReply(
   params: StreamReplyParams,
 ): AsyncGenerator<SseChunk> {
   const admin = createAdminSupabaseClient();
+  let quotaSettled = false;
+  let assistantText = "";
 
   try {
     const coach = await getCoachOrThrow(params.coachId);
@@ -303,7 +305,6 @@ export async function* streamCoachReply(
       locale,
     });
 
-    let assistantText = "";
     let totalTokens = 0;
 
     for await (const event of ModelRouter.streamText(messages, {
@@ -403,6 +404,7 @@ export async function* streamCoachReply(
     } else {
       usage = await checkQuotaGuard({ userId: params.userId, resource: "text_tokens" });
     }
+    quotaSettled = true;
 
     // Send done immediately — user sees the reply without waiting for card/memory.
     yield {
@@ -471,7 +473,8 @@ export async function* streamCoachReply(
     })();
   } catch (error) {
     const reserved = params.tokensReserved ?? 0;
-    if (reserved > 0) {
+    // Never refund after the user already received a streamed answer.
+    if (!quotaSettled && reserved > 0 && !assistantText) {
       await refundQuota({
         userId: params.userId,
         resource: "text_tokens",
@@ -481,6 +484,7 @@ export async function* streamCoachReply(
           error: refundError instanceof Error ? refundError.message : "unknown",
         });
       });
+      quotaSettled = true;
     }
 
     const apiError =
@@ -498,5 +502,19 @@ export async function* streamCoachReply(
         ...(apiError.details !== undefined ? { details: apiError.details } : {}),
       },
     };
+  } finally {
+    const reserved = params.tokensReserved ?? 0;
+    // Client aborted mid-stream before any useful reply — return the reserve.
+    if (!quotaSettled && reserved > 0 && !assistantText) {
+      await refundQuota({
+        userId: params.userId,
+        resource: "text_tokens",
+        amount: reserved,
+      }).catch((refundError) => {
+        logger.error("[chat.service] quota refund on abort", {
+          error: refundError instanceof Error ? refundError.message : "unknown",
+        });
+      });
+    }
   }
 }

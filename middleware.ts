@@ -119,7 +119,7 @@ export async function middleware(request: NextRequest) {
     return await attachCsrfCookie(forwardedRequest, response);
   }
 
-  if (pathname.startsWith("/api/cron/")) {
+  if (pathname.startsWith("/api/cron/") || pathname.startsWith("/api/webhooks/")) {
     const { response } = await updateSupabaseSession(forwardedRequest);
     response.headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce));
     response.headers.set("X-Request-ID", requestId);

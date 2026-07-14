@@ -36,7 +36,8 @@ export async function POST(request: NextRequest) {
 
     const result = await handleNormalizedPaddleEvent(event);
     if (!result.ok) {
-      return NextResponse.json({ error: result.reason }, { status: 422 });
+      const status = result.retryable ? 503 : 422;
+      return NextResponse.json({ error: result.reason }, { status });
     }
 
     return NextResponse.json({ received: true, skipped: result.skipped ?? false });
