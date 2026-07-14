@@ -295,7 +295,7 @@ export async function* streamCoachReply(
     ];
 
     // Persist the sanitized user message before streaming.
-    await admin.from("chat_messages").insert({
+    const { error: userInsertError } = await admin.from("chat_messages").insert({
       user_id: params.userId,
       coach_id: params.coachId,
       thread_type: "direct",
@@ -304,6 +304,12 @@ export async function* streamCoachReply(
       content: cleanMessage,
       locale,
     });
+    if (userInsertError) {
+      logger.error("[chat.service] persist user message error", {
+        error: userInsertError.message,
+      });
+      throw new ApiError("INTERNAL_ERROR", "Mesaj kaydedilemedi.");
+    }
 
     let totalTokens = 0;
 
@@ -380,6 +386,7 @@ export async function* streamCoachReply(
 
     if (insertError) {
       logger.error("[chat.service] persist reply error", { error: insertError.message });
+      throw new ApiError("INTERNAL_ERROR", "Yanıt kaydedilemedi.");
     }
 
     const reserved = params.tokensReserved ?? 0;

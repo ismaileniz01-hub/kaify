@@ -35,7 +35,7 @@ export async function writeHealthStepsBatch(
   const admin = createAdminSupabaseClient();
   const syncedAt = new Date().toISOString();
 
-  await admin.from("health_steps").upsert(
+  const { error } = await admin.from("health_steps").upsert(
     entries.map((entry) => ({
       user_id: userId,
       entry_date: entry.date,
@@ -45,6 +45,13 @@ export async function writeHealthStepsBatch(
     })),
     { onConflict: "user_id,entry_date,source" },
   );
+
+  if (error) {
+    logger.error("[analytics-write] health_steps upsert error", {
+      error: error.message,
+    });
+    throw new ApiError("INTERNAL_ERROR", "Adım verisi kaydedilemedi.");
+  }
 }
 
 export async function invalidateAnalyticsUserCache(userId: string): Promise<void> {

@@ -68,18 +68,35 @@ export async function reserveQuota(params: {
   return result;
 }
 
-/** Records additional consumption after a reservation (e.g. actual token count). */
+/** Records additional consumption after a reservation (e.g. actual token count).
+ * Caps to remaining quota so settle never silently drops overages under a soft deny.
+ */
 export async function settleQuota(params: {
   userId: string;
   resource: UsageResource;
   amount: number;
 }): Promise<UsageCheckResult | null> {
   if (params.amount <= 0) return null;
-  return checkAndIncrementUsage({
+
+  const probe = await checkAndIncrementUsage({
     userId: params.userId,
     resource: params.resource,
-    amount: params.amount,
+    amount: 0,
   });
+  const room = Math.max(0, Number(probe.remaining ?? 0));
+  const amount = Math.min(params.amount, room);
+  if (amount <= 0) {
+    // Already at cap — keep the reserved portion counted; do not pretend settle failed.
+    return { ...probe, allowed: true };
+  }
+
+  const result = await checkAndIncrementUsage({
+    userId: params.userId,
+    resource: params.resource,
+    amount,
+  });
+  // Cap means extras beyond hard limit are truncated, not a hard abort after AI work.
+  return { ...result, allowed: true };
 }
 
 /** Increments usage without a prior reservation (e.g. team chat). */

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createRouteHandlerSupabase } from "@/lib/supabase/route-handler";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -24,12 +24,17 @@ function sanitizeNext(next: string | undefined): string {
 
 /**
  * OAuth / magic-link callback handler.
- * Exchanges the auth code for a session, then redirects to a safe path.
+ * Exchanges the auth code for a session, then redirects with session cookies
+ * attached (same pattern as OTP verify).
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const redirectTo = (path: string): NextResponse => {
+  const redirectTo = (
+    path: string,
+    withCookies?: <T extends NextResponse>(response: T) => T,
+  ): NextResponse => {
     const url = new URL(path, request.nextUrl.origin);
-    return NextResponse.redirect(url);
+    const response = NextResponse.redirect(url);
+    return withCookies ? withCookies(response) : response;
   };
 
   const parsed = callbackQuerySchema.safeParse({
@@ -49,15 +54,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const supabase = await createServerSupabaseClient();
+    const { supabase, withCookies } = createRouteHandlerSupabase(request);
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
       logger.error("[api/auth/callback] exchange failed", { error: error.message });
-      return redirectTo("/login?error=auth_callback_failed");
+      return redirectTo("/login?error=auth_callback_failed", withCookies);
     }
 
-    return redirectTo(safeNext);
+    return redirectTo(safeNext, withCookies);
   } catch (error) {
     logger.error("[api/auth/callback] unexpected error", {
       error: error instanceof Error ? error.message : "unknown",

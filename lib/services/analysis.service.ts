@@ -159,7 +159,7 @@ export async function analyzePhoto(
     quality: result.quality,
   } as unknown as Json;
 
-  await admin.from("chat_messages").insert({
+  const { error: userPhotoError } = await admin.from("chat_messages").insert({
     user_id: params.userId,
     coach_id: params.coachId,
     thread_type: "direct",
@@ -169,6 +169,13 @@ export async function analyzePhoto(
     payload: { mimeType: params.mimeType } as unknown as Json,
     locale,
   });
+  if (userPhotoError) {
+    logger.error("[analysis.service] persist user photo error", {
+      error: userPhotoError.message,
+    });
+    await refundQuota({ userId: params.userId, resource, amount: 1 });
+    throw new ApiError("INTERNAL_ERROR", "Fotoğraf kaydı başarısız.");
+  }
 
   const { data: inserted, error: insertError } = await admin
     .from("chat_messages")
@@ -186,8 +193,12 @@ export async function analyzePhoto(
     .select("id")
     .single();
 
-  if (insertError) {
-    logger.error("[analysis.service] persist error", { error: insertError.message });
+  if (insertError || !inserted) {
+    logger.error("[analysis.service] persist error", {
+      error: insertError?.message ?? "missing row",
+    });
+    await refundQuota({ userId: params.userId, resource, amount: 1 });
+    throw new ApiError("INTERNAL_ERROR", "Analiz sonucu kaydedilemedi.");
   }
 
   let confirmation: PhotoAnalyticsConfirmation | null = null;

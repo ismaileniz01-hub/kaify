@@ -50,23 +50,6 @@ type StoredChestClaim = {
   winningIndex: number;
 };
 
-function readStoredClaim(raw: unknown): StoredChestClaim | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const obj = raw as Record<string, unknown>;
-  const chest = obj.dailyChest;
-  if (!chest || typeof chest !== "object" || Array.isArray(chest)) return null;
-  const c = chest as Record<string, unknown>;
-  if (typeof c.date !== "string" || !c.reward || typeof c.reward !== "object") return null;
-  const reward = c.reward as ChestRewardDTO;
-  if (reward.kind !== "gems" && reward.kind !== "freezie") return null;
-  return {
-    date: c.date,
-    reward,
-    reel: Array.isArray(c.reel) ? (c.reel as ChestReelSlot[]) : [],
-    winningIndex: typeof c.winningIndex === "number" ? c.winningIndex : 39,
-  };
-}
-
 async function readClaimRow(userId: string, utcDate: string) {
   const admin = createAdminSupabaseClient();
   const { data } = await admin
@@ -78,22 +61,40 @@ async function readClaimRow(userId: string, utcDate: string) {
   return data;
 }
 
-async function readReelState(userId: string): Promise<StoredChestClaim | null> {
+async function readReelState(userId: string, utcDate: string): Promise<StoredChestClaim | null> {
   const admin = createAdminSupabaseClient();
-  const { data } = await admin
-    .from("user_coaching_state")
-    .select("weekly_goals")
+  // reel_state added in 20260714140000 — types lag until regenerate.
+  const { data } = await (admin as unknown as {
+    from: (t: string) => {
+      select: (c: string) => {
+        eq: (a: string, b: string) => {
+          eq: (c: string, d: string) => {
+            maybeSingle: () => Promise<{ data: { reel_state?: unknown } | null }>;
+          };
+        };
+      };
+    };
+  })
+    .from("daily_chest_claims")
+    .select("reel_state")
     .eq("user_id", userId)
+    .eq("utc_date", utcDate)
     .maybeSingle();
 
-  const weeklyGoals =
-    typeof data?.weekly_goals === "object" &&
-    data?.weekly_goals !== null &&
-    !Array.isArray(data.weekly_goals)
-      ? (data.weekly_goals as Record<string, unknown>)
-      : {};
-
-  return readStoredClaim(weeklyGoals);
+  const reelState = data?.reel_state;
+  if (!reelState || typeof reelState !== "object" || Array.isArray(reelState)) {
+    return null;
+  }
+  const c = reelState as Record<string, unknown>;
+  if (!c.reward || typeof c.reward !== "object") return null;
+  const reward = c.reward as ChestRewardDTO;
+  if (reward.kind !== "gems" && reward.kind !== "freezie") return null;
+  return {
+    date: utcDate,
+    reward,
+    reel: Array.isArray(c.reel) ? (c.reel as ChestReelSlot[]) : [],
+    winningIndex: typeof c.winningIndex === "number" ? c.winningIndex : 39,
+  };
 }
 
 async function saveReelState(
@@ -101,39 +102,33 @@ async function saveReelState(
   claim: StoredChestClaim,
 ): Promise<void> {
   const admin = createAdminSupabaseClient();
-  const { data } = await admin
-    .from("user_coaching_state")
-    .select("weekly_goals")
+  const { error } = await (admin as unknown as {
+    from: (t: string) => {
+      update: (row: Record<string, unknown>) => {
+        eq: (a: string, b: string) => {
+          eq: (
+            c: string,
+            d: string,
+          ) => Promise<{ error: { message: string } | null }>;
+        };
+      };
+    };
+  })
+    .from("daily_chest_claims")
+    .update({
+      reel_state: {
+        reward: claim.reward,
+        reel: claim.reel,
+        winningIndex: claim.winningIndex,
+      },
+    })
     .eq("user_id", userId)
-    .maybeSingle();
+    .eq("utc_date", claim.date);
 
-  const weeklyGoals =
-    typeof data?.weekly_goals === "object" &&
-    data?.weekly_goals !== null &&
-    !Array.isArray(data.weekly_goals)
-      ? (data.weekly_goals as Record<string, unknown>)
-      : {};
-
-  const next = { ...weeklyGoals, dailyChest: claim };
-
-  const { error: updateError } = await admin
-    .from("user_coaching_state")
-    .update({ weekly_goals: next as never })
-    .eq("user_id", userId);
-
-  if (!updateError) return;
-
-  const { error: upsertError } = await admin
-    .from("user_coaching_state")
-    .upsert(
-      { user_id: userId, weekly_goals: next as never },
-      { onConflict: "user_id" },
-    );
-
-  if (upsertError) {
+  if (error) {
     logger.warn("[daily-chest] reel state save failed (non-fatal)", {
       userId,
-      error: upsertError.message,
+      error: error.message,
     });
   }
 }
@@ -195,7 +190,7 @@ export async function claimDailyChest(userId: string): Promise<DailyChestClaimDT
     const existing = await readClaimRow(userId, today);
     if (existing) {
       const reward = rowToReward(existing);
-      const reelState = await readReelState(userId);
+      const reelState = await readReelState(userId, today);
       const fallback = buildLoopingReel(reward);
       const [gems, streak] = await Promise.all([
         readGemBalance(userId),
@@ -248,7 +243,7 @@ export async function claimDailyChest(userId: string): Promise<DailyChestClaimDT
   if (payload.duplicate) {
     const existing = await readClaimRow(userId, today);
     const resolvedReward = existing ? rowToReward(existing) : reward;
-    const reelState = await readReelState(userId);
+    const reelState = await readReelState(userId, today);
     const fallback = buildLoopingReel(resolvedReward);
     return {
       reward: resolvedReward,
