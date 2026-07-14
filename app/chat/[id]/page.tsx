@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 
 import { ArrowLeft } from "lucide-react";
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { ChatBubbles } from "@/components/ChatBubbles";
 import { ChatComposer } from "@/components/chat/ChatComposer";
 import { ContactAvatar } from "@/components/ContactAvatar";
@@ -17,27 +17,36 @@ import { useSession } from "@/lib/session-context";
 import { LiveChatPanel } from "@/components/chat/LiveChatPanel";
 
 export default function ChatPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { isAuthenticated, isLoading: sessionLoading } = useSession();
   const params = useParams();
   const id = params.id as string;
   const contact = getContact(id);
 
-  if (!contact) {
-    notFound();
-  }
-
-  const contactId = contact.id as ContactId;
   const [avatarState, setAvatarState] = useState<"idle" | "typing" | "sent">("idle");
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [userMessages, setUserMessages] = useState<{ text: string; time: string }[]>([]);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const patternClass = `chat-pattern chat-pattern--${contactId}`;
-
   // Kai için unlock edilmiş level'a göre avatar ve aura rengi
   const { avatar: kaiAvatar, auraColor } = useKai();
+
+  useEffect(() => {
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, []);
+
+  if (!contact) {
+    notFound();
+  }
+
+  const contactId = contact.id as ContactId;
+  const patternClass = `chat-pattern chat-pattern--${contactId}`;
+
+  const formatGuestTime = () =>
+    new Date().toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit" });
 
   const getAvatarSrc = () => {
     if (contactId === "alex") {
@@ -118,12 +127,12 @@ export default function ChatPage() {
 
   const handleSend = () => {
     if (!inputValue.trim()) return;
-    const time = new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
-    setUserMessages((prev) => [...prev, { text: inputValue.trim(), time }]);
+    setUserMessages((prev) => [
+      ...prev,
+      { text: inputValue.trim(), time: formatGuestTime() },
+    ]);
     setInputValue("");
   };
-
-  const { primary, primaryLight, secondary, text: coachText, ring, shadow } = contact.color;
 
   return (
     <div className={`phone-shell chat-shell chat-gradient ${patternClass} relative flex h-[100dvh] flex-col`}>
@@ -145,11 +154,11 @@ export default function ChatPage() {
             auraColor={contactId === "kai" ? auraColor : "default"}
           />
           <div className="flex flex-col items-start">
-            <span className="text-sm font-semibold" style={{ color: primaryLight }}>
+            <span className="text-sm font-semibold" style={{ color: contact.color.primaryLight }}>
               {contact.name}
             </span>
-            <span className="flex items-center gap-1 text-xs" style={{ color: primaryLight }}>
-              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: primary }} />
+            <span className="flex items-center gap-1 text-xs" style={{ color: contact.color.primaryLight }}>
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: contact.color.primary }} />
               {contact.role}
             </span>
           </div>
@@ -158,7 +167,7 @@ export default function ChatPage() {
         <div
           className="absolute bottom-0 left-3 right-3 h-px"
           style={{
-            background: `linear-gradient(to right, transparent, ${primary}60, transparent)`,
+            background: `linear-gradient(to right, transparent, ${contact.color.primary}60, transparent)`,
           }}
         />
       </header>
@@ -186,7 +195,7 @@ export default function ChatPage() {
           />
         ) : (
           <>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto pb-36">
               <ChatBubbles
                 contactId={contactId}
                 onTypingChange={handleTypingChange}
@@ -224,8 +233,14 @@ export default function ChatPage() {
       <ImagePickerModal
         isOpen={showImagePicker}
         onClose={() => setShowImagePicker(false)}
-        onImageSelect={(file) => {
-          console.log("Fotoğraf seçildi:", file.name);
+        onImageSelect={() => {
+          setUserMessages((prev) => [
+            ...prev,
+            {
+              text: t("chat.photo.sent"),
+              time: formatGuestTime(),
+            },
+          ]);
           setShowImagePicker(false);
         }}
       />

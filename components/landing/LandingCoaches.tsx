@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { ScrollReveal } from "./ScrollReveal";
-import { useLang } from "@/lib/lang-context";
+import { publicAssetUrl } from "@/lib/public-asset-url";
 
 const COACHES = [
   {
@@ -50,8 +50,8 @@ const COACHES = [
     role: "Dragon Companion",
     color: "#a855f7",
     glow: "rgba(168, 85, 247, 0.45)",
-    avatar: "/kai-level-1.png",
-    hero: "/kai-level-1.png",
+    avatar: "/avatars/kai-level-1.png",
+    hero: "/avatars/kai-level-1.png",
     quote: "Hey! How are you feeling today?",
     desc: "Fitness is emotional as much as physical. Kai is your dragon companion — always there to chat, celebrate wins, and remind you why you started. Chat when you need encouragement, earn gems as you hit goals, and watch your dragon grow as your habits do. New dragon forms unlock as you level up — reach a 31-day streak to unlock Kai Level 2.",
     heading: "Never go alone with Kai",
@@ -60,7 +60,6 @@ const COACHES = [
 ];
 
 export function LandingCoaches() {
-  const { t } = useLang();
   return (
     <section id="coaches" className="landing-section landing-section--coaches relative overflow-hidden">
       <div className="landing-section-glow landing-section-glow--purple" aria-hidden />
@@ -84,6 +83,8 @@ export function LandingCoaches() {
         <div className="mt-12 space-y-20 sm:mt-20 sm:space-y-32">
           {COACHES.map((coach, i) => {
             const reversed = i % 2 === 1;
+            const heroSrc = publicAssetUrl(coach.hero);
+            const avatarSrc = publicAssetUrl(coach.avatar);
             return (
               <ScrollReveal
                 key={coach.id}
@@ -102,7 +103,7 @@ export function LandingCoaches() {
                     />
                     <div className="landing-coach-float" style={{ animationDelay: `${i * 0.3}s` }}>
                       <Image
-                        src={coach.hero}
+                        src={heroSrc}
                         alt={coach.name}
                         width={400}
                         height={500}
@@ -120,7 +121,7 @@ export function LandingCoaches() {
                       }}
                     >
                       <Image
-                        src={coach.avatar}
+                        src={avatarSrc}
                         alt=""
                         width={48}
                         height={48}
@@ -154,7 +155,7 @@ export function LandingCoaches() {
                     >
                       <div className="flex items-center gap-3 border-b border-white/5 pb-4">
                         <Image
-                          src={coach.avatar}
+                          src={avatarSrc}
                           alt=""
                           width={36}
                           height={36}

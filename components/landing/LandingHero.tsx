@@ -51,7 +51,7 @@ export function LandingHero() {
                 <div className="landing-kai-aura" aria-hidden />
                 <div className="landing-kai-float">
                   <Image
-                    src="/kai-level-1.png"
+                    src="/avatars/kai-level-1.png"
                     alt="Kai — your dragon companion"
                     width={420}
                     height={420}

@@ -3,45 +3,43 @@ import type { UserProfile } from "@/lib/user";
 import type { ProfileUpdateInput } from "@/lib/validations/profile.schema";
 import { getCountryName } from "@/lib/country-names";
 
-const GENDER_LABEL_TO_VALUE: Record<string, string> = {
-  erkek: "male",
+export type ProfileGenderValue =
+  | "male"
+  | "female"
+  | "other"
+  | "prefer_not_to_say";
+
+const GENDER_LABEL_TO_VALUE: Record<string, ProfileGenderValue> = {
   male: "male",
-  kadın: "female",
-  kadin: "female",
   female: "female",
   other: "other",
+  prefer_not_to_say: "prefer_not_to_say",
+  // Legacy TR labels still accepted when reading old client state
+  erkek: "male",
+  kadın: "female",
+  kadin: "female",
   diğer: "other",
   diger: "other",
+  belirtilmedi: "prefer_not_to_say",
 };
 
-function formatGender(gender: string | null): string {
-  if (!gender) return "—";
-  switch (gender) {
-    case "male":
-      return "Erkek";
-    case "female":
-      return "Kadın";
-    case "other":
-      return "Diğer";
-    case "prefer_not_to_say":
-      return "Belirtilmedi";
-    default:
-      return gender;
-  }
+/** Normalize any stored gender string to a schema value. */
+export function parseGenderInput(value: string): ProfileGenderValue {
+  const key = value.trim().toLowerCase();
+  return GENDER_LABEL_TO_VALUE[key] ?? "prefer_not_to_say";
 }
 
-function parseGenderInput(value: string): ProfileUpdateInput["gender"] {
-  const key = value.trim().toLowerCase();
-  const mapped = GENDER_LABEL_TO_VALUE[key];
-  if (
-    mapped === "male" ||
-    mapped === "female" ||
-    mapped === "other" ||
-    mapped === "prefer_not_to_say"
-  ) {
-    return mapped;
+export function genderLabelKey(gender: string | null | undefined): string {
+  switch (parseGenderInput(gender ?? "")) {
+    case "male":
+      return "profile.gender_male";
+    case "female":
+      return "profile.gender_female";
+    case "prefer_not_to_say":
+      return "profile.gender_unspecified";
+    default:
+      return "profile.gender_unspecified";
   }
-  return "prefer_not_to_say";
 }
 
 function parseHeightCm(raw: string): number | undefined {
@@ -65,7 +63,8 @@ export function profileDtoToUserProfile(dto: ProfileDTO): UserProfile {
     name: dto.displayName || "User",
     avatar: dto.avatarUrl ?? "/kaify-logo.png",
     isNatural: dto.isNatural,
-    gender: formatGender(dto.gender),
+    // Canonical enum — UI localizes via genderLabelKey / t()
+    gender: dto.gender ? parseGenderInput(dto.gender) : "prefer_not_to_say",
     height: dto.heightCm ? `${dto.heightCm} cm` : "—",
     weight: dto.weightKg ? `${dto.weightKg} kg` : "—",
     location,

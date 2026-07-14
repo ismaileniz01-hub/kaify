@@ -95,8 +95,18 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
       if (idx < replies.length) {
         const reply = replies[idx];
         const rid = nextIdRef.current++;
-        setTimeout(() => setTypingId(rid), 300 + Math.random() * 400);
-        setTimeout(() => { setTypingId(null); setAllMessages((prev) => [...prev, { id: rid, text: reply.text, from: "contact", time: reply.time, visible: true }]); }, 1000 + Math.random() * 800);
+        const typingTimer = setTimeout(() => setTypingId(rid), 300 + Math.random() * 400);
+        const replyTimer = setTimeout(() => {
+          setTypingId(null);
+          setAllMessages((prev) => [
+            ...prev,
+            { id: rid, text: reply.text, from: "contact", time: reply.time, visible: true },
+          ]);
+        }, 1000 + Math.random() * 800);
+        return () => {
+          clearTimeout(typingTimer);
+          clearTimeout(replyTimer);
+        };
       }
     }
   }, [userMessages, messages]);

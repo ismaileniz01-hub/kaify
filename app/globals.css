@@ -341,6 +341,11 @@ html.native-app .phone-shell.chat-shell {
   max-height: calc(100dvh - var(--keyboard-offset, 0px));
 }
 
+/* Web chat / app headers: clear status bar area; native overrides below */
+.pt-app-header {
+  padding-top: 3.5rem;
+}
+
 html.native-app .pt-app-header {
   padding-top: var(--app-header-top);
 }

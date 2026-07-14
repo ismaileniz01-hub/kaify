@@ -112,7 +112,8 @@ function PlanCheckoutButton({
       });
       return;
     }
-    router.push("/signup?next=/pricing");
+    // Authenticated but checkout not ready yet — stay on pricing (avoid signup bounce).
+    return;
   }, [
     configured,
     interval,

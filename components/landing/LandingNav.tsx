@@ -51,6 +51,22 @@ export function LandingNav({
   const appHref =
     isAuthenticated && hasActiveSubscription(profile?.tier) ? "/welcome" : "/pricing";
 
+  const primaryCtaHref = isLoading
+    ? "#"
+    : isAuthenticated
+      ? accountPage
+        ? appHref
+        : "/myaccount"
+      : "/signup";
+
+  const primaryCtaLabel = isLoading
+    ? "…"
+    : isAuthenticated
+      ? accountPage
+        ? label("myaccount.open_app", "Open app")
+        : label("landing.nav.my_account", EN.myAccount)
+      : label("landing.nav.signup", EN.signup);
+
   return (
     <header className={`landing-nav ${scrolled ? "landing-nav--scrolled" : ""}`}>
       <div className="landing-container flex items-center justify-between gap-4">
@@ -124,20 +140,13 @@ export function LandingNav({
             </Link>
           ) : null}
           <Link
-            href={
-              isAuthenticated
-                ? accountPage
-                  ? appHref
-                  : "/myaccount"
-                : "/signup"
-            }
-            className="landing-btn landing-btn--primary shrink-0 text-sm active:scale-[0.97]"
+            href={primaryCtaHref}
+            aria-disabled={isLoading}
+            className={`landing-btn landing-btn--primary shrink-0 text-sm active:scale-[0.97] ${
+              isLoading ? "pointer-events-none opacity-60" : ""
+            }`}
           >
-            {!isLoading && isAuthenticated
-              ? accountPage
-                ? label("myaccount.open_app", "Open app")
-                : label("landing.nav.my_account", EN.myAccount)
-              : label("landing.nav.signup", EN.signup)}
+            {primaryCtaLabel}
           </Link>
         </div>
       </div>

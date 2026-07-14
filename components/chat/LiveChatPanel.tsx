@@ -179,6 +179,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     } catch {
       setError(t("chat.error.send"));
       onCoachTyping?.(false);
+      setMessages((prev) => prev.filter((msg) => msg.id !== coachMsgId));
     } finally {
       setSending(false);
     }
@@ -330,7 +331,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           if (file) void uploadPhoto(file);
         }}
       />
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 pb-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 pb-36">
         {loadingHistory && (
           <div className="space-y-3">
             {[0, 1, 2].map((i) => (

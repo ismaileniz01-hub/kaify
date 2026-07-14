@@ -77,7 +77,7 @@ function WelcomeContent() {
       <header className="animate-in animate-in--1 relative z-20 flex items-center justify-between px-4 pt-14">
         <div className="flex items-center gap-2">
           <Link
-            href="/login"
+            href={isAuthenticated ? "/myaccount" : "/login"}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition-all duration-300 hover:bg-white/20 hover:text-white hover:scale-110"
             aria-label={t("nav.back")}
           >

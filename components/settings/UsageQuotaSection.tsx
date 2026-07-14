@@ -129,7 +129,7 @@ export function UsageQuotaSection() {
           <div className="border-t border-white/5 pt-3">
             <p className="text-[11px] text-zinc-500">{t("usage.upgrade_hint")}</p>
             <Link
-              href="/login"
+              href="/pricing"
               className="mt-2 inline-flex text-xs font-semibold text-purple-300 underline-offset-2 hover:underline"
             >
               {t("usage.upgrade")}

@@ -33,6 +33,7 @@ import { InlineAlert } from "@/components/InlineAlert";
 import { apiPost } from "@/lib/api/client";
 import { formatTierLabel } from "@/lib/billing/tier-labels";
 import { hasActiveSubscription } from "@/lib/auth/post-auth-redirect";
+import { parseGenderInput } from "@/lib/profile-mapper";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import type { UserProfile } from "@/lib/user";
@@ -52,7 +53,7 @@ function formatGender(
   gender: string | null | undefined,
   t: (key: string) => string,
 ): string {
-  switch (gender) {
+  switch (parseGenderInput(gender ?? "")) {
     case "male":
       return t("profile.gender_male");
     case "female":
@@ -60,7 +61,7 @@ function formatGender(
     case "prefer_not_to_say":
       return t("profile.gender_unspecified");
     default:
-      return gender ?? "—";
+      return t("profile.gender_unspecified");
   }
 }
 

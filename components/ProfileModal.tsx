@@ -5,6 +5,7 @@ import { X, MapPin, Ruler, Weight, VenusAndMars, Leaf, Sparkles, Pencil, Check, 
 import Image from "next/image";
 import { useLang } from "@/lib/lang-context";
 import { InlineAlert } from "@/components/InlineAlert";
+import { genderLabelKey, parseGenderInput } from "@/lib/profile-mapper";
 import type { UserProfile } from "@/lib/user";
 
 type ProfileModalProps = {
@@ -91,6 +92,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
                   width={96}
                   height={96}
                   className="h-full w-full object-cover"
+                  unoptimized={profile.avatar.startsWith("data:")}
                 />
               </div>
               {/* Natural rozeti */}
@@ -138,7 +140,9 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[10px] text-zinc-500">{t("profile.field_gender")}</span>
-                  <span className="text-xs font-medium text-white">{profile.gender}</span>
+                  <span className="text-xs font-medium text-white">
+                    {t(genderLabelKey(profile.gender))}
+                  </span>
                 </div>
               </div>
 
@@ -245,6 +249,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
                   width={96}
                   height={96}
                   className="h-full w-full object-cover"
+                  unoptimized={form.avatar.startsWith("data:")}
                 />
                 {/* Hover overlay */}
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition group-hover:opacity-100">
@@ -289,13 +294,13 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">{t("profile.field_gender")}</label>
             <select
-              value={form.gender}
+              value={parseGenderInput(form.gender)}
               onChange={(e) => handleChange("gender", e.target.value)}
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition focus:border-purple-500/50 focus:bg-purple-500/5"
             >
-              <option value={t("profile.gender_male")} className="bg-zinc-900">{t("profile.gender_male")}</option>
-              <option value={t("profile.gender_female")} className="bg-zinc-900">{t("profile.gender_female")}</option>
-              <option value={t("profile.gender_unspecified")} className="bg-zinc-900">{t("profile.gender_unspecified")}</option>
+              <option value="male" className="bg-zinc-900">{t("profile.gender_male")}</option>
+              <option value="female" className="bg-zinc-900">{t("profile.gender_female")}</option>
+              <option value="prefer_not_to_say" className="bg-zinc-900">{t("profile.gender_unspecified")}</option>
             </select>
           </div>
 

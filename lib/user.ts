@@ -19,7 +19,7 @@ export const DEMO_USER_PROFILE: UserProfile = {
   name: "Joe",
   avatar: "/kaify-logo.png",
   isNatural: true,
-  gender: "Erkek",
+  gender: "male",
   height: "178 cm",
   weight: "75 kg",
   location: "İstanbul, Türkiye",

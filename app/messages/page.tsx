@@ -97,7 +97,7 @@ export default function MessagesPage() {
           />
         )}
 
-        {loading && isAuthenticated && (
+        {isAuthenticated && inbox === null && !loadError && (
           <div className="space-y-2.5">
             {[0, 1, 2, 3].map((i) => (
               <div
@@ -110,14 +110,15 @@ export default function MessagesPage() {
           </div>
         )}
 
-        {!loading && isAuthenticated && rows.length === 0 && !loadError && (
+        {isAuthenticated && inbox !== null && rows.length === 0 && !loadError && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-sm font-medium text-zinc-400">{t("messages.empty.title")}</p>
             <p className="mt-1 max-w-[240px] text-xs text-zinc-600">{t("messages.empty.subtitle")}</p>
           </div>
         )}
 
-        {!loading &&
+        {(!isAuthenticated || inbox !== null) &&
+          !loading &&
           rows.map((row, i) => {
             const id = row.coachId as ContactId;
             const c = CONTACTS[id];
