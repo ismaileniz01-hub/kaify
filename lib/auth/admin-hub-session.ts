@@ -17,7 +17,7 @@ function isDeployedRuntime(): boolean {
   );
 }
 
-function useSecureCookies(): boolean {
+function secureCookiesEnabled(): boolean {
   return isDeployedRuntime();
 }
 
@@ -133,7 +133,7 @@ export function adminHubCookieOptions(): {
   return {
     httpOnly: true,
     sameSite: "strict",
-    secure: useSecureCookies(),
+    secure: secureCookiesEnabled(),
     path: "/",
     maxAge: ADMIN_HUB_MAX_AGE_SEC,
   };

@@ -13,7 +13,7 @@ function isDeployedRuntime(): boolean {
   );
 }
 
-function useSecureCookies(): boolean {
+function secureCookiesEnabled(): boolean {
   return isDeployedRuntime();
 }
 
@@ -85,7 +85,7 @@ export function csrfCookieOptions(): {
   return {
     httpOnly: false,
     sameSite: "strict",
-    secure: useSecureCookies(),
+    secure: secureCookiesEnabled(),
     path: "/",
     maxAge: CSRF_MAX_AGE_SEC,
   };
