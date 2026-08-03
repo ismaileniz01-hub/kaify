@@ -50,15 +50,19 @@ Env değiştirdikten sonra **redeploy** gerekir.
 
 ## 4. Cron doğrulama (deploy sonrası)
 
-Vercel'de 3 cron tanımlı (`vercel.json`):
+Vercel **Pro** gerekir: sık cron’lar Hobby’de günde 1 ile sınırlıdır (`vercel.json`):
 
 | Cron | Sıklık |
 |------|--------|
 | `/api/cron/cleanup` | günlük 03:00 UTC |
 | `/api/cron/cost-check` | 6 saatte bir |
 | `/api/cron/self-recovery` | 15 dakikada bir |
+| `/api/cron/notifications` | saatlik |
+| `/api/cron/outbox` | saatlik |
+| `/api/cron/leaderboard-snapshot` | 15 dakikada bir (ADR 009) |
+| `/api/cron/retention-purge` | Pazar 02:00 UTC |
 
-Notifications hâlâ **Supabase pg_cron** üzerinden (2 saatte bir).
+Notifications ayrıca **Supabase pg_cron** üzerinden (2 saatte bir) yedek çağrı yapabilir.
 
 Manuel test:
 ```bash

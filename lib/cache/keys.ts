@@ -5,8 +5,16 @@
 
 export const CacheTTL = {
   marketCatalog: 300,
+  /** Short live-miss TTL when cron has not warmed the key. */
   leaderboardHot: 60,
+  /**
+   * Cron warm TTL — keep Redis hot between 15m snapshot runs
+   * (slightly under LEADERBOARD_SNAPSHOT_MAX_AGE_MS).
+   */
+  leaderboardWarm: 840,
   leaderboardStale: 3600,
+  /** Per-user rank — O(n) RPC; cache aggressively relative to list TTL. */
+  leaderboardRank: 120,
   analyticsUser: 120,
   analyticsUserStale: 1200,
   avatarSigned: 1800,
@@ -33,6 +41,7 @@ export const CacheKeys = {
   leaderboardGlobal: (limit: number, offset: number) =>
     `lb:global:v1:${limit}:${offset}`,
   leaderboardCountry: (limit: number) => `lb:country:v1:${limit}`,
+  leaderboardRank: (userId: string) => `lb:rank:v1:${userId}`,
   leaderboardSnapshotKey: (kind: "global" | "country", limit: number, offset = 0) =>
     kind === "global" ? `global:${limit}:${offset}` : `country:${limit}`,
   avatarSigned: (storagePath: string) => `avatar:signed:v1:${storagePath}`,
@@ -47,9 +56,10 @@ export const CacheInvalidation = {
     CacheKeys.homeBundle(userId),
   ],
   homeBundle: (userId: string) => [CacheKeys.homeBundle(userId)],
+  leaderboardRank: (userId: string) => [CacheKeys.leaderboardRank(userId)],
   coachesCatalog: () => [CacheKeys.coachesCatalog()],
   allLeaderboards: () => [
-    // Prefix invalidation not supported — document TTL-bound freshness (60s).
+    // Prefix invalidation not supported — document TTL-bound freshness.
     // Admin catalog changes use marketCatalog only.
   ],
 } as const;

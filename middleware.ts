@@ -10,8 +10,8 @@ import {
   legacyApiDeprecationHeaders,
 } from "@/lib/api/v1-manifest";
 const RATE_LIMIT_CONFIG = {
-  api: { requests: 180, windowMs: 60 * 1000 },
-  page: { requests: 180, windowMs: 60 * 1000 },
+  api: { requests: 400, windowMs: 60 * 1000 },
+  page: { requests: 300, windowMs: 60 * 1000 },
   health: { requests: 10, windowMs: 60 * 1000 },
 };
 
@@ -34,16 +34,11 @@ function getRateLimitBucket(pathname: string) {
 
 /**
  * Edge middleware covers every navigation + API call.
- * API traffic fail-closed in production (prefer brief 429 over open abuse).
- * Page navigations stay soft-open so Upstash flaps do not blank the UI;
- * expensive handlers still fail-closed in enforceUserRateLimit.
- * Health probes stay fail-closed below.
+ * API + page traffic soft-open in production when Upstash flaps (memory fallback)
+ * so a Redis outage does not 429 the whole product. Expensive AI handlers still
+ * fail-closed via enforceUserRateLimit. Health probes skip rate limiting above.
  */
-const RATE_LIMIT_API =
-  process.env.NODE_ENV === "production"
-    ? ({ failClosedInProduction: true } as const)
-    : undefined;
-const RATE_LIMIT_PAGE =
+const RATE_LIMIT_SOFT =
   process.env.NODE_ENV === "production"
     ? ({ failClosedInProduction: false } as const)
     : undefined;
@@ -118,7 +113,7 @@ export async function middleware(request: NextRequest) {
   const rateLimit = await checkRateLimit(
     `${bucket}:${ip}`,
     config,
-    bucket === "api" ? RATE_LIMIT_API : RATE_LIMIT_PAGE,
+    RATE_LIMIT_SOFT,
   );
 
   if (!rateLimit.allowed) {

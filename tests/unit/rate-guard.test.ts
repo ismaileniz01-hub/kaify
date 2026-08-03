@@ -32,6 +32,18 @@ describe("enforceUserRateLimit", () => {
     });
   });
 
+  it("fail-opens soft read actions (checkin, steps)", async () => {
+    checkRateLimit.mockResolvedValue({ allowed: true, remaining: 1, limit: 20, resetMs: 0 });
+    await enforceUserRateLimit("u1", "checkin");
+    expect(checkRateLimit).toHaveBeenCalledWith("ai:checkin:u1", AI_RATE_LIMITS.checkin, {
+      failClosedInProduction: false,
+    });
+    await enforceUserRateLimit("u1", "steps");
+    expect(checkRateLimit).toHaveBeenCalledWith("ai:steps:u1", AI_RATE_LIMITS.steps, {
+      failClosedInProduction: false,
+    });
+  });
+
   it("keeps session limits high enough for auth refresh storms", () => {
     expect(AI_RATE_LIMITS.session.requests).toBeGreaterThanOrEqual(60);
   });

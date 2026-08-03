@@ -928,6 +928,13 @@ export type Database = {
         };
         Returns: Json;
       };
+      claim_pending_streak_rewards: {
+        Args: {
+          p_user_id: string;
+          p_current_streak: number;
+        };
+        Returns: Json;
+      };
       earn_gems: {
         Args: GemMutationArgs;
         Returns: GemMutationResult;

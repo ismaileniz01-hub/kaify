@@ -39,6 +39,21 @@ describe("cache (fail-open, unconfigured)", () => {
     expect(producer).toHaveBeenCalledTimes(1);
   });
 
+  it("cached() singleflights concurrent producers for the same key", async () => {
+    const producer = vi.fn(async () => {
+      await new Promise((r) => setTimeout(r, 15));
+      return { n: 1 };
+    });
+
+    const [a, b] = await Promise.all([
+      cached("sf:key", 60, producer),
+      cached("sf:key", 60, producer),
+    ]);
+    expect(a).toEqual({ n: 1 });
+    expect(b).toEqual({ n: 1 });
+    expect(producer).toHaveBeenCalledTimes(1);
+  });
+
   it("cached() propagates producer errors and never caches them", async () => {
     const producer = vi.fn().mockRejectedValue(new Error("boom"));
     await expect(cached("k", 60, producer)).rejects.toThrow("boom");

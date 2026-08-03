@@ -9,10 +9,11 @@
 
 ## Decision
 
-1. Cron `/api/cron/leaderboard-snapshot` every **15 minutes**
+1. Cron `/api/cron/leaderboard-snapshot` every **15 minutes** (`vercel.json`; requires Vercel Pro)
 2. Store pre-mapped DTO arrays in `leaderboard_snapshots` (Postgres)
-3. Warm Redis hot keys on each refresh
-4. API reads: Redis → DB snapshot (< 15m) → live RPC fallback
+3. Warm Redis hot keys on each refresh (**~14m TTL** so keys survive between cron ticks)
+4. API reads: Redis → DB snapshot (< 15m) → live RPC fallback (in-process singleflight on miss)
+5. Per-user `get_user_rank` cached in Redis (`lb:rank:v1:{userId}`, ~120s; invalidated on check-in)
 
 Avatar signing remains on the response path (private storage).
 

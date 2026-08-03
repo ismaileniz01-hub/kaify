@@ -120,17 +120,17 @@ Dashboard: https://supabase.com/dashboard/project/urnetodzvszmddzdazdj/auth/temp
 
 ## 6. Scheduled jobs
 
-All times **UTC**. Vercel Hobby plan limits crons to **once daily** — see [`vercel.json`](../vercel.json).
+All times **UTC**. Frequent schedules (**15m / hourly**) require **Vercel Pro** — Hobby allows at most one run per day. See [`vercel.json`](../vercel.json) and [ADR 009](./scalability/adr/009-leaderboard-snapshot-cron.md).
 
 | Job | Schedule | Path | Notes |
 |-----|----------|------|-------|
 | Retention purge | Sun 02:00 | `/api/cron/retention-purge` | GDPR automated purge |
 | **Cleanup + backup manifest** | Daily 03:00 | `/api/cron/cleanup` | Idempotency prune + **DR row-count snapshot** |
-| Cost check | Daily 04:00 | `/api/cron/cost-check` | AI spend anomaly |
-| Self-recovery | Daily 05:00 | `/api/cron/self-recovery` | DB probe, clear degraded mode |
-| Notifications | Daily 06:00 | `/api/cron/notifications` | Also pg_cron every 2h (see below) |
-| Outbox | Daily 07:00 | `/api/cron/outbox` | Domain event processor |
-| Leaderboard snapshot | Daily 08:00 | `/api/cron/leaderboard-snapshot` | Warm Redis leaderboard |
+| Cost check | Every 6h | `/api/cron/cost-check` | AI spend anomaly |
+| Self-recovery | Every 15m | `/api/cron/self-recovery` | DB probe, clear degraded mode |
+| Notifications | Hourly | `/api/cron/notifications` | Also pg_cron every 2h (see below) |
+| Outbox | Hourly | `/api/cron/outbox` | Domain event processor (handlers + mark) |
+| Leaderboard snapshot | Every 15m | `/api/cron/leaderboard-snapshot` | DB snapshot + Redis warm (~14m TTL) |
 
 Manual backup manifest: `GET /api/cron/backup-verification` with `CRON_SECRET`.
 

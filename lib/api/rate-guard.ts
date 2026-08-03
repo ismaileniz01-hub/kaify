@@ -34,8 +34,13 @@ export const AI_RATE_LIMITS = {
 
 export type AiRateAction = keyof typeof AI_RATE_LIMITS;
 
-/** Soft reads: if Upstash is down, prefer memory fallback over blanking the app. */
-const FAIL_OPEN_ACTIONS = new Set<AiRateAction>(["session"]);
+/** Soft reads / bootstrap: if Upstash is down, prefer memory fallback over blanking the app. */
+const FAIL_OPEN_ACTIONS = new Set<AiRateAction>([
+  "session",
+  "checkin",
+  "steps",
+  "health_probe",
+]);
 
 export async function enforceUserRateLimit(
   userId: string,
