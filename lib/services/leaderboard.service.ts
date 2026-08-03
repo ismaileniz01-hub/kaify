@@ -37,7 +37,15 @@ function maskLeaderboardEntries(
 async function signLeaderboardAvatars(
   entries: LeaderboardEntryDTO[],
 ): Promise<LeaderboardEntryDTO[]> {
-  const signedMap = await createSignedAvatarUrlsBatch(entries.map((e) => e.avatar));
+  const ownerByRef = new Map<string, string>();
+  for (const entry of entries) {
+    if (!entry.avatar || entry.avatar.startsWith("/")) continue;
+    ownerByRef.set(entry.avatar, entry.userId);
+  }
+  const signedMap = await createSignedAvatarUrlsBatch(
+    entries.map((e) => e.avatar),
+    ownerByRef,
+  );
   return entries.map((entry) => {
     if (!entry.avatar || entry.avatar.startsWith("/")) return entry;
     const signed = signedMap.get(entry.avatar);
@@ -96,7 +104,9 @@ export async function getPublicGlobalLeaderboard(params: {
   );
 
   return {
-    leaderboard: await signLeaderboardAvatars(maskLeaderboardEntries(entries)),
+    leaderboard: maskLeaderboardEntries(
+      await signLeaderboardAvatars(entries),
+    ),
     totalUsers: entries.length,
   };
 }
@@ -128,8 +138,9 @@ export async function getGlobalLeaderboard(params: {
   const rank: UserRankResult | null = rankResult.error ? null : rankResult.data;
 
   return {
-    leaderboard: await signLeaderboardAvatars(
-      maskLeaderboardEntries(listEntries, params.viewerId),
+    leaderboard: maskLeaderboardEntries(
+      await signLeaderboardAvatars(listEntries),
+      params.viewerId,
     ),
     myRank: rank?.rank ?? null,
     myStreak: rank?.current_streak ?? 0,

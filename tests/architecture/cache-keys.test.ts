@@ -25,7 +25,10 @@ describe("cache keys registry", () => {
 
   it("scopes home bundle per user and day", () => {
     expect(CacheKeys.homeBundle("u1", "2026-07-05")).toBe(
-      "home:bundle:v1:u1:2026-07-05",
+      "home:bundle:v2:u1:2026-07-05:default",
+    );
+    expect(CacheKeys.homeBundle("u1", "2026-07-05", "tr")).toBe(
+      "home:bundle:v2:u1:2026-07-05:tr",
     );
   });
 });

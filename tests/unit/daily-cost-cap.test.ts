@@ -17,7 +17,8 @@ function mockLedger(totalTokens: number[]) {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     gte: vi.fn().mockReturnThis(),
-    lt: vi.fn().mockResolvedValue({
+    lt: vi.fn().mockReturnThis(),
+    range: vi.fn().mockResolvedValue({
       data: totalTokens.map((t) => ({ total_tokens: t })),
       error: null,
     }),
@@ -55,9 +56,9 @@ describe("daily-cost-cap", () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       gte: vi.fn().mockReturnThis(),
-      lt: vi.fn().mockResolvedValue({ data: null, error: { message: "db down" } }),
+      lt: vi.fn().mockReturnThis(),
+      range: vi.fn().mockResolvedValue({ data: null, error: { message: "db down" } }),
     });
-
     await expect(assertUserDailyAiBudget("u1")).resolves.toBeUndefined();
   });
 });

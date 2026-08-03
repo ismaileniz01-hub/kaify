@@ -53,7 +53,7 @@ export const POST = defineRoute(
         throw profileError;
       }
 
-      const signedUrl = await createSignedAvatarUrl(path);
+      const signedUrl = await createSignedAvatarUrl(path, user.id);
 
       return { avatarUrl: signedUrl };
     } catch (error) {

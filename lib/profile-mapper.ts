@@ -86,7 +86,7 @@ export function userProfileToUpdateInput(
     gender: parseGenderInput(form.gender),
     ...(heightCm !== undefined ? { heightCm } : {}),
     ...(weightKg !== undefined ? { weightKg } : {}),
-    ...(form.avatar.startsWith("http") ? { avatarUrl: form.avatar } : {}),
+    // Avatar URLs are never written via PATCH — only POST /api/profile/avatar.
     ...(form.location.includes(",")
       ? { cityName: form.location.split(",")[0].trim() }
       : {}),

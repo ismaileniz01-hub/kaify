@@ -13,6 +13,7 @@ import {
 } from "@/lib/billing/subscription-access";
 import { applyLegacyProfileWrites } from "@/lib/supabase/profile-compat";
 import type { SubscriptionTier } from "@/lib/types/database.types";
+import { logger } from "@/lib/logger";
 
 type BillingCycle = "monthly" | "yearly";
 
@@ -216,7 +217,7 @@ async function applyTier(
     p_billing_cycle: billingCycle,
   });
   if (error) {
-    console.error("[billing] apply_subscription failed", {
+    logger.error("[billing] apply_subscription failed", {
       userId,
       tier,
       error: error.message,
@@ -238,7 +239,7 @@ async function revokeSubscription(userId: string): Promise<void> {
     .limit(1);
 
   if (activeError) {
-    console.error("[billing] revoke active-sub check failed", {
+    logger.error("[billing] revoke active-sub check failed", {
       userId,
       error: activeError.message,
     });
@@ -246,7 +247,7 @@ async function revokeSubscription(userId: string): Promise<void> {
   }
 
   if (activeRows && activeRows.length > 0) {
-    console.info("[billing] skip revoke; other active subscription exists", {
+    logger.info("[billing] skip revoke; other active subscription exists", {
       userId,
       keep: activeRows[0]?.subscription_id,
     });
@@ -263,7 +264,7 @@ async function revokeSubscription(userId: string): Promise<void> {
     .update(updates as never)
     .eq("id", userId);
   if (error) {
-    console.error("[billing] revoke_subscription failed", {
+    logger.error("[billing] revoke_subscription failed", {
       userId,
       error: error.message,
     });
@@ -380,7 +381,7 @@ async function releaseBillingEvent(
     .eq("provider_event_id", eventId)
     .is("processed_at", null);
   if (error) {
-    console.error("[billing] release claim failed", {
+    logger.error("[billing] release claim failed", {
       eventId,
       error: error.message,
     });

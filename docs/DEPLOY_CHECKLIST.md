@@ -16,6 +16,9 @@ Aşağıdakiler eksikse prod'da özellikler çalışmaz:
 | Değişken | Ne için |
 |----------|---------|
 | `CRON_SECRET` | Cron + detaylı health (boşluk/placeholder olmasın) |
+| `CSRF_SECRET` | Double-submit CSRF HMAC (prod/preview zorunlu; service-role ile paylaşma) |
+| `ADMIN_HUB_PASSWORD` | Admin Hub operatör şifresi (kaynakta default yok) |
+| `ADMIN_HUB_SECRET` | Hub cookie HMAC (yoksa `CSRF_SECRET` kullanılır) |
 | `DEEPSEEK_API_KEY` | AI chat |
 | `GEMINI_API_KEY` | Vision / kalite kapısı |
 | `UPSTASH_REDIS_REST_URL` + `TOKEN` | Rate limit (prod'da zorunlu) |
@@ -23,6 +26,8 @@ Aşağıdakiler eksikse prod'da özellikler çalışmaz:
 | `AI_COST_*` (opsiyonel) | Maliyet paneli USD tahmini — `.env.example`'a bak |
 
 Env değiştirdikten sonra **redeploy** gerekir.
+
+**Admin MFA:** Yönetici API'leri artık TOTP AAL2 + hub şifresi ister. Deploy öncesi admin hesaplarında MFA enroll edildiğinden emin ol.
 
 ## 3. Supabase Dashboard (zorunlu)
 

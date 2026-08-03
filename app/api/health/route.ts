@@ -126,7 +126,7 @@ function isAuthorizedForDetail(request: Request): boolean {
  * amplification). Full dependency checks require CRON_SECRET (monitors, cron).
  */
 export const GET = defineRouteRaw(
-  { route: "GET /api/health", auth: "none", publicRateLimit: "health_probe" },
+  { route: "GET /api/health", auth: "none" },
   async ({ request }) => {
     const detailed = isAuthorizedForDetail(request);
 
