@@ -102,10 +102,11 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === "/api/health") {
+    // Liveness must stay reachable for monitors even when Upstash is missing;
+    // use per-instance memory fallback instead of fail-closed (still 10/min).
     const healthLimit = await checkRateLimit(
       `health:${ip}`,
       RATE_LIMIT_CONFIG.health,
-      RATE_LIMIT_FAIL_CLOSED,
     );
     if (!healthLimit.allowed) {
       return new NextResponse(
