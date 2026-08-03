@@ -52,7 +52,7 @@ flowchart LR
 | **API** | User AI rate guard, idempotency, circuit breakers |
 | **Cache** | Read-through Redis — market, leaderboard (+ rank), analytics; singleflight |
 | **DB** | RLS initplan, FK indexes, RPC mutations, batch streak claims |
-| **Cron** | Leaderboard every 15m, outbox/notifications hourly (Vercel Pro) |
+| **Cron** | pg_cron 15m LB + hourly outbox; Vercel daily backup (Hobby-safe) |
 | **AI** | Quota reserve/settle, cost ledger, pressure fallback; chat `after()` |
 
 ---

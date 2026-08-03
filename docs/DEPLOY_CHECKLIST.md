@@ -50,19 +50,24 @@ Env değiştirdikten sonra **redeploy** gerekir.
 
 ## 4. Cron doğrulama (deploy sonrası)
 
-Vercel **Pro** gerekir: sık cron’lar Hobby’de günde 1 ile sınırlıdır (`vercel.json`):
+`vercel.json` günlük yedek cron’lar tutar (Hobby uyumlu). **15m / saatlik** cadence için Supabase **pg_cron** şart — [`docs/operations/pg-cron-frequent-schedules.sql`](./operations/pg-cron-frequent-schedules.sql).
 
-| Cron | Sıklık |
+| Cron (Vercel, günlük yedek) | Sıklık |
 |------|--------|
 | `/api/cron/cleanup` | günlük 03:00 UTC |
-| `/api/cron/cost-check` | 6 saatte bir |
-| `/api/cron/self-recovery` | 15 dakikada bir |
-| `/api/cron/notifications` | saatlik |
-| `/api/cron/outbox` | saatlik |
-| `/api/cron/leaderboard-snapshot` | 15 dakikada bir (ADR 009) |
+| `/api/cron/cost-check` | günlük 04:00 UTC |
+| `/api/cron/self-recovery` | günlük 05:00 UTC |
+| `/api/cron/notifications` | günlük 06:00 UTC |
+| `/api/cron/outbox` | günlük 07:00 UTC |
+| `/api/cron/leaderboard-snapshot` | günlük 08:00 UTC |
 | `/api/cron/retention-purge` | Pazar 02:00 UTC |
 
-Notifications ayrıca **Supabase pg_cron** üzerinden (2 saatte bir) yedek çağrı yapabilir.
+| Cron (pg_cron, production) | Sıklık |
+|------|--------|
+| leaderboard-snapshot | 15 dakika (ADR 009) |
+| outbox / notifications | saatlik |
+| self-recovery | 15 dakika |
+| cost-check | 6 saatte bir |
 
 Manuel test:
 ```bash
