@@ -27,7 +27,11 @@ export function isValidTimezone(tz: string): boolean {
 export const profileUpdateSchema = z
   .object({
     displayName: z.string().trim().min(1, "Name is required").max(80, "Name too long"),
-    avatarUrl: z.string().trim().url("Invalid avatar URL").max(500).nullable(),
+    /**
+     * Avatars are uploaded only via POST /api/profile/avatar (owned storage path).
+     * PATCH may clear the avatar with `null` — arbitrary URLs are rejected (IDOR hardening).
+     */
+    avatarUrl: z.null(),
     gender: z.enum(GENDERS),
     heightCm: z.number().int().min(50).max(280),
     weightKg: z.number().min(20).max(500),

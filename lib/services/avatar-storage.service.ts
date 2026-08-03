@@ -6,9 +6,31 @@ import { logger } from "@/lib/logger";
 const BUCKET = "avatars";
 const SIGNED_URL_TTL_SEC = 3600;
 
+/** `{userId}/avatar.{ext}` — only paths written by the upload API. */
+const OWNED_AVATAR_PATH =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/avatar\.(jpe?g|png|webp)$/i;
+
 /** Storage object path inside the avatars bucket (no leading slash). */
 export function avatarObjectPath(userId: string, ext: string): string {
   return `${userId}/avatar.${ext}`;
+}
+
+/**
+ * True when `path` is a well-formed owned avatar object path for `ownerUserId`
+ * (or any user when owner is omitted). Rejects traversal and foreign paths.
+ */
+export function isOwnedAvatarPath(
+  path: string,
+  ownerUserId?: string,
+): boolean {
+  if (!path || path.includes("..") || path.includes("\\") || path.startsWith("/")) {
+    return false;
+  }
+  if (!OWNED_AVATAR_PATH.test(path)) return false;
+  if (ownerUserId && !path.toLowerCase().startsWith(`${ownerUserId.toLowerCase()}/`)) {
+    return false;
+  }
+  return true;
 }
 
 /** Normalizes legacy public URLs to object paths. */
@@ -17,25 +39,45 @@ export function normalizeAvatarStorageRef(stored: string | null): string | null 
   if (stored.startsWith("http")) {
     const marker = "/avatars/";
     const idx = stored.indexOf(marker);
-    if (idx >= 0) return stored.slice(idx + marker.length);
+    if (idx >= 0) {
+      const path = stored.slice(idx + marker.length).split("?")[0] ?? "";
+      return path || null;
+    }
     return null;
   }
   return stored.replace(/^\/+/, "");
 }
 
 /**
+ * Returns a storage path only when it is a valid owned avatar object.
+ * Foreign / malformed refs are dropped (defense against IDOR on signed URLs).
+ */
+export function sanitizeAvatarStorageRef(
+  stored: string | null,
+  ownerUserId?: string,
+): string | null {
+  const path = normalizeAvatarStorageRef(stored);
+  if (!path) return null;
+  if (!isOwnedAvatarPath(path, ownerUserId)) return null;
+  return path;
+}
+
+/**
  * Returns short-lived signed URLs for multiple avatar storage refs in one round-trip.
  * Deduplicates paths; static assets (leading `/`) are skipped.
+ * When `ownerByRef` is provided, each ref must belong to that owner.
  */
 export async function createSignedAvatarUrlsBatch(
   storedRefs: (string | null | undefined)[],
+  ownerByRef?: Map<string, string>,
 ): Promise<Map<string, string>> {
   const result = new Map<string, string>();
   const uniquePaths = new Map<string, string>();
 
   for (const ref of storedRefs) {
     if (!ref || ref.startsWith("/")) continue;
-    const path = normalizeAvatarStorageRef(ref);
+    const ownerUserId = ownerByRef?.get(ref);
+    const path = sanitizeAvatarStorageRef(ref, ownerUserId);
     if (path) uniquePaths.set(path, ref);
   }
 
@@ -109,12 +151,13 @@ export async function createSignedAvatarUrlsBatch(
 
 /**
  * Returns a short-lived signed URL for a private avatar object.
- * Falls back to null when the object does not exist.
+ * Falls back to null when the object does not exist or is not owned.
  */
 export async function createSignedAvatarUrl(
   stored: string | null,
+  ownerUserId?: string,
 ): Promise<string | null> {
-  const path = normalizeAvatarStorageRef(stored);
+  const path = sanitizeAvatarStorageRef(stored, ownerUserId);
   if (!path) return null;
 
   const cachedUrl = await cacheGet<string>(CacheKeys.avatarSigned(path));

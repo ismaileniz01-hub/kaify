@@ -1,11 +1,15 @@
 import { assertAdminHubUnlocked, requireAdminRole } from "@/lib/api/admin-role";
 import type { AuthedUser } from "@/lib/api/auth-guard";
+import { assertAdminMfa } from "@/lib/auth/admin-mfa";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 /**
- * Ensures admin role + hub password session (replaces MFA for operator UI).
+ * Admin role + enrolled TOTP at AAL2 + hub password session.
  */
 export async function requireAdmin(): Promise<AuthedUser> {
   const user = await requireAdminRole();
+  const supabase = await createServerSupabaseClient();
+  await assertAdminMfa(supabase);
   await assertAdminHubUnlocked(user.id);
   return user;
 }

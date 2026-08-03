@@ -21,6 +21,10 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
       SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+      CSRF_SECRET: placeholder-csrf-secret-for-ci-only
+      ADMIN_HUB_PASSWORD: placeholder-hub-password-for-ci-only
+      ADMIN_HUB_SECRET: placeholder-hub-hmac-for-ci-only
+      CRON_SECRET: placeholder-cron-secret-for-ci-only
       NEXT_TELEMETRY_DISABLED: "1"
 
     steps:
