@@ -431,30 +431,39 @@ export async function* streamCoachReply(
       },
     };
 
-    // Background: structured card + memory + analytics — survive after response
-    // completes on Vercel (void async is dropped when the isolate freezes).
-    after(async () => {
-      try {
-        const structured = await Promise.race([
-          structuredPromise,
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 8_000)),
-        ]);
+    // Await card briefly while the SSE stream is still open, then emit patch.
+    try {
+      const structured = await Promise.race([
+        structuredPromise,
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 8_000)),
+      ]);
 
-        if (structured && inserted?.id) {
-          await admin
-            .from("chat_messages")
-            .update({
-              message_type: structured.messageType,
-              payload: structured.payload,
-            })
-            .eq("id", inserted.id);
-        }
-      } catch (cardError) {
-        logger.error("[chat.service] structured card error", {
-          error: cardError instanceof Error ? cardError.message : "unknown",
-        });
+      if (structured && inserted?.id) {
+        await admin
+          .from("chat_messages")
+          .update({
+            message_type: structured.messageType,
+            payload: structured.payload,
+          })
+          .eq("id", inserted.id);
+
+        yield {
+          event: "card",
+          data: {
+            messageId: inserted.id,
+            messageType: structured.messageType,
+            payload: structured.payload,
+          },
+        };
       }
+    } catch (cardError) {
+      logger.error("[chat.service] structured card error", {
+        error: cardError instanceof Error ? cardError.message : "unknown",
+      });
+    }
 
+    // Background: memory + analytics — survive after response completes on Vercel.
+    after(async () => {
       try {
         await bumpAndMaybeCondense({
           userId: params.userId,

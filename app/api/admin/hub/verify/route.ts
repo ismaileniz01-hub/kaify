@@ -18,7 +18,12 @@ const schema = z.object({
 
 /** POST /api/admin/hub/verify — unlock admin hub with operator password. */
 export const POST = defineRoute(
-  { route: "POST /api/admin/hub/verify", auth: "user" },
+  {
+    route: "POST /api/admin/hub/verify",
+    auth: "user",
+    rateLimit: "admin_hub",
+    requireCsrf: true,
+  },
   async ({ user, request }) => {
     const raw = await request.json().catch(() => null);
     const parsed = schema.safeParse(raw);

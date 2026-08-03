@@ -9,7 +9,7 @@ const schema = z.object({
 
 /** POST /api/gifts/claim — claim a pending admin gift. */
 export const POST = defineRoute(
-  { route: "POST /api/gifts/claim", auth: "user" },
+  { route: "POST /api/gifts/claim", auth: "user", requireCsrf: true },
   async ({ request }) => {
     const raw = await request.json().catch(() => null);
     const parsed = schema.safeParse(raw);

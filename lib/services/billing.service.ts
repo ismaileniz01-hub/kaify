@@ -669,6 +669,11 @@ export async function handleNormalizedPaddleEvent(
   if (claim === "already_done") {
     return { ok: true, skipped: true };
   }
+  // Another worker holds an unfinished claim — ask Paddle to retry later.
+  // Re-running the switch here races and can double-provision.
+  if (claim === "retry") {
+    return { ok: false, reason: "claim_in_progress", retryable: true };
+  }
 
   const failRetryable = async (reason: string) => {
     await releaseBillingEvent(admin, eventId);

@@ -1,26 +1,16 @@
+import { resolveIsHubAdmin } from "@/lib/auth/admin-access";
 import { verifyAdminHubSession } from "@/lib/auth/admin-hub-session";
 import { requireUser, type AuthedUser } from "@/lib/api/auth-guard";
 import { ApiError } from "@/lib/api/errors";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { logger } from "@/lib/logger";
 
-/** Authenticated user with profiles.role = admin (no hub password yet). */
+/**
+ * Authenticated admin: profiles.role = admin and optional ADMIN_EMAIL allowlist.
+ * Hub password / MFA are enforced separately by requireAdmin().
+ */
 export async function requireAdminRole(): Promise<AuthedUser> {
   const user = await requireUser();
 
-  const admin = createAdminSupabaseClient();
-  const { data, error } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (error) {
-    logger.error("[admin-guard] role lookup error", { error: error.message });
-    throw new ApiError("INTERNAL_ERROR", "Yetki doğrulanamadı.");
-  }
-
-  if (data?.role !== "admin") {
+  if (!(await resolveIsHubAdmin(user.id))) {
     throw new ApiError("FORBIDDEN", "Bu işlem için yönetici yetkisi gerekir.");
   }
 

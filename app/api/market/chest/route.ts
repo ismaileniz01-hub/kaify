@@ -20,7 +20,7 @@ export const GET = defineRoute(
 
 /** POST /api/market/chest — roll reward and grant (once per UTC day). */
 export const POST = defineRoute(
-  { route: "POST /api/market/chest", rateLimit: "chest" },
+  { route: "POST /api/market/chest", rateLimit: "chest", requireCsrf: true },
   async ({ user, request }) => {
     const clientKey = getOptionalIdempotencyKey(request);
     const today = utcTodayKey();

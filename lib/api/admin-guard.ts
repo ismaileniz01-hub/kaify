@@ -4,7 +4,7 @@ import { assertAdminMfa } from "@/lib/auth/admin-mfa";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 /**
- * Admin role + enrolled TOTP at AAL2 + hub password session.
+ * Admin role (+ ADMIN_EMAIL), enrolled TOTP at AAL2, then hub password session.
  */
 export async function requireAdmin(): Promise<AuthedUser> {
   const user = await requireAdminRole();

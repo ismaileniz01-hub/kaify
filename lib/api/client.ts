@@ -94,6 +94,12 @@ export type ChatStreamHandlers = {
     payload?: unknown;
     warning_trigger?: string | null;
   }) => void;
+  /** Optional rich-card patch after `done` (meal plan / score cards). */
+  onCard?: (data: {
+    messageId: string | null;
+    messageType?: string | null;
+    payload?: unknown;
+  }) => void;
   /** Receives a stable API error CODE (translate on the UI via apiErrorMessage). */
   onError: (code: string) => void;
 };
@@ -168,6 +174,12 @@ export async function streamChatMessage(
             messageType: (parsed.messageType as string | null) ?? null,
             payload: parsed.payload,
             warning_trigger: (parsed.warning_trigger as string | null) ?? null,
+          });
+        } else if (event === "card") {
+          handlers.onCard?.({
+            messageId: (parsed.messageId as string | null) ?? null,
+            messageType: (parsed.messageType as string | null) ?? null,
+            payload: parsed.payload,
           });
         } else if (event === "error") {
           const code =

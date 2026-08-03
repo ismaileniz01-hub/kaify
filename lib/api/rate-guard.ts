@@ -30,6 +30,8 @@ export const AI_RATE_LIMITS = {
   /** Email OTP verify attempts (wrong codes, retries). */
   otp_verify: { requests: 24, windowMs: 15 * 60 * 1000 },
   health_probe: { requests: 30, windowMs: 60 * 1000 },
+  /** Admin hub password unlock — brute-force guard. */
+  admin_hub: { requests: 5, windowMs: 15 * 60 * 1000 },
 } as const;
 
 export type AiRateAction = keyof typeof AI_RATE_LIMITS;

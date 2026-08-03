@@ -37,6 +37,8 @@ export function validateEnvAtBoot(): void {
     CSRF_SECRET: process.env.CSRF_SECRET,
     ADMIN_HUB_PASSWORD: process.env.ADMIN_HUB_PASSWORD,
     ADMIN_HUB_SECRET: process.env.ADMIN_HUB_SECRET,
+    PADDLE_NOTIFICATION_WEBHOOK_SECRET:
+      process.env.PADDLE_NOTIFICATION_WEBHOOK_SECRET,
   };
   const missingSoft = Object.entries(softVars)
     .filter(([, v]) => !v || v.includes("your_"))
@@ -70,6 +72,13 @@ export function validateEnvAtBoot(): void {
       !process.env.CSRF_SECRET?.trim()
     ) {
       problems.push("ADMIN_HUB_SECRET (or CSRF_SECRET) missing in production/preview");
+    }
+    if (
+      isProd &&
+      (!process.env.PADDLE_NOTIFICATION_WEBHOOK_SECRET ||
+        process.env.PADDLE_NOTIFICATION_WEBHOOK_SECRET.includes("your_"))
+    ) {
+      problems.push("PADDLE_NOTIFICATION_WEBHOOK_SECRET missing in production/preview");
     }
     logger.warn("env validation: optional vars missing/placeholder", {
       missing: missingSoft,

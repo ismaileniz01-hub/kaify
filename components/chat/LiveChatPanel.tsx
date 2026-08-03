@@ -94,9 +94,17 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
 
   useEffect(() => {
     if (!VISION_COACHES.has(coachId)) return;
+    let cancelled = false;
     apiGet<{ photoAnalysis: boolean }>("/api/consent")
-      .then((status) => setHasPhotoConsent(status.photoAnalysis))
-      .catch(() => setHasPhotoConsent(false));
+      .then((status) => {
+        if (!cancelled) setHasPhotoConsent(status.photoAnalysis);
+      })
+      .catch(() => {
+        if (!cancelled) setHasPhotoConsent(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [coachId]);
 
   useEffect(() => {
@@ -159,6 +167,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                 msg.id === coachMsgId
                   ? {
                       ...msg,
+                      id: data.messageId ?? msg.id,
                       streaming: false,
                       messageType: data.messageType as MessageType | undefined,
                       payload: data.payload,
@@ -167,6 +176,24 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
               ),
             );
             onCoachTyping?.(false);
+          },
+          onCard: (data) => {
+            setMessages((prev) =>
+              prev.map((msg) => {
+                const isTarget =
+                  msg.id === coachMsgId ||
+                  (data.messageId != null && msg.id === data.messageId);
+                if (!isTarget) return msg;
+                return {
+                  ...msg,
+                  id: data.messageId ?? msg.id,
+                  streaming: false,
+                  messageType:
+                    (data.messageType as MessageType | undefined) ?? msg.messageType,
+                  payload: data.payload ?? msg.payload,
+                };
+              }),
+            );
           },
           onError: (code) => {
             setError(apiErrorMessage(code, t));

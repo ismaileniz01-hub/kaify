@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * local date.
  */
 export const POST = defineRoute(
-  { route: "POST /api/check-in", rateLimit: "checkin" },
+  { route: "POST /api/check-in", rateLimit: "checkin", requireCsrf: true },
   async ({ user, request }) => {
     const requestKey = getOptionalIdempotencyKey(request);
     return withIdempotency({
