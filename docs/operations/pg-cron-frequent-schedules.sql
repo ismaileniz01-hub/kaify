@@ -1,109 +1,94 @@
 -- Kaify: frequent cron cadence via Supabase pg_cron + pg_net
 -- Why: Vercel Hobby only allows once-daily crons; ADR 009 needs LB every 15m.
--- Run in Supabase SQL editor after setting Vault secrets (or replace literals).
 --
--- Required secrets (Dashboard → Project Settings → Vault, or edit below):
---   app_base_url  e.g. https://kaifyai.org
---   cron_secret   same value as Vercel CRON_SECRET
+-- BEFORE RUNNING: Find-replace BOTH placeholders in this whole file:
+--   __APP_BASE_URL__  → https://kaifyai.org   (no trailing slash)
+--   __CRON_SECRET__   → exact same value as Vercel env CRON_SECRET
+--
+-- Then paste into Supabase Dashboard → SQL Editor → Run.
 
 create extension if not exists pg_cron with schema extensions;
 create extension if not exists pg_net with schema extensions;
 
--- Unschedule previous Kaify jobs (ignore if missing)
 do $$
+declare
+  j record;
 begin
-  perform cron.unschedule(jobid)
-  from cron.job
-  where jobname in (
-    'kaify-leaderboard-snapshot-15m',
-    'kaify-outbox-hourly',
-    'kaify-notifications-hourly',
-    'kaify-self-recovery-15m',
-    'kaify-cost-check-6h'
-  );
+  for j in
+    select jobid from cron.job
+    where jobname in (
+      'kaify-leaderboard-snapshot-15m',
+      'kaify-outbox-hourly',
+      'kaify-notifications-hourly',
+      'kaify-self-recovery-15m',
+      'kaify-cost-check-6h'
+    )
+  loop
+    perform cron.unschedule(j.jobid);
+  end loop;
 exception when others then
-  null;
+  raise notice 'unschedule skipped: %', sqlerrm;
 end $$;
 
--- Replace these two settings before scheduling (or use vault.decrypted_secrets).
--- Example:
---   select set_config('kaify.app_base_url', 'https://kaifyai.org', false);
---   select set_config('kaify.cron_secret', 'YOUR_CRON_SECRET', false);
-
--- Leaderboard snapshot every 15 minutes (ADR 009)
 select cron.schedule(
   'kaify-leaderboard-snapshot-15m',
   '*/15 * * * *',
-  $$
+  $job$
   select net.http_get(
-    url := current_setting('kaify.app_base_url', true) || '/api/cron/leaderboard-snapshot',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || current_setting('kaify.cron_secret', true)
-    ),
+    url := '__APP_BASE_URL__/api/cron/leaderboard-snapshot',
+    headers := jsonb_build_object('Authorization', 'Bearer __CRON_SECRET__'),
     timeout_milliseconds := 30000
   );
-  $$
+  $job$
 );
 
--- Outbox hourly
 select cron.schedule(
   'kaify-outbox-hourly',
   '0 * * * *',
-  $$
+  $job$
   select net.http_get(
-    url := current_setting('kaify.app_base_url', true) || '/api/cron/outbox',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || current_setting('kaify.cron_secret', true)
-    ),
+    url := '__APP_BASE_URL__/api/cron/outbox',
+    headers := jsonb_build_object('Authorization', 'Bearer __CRON_SECRET__'),
     timeout_milliseconds := 30000
   );
-  $$
+  $job$
 );
 
--- Notifications hourly (complements existing 2h job if any)
 select cron.schedule(
   'kaify-notifications-hourly',
   '0 * * * *',
-  $$
+  $job$
   select net.http_get(
-    url := current_setting('kaify.app_base_url', true) || '/api/cron/notifications',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || current_setting('kaify.cron_secret', true)
-    ),
+    url := '__APP_BASE_URL__/api/cron/notifications',
+    headers := jsonb_build_object('Authorization', 'Bearer __CRON_SECRET__'),
     timeout_milliseconds := 30000
   );
-  $$
+  $job$
 );
 
--- Self-recovery every 15 minutes
 select cron.schedule(
   'kaify-self-recovery-15m',
   '*/15 * * * *',
-  $$
+  $job$
   select net.http_get(
-    url := current_setting('kaify.app_base_url', true) || '/api/cron/self-recovery',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || current_setting('kaify.cron_secret', true)
-    ),
+    url := '__APP_BASE_URL__/api/cron/self-recovery',
+    headers := jsonb_build_object('Authorization', 'Bearer __CRON_SECRET__'),
     timeout_milliseconds := 30000
   );
-  $$
+  $job$
 );
 
--- Cost check every 6 hours
 select cron.schedule(
   'kaify-cost-check-6h',
   '0 */6 * * *',
-  $$
+  $job$
   select net.http_get(
-    url := current_setting('kaify.app_base_url', true) || '/api/cron/cost-check',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || current_setting('kaify.cron_secret', true)
-    ),
+    url := '__APP_BASE_URL__/api/cron/cost-check',
+    headers := jsonb_build_object('Authorization', 'Bearer __CRON_SECRET__'),
     timeout_milliseconds := 30000
   );
-  $$
+  $job$
 );
 
--- Verify:
+-- Verify after run:
 -- select jobid, jobname, schedule, active from cron.job order by jobname;
