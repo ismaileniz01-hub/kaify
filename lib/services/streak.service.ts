@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 import { createDomainEvent } from "@/lib/events/types";
 import { emitDomainEvent } from "@/lib/events/emit";
 import { emitCheckInNotifications } from "@/lib/services/notifications.service";
-import { invalidateHomeBundleCache, invalidateLeaderboardRankCache } from "@/lib/cache/invalidate";
+import { invalidateHomeBundleCache, invalidateLeaderboardRankCache, invalidateSessionSliceCaches } from "@/lib/cache/invalidate";
 import { mapCheckInResult, type CheckInDTO } from "@/lib/types/domain.types";
 
 /**
@@ -45,6 +45,7 @@ export async function performCheckIn(
 
   void invalidateHomeBundleCache(userId).catch(() => undefined);
   void invalidateLeaderboardRankCache(userId).catch(() => undefined);
+  void invalidateSessionSliceCaches(userId).catch(() => undefined);
 
   emitDomainEvent(
     createDomainEvent("check_in.completed", userId, {

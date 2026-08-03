@@ -204,42 +204,79 @@ export type CacheHitStatsDTO = {
   calls_with_cache: number;
 };
 
-/** Aggregates prefix-cache hits from ai_usage_ledger metadata (admin only). */
+/** Aggregates prefix-cache hits from ai_usage_ledger (admin RPC, SQL-side). */
 export async function getCacheHitStats(days = 7): Promise<CacheHitStatsDTO> {
   const admin = createAdminSupabaseClient();
-  const since = new Date(Date.now() - days * 86_400_000).toISOString();
 
-  const { data, error } = await admin
-    .from("ai_usage_ledger")
-    .select("prompt_tokens, metadata")
-    .eq("provider", "deepseek")
-    .gte("created_at", since)
-    .limit(10_000);
-
-  if (error) {
-    logger.error("[cost-admin] cache stats error", { error: error.message });
-    return {
-      cache_hit_tokens: 0,
-      prompt_tokens: 0,
-      cache_ratio_percent: 0,
-      calls_with_cache: 0,
-    };
+  try {
+    const { data, error } = await admin.rpc("admin_get_cache_hit_stats", {
+      p_days: days,
+    });
+    if (!error && data) {
+      const row = data as {
+        cache_hit_tokens?: number;
+        prompt_tokens?: number;
+        cache_ratio_percent?: number;
+        calls_with_cache?: number;
+      };
+      return {
+        cache_hit_tokens: Number(row.cache_hit_tokens ?? 0),
+        prompt_tokens: Number(row.prompt_tokens ?? 0),
+        cache_ratio_percent: Number(row.cache_ratio_percent ?? 0),
+        calls_with_cache: Number(row.calls_with_cache ?? 0),
+      };
+    }
+    if (error) {
+      logger.warn("[cost-admin] cache stats rpc unavailable, paging", {
+        error: error.message,
+      });
+    }
+  } catch (error) {
+    logger.warn("[cost-admin] cache stats rpc threw, paging", {
+      error: error instanceof Error ? error.message : "unknown",
+    });
   }
 
+  // Fallback: paginated scan (never a single uncapped 10k pull).
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  const pageSize = 1000;
+  let from = 0;
   let cacheHit = 0;
   let promptTotal = 0;
   let callsWithCache = 0;
 
-  for (const row of data ?? []) {
-    const meta = row.metadata as Record<string, unknown> | null;
-    const hit =
-      typeof meta?.prompt_cache_hit_tokens === "number"
-        ? meta.prompt_cache_hit_tokens
-        : 0;
-    if (hit <= 0) continue;
-    callsWithCache += 1;
-    cacheHit += hit;
-    promptTotal += row.prompt_tokens ?? 0;
+  for (;;) {
+    const { data, error } = await admin
+      .from("ai_usage_ledger")
+      .select("prompt_tokens, metadata")
+      .eq("provider", "deepseek")
+      .gte("created_at", since)
+      .range(from, from + pageSize - 1);
+
+    if (error) {
+      logger.error("[cost-admin] cache stats error", { error: error.message });
+      return {
+        cache_hit_tokens: 0,
+        prompt_tokens: 0,
+        cache_ratio_percent: 0,
+        calls_with_cache: 0,
+      };
+    }
+    if (!data || data.length === 0) break;
+
+    for (const row of data) {
+      const meta = row.metadata as Record<string, unknown> | null;
+      const hit =
+        typeof meta?.prompt_cache_hit_tokens === "number"
+          ? meta.prompt_cache_hit_tokens
+          : 0;
+      if (hit <= 0) continue;
+      callsWithCache += 1;
+      cacheHit += hit;
+      promptTotal += row.prompt_tokens ?? 0;
+    }
+    if (data.length < pageSize) break;
+    from += pageSize;
   }
 
   return {

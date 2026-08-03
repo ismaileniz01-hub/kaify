@@ -15,9 +15,17 @@ export async function invalidateLeaderboardRankCache(userId: string): Promise<vo
   );
 }
 
+/** Clears short-lived session slices (gems/streak/kai). */
+export async function invalidateSessionSliceCaches(userId: string): Promise<void> {
+  await Promise.all(
+    CacheInvalidation.sessionSlices(userId).map((key) => cacheDelete(key)),
+  );
+}
+
 /** Clears analytics + home caches after fitness data writes. */
 export async function invalidateUserReadCaches(userId: string): Promise<void> {
-  await Promise.all(
-    CacheInvalidation.analyticsUser(userId).map((key) => cacheDelete(key)),
-  );
+  await Promise.all([
+    ...CacheInvalidation.analyticsUser(userId).map((key) => cacheDelete(key)),
+    ...CacheInvalidation.sessionSlices(userId).map((key) => cacheDelete(key)),
+  ]);
 }

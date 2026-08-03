@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import type { DomainEventType } from "@/lib/events/types";
 
 const BATCH_SIZE = 100;
+const MAX_ATTEMPTS = 5;
 
 type OutboxRow = {
   id: string;
@@ -17,6 +18,15 @@ type OutboxRow = {
   user_id: string | null;
   payload: Record<string, unknown>;
   occurred_at: string;
+  attempt_count?: number | null;
+  last_error?: string | null;
+};
+
+export type OutboxBacklog = {
+  pending: number;
+  oldestOccurredAt: string | null;
+  poison: number;
+  oldestAgeMinutes: number | null;
 };
 
 async function handleOutboxEvent(row: OutboxRow): Promise<void> {
@@ -43,7 +53,6 @@ async function handleOutboxEvent(row: OutboxRow): Promise<void> {
     case "billing.webhook.received":
     case "consent.granted":
     case "consent.revoked":
-      // Audit trail only — sync side effects already ran at emit time.
       break;
     default:
       logger.warn("outbox.unknown event type", {
@@ -53,20 +62,71 @@ async function handleOutboxEvent(row: OutboxRow): Promise<void> {
   }
 }
 
+export async function getOutboxBacklog(): Promise<OutboxBacklog> {
+  const admin = createAdminSupabaseClient();
+
+  try {
+    const { data, error } = await admin.rpc("service_get_outbox_backlog");
+    if (!error && data) {
+      const row = data as {
+        pending?: number;
+        oldest_occurred_at?: string | null;
+        poison?: number;
+      };
+      const oldest = row.oldest_occurred_at ?? null;
+      const ageMin = oldest
+        ? Math.max(0, Math.round((Date.now() - new Date(oldest).getTime()) / 60_000))
+        : null;
+      return {
+        pending: Number(row.pending ?? 0),
+        oldestOccurredAt: oldest,
+        poison: Number(row.poison ?? 0),
+        oldestAgeMinutes: ageMin,
+      };
+    }
+  } catch {
+    // fall through
+  }
+
+  const db = admin as unknown as SupabaseClient;
+  const { data: pendingRows } = await db
+    .from("domain_events")
+    .select("id, occurred_at, attempt_count")
+    .is("processed_at", null)
+    .order("occurred_at", { ascending: true })
+    .limit(500);
+
+  const rows = pendingRows ?? [];
+  const oldest = rows[0]?.occurred_at ?? null;
+  const poison = rows.filter((r) => Number(r.attempt_count ?? 0) >= MAX_ATTEMPTS).length;
+  return {
+    pending: rows.length,
+    oldestOccurredAt: oldest,
+    poison,
+    oldestAgeMinutes: oldest
+      ? Math.max(0, Math.round((Date.now() - new Date(oldest).getTime()) / 60_000))
+      : null,
+  };
+}
+
 /**
  * Processes pending domain events: dispatch handlers, then mark processed.
- * Failed handlers leave the row pending for the next cron pass.
+ * Failed handlers increment attempt_count; poison messages are dead-lettered
+ * after MAX_ATTEMPTS so the backlog cannot stall forever.
  */
 export async function processDomainEventOutbox(): Promise<{
   processed: number;
   failed: number;
+  deadLettered: number;
 }> {
   const admin = createAdminSupabaseClient();
   const db = admin as unknown as SupabaseClient;
 
   const { data: pending, error: readError } = await db
     .from("domain_events")
-    .select("id, event_type, aggregate_id, user_id, payload, occurred_at")
+    .select(
+      "id, event_type, aggregate_id, user_id, payload, occurred_at, attempt_count, last_error",
+    )
     .is("processed_at", null)
     .order("occurred_at", { ascending: true })
     .limit(BATCH_SIZE);
@@ -78,20 +138,42 @@ export async function processDomainEventOutbox(): Promise<{
 
   const rows = (pending ?? []) as OutboxRow[];
   if (rows.length === 0) {
-    return { processed: 0, failed: 0 };
+    return { processed: 0, failed: 0, deadLettered: 0 };
   }
 
   let processed = 0;
   let failed = 0;
+  let deadLettered = 0;
   const now = new Date().toISOString();
 
   for (const row of rows) {
+    const attempts = Number(row.attempt_count ?? 0);
+    if (attempts >= MAX_ATTEMPTS) {
+      const { error: dlError } = await db
+        .from("domain_events")
+        .update({
+          processed_at: now,
+          last_error: row.last_error ?? `dead-lettered after ${MAX_ATTEMPTS} attempts`,
+        })
+        .eq("id", row.id)
+        .is("processed_at", null);
+      if (!dlError) {
+        deadLettered += 1;
+        logger.error("outbox.dead-lettered", {
+          id: row.id,
+          eventType: row.event_type,
+          attempts,
+        });
+      }
+      continue;
+    }
+
     try {
       await handleOutboxEvent(row);
 
       const { error: updateError } = await db
         .from("domain_events")
-        .update({ processed_at: now })
+        .update({ processed_at: now, last_error: null })
         .eq("id", row.id)
         .is("processed_at", null);
 
@@ -112,13 +194,23 @@ export async function processDomainEventOutbox(): Promise<{
       });
     } catch (error) {
       failed += 1;
+      const message = error instanceof Error ? error.message : "unknown";
+      await db
+        .from("domain_events")
+        .update({
+          attempt_count: attempts + 1,
+          last_error: message.slice(0, 500),
+        })
+        .eq("id", row.id)
+        .is("processed_at", null);
       logger.error("outbox.handler failed", {
         id: row.id,
         eventType: row.event_type,
-        error: error instanceof Error ? error.message : "unknown",
+        attempt: attempts + 1,
+        error: message,
       });
     }
   }
 
-  return { processed, failed };
+  return { processed, failed, deadLettered };
 }

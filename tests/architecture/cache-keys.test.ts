@@ -24,6 +24,7 @@ describe("cache keys registry", () => {
     expect(CacheTTL.leaderboardWarm).toBeGreaterThan(CacheTTL.leaderboardHot);
     expect(CacheTTL.leaderboardWarm).toBeLessThanOrEqual(15 * 60);
     expect(CacheTTL.leaderboardRank).toBeGreaterThan(0);
+    expect(CacheTTL.sessionSlice).toBeGreaterThan(0);
     expect(CacheTTL.coachesCatalog).toBeGreaterThan(CacheTTL.homeBundle);
   });
 

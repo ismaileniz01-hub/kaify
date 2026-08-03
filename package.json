@@ -21,6 +21,7 @@
     "test:smoke": "node scripts/backend-smoke-test.mjs",
     "load-test:smoke": "node scripts/load-test/smoke.mjs",
     "load-test:k6": "k6 run scripts/load-test/k6-smoke.js",
+    "load-test:k6:hotpaths": "k6 run scripts/load-test/k6-hotpaths.js",
     "db:types": "npx supabase gen types typescript --project-id urnetodzvszmddzdazdj > lib/types/database.types.ts",
     "legal:pdfs": "tsx scripts/generate-legal-pdfs.ts",
     "i18n:fill": "node scripts/i18n-fill.mjs",

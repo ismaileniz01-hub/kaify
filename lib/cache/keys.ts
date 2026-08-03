@@ -22,6 +22,8 @@ export const CacheTTL = {
   coachById: 3600,
   homeBundle: 300,
   homeBundleStale: 86_400,
+  /** Short TTL for session sub-reads (gems/streak/kai) between bootstrap storms. */
+  sessionSlice: 45,
 } as const;
 
 function utcDayKey(): string {
@@ -36,6 +38,9 @@ export const CacheKeys = {
   analyticsUser: (userId: string) => `analytics:bundle:v1:${userId}`,
   homeBundle: (userId: string, day = utcDayKey(), locale = "default") =>
     `home:bundle:v2:${userId}:${day}:${locale}`,
+  sessionGems: (userId: string) => `session:gems:v1:${userId}`,
+  sessionStreak: (userId: string) => `session:streak:v1:${userId}`,
+  sessionKai: (userId: string) => `session:kai:v1:${userId}`,
   coachesCatalog: () => "coaches:catalog:v1",
   coachById: (coachId: string) => `coaches:item:v1:${coachId}`,
   leaderboardGlobal: (limit: number, offset: number) =>
@@ -57,6 +62,11 @@ export const CacheInvalidation = {
   ],
   homeBundle: (userId: string) => [CacheKeys.homeBundle(userId)],
   leaderboardRank: (userId: string) => [CacheKeys.leaderboardRank(userId)],
+  sessionSlices: (userId: string) => [
+    CacheKeys.sessionGems(userId),
+    CacheKeys.sessionStreak(userId),
+    CacheKeys.sessionKai(userId),
+  ],
   coachesCatalog: () => [CacheKeys.coachesCatalog()],
   allLeaderboards: () => [
     // Prefix invalidation not supported — document TTL-bound freshness.

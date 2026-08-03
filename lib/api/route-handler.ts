@@ -10,7 +10,7 @@ import {
   type AiRateAction,
 } from "@/lib/api/rate-guard";
 import { requireSensitiveActionAuth } from "@/lib/auth/mfa-server";
-import { assertUserDailyAiBudget } from "@/lib/ai/daily-cost-cap";
+import { assertUserDailyAiBudget, assertPlatformDailyAiBudget } from "@/lib/ai/daily-cost-cap";
 import { assertCsrf } from "@/lib/security/csrf";
 import { getClientIP } from "@/lib/api-security";
 import { assertConsent } from "@/lib/services/consent.service";
@@ -93,6 +93,7 @@ async function runRouteGuards(
 
   if (options.requireAi) {
     await assertAiAvailable();
+    await assertPlatformDailyAiBudget();
   }
 
   if (authMode !== "none" && options.dailyAiBudget) {

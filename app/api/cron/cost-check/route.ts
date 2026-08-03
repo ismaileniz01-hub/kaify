@@ -2,8 +2,11 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { defineCronRoute } from "@/lib/api/route-handler";
 import { createCostAlert } from "@/lib/services/cost-admin.service";
 import { getCronCostSnapshot } from "@/lib/services/cost-cron.service";
+import { getOutboxBacklog } from "@/lib/services/outbox-processor.service";
 import { dailyAnomalyMultiplier, userDailyTokenAlertThreshold } from "@/lib/ai/cost";
+import { platformDailyUsdHardCap } from "@/lib/ai/daily-cost-cap";
 import { getCronSnapshots, recordCronRun } from "@/lib/services/cron-monitor.service";
+import { enterDegradedMode } from "@/lib/resilience/degraded-mode";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -15,11 +18,23 @@ export const GET = defineCronRoute("/api/cron/cost-check", async () => {
     const alerts: string[] = [];
     const multiplier = dailyAnomalyMultiplier();
     const userThreshold = userDailyTokenAlertThreshold();
+    const platformCap = platformDailyUsdHardCap();
 
     const snapshot = await getCronCostSnapshot();
     const { todayUsd, avgDailyUsd, topUsersToday } = snapshot;
 
-    if (avgDailyUsd > 0 && todayUsd > avgDailyUsd * multiplier) {
+    if (platformCap > 0 && todayUsd >= platformCap) {
+      const msg = `Platform daily AI spend hard cap: $${todayUsd.toFixed(4)} >= $${platformCap}`;
+      await createCostAlert({
+        alertType: "platform_spend_cap",
+        severity: "critical",
+        message: msg,
+        metadata: { todayUsd, platformCap },
+      });
+      alerts.push(msg);
+      await enterDegradedMode(msg);
+      logger.error("cost-check platform cap", { todayUsd, platformCap });
+    } else if (avgDailyUsd > 0 && todayUsd > avgDailyUsd * multiplier) {
       const msg = `Global AI spend anomaly: today $${todayUsd.toFixed(4)} vs 7d avg $${avgDailyUsd.toFixed(4)}/day (${multiplier}x threshold)`;
       await createCostAlert({
         alertType: "global_spend_spike",
@@ -28,6 +43,7 @@ export const GET = defineCronRoute("/api/cron/cost-check", async () => {
         metadata: { todayUsd, avgDailyUsd, multiplier },
       });
       alerts.push(msg);
+      await enterDegradedMode(msg);
       logger.error("cost-check global spike", { todayUsd, avgDailyUsd });
     }
 
@@ -87,10 +103,25 @@ export const GET = defineCronRoute("/api/cron/cost-check", async () => {
       }
     }
 
+    const outbox = await getOutboxBacklog();
+    if (outbox.pending >= 200 || (outbox.oldestAgeMinutes ?? 0) >= 120 || outbox.poison > 0) {
+      const msg = `Outbox backlog: pending=${outbox.pending} oldestAgeMin=${outbox.oldestAgeMinutes} poison=${outbox.poison}`;
+      await createCostAlert({
+        alertType: "outbox_backlog",
+        severity: outbox.poison > 0 ? "critical" : "warn",
+        message: msg,
+        metadata: outbox,
+      });
+      alerts.push(msg);
+      logger.warn("cost-check outbox backlog", outbox);
+    }
+
     const payload = {
       ranAt: new Date().toISOString(),
       todayUsd,
       avgDailyUsd,
+      platformCap,
+      outbox,
       alertsCreated: alerts.length,
       alerts,
       cronJobs: cronSnapshots,
@@ -99,6 +130,7 @@ export const GET = defineCronRoute("/api/cron/cost-check", async () => {
     await recordCronRun("cost-check", "ok", {
       alertsCreated: alerts.length,
       todayUsd,
+      outboxPending: outbox.pending,
     });
 
     return payload;

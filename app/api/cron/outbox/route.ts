@@ -12,6 +12,7 @@ export const GET = defineCronRoute("/api/cron/outbox", async () => {
     await recordCronRun("outbox", "ok", {
       processed: result.processed,
       failed: result.failed,
+      deadLettered: result.deadLettered,
     });
     return result;
   } catch (error) {

@@ -1,4 +1,4 @@
-import { cachedWithStale } from "@/lib/cache";
+import { cached, cachedWithStale } from "@/lib/cache";
 import { CacheKeys, CacheTTL } from "@/lib/cache/keys";
 import { resolveIsHubAdmin } from "@/lib/auth/admin-access";
 import { getGemBalance } from "@/lib/services/gem-balance.service";
@@ -25,14 +25,21 @@ export type SessionBundleDTO = {
  * Single round-trip bootstrap: replaces 6 parallel client calls
  * (profile, gems, streak, referral, home, kai).
  * Profile + streak are fetched once and reused for the home bundle.
+ * Gems / streak / kai use a short Redis TTL to blunt auth refresh storms.
  */
 export async function getSessionBundle(userId: string): Promise<SessionBundleDTO> {
   const [profile, gems, streak, referral, kai, isAdmin] = await Promise.all([
     getOwnProfile(userId),
-    getGemBalance(userId),
-    getStreakStatus(userId),
+    cached(CacheKeys.sessionGems(userId), CacheTTL.sessionSlice, () =>
+      getGemBalance(userId),
+    ),
+    cached(CacheKeys.sessionStreak(userId), CacheTTL.sessionSlice, () =>
+      getStreakStatus(userId),
+    ),
     getReferralSummary(userId),
-    getKaiState(userId),
+    cached(CacheKeys.sessionKai(userId), CacheTTL.sessionSlice, () =>
+      getKaiState(userId),
+    ),
     resolveIsHubAdmin(userId),
   ]);
 
