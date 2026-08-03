@@ -30,6 +30,7 @@ vi.mock("@/lib/services/home.service", () => ({
   }),
 }));
 vi.mock("@/lib/cache", () => ({
+  cached: vi.fn((_key, _ttl, producer) => producer()),
   cachedWithStale: vi.fn((_key, _ttl, _stale, producer) => producer()),
 }));
 vi.mock("@/lib/supabase/admin", () => ({
