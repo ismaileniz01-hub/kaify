@@ -66,10 +66,12 @@ export async function middleware(request: NextRequest) {
   }
 
   // Webhooks authenticate via signature — never bot-block them.
+  // Health liveness must stay open for monitors / k6 (custom short UAs).
   // Paddle's User-Agent can be short ("Paddle") and fails the length heuristic.
   if (
     pathname.startsWith("/api/") &&
     !pathname.startsWith("/api/webhooks/") &&
+    pathname !== "/api/health" &&
     isLikelyBot(request)
   ) {
     logger.warn("middleware blocked bot request", { requestId, pathname, ip });
@@ -98,24 +100,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === "/api/health") {
-    // Liveness must stay reachable for monitors even when Upstash is missing;
-    // use per-instance memory fallback instead of fail-closed (still 10/min).
-    const healthLimit = await checkRateLimit(
-      `health:${ip}`,
-      RATE_LIMIT_CONFIG.health,
-    );
-    if (!healthLimit.allowed) {
-      return new NextResponse(
-        JSON.stringify({ error: "Too many requests. Please try again later." }),
-        {
-          status: 429,
-          headers: {
-            "Content-Type": "application/json",
-            "Retry-After": String(Math.ceil(healthLimit.resetMs / 1000)),
-          },
-        },
-      );
-    }
+    // Cheap anonymous liveness — no rate limit (monitors + CI k6 must not 429).
     const { response } = await updateSupabaseSession(forwardedRequest);
     response.headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce));
     response.headers.set("X-Request-ID", requestId);
