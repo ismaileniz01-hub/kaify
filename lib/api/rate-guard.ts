@@ -65,8 +65,9 @@ export async function enforcePublicRateLimit(
   >,
 ): Promise<void> {
   const config = AI_RATE_LIMITS[action];
+  // Health liveness must remain probeable without Upstash (CI + uptime monitors).
   const result = await checkRateLimit(`pub:${action}:${ip}`, config, {
-    failClosedInProduction: true,
+    failClosedInProduction: action !== "health_probe",
   });
 
   if (!result.allowed) {
