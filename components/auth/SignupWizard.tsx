@@ -18,6 +18,11 @@ import { FloatingOrbs } from "@/components/landing/FloatingOrbs";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { sendEmailLoginCode } from "@/lib/auth/email-otp";
 import { apiErrorMessage } from "@/lib/i18n/api-error";
+import {
+  executeInvisibleRecaptcha,
+  InvisibleRecaptcha,
+  useInvisibleRecaptchaRef,
+} from "@/components/security/InvisibleRecaptcha";
 import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
 import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 import {
@@ -134,6 +139,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>("beginner");
   const [isNatural, setIsNatural] = useState(true);
   const [bio, setBio] = useState("");
+  const captchaRef = useInvisibleRecaptchaRef();
 
   const currentStep = flow[stepIndex] ?? "email";
   const progressPct = Math.round(((stepIndex + 1) / flow.length) * 100);
@@ -271,7 +277,8 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
       setBusy(true);
       try {
         storePendingLegalConsent();
-        const result = await sendEmailLoginCode(trimmedEmail);
+        const recaptchaToken = await executeInvisibleRecaptcha(captchaRef);
+        const result = await sendEmailLoginCode(trimmedEmail, recaptchaToken);
         if (!result.ok) {
           setError(apiErrorMessage(result.code, t));
           setBusy(false);
@@ -298,6 +305,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     birthDate,
     alreadyAuthedNeedsProfile,
     buildPayload,
+    captchaRef,
     completeOnboarding,
     currentStep,
     email,
@@ -695,6 +703,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
             )}
           </div>
         </ScrollReveal>
+        <InvisibleRecaptcha captchaRef={captchaRef} />
       </div>
     </section>
   );

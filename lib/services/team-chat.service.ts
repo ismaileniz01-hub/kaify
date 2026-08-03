@@ -23,6 +23,34 @@ const COACH_VOICES = [
   { id: "kai", name: "Kai", tone: "ride-or-die best friend; motivates gym, never enables skipping" },
 ] as const;
 
+/** Sunday UTC week key — shared with POST /api/chat/team idempotency. */
+export function teamMeetingWeekKey(now = new Date()): string {
+  const d = new Date(now);
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+  return d.toISOString().slice(0, 10);
+}
+
+async function claimTeamMeetingWeek(userId: string, weekStart: string): Promise<boolean> {
+  const admin = createAdminSupabaseClient();
+  const { error } = await admin.from("team_meeting_weeks").insert({
+    user_id: userId,
+    week_start: weekStart,
+  });
+
+  if (!error) return true;
+  if (error.code === "23505") return false;
+  throw new ApiError("INTERNAL_ERROR", "Takım toplantısı doğrulanamadı.");
+}
+
+async function releaseTeamMeetingWeek(userId: string, weekStart: string): Promise<void> {
+  const admin = createAdminSupabaseClient();
+  await admin
+    .from("team_meeting_weeks")
+    .delete()
+    .eq("user_id", userId)
+    .eq("week_start", weekStart);
+}
+
 export async function getTeamChatHistory(userId: string): Promise<ChatMessageDTO[]> {
   const admin = createAdminSupabaseClient();
 
@@ -66,22 +94,10 @@ export async function generateWeeklyTeamMeeting(
   await assertTeamChatUnlocked(userId);
 
   const admin = createAdminSupabaseClient();
+  const weekStart = teamMeetingWeekKey();
 
-  const weekStart = new Date();
-  weekStart.setUTCDate(weekStart.getUTCDate() - 7);
-  const since = weekStart.toISOString();
-
-  const { data: recentMeeting } = await admin
-    .from("chat_messages")
-    .select("created_at")
-    .eq("user_id", userId)
-    .eq("thread_type", "team")
-    .eq("message_type", "team_meeting")
-    .gte("created_at", since)
-    .limit(1)
-    .maybeSingle();
-
-  if (recentMeeting) {
+  const claimed = await claimTeamMeetingWeek(userId, weekStart);
+  if (!claimed) {
     throw new ApiError("CONFLICT", "Bu hafta takım toplantısı zaten yapıldı.");
   }
 
@@ -98,11 +114,16 @@ export async function generateWeeklyTeamMeeting(
   const context = `User: ${name}. Streak: ${streak.currentStreak}. Workouts: ${analytics.today.workoutsCompleted}/${analytics.today.workoutsTarget}. Water: ${analytics.today.waterLiters}L. Calories: ${analytics.today.caloriesConsumed}/${analytics.today.calorieGoal}. Protein: ${analytics.today.proteinG}g. Steps today: ${analytics.today.steps}.`;
 
   const tokenReserve = TOKEN_BUDGET.teamChat;
-  await reserveQuota({
-    userId,
-    resource: "text_tokens",
-    amount: tokenReserve,
-  });
+  try {
+    await reserveQuota({
+      userId,
+      resource: "text_tokens",
+      amount: tokenReserve,
+    });
+  } catch (error) {
+    await releaseTeamMeetingWeek(userId, weekStart);
+    throw error;
+  }
 
   const messages: ChatTurn[] = [
     {
@@ -129,6 +150,7 @@ export async function generateWeeklyTeamMeeting(
       resource: "text_tokens",
       amount: tokenReserve,
     });
+    await releaseTeamMeetingWeek(userId, weekStart);
     throw error;
   }
 
@@ -156,7 +178,6 @@ export async function generateWeeklyTeamMeeting(
     }));
   }
 
-  const meetingWeek = new Date().toISOString().slice(0, 10);
   const rowsToInsert = parsed.map((msg) => ({
     user_id: userId,
     coach_id: COACH_VOICES.some((c) => c.id === msg.coachId) ? msg.coachId : "kai",
@@ -165,7 +186,7 @@ export async function generateWeeklyTeamMeeting(
     message_type: "team_meeting" as const,
     content: msg.text,
     locale,
-    payload: { meetingWeek },
+    payload: { meetingWeek: weekStart },
   }));
 
   // Single batched insert instead of one round-trip per message (N+1 → 1).
@@ -180,6 +201,7 @@ export async function generateWeeklyTeamMeeting(
       resource: "text_tokens",
       amount: tokenReserve,
     });
+    await releaseTeamMeetingWeek(userId, weekStart);
     throw new ApiError("INTERNAL_ERROR", "Takım toplantısı kaydedilemedi.");
   }
 

@@ -1,6 +1,7 @@
 import { defineRouteRaw } from "@/lib/api/route-handler";
 import { ApiError } from "@/lib/api/errors";
 import { fail, ok } from "@/lib/api/response";
+import { validateRecaptcha } from "@/lib/api-security";
 import { mapGoTrueOtpSendError } from "@/lib/auth/map-otp-send-error";
 import { sendAuthEmailOtp } from "@/lib/auth/send-otp-server";
 import { SupabaseEnvError } from "@/lib/supabase/env";
@@ -19,6 +20,11 @@ export const POST = defineRouteRaw(
       return fail(
         new ApiError("VALIDATION_ERROR", "Invalid email address.", parsed.error.issues),
       );
+    }
+
+    const captchaOk = await validateRecaptcha(parsed.data.recaptchaToken ?? "");
+    if (!captchaOk) {
+      return fail(new ApiError("FORBIDDEN", "reCAPTCHA doğrulaması başarısız."));
     }
 
     try {

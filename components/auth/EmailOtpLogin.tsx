@@ -29,6 +29,11 @@ import { apiPost } from "@/lib/api/client";
 import { clearPendingReferral, getPendingReferral } from "@/lib/referral";
 import { apiErrorMessage } from "@/lib/i18n/api-error";
 import { otpSendSchema } from "@/lib/validations/auth-otp.schema";
+import {
+  executeInvisibleRecaptcha,
+  InvisibleRecaptcha,
+  useInvisibleRecaptchaRef,
+} from "@/components/security/InvisibleRecaptcha";
 
 const RESEND_COOLDOWN_SEC = 60;
 
@@ -73,6 +78,7 @@ export function EmailOtpLogin({
   const [error, setError] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
   const [legalAccepted, setLegalAccepted] = useState(false);
+  const captchaRef = useInvisibleRecaptchaRef();
 
   const goToStep = useCallback(
     (next: "email" | "code") => {
@@ -131,7 +137,8 @@ export function EmailOtpLogin({
     setError(null);
     try {
       storePendingLegalConsent();
-      const result = await sendEmailLoginCode(trimmed);
+      const recaptchaToken = await executeInvisibleRecaptcha(captchaRef);
+      const result = await sendEmailLoginCode(trimmed, recaptchaToken);
       if (!result.ok) {
         setError(apiErrorMessage(result.code, t));
         return;
@@ -146,7 +153,7 @@ export function EmailOtpLogin({
     } finally {
       setLoading(false);
     }
-  }, [email, goToStep, isSignup, legalAccepted, t]);
+  }, [captchaRef, email, goToStep, isSignup, legalAccepted, t]);
 
   const applyPendingReferral = useCallback(async () => {
     const code = getPendingReferral();
@@ -313,6 +320,7 @@ export function EmailOtpLogin({
             {error}
           </p>
         )}
+        <InvisibleRecaptcha captchaRef={captchaRef} />
       </div>
     );
   }
@@ -370,6 +378,7 @@ export function EmailOtpLogin({
           {error}
         </p>
       )}
+      <InvisibleRecaptcha captchaRef={captchaRef} />
     </div>
   );
 }

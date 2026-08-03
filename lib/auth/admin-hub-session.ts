@@ -22,14 +22,11 @@ function secureCookiesEnabled(): boolean {
 }
 
 /**
- * Dedicated hub HMAC secret — never reuse SUPABASE_SERVICE_ROLE_KEY.
- * Falls back to CSRF_SECRET, then a local-only insecure default.
+ * Dedicated hub HMAC secret — never reuse SUPABASE_SERVICE_ROLE_KEY or CSRF_SECRET
+ * in deployed environments. Local-only insecure default for tests/dev.
  */
 function hubSecret(): string | null {
-  const secret =
-    process.env.ADMIN_HUB_SECRET?.trim() ||
-    process.env.CSRF_SECRET?.trim() ||
-    "";
+  const secret = process.env.ADMIN_HUB_SECRET?.trim() || "";
   if (secret && !secret.includes("your_")) return secret;
   if (isDeployedRuntime()) return null;
   return "dev-admin-hub-insecure";
@@ -83,7 +80,7 @@ export function verifyAdminHubPassword(password: string): boolean {
 export async function mintAdminHubToken(userId: string): Promise<string> {
   const secret = hubSecret();
   if (!secret) {
-    throw new Error("ADMIN_HUB_SECRET (or CSRF_SECRET) is required in production/preview");
+    throw new Error("ADMIN_HUB_SECRET is required in production/preview");
   }
   const expiresAt = Math.floor(Date.now() / 1000) + ADMIN_HUB_MAX_AGE_SEC;
   const payload = `${userId}.${expiresAt}`;

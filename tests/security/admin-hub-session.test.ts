@@ -18,7 +18,7 @@ describe("admin-hub-session", () => {
   beforeEach(() => {
     process.env.ADMIN_HUB_PASSWORD = "test-hub-password";
     process.env.CSRF_SECRET = "test-csrf-secret-key";
-    delete process.env.ADMIN_HUB_SECRET;
+    process.env.ADMIN_HUB_SECRET = "test-admin-hub-secret-key";
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-06T12:00:00.000Z"));
   });

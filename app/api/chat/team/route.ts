@@ -4,15 +4,10 @@ import {
   assertTeamChatUnlocked,
   generateWeeklyTeamMeeting,
   getTeamChatHistory,
+  teamMeetingWeekKey,
 } from "@/lib/services/team-chat.service";
 
 export const dynamic = "force-dynamic";
-
-function currentWeekKey(): string {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
-  return d.toISOString().slice(0, 10);
-}
 
 /** GET /api/chat/team — team chat history (Pro / Premium only) */
 export const GET = defineRoute(
@@ -34,7 +29,7 @@ export const POST = defineRoute(
     dailyAiBudget: true,
   },
   async ({ user }) => {
-    const week = currentWeekKey();
+    const week = teamMeetingWeekKey();
     // Server-owned key only — client Idempotency-Key must not bypass the weekly lock.
     const idempotencyKey = `team_meeting:${user.id}:${week}`;
 

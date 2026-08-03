@@ -68,10 +68,10 @@ export function validateEnvAtBoot(): void {
     }
     if (
       isProd &&
-      !process.env.ADMIN_HUB_SECRET?.trim() &&
-      !process.env.CSRF_SECRET?.trim()
+      (!process.env.ADMIN_HUB_SECRET?.trim() ||
+        process.env.ADMIN_HUB_SECRET.includes("your_"))
     ) {
-      problems.push("ADMIN_HUB_SECRET (or CSRF_SECRET) missing in production/preview");
+      problems.push("ADMIN_HUB_SECRET missing in production/preview");
     }
     if (
       isProd &&

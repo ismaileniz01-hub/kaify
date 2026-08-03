@@ -13,6 +13,11 @@ import { OTP_LENGTH } from "@/lib/auth/otp";
 import { maskEmail } from "@/lib/auth/mask-email";
 import { apiErrorMessage } from "@/lib/i18n/api-error";
 import { useLang } from "@/lib/lang-context";
+import {
+  executeInvisibleRecaptcha,
+  InvisibleRecaptcha,
+  useInvisibleRecaptchaRef,
+} from "@/components/security/InvisibleRecaptcha";
 
 type Props = {
   email: string;
@@ -26,6 +31,7 @@ export function SignupVerifyStep({ email, onVerified, onBack }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
+  const captchaRef = useInvisibleRecaptchaRef();
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -37,7 +43,8 @@ export function SignupVerifyStep({ email, onVerified, onBack }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const result = await sendEmailLoginCode(email);
+      const recaptchaToken = await executeInvisibleRecaptcha(captchaRef);
+      const result = await sendEmailLoginCode(email, recaptchaToken);
       if (!result.ok) {
         setError(apiErrorMessage(result.code, t));
         return;
@@ -47,7 +54,7 @@ export function SignupVerifyStep({ email, onVerified, onBack }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [email]);
+  }, [captchaRef, email, t]);
 
   const verify = useCallback(
     async (token = code) => {
@@ -154,6 +161,7 @@ export function SignupVerifyStep({ email, onVerified, onBack }: Props) {
           {error}
         </p>
       )}
+      <InvisibleRecaptcha captchaRef={captchaRef} />
     </div>
   );
 }

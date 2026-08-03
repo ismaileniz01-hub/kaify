@@ -22,6 +22,52 @@ export async function writeAnalyticsDailyPatch(
   }
 }
 
+/** Atomic additive meal macros — no read-modify-write. */
+export async function writeAnalyticsMealIncrement(
+  userId: string,
+  entryDate: string,
+  meal: { calories: number; protein: number; carbs: number; fat: number },
+): Promise<void> {
+  const admin = createAdminSupabaseClient();
+  const { error } = await admin.rpc("increment_analytics_meals", {
+    p_user_id: userId,
+    p_entry_date: entryDate,
+    p_calories: meal.calories,
+    p_protein: meal.protein,
+    p_carbs: meal.carbs,
+    p_fat: meal.fat,
+  });
+
+  if (error) {
+    logger.error("[analytics-write] meal increment error", {
+      error: error.message,
+    });
+    throw new ApiError("INTERNAL_ERROR", "Öğün verisi eklenemedi.");
+  }
+}
+
+/** Claim + apply pending confirmation in one DB transaction. */
+export async function writeConfirmAnalyticsPending(
+  userId: string,
+  pendingId: string,
+): Promise<void> {
+  const admin = createAdminSupabaseClient();
+  const { error } = await admin.rpc("confirm_analytics_pending", {
+    p_user_id: userId,
+    p_pending_id: pendingId,
+  });
+
+  if (error) {
+    if (error.code === "P0002") {
+      throw new ApiError("NOT_FOUND", "Onay bekleyen kayıt bulunamadı.");
+    }
+    logger.error("[analytics-write] confirm pending error", {
+      error: error.message,
+    });
+    throw new ApiError("INTERNAL_ERROR", "Onay uygulanamadı.");
+  }
+}
+
 export async function writeHealthStepsBatch(
   userId: string,
   entries: {

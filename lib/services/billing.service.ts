@@ -209,12 +209,14 @@ async function applyTier(
   userId: string,
   tier: SubscriptionTier,
   billingCycle: BillingCycle,
+  expiresAt: string | null,
 ): Promise<void> {
   const admin = createAdminSupabaseClient();
   const { error } = await admin.rpc("apply_subscription", {
     p_user_id: userId,
     p_tier: tier,
     p_billing_cycle: billingCycle,
+    p_expires_at: expiresAt,
   });
   if (error) {
     logger.error("[billing] apply_subscription failed", {
@@ -406,6 +408,26 @@ function billingCycleFromData(data: Record<string, unknown>): BillingCycle {
   const interval = pickString(nestedCycle?.interval)?.toLowerCase();
   if (interval === "year" || interval === "yearly") return "yearly";
   return "monthly";
+}
+
+/** Prefer Paddle period end; fall back to next_billed_at. Returns ISO or null. */
+function expiresAtFromData(data: Record<string, unknown>): string | null {
+  const period =
+    asRecord(data.currentBillingPeriod) ??
+    asRecord(data.current_billing_period);
+  const endsAt = pickString(period?.endsAt, period?.ends_at);
+  if (endsAt) {
+    const ms = Date.parse(endsAt);
+    if (Number.isFinite(ms)) return new Date(ms).toISOString();
+  }
+
+  const nextBilled = pickString(data.nextBilledAt, data.next_billed_at);
+  if (nextBilled) {
+    const ms = Date.parse(nextBilled);
+    if (Number.isFinite(ms)) return new Date(ms).toISOString();
+  }
+
+  return null;
 }
 
 function priceIdFromData(data: Record<string, unknown>): string | undefined {
@@ -618,7 +640,12 @@ async function provisionFromPrice(
   const priceId = priceIdFromData(data);
   const tier = priceId ? priceMap[priceId] : undefined;
   if (!tier) return { ok: false, reason: "unknown_price" };
-  await applyTier(userId, tier, billingCycleFromData(data));
+  await applyTier(
+    userId,
+    tier,
+    billingCycleFromData(data),
+    expiresAtFromData(data),
+  );
   return { ok: true };
 }
 

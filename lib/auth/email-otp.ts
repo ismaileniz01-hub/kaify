@@ -6,10 +6,12 @@ import { isCompleteOtp, normalizeOtpInput } from "@/lib/auth/otp";
 /** Request a one-time email code via the server (avoids missing browser Supabase keys). */
 export async function sendEmailLoginCode(
   email: string,
+  recaptchaToken?: string,
 ): Promise<{ ok: true } | { ok: false; code: string; message: string }> {
   try {
     await apiPost<{ sent: true }>("/api/auth/otp/send", {
       email: email.trim().toLowerCase(),
+      ...(recaptchaToken ? { recaptchaToken } : {}),
     });
     return { ok: true };
   } catch (error) {

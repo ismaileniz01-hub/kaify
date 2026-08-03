@@ -10,7 +10,6 @@ import {
   readHealthStepsRange,
   readLeoAnalysisMessages,
   readMayaAnalysisMessages,
-  readMealTotalsRow,
   readPreviousWeightKg,
   readUserTimezone,
   readWeeklyAnalyticsSummary,
@@ -19,6 +18,7 @@ import {
 import {
   invalidateAnalyticsUserCache,
   writeAnalyticsDailyPatch,
+  writeAnalyticsMealIncrement,
   writeHealthStepsBatch,
 } from "@/lib/repositories/analytics-write.repository";
 export type AnalyticsDailyDTO = {
@@ -416,9 +416,7 @@ export async function patchAnalyticsDaily(
 
 /**
  * Adds a logged meal's macros onto today's running totals (accumulate, not
- * overwrite). Used by the Maya food-photo pipeline so a breakfast photo is
- * reflected in the analytics screen. Reads current totals with the admin
- * client, then writes the summed values via the SET-semantics RPC.
+ * overwrite). Uses an atomic SQL increment — no read-modify-write race.
  */
 export async function addMealToAnalytics(
   userId: string,
@@ -432,22 +430,10 @@ export async function addMealToAnalytics(
   };
   if (add.calories + add.protein + add.carbs + add.fat === 0) return;
 
-  const admin = createAnalyticsAdminReadClient();
   const timezone = await resolveUserTimezone(userId);
   const date = localTodayDate(timezone);
 
-  const current = await readMealTotalsRow(admin, userId, date);
-
-  await patchAnalyticsDaily(
-    userId,
-    {
-      caloriesConsumed: (current?.calories_consumed ?? 0) + add.calories,
-      proteinG: (current?.protein_g ?? 0) + add.protein,
-      carbsG: (current?.carbs_g ?? 0) + add.carbs,
-      fatG: (current?.fat_g ?? 0) + add.fat,
-    },
-    date,
-  );
+  await writeAnalyticsMealIncrement(userId, date, add);
   await invalidateAnalyticsCache(userId);
 }
 

@@ -395,6 +395,7 @@ type ApplySubscriptionArgs = {
   p_user_id: string;
   p_tier: SubscriptionTier;
   p_billing_cycle: BillingCycle;
+  p_expires_at?: string | null;
 };
 
 type ReferralRow = {
@@ -740,6 +741,20 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["idempotency_keys"]["Row"]>;
         Relationships: [];
       };
+      team_meeting_weeks: {
+        Row: {
+          user_id: string;
+          week_start: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          week_start: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["team_meeting_weeks"]["Row"]>;
+        Relationships: [];
+      };
       admin_audit_log: {
         Row: {
           id: string;
@@ -978,6 +993,21 @@ export type Database = {
       apply_subscription: {
         Args: ApplySubscriptionArgs;
         Returns: ProfileRow;
+      };
+      increment_analytics_meals: {
+        Args: {
+          p_user_id: string;
+          p_entry_date: string;
+          p_calories?: number;
+          p_protein?: number;
+          p_carbs?: number;
+          p_fat?: number;
+        };
+        Returns: undefined;
+      };
+      confirm_analytics_pending: {
+        Args: { p_user_id: string; p_pending_id: string };
+        Returns: undefined;
       };
       increment_condense_counter: {
         Args: { p_user_id: string; p_delta?: number };
