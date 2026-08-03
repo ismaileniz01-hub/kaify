@@ -8,9 +8,24 @@ export async function invalidateHomeBundleCache(userId: string): Promise<void> {
   );
 }
 
+/** Clears per-user leaderboard rank after streak changes. */
+export async function invalidateLeaderboardRankCache(userId: string): Promise<void> {
+  await Promise.all(
+    CacheInvalidation.leaderboardRank(userId).map((key) => cacheDelete(key)),
+  );
+}
+
+/** Clears short-lived session slices (gems/streak/kai). */
+export async function invalidateSessionSliceCaches(userId: string): Promise<void> {
+  await Promise.all(
+    CacheInvalidation.sessionSlices(userId).map((key) => cacheDelete(key)),
+  );
+}
+
 /** Clears analytics + home caches after fitness data writes. */
 export async function invalidateUserReadCaches(userId: string): Promise<void> {
-  await Promise.all(
-    CacheInvalidation.analyticsUser(userId).map((key) => cacheDelete(key)),
-  );
+  await Promise.all([
+    ...CacheInvalidation.analyticsUser(userId).map((key) => cacheDelete(key)),
+    ...CacheInvalidation.sessionSlices(userId).map((key) => cacheDelete(key)),
+  ]);
 }

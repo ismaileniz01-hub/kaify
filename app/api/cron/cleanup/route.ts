@@ -21,15 +21,20 @@ export const GET = defineCronRoute("/api/cron/cleanup", async () => {
 
     const admin = createAdminSupabaseClient();
 
-    const { data: streakRows } = await admin
-      .from("user_streaks")
-      .select("user_id")
-      .gte("current_streak", 7);
-
-    const userIds = (streakRows ?? []).map((r) => r.user_id);
+    const pageSize = 500;
     let teamChatUnlocked = 0;
+    let streakFrom = 0;
 
-    if (userIds.length > 0) {
+    for (;;) {
+      const { data: streakRows } = await admin
+        .from("user_streaks")
+        .select("user_id")
+        .gte("current_streak", 7)
+        .range(streakFrom, streakFrom + pageSize - 1);
+
+      const userIds = (streakRows ?? []).map((r) => r.user_id);
+      if (userIds.length === 0) break;
+
       const { data: updated } = await admin
         .from("profiles")
         .update({
@@ -39,7 +44,10 @@ export const GET = defineCronRoute("/api/cron/cleanup", async () => {
         .in("id", userIds)
         .eq("team_chat_unlocked", false)
         .select("id");
-      teamChatUnlocked = updated?.length ?? 0;
+      teamChatUnlocked += updated?.length ?? 0;
+
+      if (userIds.length < pageSize) break;
+      streakFrom += pageSize;
     }
 
     const { data: deletedKeys } = await admin

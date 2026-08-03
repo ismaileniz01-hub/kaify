@@ -5,18 +5,29 @@ export { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from "@/lib/security/csrf-client";
 
 const CSRF_MAX_AGE_SEC = 60 * 60 * 12;
 
+function isDeployedRuntime(): boolean {
+  return (
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL_ENV === "production" ||
+    process.env.VERCEL_ENV === "preview"
+  );
+}
+
+function secureCookiesEnabled(): boolean {
+  return isDeployedRuntime();
+}
+
+/**
+ * Dedicated CSRF HMAC secret only — never reuse the Supabase service-role key.
+ * Local development may fall back to a well-known insecure default.
+ */
 function csrfSecret(): string {
-  const secret =
-    process.env.CSRF_SECRET?.trim() ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
-    "dev-csrf-insecure";
-  if (
-    process.env.NODE_ENV === "production" &&
-    (secret.includes("your_") || secret === "dev-csrf-insecure")
-  ) {
-    throw new Error("CSRF_SECRET or SUPABASE_SERVICE_ROLE_KEY required in production");
+  const secret = process.env.CSRF_SECRET?.trim() || "";
+  if (secret && !secret.includes("your_")) return secret;
+  if (isDeployedRuntime()) {
+    throw new Error("CSRF_SECRET is required in production/preview");
   }
-  return secret;
+  return "dev-csrf-insecure";
 }
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -74,7 +85,7 @@ export function csrfCookieOptions(): {
   return {
     httpOnly: false,
     sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookiesEnabled(),
     path: "/",
     maxAge: CSRF_MAX_AGE_SEC,
   };

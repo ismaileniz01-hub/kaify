@@ -21,6 +21,7 @@
     "test:smoke": "node scripts/backend-smoke-test.mjs",
     "load-test:smoke": "node scripts/load-test/smoke.mjs",
     "load-test:k6": "k6 run scripts/load-test/k6-smoke.js",
+    "load-test:k6:hotpaths": "k6 run scripts/load-test/k6-hotpaths.js",
     "db:types": "npx supabase gen types typescript --project-id urnetodzvszmddzdazdj > lib/types/database.types.ts",
     "legal:pdfs": "tsx scripts/generate-legal-pdfs.ts",
     "i18n:fill": "node scripts/i18n-fill.mjs",
@@ -67,11 +68,11 @@
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
     "lucide-react": "^0.511.0",
-    "next": "^15.3.3",
+    "next": "^15.5.22",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-google-recaptcha": "^3.1.0",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.3",
     "web-push": "^3.6.7",
     "zod": "^4.4.3"
   },
@@ -93,5 +94,9 @@
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "sharp": "^0.35.3",
+    "postcss": "^8.5.18"
   }
 }

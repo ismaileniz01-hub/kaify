@@ -34,6 +34,9 @@ export function validateEnvAtBoot(): void {
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
     UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
     CRON_SECRET: process.env.CRON_SECRET,
+    CSRF_SECRET: process.env.CSRF_SECRET,
+    ADMIN_HUB_PASSWORD: process.env.ADMIN_HUB_PASSWORD,
+    ADMIN_HUB_SECRET: process.env.ADMIN_HUB_SECRET,
   };
   const missingSoft = Object.entries(softVars)
     .filter(([, v]) => !v || v.includes("your_"))
@@ -43,7 +46,10 @@ export function validateEnvAtBoot(): void {
     logger.error("env validation failed (critical)", { problems });
   }
   if (missingSoft.length > 0) {
-    const isProd = process.env.NODE_ENV === "production";
+    const isProd =
+      process.env.NODE_ENV === "production" ||
+      process.env.VERCEL_ENV === "production" ||
+      process.env.VERCEL_ENV === "preview";
     const hasUpstash =
       process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
     if (isProd && !hasUpstash) {
@@ -51,6 +57,19 @@ export function validateEnvAtBoot(): void {
     }
     if (isProd && (!process.env.CRON_SECRET || process.env.CRON_SECRET.includes("your_"))) {
       problems.push("CRON_SECRET missing or placeholder in production");
+    }
+    if (isProd && (!process.env.CSRF_SECRET || process.env.CSRF_SECRET.includes("your_"))) {
+      problems.push("CSRF_SECRET missing or placeholder in production/preview");
+    }
+    if (isProd && !process.env.ADMIN_HUB_PASSWORD?.trim()) {
+      problems.push("ADMIN_HUB_PASSWORD missing in production/preview");
+    }
+    if (
+      isProd &&
+      !process.env.ADMIN_HUB_SECRET?.trim() &&
+      !process.env.CSRF_SECRET?.trim()
+    ) {
+      problems.push("ADMIN_HUB_SECRET (or CSRF_SECRET) missing in production/preview");
     }
     logger.warn("env validation: optional vars missing/placeholder", {
       missing: missingSoft,

@@ -48,12 +48,12 @@ flowchart LR
 
 | Layer | Scale mechanism |
 |-------|-----------------|
-| **Edge** | IP rate limit (Upstash, fail-closed prod) |
+| **Edge** | IP rate limit (Upstash; soft-open memory fallback on outage) |
 | **API** | User AI rate guard, idempotency, circuit breakers |
-| **Cache** | Read-through Redis — market, leaderboard, analytics |
-| **DB** | RLS initplan, FK indexes, RPC mutations |
-| **Cron** | Keyset pagination, dedup keys, outbox processor |
-| **AI** | Quota reserve/settle, cost ledger, pressure fallback |
+| **Cache** | Read-through Redis — market, leaderboard (+ rank), analytics; singleflight |
+| **DB** | RLS initplan, FK indexes, RPC mutations, batch streak claims |
+| **Cron** | pg_cron 15m LB + hourly outbox; Vercel daily backup (Hobby-safe) |
+| **AI** | Quota reserve/settle, cost ledger, pressure fallback; chat `after()` |
 
 ---
 

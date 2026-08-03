@@ -32,7 +32,7 @@ describe("analytics read cache keys", () => {
     const keys = CacheInvalidation.analyticsUser("user-1");
     expect(keys).toContain("analytics:bundle:v1:user-1");
     expect(keys).toContain("analytics:today:v1:user-1");
-    expect(keys.some((k) => k.startsWith("home:bundle:v1:user-1:"))).toBe(true);
+    expect(keys.some((k) => k.startsWith("home:bundle:v2:user-1:"))).toBe(true);
     expect(keys.length).toBeGreaterThanOrEqual(3);
   });
 });

@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
@@ -430,8 +431,9 @@ export async function* streamCoachReply(
       },
     };
 
-    // Background: structured card (with optional patch event if fast enough).
-    void (async () => {
+    // Background: structured card + memory + analytics — survive after response
+    // completes on Vercel (void async is dropped when the isolate freezes).
+    after(async () => {
       try {
         const structured = await Promise.race([
           structuredPromise,
@@ -477,7 +479,7 @@ export async function* streamCoachReply(
           error: analyticsError instanceof Error ? analyticsError.message : "unknown",
         });
       }
-    })();
+    });
   } catch (error) {
     const reserved = params.tokensReserved ?? 0;
     // Never refund after the user already received a streamed answer.

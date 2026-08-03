@@ -16,6 +16,9 @@ Aşağıdakiler eksikse prod'da özellikler çalışmaz:
 | Değişken | Ne için |
 |----------|---------|
 | `CRON_SECRET` | Cron + detaylı health (boşluk/placeholder olmasın) |
+| `CSRF_SECRET` | Double-submit CSRF HMAC (prod/preview zorunlu; service-role ile paylaşma) |
+| `ADMIN_HUB_PASSWORD` | Admin Hub operatör şifresi (kaynakta default yok) |
+| `ADMIN_HUB_SECRET` | Hub cookie HMAC (yoksa `CSRF_SECRET` kullanılır) |
 | `DEEPSEEK_API_KEY` | AI chat |
 | `GEMINI_API_KEY` | Vision / kalite kapısı |
 | `UPSTASH_REDIS_REST_URL` + `TOKEN` | Rate limit (prod'da zorunlu) |
@@ -23,6 +26,8 @@ Aşağıdakiler eksikse prod'da özellikler çalışmaz:
 | `AI_COST_*` (opsiyonel) | Maliyet paneli USD tahmini — `.env.example`'a bak |
 
 Env değiştirdikten sonra **redeploy** gerekir.
+
+**Admin MFA:** Yönetici API'leri artık TOTP AAL2 + hub şifresi ister. Deploy öncesi admin hesaplarında MFA enroll edildiğinden emin ol.
 
 ## 3. Supabase Dashboard (zorunlu)
 
@@ -45,15 +50,24 @@ Env değiştirdikten sonra **redeploy** gerekir.
 
 ## 4. Cron doğrulama (deploy sonrası)
 
-Vercel'de 3 cron tanımlı (`vercel.json`):
+`vercel.json` günlük yedek cron’lar tutar (Hobby uyumlu). **15m / saatlik** cadence için Supabase **pg_cron** şart — [`docs/operations/pg-cron-frequent-schedules.sql`](./operations/pg-cron-frequent-schedules.sql).
 
-| Cron | Sıklık |
+| Cron (Vercel, günlük yedek) | Sıklık |
 |------|--------|
 | `/api/cron/cleanup` | günlük 03:00 UTC |
-| `/api/cron/cost-check` | 6 saatte bir |
-| `/api/cron/self-recovery` | 15 dakikada bir |
+| `/api/cron/cost-check` | günlük 04:00 UTC |
+| `/api/cron/self-recovery` | günlük 05:00 UTC |
+| `/api/cron/notifications` | günlük 06:00 UTC |
+| `/api/cron/outbox` | günlük 07:00 UTC |
+| `/api/cron/leaderboard-snapshot` | günlük 08:00 UTC |
+| `/api/cron/retention-purge` | Pazar 02:00 UTC |
 
-Notifications hâlâ **Supabase pg_cron** üzerinden (2 saatte bir).
+| Cron (pg_cron, production) | Sıklık |
+|------|--------|
+| leaderboard-snapshot | 15 dakika (ADR 009) |
+| outbox / notifications | saatlik |
+| self-recovery | 15 dakika |
+| cost-check | 6 saatte bir |
 
 Manuel test:
 ```bash

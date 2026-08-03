@@ -83,7 +83,12 @@ export async function cacheDelete(key: string): Promise<void> {
  * Read-through helper: returns the cached value when present, otherwise runs
  * `producer`, caches the result, and returns it. Errors thrown by `producer`
  * propagate (and are never cached).
+ *
+ * In-process singleflight: concurrent misses for the same key share one producer
+ * (reduces stampede on cold Redis / DB fallback).
  */
+const inflightProducers = new Map<string, Promise<unknown>>();
+
 export async function cached<T>(
   key: string,
   ttlSeconds: number,
@@ -92,9 +97,25 @@ export async function cached<T>(
   const hit = await cacheGet<T>(key);
   if (hit !== null) return hit;
 
-  const fresh = await producer();
-  await cacheSet(key, fresh, ttlSeconds);
-  return fresh;
+  const existing = inflightProducers.get(key);
+  if (existing) return existing as Promise<T>;
+
+  const pending = (async () => {
+    try {
+      // Re-check after winning the race — another isolate may have filled Redis.
+      const again = await cacheGet<T>(key);
+      if (again !== null) return again;
+
+      const fresh = await producer();
+      await cacheSet(key, fresh, ttlSeconds);
+      return fresh;
+    } finally {
+      inflightProducers.delete(key);
+    }
+  })();
+
+  inflightProducers.set(key, pending);
+  return pending;
 }
 
 /**

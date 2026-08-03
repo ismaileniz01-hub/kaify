@@ -1,6 +1,7 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ModelRouter } from "@/lib/ai/model-router";
 import { TOKEN_BUDGET, AI_FEATURES } from "@/lib/ai/budget";
+import { isAiPressureMode } from "@/lib/ai/daily-cost-cap";
 import { sanitizeUserText, wrapUntrustedInput } from "@/lib/ai/prompt-safety";
 import { resolveLocale } from "@/lib/i18n/dictionary";
 import { createPendingAnalyticsConfirmation } from "@/lib/services/analytics-confirmation.service";
@@ -113,6 +114,7 @@ export async function applyCoachAnalyticsFromChat(params: {
   coachReply: string;
 }): Promise<void> {
   if (!AI_FEATURES.chatAnalytics) return;
+  if (await isAiPressureMode()) return;
 
   const allowed = COACH_FIELDS[params.coachId];
   if (!allowed || allowed.length === 0) return;

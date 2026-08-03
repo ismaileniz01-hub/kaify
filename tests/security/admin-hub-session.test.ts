@@ -12,26 +12,32 @@ vi.mock("next/headers", () => ({
 
 describe("admin-hub-session", () => {
   const originalPassword = process.env.ADMIN_HUB_PASSWORD;
+  const originalCsrf = process.env.CSRF_SECRET;
+  const originalHubSecret = process.env.ADMIN_HUB_SECRET;
 
   beforeEach(() => {
-    process.env.ADMIN_HUB_PASSWORD = "isoisking";
+    process.env.ADMIN_HUB_PASSWORD = "test-hub-password";
+    process.env.CSRF_SECRET = "test-csrf-secret-key";
+    delete process.env.ADMIN_HUB_SECRET;
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-06T12:00:00.000Z"));
   });
 
   afterEach(() => {
-    if (originalPassword === undefined) {
-      delete process.env.ADMIN_HUB_PASSWORD;
-    } else {
-      process.env.ADMIN_HUB_PASSWORD = originalPassword;
-    }
+    if (originalPassword === undefined) delete process.env.ADMIN_HUB_PASSWORD;
+    else process.env.ADMIN_HUB_PASSWORD = originalPassword;
+    if (originalCsrf === undefined) delete process.env.CSRF_SECRET;
+    else process.env.CSRF_SECRET = originalCsrf;
+    if (originalHubSecret === undefined) delete process.env.ADMIN_HUB_SECRET;
+    else process.env.ADMIN_HUB_SECRET = originalHubSecret;
     vi.useRealTimers();
     vi.clearAllMocks();
   });
 
-  it("uses isoisking as default operator password outside production", () => {
+  it("returns null when ADMIN_HUB_PASSWORD is unset (no hardcoded default)", () => {
     delete process.env.ADMIN_HUB_PASSWORD;
-    expect(adminHubPassword()).toBe("isoisking");
+    expect(adminHubPassword()).toBeNull();
+    expect(verifyAdminHubPassword("isoisking")).toBe(false);
   });
 
   it("fails closed when production has no ADMIN_HUB_PASSWORD", () => {
@@ -39,13 +45,13 @@ describe("admin-hub-session", () => {
     delete process.env.ADMIN_HUB_PASSWORD;
     process.env.VERCEL_ENV = "production";
     expect(adminHubPassword()).toBeNull();
-    expect(verifyAdminHubPassword("isoisking")).toBe(false);
+    expect(verifyAdminHubPassword("anything")).toBe(false);
     if (prevVercel === undefined) delete process.env.VERCEL_ENV;
     else process.env.VERCEL_ENV = prevVercel;
   });
 
   it("accepts the correct password and rejects wrong ones", () => {
-    expect(verifyAdminHubPassword("isoisking")).toBe(true);
+    expect(verifyAdminHubPassword("test-hub-password")).toBe(true);
     expect(verifyAdminHubPassword("wrong")).toBe(false);
   });
 

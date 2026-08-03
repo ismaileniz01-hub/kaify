@@ -1,9 +1,10 @@
 import { getOwnProfile } from "@/lib/services/profile.service";
-import { getStreakStatus } from "@/lib/services/streak-status.service";
+import { getStreakStatus, type StreakStatusDTO } from "@/lib/services/streak-status.service";
 import { getTodayNutritionSnapshot } from "@/lib/services/analytics.service";
 import { buildKaiFoodInsight } from "@/lib/kai-food-insight";
 import { resolveLocale, translateKey } from "@/lib/i18n/dictionary";
 import { getDailyMotivationQuote } from "@/lib/motivation-quotes";
+import type { ProfileDTO } from "@/lib/types/domain.types";
 
 export type HomeDTO = {
   displayName: string;
@@ -18,13 +19,23 @@ export type HomeDTO = {
   kaiLevel: number;
 };
 
+export type HomeDataPrefetch = {
+  profile?: ProfileDTO;
+  streakStatus?: StreakStatusDTO;
+};
+
 export async function getHomeData(
   userId: string,
   localeOverride?: string | null,
+  prefetch?: HomeDataPrefetch,
 ): Promise<HomeDTO> {
   const [profile, streakStatus, todayNutrition] = await Promise.all([
-    getOwnProfile(userId),
-    getStreakStatus(userId),
+    prefetch?.profile
+      ? Promise.resolve(prefetch.profile)
+      : getOwnProfile(userId),
+    prefetch?.streakStatus
+      ? Promise.resolve(prefetch.streakStatus)
+      : getStreakStatus(userId),
     getTodayNutritionSnapshot(userId).catch(() => null),
   ]);
 

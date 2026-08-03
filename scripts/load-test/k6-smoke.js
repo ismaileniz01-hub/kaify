@@ -1,9 +1,12 @@
 /**
- * k6 smoke — CI gate for /api/health latency + error rate.
+ * k6 smoke — CI gate for /api/health + optional authenticated hot paths.
  *
  * Usage:
  *   k6 run scripts/load-test/k6-smoke.js
  *   BASE_URL=http://localhost:3000 k6 run scripts/load-test/k6-smoke.js
+ *   K6_ACCESS_TOKEN=<supabase jwt> k6 run scripts/load-test/k6-hotpaths.js
+ *
+ * This file stays CI-safe (anonymous health only). Hot paths live in k6-hotpaths.js.
  */
 import http from "k6/http";
 import { check, sleep } from "k6";

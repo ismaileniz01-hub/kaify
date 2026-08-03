@@ -119,8 +119,8 @@ export async function refreshLeaderboardSnapshots(): Promise<{
   await Promise.all([
     upsertSnapshot(globalKey, globalEntries),
     upsertSnapshot(countryKey, countryEntries),
-    cacheSet(CacheKeys.leaderboardGlobal(limit, offset), globalEntries, CacheTTL.leaderboardHot),
-    cacheSet(CacheKeys.leaderboardCountry(countryLimit), countryEntries, CacheTTL.leaderboardHot),
+    cacheSet(CacheKeys.leaderboardGlobal(limit, offset), globalEntries, CacheTTL.leaderboardWarm),
+    cacheSet(CacheKeys.leaderboardCountry(countryLimit), countryEntries, CacheTTL.leaderboardWarm),
   ]);
 
   return { globalCount: globalEntries.length, countryCount: countryEntries.length };

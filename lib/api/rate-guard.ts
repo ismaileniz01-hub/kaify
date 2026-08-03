@@ -34,8 +34,13 @@ export const AI_RATE_LIMITS = {
 
 export type AiRateAction = keyof typeof AI_RATE_LIMITS;
 
-/** Soft reads: if Upstash is down, prefer memory fallback over blanking the app. */
-const FAIL_OPEN_ACTIONS = new Set<AiRateAction>(["session"]);
+/** Soft reads / bootstrap: if Upstash is down, prefer memory fallback over blanking the app. */
+const FAIL_OPEN_ACTIONS = new Set<AiRateAction>([
+  "session",
+  "checkin",
+  "steps",
+  "health_probe",
+]);
 
 export async function enforceUserRateLimit(
   userId: string,
@@ -65,8 +70,9 @@ export async function enforcePublicRateLimit(
   >,
 ): Promise<void> {
   const config = AI_RATE_LIMITS[action];
+  // Health liveness must remain probeable without Upstash (CI + uptime monitors).
   const result = await checkRateLimit(`pub:${action}:${ip}`, config, {
-    failClosedInProduction: true,
+    failClosedInProduction: action !== "health_probe",
   });
 
   if (!result.allowed) {

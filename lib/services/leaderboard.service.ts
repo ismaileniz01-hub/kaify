@@ -2,7 +2,7 @@ import { createSignedAvatarUrlsBatch } from "@/lib/services/avatar-storage.servi
 import { resolveLeaderboardUserId } from "@/lib/privacy/mask-user-id";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
-import { cachedWithStale } from "@/lib/cache";
+import { cached, cachedWithStale } from "@/lib/cache";
 import { CacheKeys, CacheTTL } from "@/lib/cache/keys";
 import { logger } from "@/lib/logger";
 import {
@@ -37,7 +37,15 @@ function maskLeaderboardEntries(
 async function signLeaderboardAvatars(
   entries: LeaderboardEntryDTO[],
 ): Promise<LeaderboardEntryDTO[]> {
-  const signedMap = await createSignedAvatarUrlsBatch(entries.map((e) => e.avatar));
+  const ownerByRef = new Map<string, string>();
+  for (const entry of entries) {
+    if (!entry.avatar || entry.avatar.startsWith("/")) continue;
+    ownerByRef.set(entry.avatar, entry.userId);
+  }
+  const signedMap = await createSignedAvatarUrlsBatch(
+    entries.map((e) => e.avatar),
+    ownerByRef,
+  );
   return entries.map((entry) => {
     if (!entry.avatar || entry.avatar.startsWith("/")) return entry;
     const signed = signedMap.get(entry.avatar);
@@ -81,6 +89,18 @@ async function loadCountryLeaderboardEntries(
   return (data ?? []).map(mapCountryLeaderboardEntry);
 }
 
+async function loadUserRank(viewerId: string): Promise<UserRankResult | null> {
+  return cached(CacheKeys.leaderboardRank(viewerId), CacheTTL.leaderboardRank, async () => {
+    const supabase = await createServerSupabaseClient();
+    const { data, error } = await supabase.rpc("get_user_rank", {});
+    if (error) {
+      logger.warn("[leaderboard.service] rank error", { error: error.message });
+      return null;
+    }
+    return (data as UserRankResult | null) ?? null;
+  });
+}
+
 /** Public global leaderboard (anon-safe RPC). Used by legacy/demo routes. */
 export async function getPublicGlobalLeaderboard(params: {
   limit: number;
@@ -96,7 +116,9 @@ export async function getPublicGlobalLeaderboard(params: {
   );
 
   return {
-    leaderboard: await signLeaderboardAvatars(maskLeaderboardEntries(entries)),
+    leaderboard: maskLeaderboardEntries(
+      await signLeaderboardAvatars(entries),
+    ),
     totalUsers: entries.length,
   };
 }
@@ -113,23 +135,20 @@ export async function getGlobalLeaderboard(params: {
   offset: number;
   viewerId: string;
 }): Promise<GlobalLeaderboard> {
-  const supabase = await createServerSupabaseClient();
-
-  const [listEntries, rankResult] = await Promise.all([
+  const [listEntries, rank] = await Promise.all([
     cachedWithStale(
       CacheKeys.leaderboardGlobal(params.limit, params.offset),
       CacheTTL.leaderboardHot,
       CacheTTL.leaderboardStale,
       async () => loadGlobalLeaderboardEntries(params.limit, params.offset),
     ),
-    supabase.rpc("get_user_rank", {}),
+    loadUserRank(params.viewerId),
   ]);
 
-  const rank: UserRankResult | null = rankResult.error ? null : rankResult.data;
-
   return {
-    leaderboard: await signLeaderboardAvatars(
-      maskLeaderboardEntries(listEntries, params.viewerId),
+    leaderboard: maskLeaderboardEntries(
+      await signLeaderboardAvatars(listEntries),
+      params.viewerId,
     ),
     myRank: rank?.rank ?? null,
     myStreak: rank?.current_streak ?? 0,

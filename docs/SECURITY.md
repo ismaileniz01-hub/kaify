@@ -1,6 +1,6 @@
 # Kaify Security Architecture
 
-Last updated: 2026-07-05
+Last updated: 2026-08-03
 
 ## Threat model (summary)
 
@@ -9,21 +9,22 @@ Last updated: 2026-07-05
 | User accounts | Session hijack, MFA bypass | Supabase Auth, MFA AAL2, fail-closed guards |
 | Health / chat data | LLM exfiltration, injection | Prompt sanitization, canary, soft-block, RLS |
 | Gems / economy | RPC bypass, farming | Service-role RPCs, idempotency, rate limits |
-| Avatars | Public enumeration | Private bucket + signed URLs (1h TTL) |
-| Admin | Privilege escalation | `is_admin()`, MFA AAL2, audit log |
+| Avatars | IDOR / public enumeration | Private bucket + owned-path signed URLs (1h TTL); PATCH cannot set foreign URLs |
+| Admin | Privilege escalation | `profiles.role=admin`, TOTP AAL2, hub password session, audit log |
 
 ## Authentication flow
 
-1. Magic link / OAuth → Supabase session (AAL1)
+1. Email OTP → Supabase session (AAL1)
 2. TOTP enrolled users → `/login/mfa` → AAL2 required for API (`requireMfaIfEnrolled`)
-3. Admin routes → `requireAdmin()` + AAL2 fail-closed
+3. Admin routes → `requireAdmin()` = admin role + **AAL2 (enrolled TOTP)** + hub password session
 4. Sensitive actions (delete, export, purchase) → MFA step-up + CSRF token
+5. All authenticated mutating APIs → CSRF by default (`defineRoute`)
 
 ## API surface
 
 All routes use `defineRoute` family ([api-inventory.md](./api-inventory.md)):
 
-- Auth → rate limit → CSRF (when required) → handler
+- Auth → rate limit → CSRF (default on mutating cookie-auth) → handler
 - Cron routes → `CRON_SECRET` bearer (timing-safe compare)
 - Public routes → IP rate limits (fail-closed in prod without Upstash)
 
@@ -33,13 +34,26 @@ All routes use `defineRoute` family ([api-inventory.md](./api-inventory.md)):
 - **Mutations** via service-role RPCs: check-in, gems, market purchase, streak rewards
 - **chat_messages**: SELECT own; INSERT revoked from client (API only)
 - **admin_get_***: service_role only
+- **Bootstrap admin**: `20260706150000_bootstrap_first_admin.sql` is a one-shot migration that promotes the earliest profile when no admin exists. Do **not** re-run against production after the first admin exists; never leave a zero-admin state on a multi-tenant DB.
 
 ## Edge / transport
 
 - CSP with per-request nonce; Termly legal embed isolated on `/privacy`, `/terms`, `/cookies`
 - HSTS, COOP, CORP via `vercel.json`
 - Origin check on mutating API requests (CSRF defense in depth)
-- Double-submit CSRF cookie (`kaify_csrf`) on delete / export / purchase
+- Double-submit CSRF cookie (`kaify_csrf`) on authenticated mutations (and export GET)
+- Dedicated `CSRF_SECRET` / `ADMIN_HUB_SECRET` (never reuse `SUPABASE_SERVICE_ROLE_KEY`)
+- Edge API rate limit fail-closed in production; page navigations soft-open
+
+## Secrets checklist (production / preview)
+
+| Variable | Required |
+|----------|----------|
+| `CSRF_SECRET` | Yes |
+| `ADMIN_HUB_PASSWORD` | Yes |
+| `ADMIN_HUB_SECRET` | Recommended (falls back to `CSRF_SECRET`) |
+| `CRON_SECRET` | Yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes (server only) |
 
 ## WAF (operational)
 

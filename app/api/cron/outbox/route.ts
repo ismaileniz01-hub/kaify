@@ -9,7 +9,11 @@ export const runtime = "nodejs";
 export const GET = defineCronRoute("/api/cron/outbox", async () => {
   try {
     const result = await processDomainEventOutbox();
-    await recordCronRun("outbox", "ok", { processed: result.processed });
+    await recordCronRun("outbox", "ok", {
+      processed: result.processed,
+      failed: result.failed,
+      deadLettered: result.deadLettered,
+    });
     return result;
   } catch (error) {
     await recordCronRun("outbox", "error", {

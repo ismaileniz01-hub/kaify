@@ -10,24 +10,39 @@ function isProductionRuntime(): boolean {
   );
 }
 
-/** Returns the hub HMAC secret, or null when production is misconfigured. */
+function isDeployedRuntime(): boolean {
+  return (
+    isProductionRuntime() ||
+    process.env.VERCEL_ENV === "preview"
+  );
+}
+
+function secureCookiesEnabled(): boolean {
+  return isDeployedRuntime();
+}
+
+/**
+ * Dedicated hub HMAC secret — never reuse SUPABASE_SERVICE_ROLE_KEY.
+ * Falls back to CSRF_SECRET, then a local-only insecure default.
+ */
 function hubSecret(): string | null {
   const secret =
     process.env.ADMIN_HUB_SECRET?.trim() ||
     process.env.CSRF_SECRET?.trim() ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
     "";
-  if (secret) return secret;
-  if (isProductionRuntime()) return null;
+  if (secret && !secret.includes("your_")) return secret;
+  if (isDeployedRuntime()) return null;
   return "dev-admin-hub-insecure";
 }
 
-/** Returns the hub password, or null when production is misconfigured. */
+/**
+ * Operator hub password. Must be set via ADMIN_HUB_PASSWORD in every
+ * environment (no hardcoded default — the previous default was public in source).
+ */
 export function adminHubPassword(): string | null {
   const password = process.env.ADMIN_HUB_PASSWORD?.trim() || "";
   if (password) return password;
-  if (isProductionRuntime()) return null;
-  return "isoisking";
+  return null;
 }
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -68,7 +83,7 @@ export function verifyAdminHubPassword(password: string): boolean {
 export async function mintAdminHubToken(userId: string): Promise<string> {
   const secret = hubSecret();
   if (!secret) {
-    throw new Error("ADMIN_HUB_SECRET (or CSRF_SECRET) is required in production");
+    throw new Error("ADMIN_HUB_SECRET (or CSRF_SECRET) is required in production/preview");
   }
   const expiresAt = Math.floor(Date.now() / 1000) + ADMIN_HUB_MAX_AGE_SEC;
   const payload = `${userId}.${expiresAt}`;
@@ -118,7 +133,7 @@ export function adminHubCookieOptions(): {
   return {
     httpOnly: true,
     sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookiesEnabled(),
     path: "/",
     maxAge: ADMIN_HUB_MAX_AGE_SEC,
   };

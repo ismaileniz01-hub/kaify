@@ -14,12 +14,13 @@ Last updated: 2026-07-05
 | Key | TTL (hot) | Stale | Invalidation |
 |-----|-----------|-------|--------------|
 | `market:items:v2` | 300s | — | Admin catalog change |
-| `lb:global:v1:*` | 60s | 3600s | TTL only |
-| `lb:country:v1:*` | 60s | 3600s | TTL only |
+| `lb:global:v1:*` | 60s (live) / 840s (cron warm) | 3600s | TTL only |
+| `lb:country:v1:*` | 60s (live) / 840s (cron warm) | 3600s | TTL only |
+| `lb:rank:v1:{userId}` | 120s | — | Check-in |
 | `analytics:v1:{userId}` | — | — | On analytics write |
 | `analytics:bundle:v1:{userId}` | 120s | — | On analytics write |
 | `analytics:today:v1:{userId}` | 120s | — | On analytics write |
-| `home:bundle:v1:{userId}:{day}` | 300s | 86400s stale | Check-in + analytics write |
+| `home:bundle:v2:{userId}:{day}` | 300s | 86400s stale | Check-in + analytics write |
 | `coaches:catalog:v1` | 3600s | — | Admin coach change |
 | `coaches:item:v1:{id}` | 3600s | — | Admin coach change |
 

@@ -10,7 +10,7 @@ import {
   type AiRateAction,
 } from "@/lib/api/rate-guard";
 import { requireSensitiveActionAuth } from "@/lib/auth/mfa-server";
-import { assertUserDailyAiBudget } from "@/lib/ai/daily-cost-cap";
+import { assertUserDailyAiBudget, assertPlatformDailyAiBudget } from "@/lib/ai/daily-cost-cap";
 import { assertCsrf } from "@/lib/security/csrf";
 import { getClientIP } from "@/lib/api-security";
 import { assertConsent } from "@/lib/services/consent.service";
@@ -37,7 +37,11 @@ export type DefineRouteOptions = {
   dailyAiBudget?: boolean;
   /** MFA step-up for delete/export and similar destructive actions. */
   sensitiveAction?: boolean;
-  /** Double-submit CSRF token (delete, export, purchase). */
+  /**
+   * Double-submit CSRF token. Defaults to required for authenticated
+   * POST/PUT/PATCH/DELETE. Set `false` only for intentional exceptions;
+   * set `true` to force CSRF on GET (e.g. export).
+   */
   requireCsrf?: boolean;
   /** Terms + Privacy clickwrap recorded in consent_records. */
   requireTermsConsent?: boolean;
@@ -65,7 +69,13 @@ async function runRouteGuards(
     await requireSensitiveActionAuth(user);
   }
 
-  if (options.requireCsrf) {
+  // Default CSRF on cookie-auth mutating requests; opt out with requireCsrf: false.
+  const method = request.method.toUpperCase();
+  const isMutating = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+  const csrfRequired =
+    options.requireCsrf === true ||
+    (options.requireCsrf !== false && authMode !== "none" && isMutating);
+  if (csrfRequired) {
     await assertCsrf(request);
   }
 
@@ -83,6 +93,7 @@ async function runRouteGuards(
 
   if (options.requireAi) {
     await assertAiAvailable();
+    await assertPlatformDailyAiBudget();
   }
 
   if (authMode !== "none" && options.dailyAiBudget) {

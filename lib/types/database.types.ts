@@ -928,6 +928,25 @@ export type Database = {
         };
         Returns: Json;
       };
+      claim_pending_streak_rewards: {
+        Args: {
+          p_user_id: string;
+          p_current_streak: number;
+        };
+        Returns: Json;
+      };
+      service_get_ai_cost_snapshot: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      admin_get_cache_hit_stats: {
+        Args: { p_days?: number };
+        Returns: Json;
+      };
+      service_get_outbox_backlog: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
       earn_gems: {
         Args: GemMutationArgs;
         Returns: GemMutationResult;

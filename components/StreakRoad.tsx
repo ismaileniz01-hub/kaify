@@ -9,6 +9,12 @@ import { useSession } from "@/lib/session-context";
 import { apiPost } from "@/lib/api/client";
 import { getKaiLevel, KAI_LEVEL_THRESHOLDS, KAI_LEVEL_AVATARS, type KaiLevel } from "@/lib/kai-level";
 import { useLang } from "@/lib/lang-context";
+import {
+  MILESTONE_GEM_REWARD,
+  SPECIAL_STATION_DAY,
+  SPECIAL_STATION_GEM_REWARD,
+  STATION_GEM_REWARD,
+} from "@/lib/streak-rewards.constants";
 
 type StreakRoadProps = {
   currentStreak: number;
@@ -29,11 +35,6 @@ const SEGMENTS: RoadSegment[] = [
   { start: 31, end: 61, labelKey: "streak.segment.veteran", milestone: 61, kaiLevel: 3 },
   { start: 61, end: 120, labelKey: "streak.segment.legend", milestone: 120, kaiLevel: 4 },
 ];
-
-const MILESTONE_GEM_REWARD = 10;
-const STATION_GEM_REWARD = 10;
-const SPECIAL_STATION_DAY = 90;
-const SPECIAL_STATION_GEM_REWARD = 30;
 
 const GEM_ICON_STYLE = {
   color: "#a855f7",

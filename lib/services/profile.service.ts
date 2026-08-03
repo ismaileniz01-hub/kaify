@@ -10,9 +10,13 @@ import { createSignedAvatarUrl } from "@/lib/services/avatar-storage.service";
 
 type ProfileUpdateColumns = Database["public"]["Tables"]["profiles"]["Update"];
 
-async function withSignedProfileAvatar(dto: ProfileDTO): Promise<ProfileDTO> {
-  const signedAvatar = await createSignedAvatarUrl(dto.avatarUrl);
-  return { ...dto, avatarUrl: signedAvatar ?? dto.avatarUrl };
+async function withSignedProfileAvatar(
+  dto: ProfileDTO,
+  ownerUserId: string,
+): Promise<ProfileDTO> {
+  const signedAvatar = await createSignedAvatarUrl(dto.avatarUrl, ownerUserId);
+  // Never echo a foreign/unsigned storage ref back to the client.
+  return { ...dto, avatarUrl: signedAvatar };
 }
 
 /**
@@ -33,7 +37,7 @@ export async function getOwnProfile(userId: string): Promise<ProfileDTO> {
   }
 
   const dto = mapProfileRow(data);
-  return withSignedProfileAvatar(dto);
+  return withSignedProfileAvatar(dto, userId);
 }
 
 const TIMEZONE_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -86,7 +90,8 @@ export async function updateOwnProfile(
   const updates: ProfileUpdateColumns = {};
 
   if (patch.displayName !== undefined) updates.display_name = patch.displayName;
-  if (patch.avatarUrl !== undefined) updates.avatar_url = patch.avatarUrl;
+  // Only allow clearing; uploads go through POST /api/profile/avatar.
+  if (patch.avatarUrl === null) updates.avatar_url = null;
   if (patch.gender !== undefined) updates.gender = patch.gender;
   if (patch.heightCm !== undefined) updates.height_cm = patch.heightCm;
   if (patch.weightKg !== undefined) updates.weight_kg = patch.weightKg;
@@ -135,5 +140,5 @@ export async function updateOwnProfile(
     throw new ApiError("INTERNAL_ERROR", "Profil güncellenemedi.");
   }
 
-  return withSignedProfileAvatar(mapProfileRow(data));
+  return withSignedProfileAvatar(mapProfileRow(data), userId);
 }
