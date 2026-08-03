@@ -47,10 +47,6 @@ const RATE_LIMIT_PAGE =
   process.env.NODE_ENV === "production"
     ? ({ failClosedInProduction: false } as const)
     : undefined;
-const RATE_LIMIT_FAIL_CLOSED =
-  process.env.NODE_ENV === "production"
-    ? ({ failClosedInProduction: true } as const)
-    : undefined;
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
