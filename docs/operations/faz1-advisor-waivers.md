@@ -45,8 +45,9 @@ etc.) are authenticated + JWT-scoped. `admin_get_cache_hit_stats` requires
 1. **HIBP leaked-password protection** — Auth → Providers → Email → enable
    “Prevent use of leaked passwords” (Pro entitlement):
    https://supabase.com/dashboard/project/urnetodzvszmddzdazdj/auth/providers?provider=Email
-2. **`ADMIN_EMAIL`** on Vercel project **`kaify`** (owns `kaifyai.org`) production env.
-3. Confirm `CSRF_SECRET` / `ADMIN_HUB_PASSWORD` / Paddle / Upstash are strong (not short placeholders) and redeploy.
+2. **`ADMIN_EMAIL`** — set to `ismaileniz01@gmail.com` on Vercel `kaify` (2026-08-04).
+3. Confirm Paddle / Upstash remain real; `CSRF_SECRET` + `ADMIN_HUB_PASSWORD` rotated 2026-08-04 (values in local `.env.local` / Vercel).
 4. Dual project: production custom domain is on **`kaify`**; **`kaify-main`** has no `kaifyai.org` — ignore or archive to avoid dual-prod confusion.
 5. Sign remaining checklist rows in `DEPLOY_CHECKLIST.md` / `10k-go-live-checklist.md` after 24h cron health.
 6. Optional: rotate `CRON_SECRET` if it appeared in any agent/tool logs, then re-sync Vault + Vercel.
+7. **HIBP:** enable via dashboard (Pro) or `node scripts/ops/enable-hibp.mjs` after `supabase login` / `SUPABASE_ACCESS_TOKEN`.
