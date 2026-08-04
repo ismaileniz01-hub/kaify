@@ -130,11 +130,12 @@ export type LeaderboardEntryDTO = {
 export function mapLeaderboardEntry(
   row: GlobalLeaderboardEntry,
 ): LeaderboardEntryDTO {
+  const flag = (row.country_code ?? "xx").toLowerCase();
   return {
     rank: row.rank,
     userId: row.user_id,
     name: row.display_name,
-    flagCode: row.country_code.toLowerCase(),
+    flagCode: flag,
     avatar: row.avatar_url ?? "",
     streak: row.current_streak,
     longestStreak: row.longest_streak,
@@ -154,10 +155,11 @@ export type CountryLeaderboardDTO = {
 export function mapCountryLeaderboardEntry(
   row: CountryLeaderboardEntry,
 ): CountryLeaderboardDTO {
+  const code = (row.country_code ?? "xx").toLowerCase();
   return {
     rank: row.rank,
-    countryCode: row.country_code.toLowerCase(),
-    flagCode: row.country_code.toLowerCase(),
+    countryCode: code,
+    flagCode: code,
     totalStreak: row.total_streak,
     userCount: row.user_count,
     avgStreak: row.avg_streak,

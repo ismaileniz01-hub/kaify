@@ -214,7 +214,7 @@ export default function LeaderboardPage() {
       .then(([settings, result]) => {
         if (cancelled) return;
         setLeaderboardHidden(settings.leaderboardOptOut);
-        const userCountry = profile?.countryCode.toLowerCase() ?? null;
+        const userCountry = profile?.countryCode?.toLowerCase() ?? null;
         const leaderboard: CountryEntry[] = result.leaderboard.map((row) => ({
           countryCode: row.countryCode,
           countryName: getCountryName(row.countryCode),

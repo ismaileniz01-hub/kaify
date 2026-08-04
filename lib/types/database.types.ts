@@ -431,14 +431,14 @@ export type GlobalLeaderboardEntry = {
   user_id: string;
   display_name: string;
   avatar_url: string | null;
-  country_code: string;
+  country_code: string | null;
   current_streak: number;
   longest_streak: number;
 };
 
 export type CountryLeaderboardEntry = {
   rank: number;
-  country_code: string;
+  country_code: string | null;
   total_streak: number;
   user_count: number;
   avg_streak: number;

@@ -111,7 +111,9 @@ export async function refreshLeaderboardSnapshots(): Promise<{
   if (countryError) throw countryError;
 
   const globalEntries = (globalRows ?? []).map(mapLeaderboardEntry);
-  const countryEntries = (countryRows ?? []).map(mapCountryLeaderboardEntry);
+  const countryEntries = (countryRows ?? [])
+    .filter((row) => Boolean(row?.country_code))
+    .map(mapCountryLeaderboardEntry);
 
   const globalKey = CacheKeys.leaderboardSnapshotKey("global", limit, offset);
   const countryKey = CacheKeys.leaderboardSnapshotKey("country", countryLimit);
