@@ -46,3 +46,5 @@ next-env.d.ts
 android/app/google-services.json
 ios/App/GoogleService-Info.plist
 .env*
+
+.env.vercel.prod.tmp
