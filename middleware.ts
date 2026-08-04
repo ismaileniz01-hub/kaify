@@ -61,11 +61,13 @@ export async function middleware(request: NextRequest) {
   }
 
   // Webhooks authenticate via signature — never bot-block them.
+  // Cron authenticates via CRON_SECRET bearer (pg_net / Vercel often omit a browser UA).
   // Health liveness must stay open for monitors / k6 (custom short UAs).
   // Paddle's User-Agent can be short ("Paddle") and fails the length heuristic.
   if (
     pathname.startsWith("/api/") &&
     !pathname.startsWith("/api/webhooks/") &&
+    !pathname.startsWith("/api/cron/") &&
     pathname !== "/api/health" &&
     isLikelyBot(request)
   ) {

@@ -9,7 +9,7 @@
 
 ## Decision
 
-1. **Primary cadence:** Supabase **pg_cron + pg_net** every **15 minutes** → `GET /api/cron/leaderboard-snapshot` (see [`docs/operations/pg-cron-frequent-schedules.sql`](../../operations/pg-cron-frequent-schedules.sql)). Vercel Hobby cannot host sub-daily crons.
+1. **Primary cadence:** Supabase **pg_cron + pg_net** every **15 minutes** → `GET /api/cron/leaderboard-snapshot` (see [`docs/operations/pg-cron-frequent-schedules-vault.sql`](../../operations/pg-cron-frequent-schedules-vault.sql)). Vercel Hobby cannot host sub-daily crons.
 2. **Backup:** Vercel Cron daily (`vercel.json`) still hits the same route.
 3. Store pre-mapped DTO arrays in `leaderboard_snapshots` (Postgres)
 4. Warm Redis hot keys on each refresh (**~14m TTL** so keys survive between 15m ticks)

@@ -18,7 +18,8 @@ Aşağıdakiler eksikse prod'da özellikler çalışmaz:
 | `CRON_SECRET` | Cron + detaylı health (boşluk/placeholder olmasın) |
 | `CSRF_SECRET` | Double-submit CSRF HMAC (prod/preview zorunlu; service-role ile paylaşma) |
 | `ADMIN_HUB_PASSWORD` | Admin Hub operatör şifresi (kaynakta default yok) |
-| `ADMIN_HUB_SECRET` | Hub cookie HMAC (yoksa `CSRF_SECRET` kullanılır) |
+| `ADMIN_HUB_SECRET` | Hub cookie HMAC (**zorunlu** prod/preview; CSRF ile paylaşma) |
+| `ADMIN_EMAIL` | Opsiyonel ama önerilir — hub'ı tek operatör e-postasına kısıtlar |
 | `DEEPSEEK_API_KEY` | AI chat |
 | `GEMINI_API_KEY` | Vision / kalite kapısı |
 | `UPSTASH_REDIS_REST_URL` + `TOKEN` | Rate limit (prod'da zorunlu) |
@@ -50,7 +51,7 @@ Env değiştirdikten sonra **redeploy** gerekir.
 
 ## 4. Cron doğrulama (deploy sonrası)
 
-`vercel.json` günlük yedek cron’lar tutar (Hobby uyumlu). **15m / saatlik** cadence için Supabase **pg_cron** şart — [`docs/operations/pg-cron-frequent-schedules.sql`](./operations/pg-cron-frequent-schedules.sql).
+`vercel.json` günlük yedek cron’lar tutar (Hobby uyumlu). **15m / saatlik** cadence için Supabase **pg_cron** + Vault secret — [`docs/operations/pg-cron-frequent-schedules-vault.sql`](./operations/pg-cron-frequent-schedules-vault.sql) (`node scripts/ops/apply-pg-cron.mjs --seed-vault` sonra apply).
 
 | Cron (Vercel, günlük yedek) | Sıklık |
 |------|--------|
@@ -96,13 +97,14 @@ Admin hesabınla giriş yap, şunları kontrol et:
 |------|-------|
 | `POST /api/onboarding` | Backend hazır, welcome onboarding formu henüz bağlanmadı |
 | `npm run i18n:fill` | Gemini kotası dolunca 54 dil tamamlanır |
-| LemonSqueezy ödeme | Entegrasyon bekliyor |
+| Paddle Billing | Production checkout + webhook (see `docs/billing`) |
+| Store IAP (Capacitor) | WebView Paddle blocked — native store path (Faz 5) |
 | 4 leaderboard endpoint birleştirme | Çalışıyor, bakım kolaylığı için ileride sadeleştirilebilir |
 | `/api/subscribe` | `/api/waitlist` ile mükerrer; landing waitlist kullanıyor |
 
 ## 8. Kod tarafında tamamlanan (benim tarafım)
 
-- CI yeşil: lint + typecheck + 139 test + build
+- CI yeşil: lint + typecheck + unit/integration tests + build (`npm test`)
 - Self-healing: tüm API route'ları `{ route }` context ile error-monitor'a bağlı
 - Cron auth: paylaşılan `lib/api/cron-auth.ts`
 - Leaderboard field mismatch düzeltildi (`myRank`/`totalRanked`)
@@ -114,6 +116,8 @@ Admin hesabınla giriş yap, şunları kontrol et:
 - Security'e GDPR JSON export eklendi
 - Admin hub'a referral listesi eklendi
 - AI cost observability migration Supabase'e uygulandı
+- **Faz 0**: SECURITY DEFINER RPC privilege lockdown
+- **Faz 1**: service-table grants + vault-backed pg_cron schedules (ops)
 
 ---
 

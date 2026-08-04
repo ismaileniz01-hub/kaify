@@ -122,7 +122,7 @@ Dashboard: https://supabase.com/dashboard/project/urnetodzvszmddzdazdj/auth/temp
 
 All times **UTC**.
 
-**Vercel Hobby** only allows **once-daily** crons — `vercel.json` stays on daily schedules as a backup. Production freshness (ADR 009) uses **Supabase pg_cron + pg_net**: run [`docs/operations/pg-cron-frequent-schedules.sql`](./operations/pg-cron-frequent-schedules.sql) after setting `kaify.app_base_url` and `kaify.cron_secret`.
+**Vercel Hobby** only allows **once-daily** crons — `vercel.json` stays on daily schedules as a backup. Production freshness (ADR 009) uses **Supabase pg_cron + pg_net** with Vault secret `kaify_cron_secret`: apply [`docs/operations/pg-cron-frequent-schedules-vault.sql`](./operations/pg-cron-frequent-schedules-vault.sql) (or migration `20260804171000_faz1_pg_cron_vault_schedules.sql`). Seed secret once via `node scripts/ops/apply-pg-cron.mjs --seed-vault` if missing.
 
 | Job | Vercel (backup) | pg_cron (production) | Path | Notes |
 |-----|-----------------|----------------------|------|-------|

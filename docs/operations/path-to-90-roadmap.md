@@ -37,22 +37,24 @@ Score lift (indicative):
 
 ### Security
 
-- [ ] Enable Supabase Auth leaked-password (HIBP) protection
-- [ ] Set `ADMIN_EMAIL` allowlist in Vercel production
-- [ ] Confirm real secrets (not placeholders): `CRON_SECRET`, `CSRF_SECRET`, `ADMIN_HUB_*`, `PADDLE_NOTIFICATION_WEBHOOK_SECRET`, Upstash — redeploy
-- [ ] Address `pg_net` in `public` schema advisor WARN (move or document waiver)
-- [ ] RLS-enabled / no-policy tables: confirm service_role-only intent or add policies
+- [ ] Enable Supabase Auth leaked-password (HIBP) protection — **operator** (dashboard / Pro): see [faz1-advisor-waivers.md](./faz1-advisor-waivers.md)
+- [ ] Set `ADMIN_EMAIL` allowlist in Vercel production — **operator** on project **`kaify`** (owns `kaifyai.org`)
+- [ ] Confirm real secrets (not placeholders): `CRON_SECRET`, `CSRF_SECRET`, `ADMIN_HUB_*`, `PADDLE_NOTIFICATION_WEBHOOK_SECRET`, Upstash — redeploy — **operator**
+- [x] Address `pg_net` in `public` schema advisor WARN — **waiver documented** ([faz1-advisor-waivers.md](./faz1-advisor-waivers.md)); extension comment on prod
+- [x] RLS-enabled / no-policy tables: service_role-only intent + `REVOKE` (`20260804170000_faz1_service_table_grants.sql`)
 
 ### Ops
 
-- [ ] Apply [`pg-cron-frequent-schedules.sql`](./pg-cron-frequent-schedules.sql) (15m leaderboard, hourly outbox/notifications, 15m self-recovery, 6h cost-check)
-- [ ] Confirm `cron.job` active; `cron_job_runs` healthy for 24h
-- [ ] Complete [`DEPLOY_CHECKLIST.md`](../DEPLOY_CHECKLIST.md) + [`10k-go-live-checklist.md`](./10k-go-live-checklist.md) with evidence
-- [ ] Disconnect/ignore Netlify if it still fails PRs
-- [ ] Single Vercel production project (`kaify` vs `kaify-main`) — avoid dual prod
-- [ ] Fix doc drift: `SECURITY.md` rate-limit posture, hub secret fallback, remove LemonSqueezy from DEPLOY
+- [x] Apply vault-backed frequent pg_cron ([pg-cron-frequent-schedules-vault.sql](./pg-cron-frequent-schedules-vault.sql) / `20260804171000_faz1_pg_cron_vault_schedules.sql`) — 15m leaderboard + self-recovery, hourly outbox/notifications, 6h cost-check
+- [x] Confirm `cron.job` active (5 jobs; legacy `kaify-notifications` retired)
+- [ ] Confirm `cron_job_runs` healthy for 24h — **operator** (wait)
+- [ ] Complete [`DEPLOY_CHECKLIST.md`](../DEPLOY_CHECKLIST.md) + [`10k-go-live-checklist.md`](./10k-go-live-checklist.md) with evidence — **operator**
+- [ ] Disconnect/ignore Netlify if it still fails PRs — **operator**
+- [x] Single Vercel production for custom domain: **`kaify`** has `kaifyai.org`; `kaify-main` is secondary (no custom domain) — documented in waivers
+- [x] Fix doc drift: `SECURITY.md` rate-limit posture, required hub secret, LemonSqueezy removed from DEPLOY
 
-**Exit:** Authed detailed `/api/health` OK · frequent crons listed · checklists signed · HIBP on · `ADMIN_EMAIL` set.
+**Exit (code/infra):** Authed cron smoke OK · frequent crons listed · docs synced · grants applied.  
+**Exit (operator):** HIBP on · `ADMIN_EMAIL` set · 24h cron health · checklists signed.
 
 ---
 
