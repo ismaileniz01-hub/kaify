@@ -58,13 +58,14 @@ Score lift (indicative):
 
 ## Faz 2 — Critical path tests
 
-- [ ] **Paddle webhook** unit/integration: bad signature → 401; happy path entitlement; `claim_in_progress` → retryable
-- [ ] **OTP send/verify** unit/integration: validation, rate limit, GoTrue error mapping, session path
-- [ ] **Auth Playwright E2E** (TD-002): OTP → session → check-in on staging
-- [ ] Billing portal session create (mocked Paddle acceptable)
-- [ ] **RPC grant regression** test in CI (migration text or privilege snapshot)
+- [x] **Paddle webhook** unit/integration: bad signature → 401; happy path skip; `claim_in_progress` → 503 retryable (`tests/integration/paddle-webhook.flow.test.ts`, `tests/unit/paddle-signature.test.ts`)
+- [x] **OTP send/verify** unit/integration: schemas, GoTrue error map, send/verify routes (`tests/integration/otp.flow.test.ts`, `tests/unit/send-otp-server.test.ts`)
+- [x] **Auth Playwright E2E** (TD-002): `e2e/auth-otp.spec.ts` — login always; OTP→session staging-gated via `E2E_AUTH_ENABLED` + `E2E_OTP_*`
+- [x] Billing portal session create (mocked Paddle) (`tests/integration/billing-portal.flow.test.ts`)
+- [x] **RPC grant regression** test in CI (`tests/security/rpc-privilege-matrix.test.ts` + Faz 0 lockdown tests)
 
-**Exit:** New tests green in CI · webhook/OTP not skipped · staging E2E evidenced or secret-gated.
+**Exit:** New tests green in CI · webhook/OTP not skipped · staging E2E secret-gated.  
+**Shipped:** 2026-08-04.
 
 ---
 

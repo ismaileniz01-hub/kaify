@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 /**
  * Public smoke — no auth fixtures required.
- * ADR 016 Phase 2 full OTP→check-in path stays staging-gated (TD-002).
+ * Auth OTP→session path: see `e2e/auth-otp.spec.ts` (E2E_AUTH_ENABLED staging gate).
  */
 test.describe("public smoke", () => {
   test("landing renders brand and main landmark", async ({ page }) => {
