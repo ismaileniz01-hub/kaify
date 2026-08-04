@@ -9,10 +9,13 @@ import {
   isLegacyPublicApi,
   legacyApiDeprecationHeaders,
 } from "@/lib/api/v1-manifest";
+
 const RATE_LIMIT_CONFIG = {
   api: { requests: 400, windowMs: 60 * 1000 },
   page: { requests: 300, windowMs: 60 * 1000 },
   health: { requests: 10, windowMs: 60 * 1000 },
+  /** Anonymous marketing/legal — higher ceiling when rate limit still applied. */
+  marketing: { requests: 600, windowMs: 60 * 1000 },
 };
 
 const SUSPICIOUS_PATHS = [
@@ -28,8 +31,39 @@ const SUSPICIOUS_PATHS = [
   "/cgi-bin", "/cpanel", "/webmail",
 ];
 
-function getRateLimitBucket(pathname: string) {
-  return pathname.startsWith("/api/") ? "api" : "page";
+const MARKETING_EXACT = new Set([
+  "/",
+  "/privacy",
+  "/terms",
+  "/terms&conditions",
+  "/cookies",
+  "/kvkk",
+]);
+
+function isMarketingPath(pathname: string): boolean {
+  if (MARKETING_EXACT.has(pathname)) return true;
+  return (
+    pathname.startsWith("/privacy/") ||
+    pathname.startsWith("/terms/") ||
+    pathname.startsWith("/cookies/") ||
+    pathname.startsWith("/kvkk/")
+  );
+}
+
+function hasSupabaseAuthCookie(request: NextRequest): boolean {
+  return request.cookies
+    .getAll()
+    .some(
+      (c) =>
+        c.name.includes("auth-token") ||
+        (c.name.startsWith("sb-") && c.name.includes("auth")),
+    );
+}
+
+function getRateLimitBucket(pathname: string): keyof typeof RATE_LIMIT_CONFIG {
+  if (pathname.startsWith("/api/")) return "api";
+  if (isMarketingPath(pathname)) return "marketing";
+  return "page";
 }
 
 /**
@@ -42,6 +76,50 @@ const RATE_LIMIT_SOFT =
   process.env.NODE_ENV === "production"
     ? ({ failClosedInProduction: false } as const)
     : undefined;
+
+async function finalizeResponse(
+  forwardedRequest: NextRequest,
+  nonce: string,
+  requestId: string,
+  pathname: string,
+  rateLimit?: { limit: number; remaining: number },
+  options?: { skipSessionRefresh?: boolean },
+) {
+  const { response } = options?.skipSessionRefresh
+    ? {
+        response: NextResponse.next({
+          request: { headers: forwardedRequest.headers },
+        }),
+      }
+    : await updateSupabaseSession(forwardedRequest);
+
+  response.headers.set(
+    "Content-Security-Policy",
+    buildContentSecurityPolicy(nonce, { legalEmbed: isLegalContentPath(pathname) }),
+  );
+  response.headers.set("X-Request-ID", requestId);
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+  response.headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(self), geolocation=(), browsing-topics=(), interest-cohort=()",
+  );
+  if (rateLimit) {
+    response.headers.set("X-RateLimit-Limit", String(rateLimit.limit));
+    response.headers.set("X-RateLimit-Remaining", String(rateLimit.remaining));
+  }
+
+  if (pathname.startsWith("/api/v1/")) {
+    response.headers.set("X-API-Version", "v1");
+  } else if (isLegacyPublicApi(pathname)) {
+    for (const [key, value] of Object.entries(legacyApiDeprecationHeaders())) {
+      response.headers.set(key, value);
+    }
+  }
+
+  return await attachCsrfCookie(forwardedRequest, response);
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -60,10 +138,6 @@ export async function middleware(request: NextRequest) {
     return new NextResponse(null, { status: 404 });
   }
 
-  // Webhooks authenticate via signature — never bot-block them.
-  // Cron authenticates via CRON_SECRET bearer (pg_net / Vercel often omit a browser UA).
-  // Health liveness must stay open for monitors / k6 (custom short UAs).
-  // Paddle's User-Agent can be short ("Paddle") and fails the length heuristic.
   if (
     pathname.startsWith("/api/") &&
     !pathname.startsWith("/api/webhooks/") &&
@@ -97,19 +171,20 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === "/api/health") {
-    // Cheap anonymous liveness — no rate limit (monitors + CI k6 must not 429).
-    const { response } = await updateSupabaseSession(forwardedRequest);
-    response.headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce));
-    response.headers.set("X-Request-ID", requestId);
-    return await attachCsrfCookie(forwardedRequest, response);
+    return finalizeResponse(forwardedRequest, nonce, requestId, pathname);
   }
 
   if (pathname.startsWith("/api/cron/") || pathname.startsWith("/api/webhooks/")) {
-    const { response } = await updateSupabaseSession(forwardedRequest);
-    response.headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce));
-    response.headers.set("X-Request-ID", requestId);
-    return await attachCsrfCookie(forwardedRequest, response);
+    return finalizeResponse(forwardedRequest, nonce, requestId, pathname);
   }
+
+  // Anonymous marketing/legal: skip Redis rate limit + skip getUser() when no auth cookies.
+  if (isMarketingPath(pathname) && !hasSupabaseAuthCookie(request)) {
+    return finalizeResponse(forwardedRequest, nonce, requestId, pathname, undefined, {
+      skipSessionRefresh: true,
+    });
+  }
+
   const bucket = getRateLimitBucket(pathname);
   const config = RATE_LIMIT_CONFIG[bucket];
   const rateLimit = await checkRateLimit(
@@ -134,32 +209,13 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  const { response } = await updateSupabaseSession(forwardedRequest);
-
-  response.headers.set(
-    "Content-Security-Policy",
-    buildContentSecurityPolicy(nonce, { legalEmbed: isLegalContentPath(pathname) }),
+  return finalizeResponse(
+    forwardedRequest,
+    nonce,
+    requestId,
+    pathname,
+    { limit: rateLimit.limit, remaining: rateLimit.remaining },
   );
-  response.headers.set("X-Request-ID", requestId);
-  response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("X-Frame-Options", "DENY");
-  response.headers.set("X-XSS-Protection", "1; mode=block");
-  response.headers.set(
-    "Permissions-Policy",
-    "camera=(), microphone=(self), geolocation=(), browsing-topics=(), interest-cohort=()",
-  );
-  response.headers.set("X-RateLimit-Limit", String(rateLimit.limit));
-  response.headers.set("X-RateLimit-Remaining", String(rateLimit.remaining));
-
-  if (pathname.startsWith("/api/v1/")) {
-    response.headers.set("X-API-Version", "v1");
-  } else if (isLegacyPublicApi(pathname)) {
-    for (const [key, value] of Object.entries(legacyApiDeprecationHeaders())) {
-      response.headers.set(key, value);
-    }
-  }
-
-  return await attachCsrfCookie(forwardedRequest, response);
 }
 
 export const config = {

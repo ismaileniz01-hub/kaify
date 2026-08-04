@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { hasActiveSubscription } from "@/lib/auth/post-auth-redirect";
 import { useLang } from "@/lib/lang-context";
-import { useSession } from "@/lib/session-context";
+import { useSessionOptional } from "@/lib/session-context";
 
 const LINKS = [
   { href: "#about", labelKey: "landing.nav.about", en: "About" },
@@ -36,7 +36,11 @@ export function LandingNav({
   forceEnglish?: boolean;
 }) {
   const { t } = useLang();
-  const { isAuthenticated, isLoading, displayName, profile } = useSession();
+  const session = useSessionOptional();
+  const isAuthenticated = session?.isAuthenticated ?? false;
+  const isLoading = session?.isLoading ?? false;
+  const displayName = session?.displayName ?? "";
+  const profile = session?.profile ?? null;
   const label = (key: string, english: string) => (forceEnglish ? english : t(key));
   const [scrolled, setScrolled] = useState(false);
 

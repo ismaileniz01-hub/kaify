@@ -1,25 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { headers } from "next/headers";
 import "./globals.css";
-import "./light-theme.css";
-
-import { SessionProvider } from "@/lib/session-context";
-import { GemProvider } from "@/lib/gem-context";
-import { KaiProvider } from "@/lib/kai-context";
-import { NotificationProvider } from "@/lib/notification-context";
-import { KaiSync } from "@/components/KaiSync";
-import { SessionErrorBanner } from "@/components/SessionErrorBanner";
-import { CapacitorShell } from "@/components/CapacitorShell";
-import { NativeAppEntry } from "@/components/NativeAppEntry";
-import { MfaGate } from "@/components/auth/MfaGate";
-import { LegalConsentSync } from "@/components/consent/LegalConsentSync";
-import { AiConsentGate } from "@/components/consent/AiConsentGate";
-import { CookieConsentBanner } from "@/components/consent/CookieConsentBanner";
-import { OptionalAnalytics } from "@/components/consent/OptionalAnalytics";
-import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
-import { SubscriptionGate } from "@/components/billing/SubscriptionGate";
-import { ReferralApplySync } from "@/components/referral/ReferralApplySync";
 import { ThemeProvider } from "@/lib/theme-context";
 import { LangProvider } from "@/lib/lang-context";
 
@@ -61,13 +42,11 @@ export const viewport: Viewport = {
   themeColor: "#0a0a0a",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
-
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -78,31 +57,7 @@ export default async function RootLayout({
           Skip to content
         </a>
         <ThemeProvider>
-          <LangProvider>
-            <SessionProvider>
-              <GemProvider>
-                <KaiProvider>
-                  <NotificationProvider>
-                    <CapacitorShell />
-                    <NativeAppEntry />
-                    <MfaGate />
-                    <LegalConsentSync />
-                    <ReferralApplySync />
-                    <AiConsentGate />
-                    <OnboardingGate />
-                    <SubscriptionGate />
-                    <KaiSync />
-                    <SessionErrorBanner />
-                    <div id="main-content" tabIndex={-1}>
-                      {children}
-                    </div>
-                    <CookieConsentBanner />
-                    <OptionalAnalytics nonce={nonce} />
-                  </NotificationProvider>
-                </KaiProvider>
-              </GemProvider>
-            </SessionProvider>
-          </LangProvider>
+          <LangProvider>{children}</LangProvider>
         </ThemeProvider>
       </body>
     </html>

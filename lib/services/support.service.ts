@@ -122,32 +122,55 @@ export async function listAdminSupportTickets(): Promise<AdminSupportTicketSumma
     .order("updated_at", { ascending: false })
     .limit(100);
 
-  const summaries: AdminSupportTicketSummary[] = [];
-  for (const t of tickets ?? []) {
-    const [{ data: profile }, { data: authUser }, { data: lastMsg }] = await Promise.all([
-      admin.from("profiles").select("*").eq("id", t.user_id).maybeSingle(),
-      admin.auth.admin.getUserById(t.user_id),
-      admin
-        .from("support_messages")
-        .select("body")
-        .eq("ticket_id", t.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
-    const dto = profile ? mapProfileRow(profile) : null;
-    summaries.push({
-      id: t.id,
-      userId: t.user_id,
-      userName: dto?.displayName ?? "User",
-      userEmail: authUser.user?.email ?? null,
-      subject: t.subject,
-      status: t.status,
-      updatedAt: t.updated_at,
-      lastMessage: lastMsg?.body ?? "",
-    });
+  const list = tickets ?? [];
+  if (list.length === 0) return [];
+
+  const userIds = [...new Set(list.map((t) => t.user_id))];
+  const ticketIds = list.map((t) => t.id);
+
+  const [{ data: profiles }, { data: messages }] = await Promise.all([
+    admin.from("profiles").select("id, display_name").in("id", userIds),
+    admin
+      .from("support_messages")
+      .select("ticket_id, body, created_at")
+      .in("ticket_id", ticketIds)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  const nameByUser = new Map<string, string>();
+  for (const p of profiles ?? []) {
+    nameByUser.set(p.id, p.display_name?.trim() || "User");
   }
-  return summaries;
+
+  const lastBodyByTicket = new Map<string, string>();
+  for (const m of messages ?? []) {
+    if (!lastBodyByTicket.has(m.ticket_id)) {
+      lastBodyByTicket.set(m.ticket_id, m.body ?? "");
+    }
+  }
+
+  const emailByUser = new Map<string, string | null>();
+  await Promise.all(
+    userIds.map(async (userId) => {
+      try {
+        const { data } = await admin.auth.admin.getUserById(userId);
+        emailByUser.set(userId, data.user?.email ?? null);
+      } catch {
+        emailByUser.set(userId, null);
+      }
+    }),
+  );
+
+  return list.map((t) => ({
+    id: t.id,
+    userId: t.user_id,
+    userName: nameByUser.get(t.user_id) ?? "User",
+    userEmail: emailByUser.get(t.user_id) ?? null,
+    subject: t.subject,
+    status: t.status,
+    updatedAt: t.updated_at,
+    lastMessage: lastBodyByTicket.get(t.id) ?? "",
+  }));
 }
 
 export async function getAdminSupportTicket(ticketId: string): Promise<{

@@ -33,6 +33,7 @@ import {
   mapChatMessageRow,
   type ChatMessageDTO,
 } from "@/lib/types/domain.types";
+import { CHAT_MESSAGE_LIST_COLUMNS } from "@/lib/services/chat-message-columns";
 import type { ChatTurn } from "@/lib/ai/types";
 import type { SseChunk } from "@/lib/api/sse";
 import type { Database } from "@/lib/types/database.types";
@@ -158,7 +159,7 @@ export async function getHistory(
 
   let query = admin
     .from("chat_messages")
-    .select("*")
+    .select(CHAT_MESSAGE_LIST_COLUMNS)
     .eq("user_id", params.userId)
     .eq("coach_id", params.coachId)
     .eq("thread_type", "direct")

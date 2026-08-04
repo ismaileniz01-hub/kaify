@@ -43,21 +43,21 @@ type GemContextValue = {
 const GemContext = createContext<GemContextValue | null>(null);
 
 export function GemProvider({ children }: { children: ReactNode }) {
-  const session = useSession();
+  const { isAuthenticated, gemBalance } = useSession();
   const [gemState, setGemState] = useState<GemState>(DEMO_GEM_STATE);
   const [lastTransaction, setLastTransaction] =
     useState<GemTransaction | null>(null);
 
   useEffect(() => {
-    if (session.isAuthenticated) {
+    if (isAuthenticated) {
       setGemState((prev) => ({
         ...prev,
-        balance: session.gemBalance.balance,
-        totalEarned: session.gemBalance.totalEarned,
-        totalSpent: session.gemBalance.totalSpent,
+        balance: gemBalance.balance,
+        totalEarned: gemBalance.totalEarned,
+        totalSpent: gemBalance.totalSpent,
       }));
     }
-  }, [session.isAuthenticated, session.gemBalance]);
+  }, [isAuthenticated, gemBalance]);
 
   const earn = useCallback(
     (
@@ -90,7 +90,7 @@ export function GemProvider({ children }: { children: ReactNode }) {
   const todayEarned = getTodayEarned(gemState.history);
 
   const refreshBalance = useCallback(async () => {
-    if (!session.isAuthenticated) return;
+    if (!isAuthenticated) return;
     const balance = await apiGet<GemBalanceDTO>("/api/gems");
     setGemState((prev) => ({
       ...prev,
@@ -98,7 +98,7 @@ export function GemProvider({ children }: { children: ReactNode }) {
       totalEarned: balance.totalEarned,
       totalSpent: balance.totalSpent,
     }));
-  }, [session.isAuthenticated]);
+  }, [isAuthenticated]);
 
   const value = useMemo<GemContextValue>(
     () => ({

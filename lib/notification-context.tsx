@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useSession } from "./session-context";
+import { useSessionAuth } from "./session-context";
 import { apiGet, apiPatch } from "./api/client";
 import type {
   NotificationDTO,
@@ -31,7 +31,7 @@ const NotificationContext = createContext<NotificationContextValue | null>(null)
 const POLL_INTERVAL_MS = 60_000;
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const session = useSession();
+  const { isAuthenticated } = useSessionAuth();
   const [notifications, setNotifications] = useState<NotificationDTO[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -40,7 +40,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const hasPrimed = useRef(false);
 
   const refresh = useCallback(async () => {
-    if (!session.isAuthenticated || inFlight.current) return;
+    if (!isAuthenticated || inFlight.current) return;
     if (typeof document !== "undefined" && document.visibilityState === "hidden") {
       return;
     }
@@ -67,11 +67,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       inFlight.current = false;
     }
-  }, [session.isAuthenticated]);
+  }, [isAuthenticated]);
 
   // Initial load + polling while authenticated and tab visible.
   useEffect(() => {
-    if (!session.isAuthenticated) {
+    if (!isAuthenticated) {
       setNotifications([]);
       setUnreadCount(0);
       knownIds.current = new Set();
@@ -88,7 +88,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [session.isAuthenticated, refresh]);
+  }, [isAuthenticated, refresh]);
 
   const markAllRead = useCallback(async () => {
     if (unreadCount === 0) return;

@@ -33,13 +33,18 @@ import type { ProfileUpdateInput } from "@/lib/validations/profile.schema";
 import { syncFreezieBalanceFromServer } from "@/lib/freezie";
 import { clearAuthLocalState, signOutUser } from "@/lib/auth/logout";
 
-type SessionContextValue = {
+type SessionAuthValue = {
   isLoading: boolean;
   isAuthenticated: boolean;
   isPreviewMode: boolean;
   isAdmin: boolean;
   sessionError: boolean;
   clearSessionError: () => void;
+  refreshSession: () => Promise<void>;
+  signOut: () => Promise<boolean>;
+};
+
+type SessionDataValue = {
   profile: ProfileDTO | null;
   userProfile: UserProfile;
   displayName: string;
@@ -48,14 +53,13 @@ type SessionContextValue = {
   home: HomeDTO | null;
   kai: KaiStateDTO | null;
   referralCode: string;
-  refreshSession: () => Promise<void>;
   refreshHome: (locale?: string) => Promise<void>;
-  signOut: () => Promise<boolean>;
-  /** Sandık claim yanıtındaki güncel bakiyeleri oturuma yansıt. */
   applyChestClaim: (balances: { gemBalance: number; freezieBalance: number }) => void;
   updateProfile: (form: UserProfile) => Promise<void>;
   checkIn: () => Promise<CheckInDTO>;
 };
+
+type SessionContextValue = SessionAuthValue & SessionDataValue;
 
 const DEFAULT_GEMS: GemBalanceDTO = {
   balance: 1000,
@@ -72,6 +76,8 @@ const DEFAULT_STREAK: StreakStatusDTO = {
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
+const SessionAuthContext = createContext<SessionAuthValue | null>(null);
+const SessionDataContext = createContext<SessionDataValue | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
@@ -262,7 +268,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [isAuthenticated, profile, home],
   );
 
-  const value = useMemo<SessionContextValue>(
+  const authValue = useMemo<SessionAuthValue>(
     () => ({
       isLoading,
       isAuthenticated,
@@ -270,20 +276,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isAdmin,
       sessionError,
       clearSessionError,
-      profile,
-      userProfile,
-      displayName,
-      gemBalance,
-      streak,
-      home,
-      kai,
-      referralCode,
       refreshSession,
-      refreshHome,
       signOut,
-      applyChestClaim,
-      updateProfile,
-      checkIn,
     }),
     [
       isLoading,
@@ -292,6 +286,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isAdmin,
       sessionError,
       clearSessionError,
+      refreshSession,
+      signOut,
+    ],
+  );
+
+  const dataValue = useMemo<SessionDataValue>(
+    () => ({
       profile,
       userProfile,
       displayName,
@@ -300,17 +301,38 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       home,
       kai,
       referralCode,
-      refreshSession,
       refreshHome,
-      signOut,
+      applyChestClaim,
+      updateProfile,
+      checkIn,
+    }),
+    [
+      profile,
+      userProfile,
+      displayName,
+      gemBalance,
+      streak,
+      home,
+      kai,
+      referralCode,
+      refreshHome,
       applyChestClaim,
       updateProfile,
       checkIn,
     ],
   );
 
+  const value = useMemo<SessionContextValue>(
+    () => ({ ...authValue, ...dataValue }),
+    [authValue, dataValue],
+  );
+
   return (
-    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+    <SessionAuthContext.Provider value={authValue}>
+      <SessionDataContext.Provider value={dataValue}>
+        <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+      </SessionDataContext.Provider>
+    </SessionAuthContext.Provider>
   );
 }
 
@@ -320,4 +342,26 @@ export function useSession(): SessionContextValue {
     throw new Error("useSession must be used within SessionProvider");
   }
   return ctx;
+}
+
+/** Auth flags only — avoids re-render when gems/streak/home change. */
+export function useSessionAuth(): SessionAuthValue {
+  const ctx = useContext(SessionAuthContext);
+  if (!ctx) {
+    throw new Error("useSessionAuth must be used within SessionProvider");
+  }
+  return ctx;
+}
+
+export function useSessionData(): SessionDataValue {
+  const ctx = useContext(SessionDataContext);
+  if (!ctx) {
+    throw new Error("useSessionData must be used within SessionProvider");
+  }
+  return ctx;
+}
+
+/** Safe on marketing routes that omit SessionProvider (guest defaults). */
+export function useSessionOptional(): SessionContextValue | null {
+  return useContext(SessionContext);
 }

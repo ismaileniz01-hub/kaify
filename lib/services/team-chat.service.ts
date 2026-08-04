@@ -12,6 +12,7 @@ import {
 import { sanitizeUserText, wrapUntrustedInput } from "@/lib/ai/prompt-safety";
 import type { ChatTurn } from "@/lib/ai/types";
 import { mapChatMessageRow, type ChatMessageDTO } from "@/lib/types/domain.types";
+import { CHAT_MESSAGE_LIST_COLUMNS } from "@/lib/services/chat-message-columns";
 import { resolveLocale } from "@/lib/i18n/dictionary";
 import { getAnalyticsBundle } from "@/lib/services/analytics.service";
 import { getStreakStatus } from "@/lib/services/streak-status.service";
@@ -52,7 +53,7 @@ export async function getTeamChatHistory(userId: string): Promise<ChatMessageDTO
 
   const { data, error } = await admin
     .from("chat_messages")
-    .select("*")
+    .select(CHAT_MESSAGE_LIST_COLUMNS)
     .eq("user_id", userId)
     .eq("thread_type", "team")
     .order("created_at", { ascending: true })
@@ -189,7 +190,7 @@ export async function generateWeeklyTeamMeeting(
   const { data: rows, error: insertError } = await admin
     .from("chat_messages")
     .insert(rowsToInsert)
-    .select("*");
+    .select(CHAT_MESSAGE_LIST_COLUMNS);
 
   if (insertError) {
     await refundQuota({

@@ -166,7 +166,19 @@ export function mapCountryLeaderboardEntry(
   };
 }
 
-export function mapChatMessageRow(row: ChatMessageRow): ChatMessageDTO {
+export function mapChatMessageRow(
+  row: Pick<
+    ChatMessageRow,
+    | "id"
+    | "coach_id"
+    | "thread_type"
+    | "sender"
+    | "message_type"
+    | "content"
+    | "payload"
+    | "created_at"
+  >,
+): ChatMessageDTO {
   return {
     id: row.id,
     coachId: row.coach_id,
