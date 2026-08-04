@@ -1,2 +1,4 @@
 /** Stable v1 API — thin re-export. */
-export { GET, dynamic, runtime } from "../../../profile/export/route";
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export { GET } from "../../../profile/export/route";

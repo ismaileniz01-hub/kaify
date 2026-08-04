@@ -36,6 +36,8 @@ export default defineConfig({
         "lib/billing/paddle-period.ts",
         "lib/team/meeting-week.ts",
         "lib/security/csrf-client.ts",
+        "lib/ai/count-consecutive-rest-days.ts",
+        "lib/api/resolve-api-path.ts",
       ],
       thresholds: {
         statements: 75,

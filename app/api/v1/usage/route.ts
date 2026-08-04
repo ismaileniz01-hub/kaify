@@ -1,2 +1,3 @@
 /** Stable v1 API — thin re-export. */
-export { GET, dynamic } from "../../usage/route";
+export const dynamic = "force-dynamic";
+export { GET } from "../../usage/route";

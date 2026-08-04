@@ -6,6 +6,7 @@ import { useSession } from "@/lib/session-context";
 import type { LeaderboardEntryDTO } from "@/lib/types/domain.types";
 import { useLang } from "@/lib/lang-context";
 import { FlagImage } from "@/components/FlagImage";
+import { resolveApiPath } from "@/lib/api/client";
 
 type LeaderboardEntry = {
   userId: string;
@@ -40,7 +41,7 @@ export function WelcomeLeaderboard() {
       ? "/api/leaderboard/global?limit=10"
       : "/api/leaderboard";
 
-    fetch(path, { credentials: "include" })
+    fetch(resolveApiPath(path), { credentials: "include" })
       .then(async (res) => {
         const json = await res.json();
         if (isAuthenticated && json.success) {

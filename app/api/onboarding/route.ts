@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { ApiError } from "@/lib/api/errors";
 import { defineRoute } from "@/lib/api/route-handler";
 import { completeOnboarding } from "@/lib/services/onboarding.service";

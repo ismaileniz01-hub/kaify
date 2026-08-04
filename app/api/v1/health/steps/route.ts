@@ -1,2 +1,3 @@
 /** Stable v1 API — thin re-export. */
-export { POST, dynamic } from "../../../health/steps/route";
+export const dynamic = "force-dynamic";
+export { POST } from "../../../health/steps/route";

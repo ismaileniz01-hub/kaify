@@ -1,9 +1,9 @@
-import type { ErrorEvent, EventHint } from "@sentry/nextjs";
+import type { ErrorEvent } from "@sentry/nextjs";
 
 const EMAIL_IN_TEXT = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 
 /** Strips PII from Sentry events before upload (Compliance Faz 3). */
-export function scrubSentryEvent<T extends ErrorEvent>(event: T, _hint?: EventHint): T {
+export function scrubSentryEvent<T extends ErrorEvent>(event: T): T {
   if (event.user) {
     delete event.user.email;
     delete event.user.username;

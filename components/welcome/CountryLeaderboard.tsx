@@ -4,6 +4,7 @@ import { Globe, X, Crown, Medal, Award, Flame } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLang } from "@/lib/lang-context";
 import { FlagImage } from "@/components/FlagImage";
+import { resolveApiPath } from "@/lib/api/client";
 
 type CountryEntry = {
   countryCode: string;
@@ -35,7 +36,7 @@ export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClo
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
-    fetch("/api/country-leaderboard")
+    fetch(resolveApiPath("/api/country-leaderboard"))
       .then((res) => res.json())
       .then((json) => {
         setData(json);

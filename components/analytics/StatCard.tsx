@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { useLang } from "@/lib/lang-context";
 
 type GradientVariant = "blue" | "orange" | "green" | "purple" | "water";
 
@@ -43,7 +42,6 @@ export function StatCard({
   gradient,
   animate = true,
 }: StatCardProps) {
-  const { t } = useLang();
   const [displayNum, setDisplayNum] = useState(0);
   const [displayBar, setDisplayBar] = useState(0);
   const parsed = parseValue(value ?? "");

@@ -1,2 +1,4 @@
 /** Stable v1 API — thin re-export. */
-export { POST, DELETE, dynamic, runtime } from "../../../push/subscribe/route";
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export { POST, DELETE } from "../../../push/subscribe/route";

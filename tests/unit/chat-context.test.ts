@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countConsecutiveRestDays } from "@/lib/ai/chat-context";
+import { countConsecutiveRestDays } from "@/lib/ai/count-consecutive-rest-days";
 import { buildChatSystemPrompt } from "@/lib/ai/personas";
 
 describe("countConsecutiveRestDays", () => {

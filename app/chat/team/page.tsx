@@ -6,6 +6,7 @@ import { ChatMessageText } from "@/components/chat/ChatMessageText";
 import { ArrowLeft, Send, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { InlineAlert } from "@/components/InlineAlert";
+import { EmptyState } from "@/components/EmptyState";
 import { CONTACTS, type ContactId } from "@/lib/contacts";
 import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
@@ -224,7 +225,10 @@ export default function TeamChatPage() {
           />
         )}
         {!loading && messages.length === 0 && unlocked && !error && (
-          <p className="py-8 text-center text-xs text-zinc-500">{t("team.empty")}</p>
+          <EmptyState
+            title={t("team.empty")}
+            icon={<Users className="h-5 w-5" aria-hidden />}
+          />
         )}
         {messages.map((msg) => {
           const c = CONTACTS[msg.coachId];

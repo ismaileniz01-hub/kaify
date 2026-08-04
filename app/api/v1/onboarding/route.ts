@@ -1,2 +1,3 @@
 /** Stable v1 API — thin re-export. */
-export { POST, dynamic } from "../../onboarding/route";
+export const dynamic = "force-dynamic";
+export { POST } from "../../onboarding/route";

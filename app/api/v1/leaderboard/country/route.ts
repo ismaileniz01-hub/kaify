@@ -1,2 +1,3 @@
 /** Stable v1 API — thin re-export. */
-export { GET, runtime } from "../../../leaderboard/country/route";
+export const runtime = "nodejs";
+export { GET } from "../../../leaderboard/country/route";

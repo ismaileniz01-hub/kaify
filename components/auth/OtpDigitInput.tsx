@@ -23,11 +23,11 @@ export function OtpDigitInput({
   const refs = useRef<(HTMLInputElement | null)[]>([]);
   const digits = Array.from({ length }, (_, i) => value[i] ?? "");
 
-  const focusIndex = (index: number) => {
+  const focusIndex = useCallback((index: number) => {
     const el = refs.current[Math.max(0, Math.min(length - 1, index))];
     el?.focus();
     el?.select();
-  };
+  }, [length]);
 
   const applyValue = useCallback(
     (next: string) => {
@@ -78,7 +78,7 @@ export function OtpDigitInput({
 
   useEffect(() => {
     if (autoFocus) focusIndex(0);
-  }, [autoFocus]);
+  }, [autoFocus, focusIndex]);
 
   return (
     <div className="otp-digit-row" role="group" aria-label="Email login code">

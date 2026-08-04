@@ -21,7 +21,6 @@ export type NotificationVisual = {
 const KAI = "/kai-mascot-v2.png";
 const ALEX = "/avatars/alex.png";
 const MAYA = "/avatars/maya-notif.png";
-const LEO = "/avatars/leo.png";
 
 export const NOTIFICATION_VISUAL: Record<NotificationType, NotificationVisual> = {
   streak_risk: { avatar: KAI, color: "#f59e0b", from: "Kai" },

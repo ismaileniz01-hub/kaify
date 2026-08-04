@@ -83,7 +83,7 @@ const BG_ICONS = [
   { icon: "🥇", x: "78%", y: "70%", size: 22 },
 ];
 
-export function StreakCard({ streak, kaiLevel, userName, onClose }: StreakCardProps) {
+export function StreakCard({ streak, kaiLevel, onClose }: StreakCardProps) {
   const { t } = useLang();
   const cardRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
@@ -214,18 +214,14 @@ export function StreakCard({ streak, kaiLevel, userName, onClose }: StreakCardPr
             <div className="absolute w-96 h-96 rounded-full blur-3xl opacity-60" style={{ background: `radial-gradient(circle, ${theme.glowIntense}, ${theme.flameColor}40, transparent 70%)` }} />
 
             {/* Yükselen kıvılcımlar */}
-            {[...Array(12)].map((_, i) => {
-              const angle = (i / 12) * 360;
-              const dist = 60 + Math.random() * 40;
-              return (
+            {[...Array(12)].map((_, i) => (
                 <div key={i} className="absolute w-1.5 h-1.5 rounded-full" style={{
                   background: i % 2 === 0 ? theme.flameColor : theme.flameColor2,
                   boxShadow: `0 0 6px ${i % 2 === 0 ? theme.flameColor : theme.flameColor2}`,
                   animation: `sparkFloat ${2 + Math.random() * 2}s ${Math.random() * 2}s ease-out infinite`,
                   opacity: 0.8,
                 }} />
-              );
-            })}
+            ))}
 
             {/* Alev tabanı - sayının altında */}
             <div className="absolute bottom-0 w-32 h-16" style={{

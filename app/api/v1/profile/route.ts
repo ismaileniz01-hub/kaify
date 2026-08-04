@@ -1,2 +1,3 @@
 /** Stable v1 API — thin re-export. */
-export { GET, PATCH, DELETE, dynamic } from "../../profile/route";
+export const dynamic = "force-dynamic";
+export { GET, PATCH, DELETE } from "../../profile/route";

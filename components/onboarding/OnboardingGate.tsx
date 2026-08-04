@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { OnboardingProfileForm } from "@/components/onboarding/OnboardingProfileForm";
 import { useSession } from "@/lib/session-context";

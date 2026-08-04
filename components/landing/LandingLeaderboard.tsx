@@ -2,7 +2,6 @@
 
 import { ScrollReveal } from "./ScrollReveal";
 import { Trophy, Flame, TrendingUp, Globe } from "lucide-react";
-import { useLang } from "@/lib/lang-context";
 import { FlagImage } from "@/components/FlagImage";
 
 const COUNTRIES = [
@@ -178,7 +177,6 @@ function CountryRow({
 }
 
 export function LandingLeaderboard() {
-  const { t } = useLang();
   return (
     <section id="leaderboard" className="landing-section relative">
       {/* Background glow */}

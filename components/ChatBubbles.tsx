@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import type { ContactId } from "@/lib/contacts";
+import type { ContactId, AnalysisCategory, MealPlanData, WorkoutPlanData, DemoChatMessage } from "@/lib/contacts";
 import { CHAT_THREADS, CONTACTS } from "@/lib/contacts";
 import { useKai } from "@/lib/kai-context";
 import { useSound } from "@/lib/use-sound";
@@ -18,18 +18,7 @@ type ChatBubblesProps = {
   userMessages?: { text: string; time: string }[];
 };
 
-type MessageItem = {
-  id: number;
-  text: string;
-  from: "user" | "contact";
-  time: string;
-  visible: boolean;
-  type?: string;
-  analysis?: any;
-  mealPlan?: any;
-  workoutPlan?: any;
-  dailySummary?: any;
-};
+type MessageItem = DemoChatMessage & { visible: boolean };
 
 export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConversationEnd, userMessages = [] }: ChatBubblesProps) {
   const { t } = useLang();
@@ -64,6 +53,8 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
     const endTimeout = setTimeout(() => onConversationEndRef.current?.(), delay + 1000);
     timeouts.push(endTimeout);
     return () => timeouts.forEach(clearTimeout);
+    // messages is derived from contactId via CHAT_THREADS
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contactId]);
 
   useEffect(() => {
@@ -126,7 +117,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
           </div>
           <div className="flex flex-col gap-2 p-3">
             <p className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400"><Target className="h-3.5 w-3.5" />{t("analysis.categories")}</p>
-            {[...(a.categories || []), ...(a.extraCategories || [])].map((cat: any, i: number) => (
+            {[...(a.categories || []), ...(a.extraCategories || [])].map((cat: AnalysisCategory, i: number) => (
               <div key={i} className="flex items-center gap-2">
                 <span className="w-24 text-[11px] text-zinc-400">{t(cat.key)}</span>
                 <div className="flex-1 h-1.5 rounded-full bg-zinc-800 overflow-hidden"><div className="h-full rounded-full transition-all duration-700" style={{ width: `${(cat.score / cat.maxScore) * 100}%`, backgroundColor: cat.color, boxShadow: `0 0 6px ${cat.color}` }} /></div>
@@ -171,8 +162,8 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
           </div>
           <div className="flex flex-col gap-2 p-3" style={{ borderTop: `1px solid ${ring}` }}>
             <p className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400"><TrendingUp className="h-3.5 w-3.5" />{t("meal.meals")}</p>
-            {mp.meals.map((meal: any, i: number) => (
-              <div key={i}><p className="text-[11px] font-bold text-zinc-300 mb-1">{t(meal.labelKey)}</p>{meal.items.map((item: any, j: number) => (
+            {mp.meals.map((meal: MealPlanData["meals"][number], i: number) => (
+              <div key={i}><p className="text-[11px] font-bold text-zinc-300 mb-1">{t(meal.labelKey)}</p>{meal.items.map((item, j: number) => (
                 <div key={j} className="flex items-center justify-between pl-3"><span className="text-[11px] text-zinc-400">{item.name}</span><span className="text-[11px] text-zinc-500">{item.calories} kcal</span></div>
               ))}</div>
             ))}
@@ -196,10 +187,10 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
             <div className="flex h-12 w-12 items-center justify-center rounded-xl" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}><Dumbbell className="h-6 w-6 text-white" /></div>
             <div><p className="text-sm font-bold text-white">{t(wp.titleKey)}</p><p className="text-xs text-zinc-400">{t(wp.durationKey)}</p></div>
           </div>
-          {wp.days.map((day: any, di: number) => (
+          {wp.days.map((day: WorkoutPlanData["days"][number], di: number) => (
             <div key={di} style={{ borderBottom: di < wp.days.length - 1 ? `1px solid ${ring}` : undefined }}>
               <div className="flex items-center gap-2 px-3 pt-3 pb-1"><p className="text-xs font-bold text-zinc-300">{t(day.dayKey)}</p><span className="text-[10px] text-zinc-500">—</span><span className="text-[10px] text-zinc-400">{t(day.focusKey)}</span></div>
-              <div className="flex flex-col px-3 pb-2">{day.exercises.map((ex: any, ei: number) => (
+              <div className="flex flex-col px-3 pb-2">{day.exercises.map((ex, ei: number) => (
                 <div key={ei} className="flex items-start gap-2 py-1">
                   <div className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: primary }} />
                   <div className="flex-1 min-w-0">

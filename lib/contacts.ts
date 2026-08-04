@@ -98,6 +98,8 @@ type AnalysisCategory = {
   color: string;
 };
 
+export type { AnalysisCategory };
+
 type Exercise = {
   name: string;
   sets: number;
@@ -123,7 +125,7 @@ type MealItem = {
   calories: number;
 };
 
-type MealPlanData = {
+export type MealPlanData = {
   totalCalories: number;
   targetCalories: number;
   macros: {
@@ -138,7 +140,7 @@ type MealPlanData = {
   tips: string[];
 };
 
-type DailySummaryData = {
+export type DailySummaryData = {
   greeting: string;
   workout: {
     completed: string;
@@ -157,7 +159,7 @@ type DailySummaryData = {
   motivation: string;
 };
 
-type ChatMessage = {
+export type DemoChatMessage = {
   id: number;
   from: "contact" | "user";
   text: string;
@@ -173,6 +175,8 @@ type ChatMessage = {
   workoutPlan?: WorkoutPlanData;
   dailySummary?: DailySummaryData;
 };
+
+type ChatMessage = DemoChatMessage;
 
 export const CHAT_THREADS: Record<ContactId, ChatMessage[]> = {
   alex: [

@@ -30,6 +30,7 @@ export const API_V1_ROUTES = [
   "/api/v1/market/purchase",
   "/api/v1/market/chest",
   "/api/v1/analytics",
+  "/api/v1/analytics/confirm",
   "/api/v1/settings",
   "/api/v1/onboarding",
   "/api/v1/usage",

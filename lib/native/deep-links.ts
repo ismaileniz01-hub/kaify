@@ -1,12 +1,9 @@
-import { CANONICAL_APP_URL, isAppHostname, NATIVE_URL_SCHEME, resolveAppUrl } from "@/lib/app-url";
+import { CANONICAL_APP_URL, isAppHostname, NATIVE_URL_SCHEME } from "@/lib/app-url";
 
 /**
  * Normalize push / universal-link / custom-scheme URLs into an in-app path or absolute URL.
  */
-export function resolveAppNavigationTarget(
-  raw: string,
-  origin = typeof window !== "undefined" ? window.location.origin : resolveAppUrl(),
-): string {
+export function resolveAppNavigationTarget(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return "/welcome";
 

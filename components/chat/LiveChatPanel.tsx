@@ -12,12 +12,14 @@ import { ChatRichCard } from "@/components/chat/ChatRichCard";
 import { AnalyticsConfirmationCard } from "@/components/chat/AnalyticsConfirmationCard";
 import { ChatMessageText } from "@/components/chat/ChatMessageText";
 import { InlineAlert } from "@/components/InlineAlert";
+import { EmptyState } from "@/components/EmptyState";
 import { PhotoAnalyzeConsentModal } from "@/components/consent/PhotoAnalyzeConsentModal";
 import { useLang } from "@/lib/lang-context";
 import { useKai } from "@/lib/kai-context";
 import { useSession } from "@/lib/session-context";
 import { ChatComposer } from "@/components/chat/ChatComposer";
 import { apiErrorMessage, errorToMessage } from "@/lib/i18n/api-error";
+import { MessageCircle } from "lucide-react";
 
 type LiveMessage = {
   id: string;
@@ -90,7 +92,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [coachId]);
+  }, [coachId, t]);
 
   useEffect(() => {
     if (!VISION_COACHES.has(coachId)) return;
@@ -384,6 +386,13 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             message={error}
             dismissLabel={t("common.dismiss")}
             onDismiss={() => setError(null)}
+          />
+        )}
+        {!loadingHistory && messages.length === 0 && !error && (
+          <EmptyState
+            title={t("chat.empty.title")}
+            subtitle={t("chat.empty.subtitle")}
+            icon={<MessageCircle className="h-5 w-5" aria-hidden />}
           />
         )}
         {messages.map((msg) => {

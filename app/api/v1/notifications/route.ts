@@ -1,2 +1,3 @@
 /** Stable v1 API — thin re-export. */
-export { GET, PATCH, dynamic } from "../../notifications/route";
+export const dynamic = "force-dynamic";
+export { GET, PATCH } from "../../notifications/route";

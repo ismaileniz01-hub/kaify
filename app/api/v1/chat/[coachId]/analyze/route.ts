@@ -1,2 +1,4 @@
 /** Stable v1 API — thin re-export. */
-export { POST, runtime, dynamic } from "../../../../chat/[coachId]/analyze/route";
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export { POST } from "../../../../chat/[coachId]/analyze/route";

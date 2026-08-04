@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MessageRow } from "@/components/messages/MessageRow";
 import { InlineAlert } from "@/components/InlineAlert";
 import { EmptyState } from "@/components/EmptyState";
@@ -26,7 +26,7 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const loadInbox = () => {
+  const loadInbox = useCallback(() => {
     if (!isAuthenticated) return;
     setLoading(true);
     setLoadError(null);
@@ -37,12 +37,12 @@ export default function MessagesPage() {
         setLoadError(errorToMessage(err, t) || t("messages.error.load"));
       })
       .finally(() => setLoading(false));
-  };
+  }, [isAuthenticated, t]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
     loadInbox();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loadInbox]);
 
   const rows =
     inbox ??

@@ -1,4 +1,3 @@
-import type { AuthedUser } from "@/lib/api/auth-guard";
 import { ApiError } from "@/lib/api/errors";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -16,7 +15,7 @@ function hasVerifiedTotp(
  * When the user has enrolled TOTP, require AAL2 for API access.
  * Fail-closed if MFA state cannot be read.
  */
-export async function requireMfaIfEnrolled(_user: AuthedUser): Promise<void> {
+export async function requireMfaIfEnrolled(): Promise<void> {
   const supabase = await createServerSupabaseClient();
 
   const { data: factors, error: factorsError } =
@@ -45,7 +44,11 @@ export async function requireMfaIfEnrolled(_user: AuthedUser): Promise<void> {
 
 /**
  * Step-up auth for destructive / data-export actions (passwordless: MFA when enrolled).
+ * `user` is accepted for call-site clarity; MFA is resolved from the session cookie.
  */
-export async function requireSensitiveActionAuth(user: AuthedUser): Promise<void> {
-  await requireMfaIfEnrolled(user);
+export async function requireSensitiveActionAuth(_user: {
+  id: string;
+}): Promise<void> {
+  void _user;
+  await requireMfaIfEnrolled();
 }

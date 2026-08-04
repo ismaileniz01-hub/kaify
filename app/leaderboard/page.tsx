@@ -24,6 +24,8 @@ import type { UserSettingsDTO } from "@/lib/services/settings.service";
 import { getCountryName } from "@/lib/country-names";
 import type { CountryLeaderboardDTO } from "@/lib/types/domain.types";
 import { FlagImage } from "@/components/FlagImage";
+import { EmptyState } from "@/components/EmptyState";
+import { resolveApiPath } from "@/lib/api/client";
 
 type CountryEntry = {
   countryCode: string;
@@ -171,7 +173,7 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      fetch("/api/country-leaderboard")
+      fetch(resolveApiPath("/api/country-leaderboard"))
         .then((res) => res.json())
         .then((json) => {
           setData(json);
@@ -402,10 +404,11 @@ export default function LeaderboardPage() {
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center">
-            <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-white/[0.08] bg-zinc-900/80 px-8 py-12 backdrop-blur-md">
-              <Globe className="h-8 w-8 text-zinc-600" />
-              <p className="text-sm text-zinc-500">{t("leaderboard.error.load")}</p>
-            </div>
+            <EmptyState
+              title={t("leaderboard.empty.title")}
+              subtitle={t("leaderboard.empty.subtitle")}
+              icon={<Globe className="h-5 w-5" aria-hidden />}
+            />
           </div>
         )}
       </main>

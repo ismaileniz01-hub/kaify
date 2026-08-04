@@ -1,7 +1,6 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
 import { mapRpcError } from "@/lib/supabase/rpc-errors";
-import { logger } from "@/lib/logger";
 import type {
   Database,
   GemMutationResult,

@@ -10,11 +10,12 @@ import { GemBalance } from "@/components/GemBalance";
 import { FreezieBalance } from "@/components/FreezieBalance";
 import { GemIcon } from "@/components/GemIcon";
 import { useGem } from "@/lib/gem-context";
-import { useKai, type AuraColor } from "@/lib/kai-context";
+import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import { DailyChestBanner } from "@/components/market/DailyChestBanner";
 import { MarketAuraPreview } from "@/components/market/MarketAuraPreview";
+import { EmptyState } from "@/components/EmptyState";
 import { MARKET_EFFECTS, type MarketEffect } from "@/lib/market-catalog";
 
 type EffectColor = MarketEffect;
@@ -53,7 +54,7 @@ export default function MarketPage() {
 
     if (isAuthenticated) {
       try {
-        const result = await apiPost<{ balance: number; itemId: string; activeAura: string }>(
+        await apiPost<{ balance: number; itemId: string; activeAura: string }>(
           "/api/market/purchase",
           { itemId: effect.id },
         );
@@ -85,7 +86,7 @@ export default function MarketPage() {
     if (isAuthenticated) {
       setApplying(effect.id);
       try {
-        const result = await apiPatch<{ activeAura: string }>("/api/market/purchase", {
+        await apiPatch<{ activeAura: string }>("/api/market/purchase", {
           itemId: effect.id,
         });
         await refreshMarketState();
@@ -280,6 +281,12 @@ export default function MarketPage() {
               <div key={i} className="h-52 animate-pulse rounded-2xl bg-white/[0.06]" />
             ))}
           </div>
+        ) : STANDARD_EFFECTS.length === 0 && PREMIUM_EFFECTS.length === 0 ? (
+          <EmptyState
+            title={t("market.empty.title")}
+            subtitle={t("market.empty.subtitle")}
+            icon={<ShoppingCart className="h-5 w-5" aria-hidden />}
+          />
         ) : (
         <>
           <div className="grid grid-cols-2 gap-3">

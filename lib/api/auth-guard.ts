@@ -27,7 +27,7 @@ export async function requireUser(
   }
 
   if (!options?.skipMfa) {
-    await requireMfaIfEnrolled(user);
+    await requireMfaIfEnrolled();
   }
 
   return user;

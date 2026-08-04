@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { BellRing, BellOff, Loader2 } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
-import { apiPost } from "@/lib/api/client";
+import { apiPost, resolveApiPath } from "@/lib/api/client";
 import { CONSENT_TYPES } from "@/lib/legal/constants";
 import {
   ensurePushReady,
@@ -37,9 +37,9 @@ export function PushToggle() {
       const permission = await getPushPermission();
       const subscribed = await hasActiveSubscription();
       try {
-        const status = await fetch("/api/consent", { credentials: "include" }).then((r) =>
-          r.json(),
-        );
+        const status = await fetch(resolveApiPath("/api/consent"), {
+          credentials: "include",
+        }).then((r) => r.json());
         if (active && status.success) {
           setHasConsent(Boolean(status.data?.pushNotifications));
         }

@@ -1,2 +1,3 @@
 /** Stable v1 API — thin re-export. */
-export { GET, POST, dynamic } from "../../../market/chest/route";
+export const dynamic = "force-dynamic";
+export { GET, POST } from "../../../market/chest/route";

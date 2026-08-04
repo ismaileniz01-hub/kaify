@@ -100,19 +100,19 @@ Score lift (indicative):
 
 ### UI / UX
 
-- [ ] `loading.tsx` for chat, market, streak, leaderboard, settings, pricing
-- [ ] `app/not-found.tsx` (i18n)
-- [ ] Broaden `EmptyState` (chat / market / leaderboard)
-- [ ] Fix ImagePicker `alt` / a11y lint blockers
-- [ ] Onboarding: wire form or ship explicit deferred UX (no dead endpoint expectation)
+- [x] `loading.tsx` for chat, trophy-road (market), streak, leaderboard, settings, pricing
+- [x] `app/not-found.tsx` (i18n)
+- [x] Broaden `EmptyState` (chat / market / leaderboard)
+- [x] Fix ImagePicker `alt` / a11y lint blockers
+- [x] Onboarding: wired via `OnboardingGate` + `SignupWizard` → `POST /api/onboarding` (no dead endpoint)
 
 ### Code quality
 
-- [ ] Clear lint unused/`any` hotspots (`ChatBubbles`, etc.)
-- [ ] Start TD-003: coverage extracts from billing/chat pure paths
-- [ ] Start TD-004: client hot paths → `/api/v1/*`
-- [ ] Address v1 re-export `runtime`/`dynamic` build warnings if feasible
-- [ ] Optional: `lint:strict` CI gate
+- [x] Clear lint unused/`any` hotspots (`ChatBubbles`, etc.)
+- [x] Start TD-003: coverage extracts (`count-consecutive-rest-days`, `resolve-api-path`)
+- [x] Start TD-004: client hot paths → `/api/v1/*` via `resolveApiPath`
+- [x] Address v1 re-export `runtime`/`dynamic` build warnings (local consts on v1 routes)
+- [x] Optional: `lint:strict` CI gate
 
 **Exit:** Re-run full release gate → web score **≥ 90** (store still Faz 5).
 

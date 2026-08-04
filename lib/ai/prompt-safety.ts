@@ -30,7 +30,6 @@ const HIDDEN_CHARS =
 
 // C0/C1 control characters except tab (\u0009) and newline (\u000A).
 const CONTROL_CHARS =
-  // eslint-disable-next-line no-control-regex
   /[\u0000-\u0008\u000B-\u001F\u007F-\u009F]/g;
 
 // Chat-template / instruction tokens that must never survive in user content.

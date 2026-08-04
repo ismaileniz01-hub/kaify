@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import enFallback from "@/lib/lang/en.json";
+import { apiPatch } from "@/lib/api/client";
 
 // Sadece JSON dosyası olan diller
 export type LangCode =
@@ -102,12 +103,7 @@ export function isRtlLang(code: LangCode): boolean {
  */
 function persistLocaleToProfile(code: LangCode): void {
   if (typeof window === "undefined") return;
-  void fetch("/api/profile", {
-    method: "PATCH",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ locale: code }),
-  }).catch(() => {
+  void apiPatch("/api/profile", { locale: code }).catch(() => {
     // Non-fatal: language still applies locally via localStorage.
   });
 }

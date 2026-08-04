@@ -2,7 +2,6 @@
 
 import { BarChart3, Flame, MessageCircle, ShoppingCart } from "lucide-react";
 import { ScrollReveal } from "./ScrollReveal";
-import { useLang } from "@/lib/lang-context";
 
 const PILLARS = [
   {
@@ -40,7 +39,6 @@ const PILLARS = [
 ];
 
 export function LandingAbout() {
-  const { t } = useLang();
   return (
     <section id="about" className="landing-section relative">
       <div className="landing-container">
@@ -118,7 +116,7 @@ export function LandingAbout() {
                   { label: "Nutrition Coach", price: "$40+", delay: 100, icon: "🥗" },
                   { label: "Calorie Tracking", price: "$10+", delay: 150, icon: "📊" },
                   { label: "Posture Coach", price: "$40+", delay: 200, icon: "🧍" },
-                ].map((item, i) => (
+                ].map((item) => (
                   <div
                     key={item.label}
                     className="group flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4 transition-all duration-500 hover:border-purple-500/30 hover:bg-white/[0.06] hover:shadow-[0_0_20px_rgba(168,85,247,0.08)]"

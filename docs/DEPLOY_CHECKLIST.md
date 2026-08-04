@@ -95,7 +95,7 @@ Admin hesabınla giriş yap, şunları kontrol et:
 
 | Konu | Durum |
 |------|-------|
-| `POST /api/onboarding` | Backend hazır, welcome onboarding formu henüz bağlanmadı |
+| `POST /api/onboarding` | Wired — `OnboardingGate` + `SignupWizard` / `OnboardingProfileForm` |
 | `npm run i18n:fill` | Gemini kotası dolunca 54 dil tamamlanır |
 | Paddle Billing | Production checkout + webhook (see `docs/billing`) |
 | Store IAP (Capacitor) | WebView Paddle blocked — native store path (Faz 5) |

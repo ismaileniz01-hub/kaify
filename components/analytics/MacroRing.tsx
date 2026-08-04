@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useLang } from "@/lib/lang-context";
 
 type MacroRingProps = {
   label: string;
@@ -12,7 +11,6 @@ type MacroRingProps = {
 };
 
 export function MacroRing({ label, value, percent, color, gradient }: MacroRingProps) {
-  const { t } = useLang();
   const [displayPercent, setDisplayPercent] = useState(0);
   const r = 28;
   const c = 2 * Math.PI * r;

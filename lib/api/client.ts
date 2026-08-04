@@ -1,5 +1,7 @@
 import type { ApiResponseBody } from "@/lib/api/response";
 import { CSRF_HEADER_NAME, readCsrfCookieFromDocument } from "@/lib/security/csrf-client";
+export { resolveApiPath } from "@/lib/api/resolve-api-path";
+import { resolveApiPath } from "@/lib/api/resolve-api-path";
 
 function csrfHeaders(): HeadersInit {
   const token = readCsrfCookieFromDocument();
@@ -15,7 +17,7 @@ export async function apiFetch<T>(
   path: string,
   init?: RequestInit,
 ): Promise<ApiResponseBody<T>> {
-  const response = await fetch(path, {
+  const response = await fetch(resolveApiPath(path), {
     ...init,
     credentials: "include",
     headers: {
@@ -111,7 +113,7 @@ export async function streamChatMessage(
   handlers: ChatStreamHandlers,
   signal?: AbortSignal,
 ): Promise<void> {
-  const response = await fetch(`/api/chat/${coachId}`, {
+  const response = await fetch(resolveApiPath(`/api/chat/${coachId}`), {
     method: "POST",
     credentials: "include",
     headers: {

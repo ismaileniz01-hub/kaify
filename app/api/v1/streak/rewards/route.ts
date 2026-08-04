@@ -1,2 +1,3 @@
 /** Stable v1 API — thin re-export. */
-export { POST, dynamic } from "../../../streak/rewards/route";
+export const dynamic = "force-dynamic";
+export { POST } from "../../../streak/rewards/route";

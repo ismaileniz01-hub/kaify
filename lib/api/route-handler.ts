@@ -120,7 +120,7 @@ export function defineRoute<T>(
 ) {
   const authMode = options.auth ?? "user";
 
-  return async (request: NextRequest, ..._args: unknown[]) => {
+  return async (request: NextRequest) => {
     return withSpan(
       options.route,
       async () => {
@@ -147,7 +147,7 @@ export function defineRouteRaw(
 ) {
   const authMode = options.auth ?? "user";
 
-  return async (request: NextRequest, ..._args: unknown[]) => {
+  return async (request: NextRequest) => {
     return withSpan(
       options.route,
       async () => {

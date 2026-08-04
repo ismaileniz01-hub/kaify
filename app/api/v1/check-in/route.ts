@@ -1,2 +1,3 @@
-/** Stable v1 API — thin re-export. See docs/architecture/api-versioning.md */
-export { POST, dynamic } from "../../check-in/route";
+/** Stable v1 API — thin re-export. */
+export const dynamic = "force-dynamic";
+export { POST } from "../../check-in/route";

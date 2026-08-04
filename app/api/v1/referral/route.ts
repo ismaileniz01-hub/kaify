@@ -1,2 +1,3 @@
 /** Stable v1 API — thin re-export. */
-export { GET, POST, runtime } from "../../referral/route";
+export const runtime = "nodejs";
+export { GET, POST } from "../../referral/route";
