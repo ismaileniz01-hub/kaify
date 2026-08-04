@@ -151,11 +151,16 @@ Score lift (indicative):
 
 ## Faz 6 — Enterprise 92+
 
-- [ ] **TD-006** Legal compliance Faz 4 sign-off + retention/export/deletion evidence pack
-- [ ] **TD-008** `STAGING_URL` + weekly ZAP baseline green or waived
-- [ ] **TD-007** complete if not finished in Faz 3
-- [ ] **TD-001** OTel optional (Sentry spans acceptable)
-- [ ] Continue **TD-003** full service coverage
+- [x] **TD-006** Eng evidence pack shipped ([evidence/td006-compliance-evidence-pack.md](./evidence/td006-compliance-evidence-pack.md)) — **counsel L1/L2/L4 still required** for auditor claim
+- [x] **TD-008** ZAP staging waived with dated waiver ([evidence/td008-zap-waiver.md](./evidence/td008-zap-waiver.md)); workflow uses `vars.STAGING_URL` + status job; SBOM/OSV weekly
+- [x] **TD-007** Eng checklist + paste fields ([evidence/td007-monitors-checklist.md](./evidence/td007-monitors-checklist.md)) — **operator** still pastes monitor URLs/IDs
+- [x] **TD-001** Accepted via Sentry spans ([ADR 017](../sustainability/adr/017-otel-migration-plan.md))
+- [x] **TD-003** Coverage expanded (`gem.service`, `rpc-errors`, `lib/compliance/*`, `to-span-attributes`) — full `lib/services/**` still Q4
+
+**Exit (eng):** Debt register updated · evidence packs on disk · coverage gate broader · ZAP waiver or green staging.  
+**Exit (operator/legal):** Uptime + Sentry IDs · counsel sign-off · optional `STAGING_URL` to lift ZAP waiver.
+
+**Shipped (eng):** 2026-08-04.
 
 ---
 

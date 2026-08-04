@@ -119,6 +119,7 @@ Admin hesabınla giriş yap, şunları kontrol et:
 - AI cost observability migration Supabase'e uygulandı
 - **Faz 0**: SECURITY DEFINER RPC privilege lockdown
 - **Faz 1**: service-table grants + vault-backed pg_cron schedules (ops)
+- **Faz 6**: TD-001 Sentry spans accepted; TD-006 eng evidence pack; TD-008 ZAP waiver; TD-003 coverage expand
 
 ---
 

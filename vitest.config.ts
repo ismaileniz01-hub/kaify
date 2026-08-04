@@ -38,6 +38,13 @@ export default defineConfig({
         "lib/security/csrf-client.ts",
         "lib/ai/count-consecutive-rest-days.ts",
         "lib/api/resolve-api-path.ts",
+        "lib/observability/to-span-attributes.ts",
+        "lib/supabase/rpc-errors.ts",
+        "lib/services/gem.service.ts",
+        "lib/compliance/retention-config.ts",
+        "lib/compliance/export-tables.ts",
+        "lib/compliance/deletion-config.ts",
+        "lib/compliance/age.ts",
       ],
       thresholds: {
         statements: 75,

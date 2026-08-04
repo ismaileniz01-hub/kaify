@@ -1,29 +1,41 @@
-# Faz 3 — TD-007 operator monitors (checklist)
+# Faz 3 / 6 — TD-007 operator monitors (checklist)
 
-Code/docs shipped in Faz 3. Create these in the product UIs (cannot fully automate
-without SaaS API tokens):
+Code/docs shipped. Create these in product UIs (needs SaaS login — not fully
+automatable without API tokens).
 
 ## 1. Uptime on `/api/health`
 
-- URL: `https://kaifyai.org/api/health`
-- Expect: HTTP 200, JSON `{"status":"ok",...}`
-- Interval: 1–5 min
-- User-Agent: browser-like (middleware allows health without bot block)
-- Provider: UptimeRobot / Better Stack / Vercel Observability
+| Field | Value |
+|-------|-------|
+| URL | `https://kaifyai.org/api/health` |
+| Expect | HTTP 200, JSON `status: ok` |
+| Interval | 1–5 min |
+| User-Agent | browser-like |
+| Provider | UptimeRobot / Better Stack / Vercel Observability |
+| **Monitor URL / ID** | ☐ _paste here_ |
+| Created date | |
 
 ## 2. Sentry alerts
 
-In Sentry project for Kaify:
-
-1. **Error spike** — issue alert when event volume > ~10× baseline or >10 5xx/hour
-2. **Cron / job failure** — filter messages/tags for `cron` routes or create
-   [Sentry Crons](https://docs.sentry.io/product/crons/) monitors for:
-   - `leaderboard-snapshot`, `outbox`, `notifications`, `self-recovery`,
-     `cost-check`, `backup-verification`
+| Alert | Rule ID / URL | Created |
+|-------|---------------|---------|
+| Error spike (>~10× baseline or >10 5xx/hour) | ☐ | |
+| Cron: `leaderboard-snapshot` | ☐ | |
+| Cron: `outbox` | ☐ | |
+| Cron: `notifications` | ☐ | |
+| Cron: `self-recovery` | ☐ | |
+| Cron: `cost-check` | ☐ | |
+| Cron: `backup-verification` | ☐ | |
 
 SDK already captures API 5xx via `lib/observability/capture.ts`.
 
-## 3. After creating
+## 3. Eng half (done)
 
-Paste monitor URLs / rule IDs into this file and tick
-`docs/operations/path-to-90-roadmap.md` TD-007 rows.
+- [x] Checklist + capture path documented (2026-08-04)
+- [x] Backup verification evidence archived
+- [x] Incident runbook linked
+
+## 4. Close criteria
+
+When rows above have real IDs/URLs, tick TD-007 in
+`docs/operations/path-to-90-roadmap.md` and set register status to **Done**.

@@ -23,6 +23,18 @@ jobs:
           target: ${{ env.STAGING_URL }}
           cmd_options: "-a"
 
+  zap-status:
+    name: ZAP staging gate status
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report STAGING_URL / waiver
+        run: |
+          if [ -z "${{ vars.STAGING_URL }}" ]; then
+            echo "::notice::STAGING_URL unset — ZAP baseline skipped. Active waiver: docs/operations/evidence/td008-zap-waiver.md"
+          else
+            echo "::notice::STAGING_URL is set — zap-baseline job will run when scheduled or dispatched."
+          fi
+
   sbom:
     name: SBOM + OSV
     runs-on: ubuntu-latest

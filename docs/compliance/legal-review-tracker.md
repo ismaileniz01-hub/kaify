@@ -1,9 +1,13 @@
 # Legal Review Tracker
 
-Last updated: 2026-07-05 · Compliance Faz 4  
+Last updated: 2026-08-04 · Compliance Faz 4 / path-to-90 Faz 6  
 **Purpose:** Track avukat / qualified counsel review for 90+ compliance claim
 
 > **Not legal advice.** Use this tracker to record external review — do not mark complete without actual counsel sign-off.
+>
+> **Engineering (2026-08-04):** Code + CI + evidence pack ready —
+> [`td006-compliance-evidence-pack.md`](../operations/evidence/td006-compliance-evidence-pack.md).
+> This does **not** replace counsel rows below.
 
 ---
 
