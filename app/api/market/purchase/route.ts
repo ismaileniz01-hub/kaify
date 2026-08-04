@@ -6,7 +6,7 @@ import { defineRoute } from "@/lib/api/route-handler";
 import {
   applyMarketAura,
   purchaseMarketItem,
-} from "@/lib/services/market.service";
+} from "@/lib/domains/market";
 
 export const dynamic = "force-dynamic";
 

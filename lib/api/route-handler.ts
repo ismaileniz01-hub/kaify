@@ -121,16 +121,20 @@ export function defineRoute<T>(
   const authMode = options.auth ?? "user";
 
   return async (request: NextRequest, ..._args: unknown[]) => {
-    return withSpan(options.route, async () => {
-      try {
-        const user = await resolveRouteUser(authMode);
-        await runRouteGuards(options, authMode, user, request);
-        const result = await handler({ user, request });
-        return ok(result);
-      } catch (error) {
-        return handleApiError(error, { route: options.route });
-      }
-    });
+    return withSpan(
+      options.route,
+      async () => {
+        try {
+          const user = await resolveRouteUser(authMode);
+          await runRouteGuards(options, authMode, user, request);
+          const result = await handler({ user, request });
+          return ok(result);
+        } catch (error) {
+          return handleApiError(error, { route: options.route });
+        }
+      },
+      { auth: authMode, method: request.method },
+    );
   };
 }
 
@@ -144,15 +148,19 @@ export function defineRouteRaw(
   const authMode = options.auth ?? "user";
 
   return async (request: NextRequest, ..._args: unknown[]) => {
-    return withSpan(options.route, async () => {
-      try {
-        const user = await resolveRouteUser(authMode);
-        await runRouteGuards(options, authMode, user, request);
-        return await handler({ user, request });
-      } catch (error) {
-        return handleApiError(error, { route: options.route });
-      }
-    });
+    return withSpan(
+      options.route,
+      async () => {
+        try {
+          const user = await resolveRouteUser(authMode);
+          await runRouteGuards(options, authMode, user, request);
+          return await handler({ user, request });
+        } catch (error) {
+          return handleApiError(error, { route: options.route });
+        }
+      },
+      { auth: authMode, method: request.method },
+    );
   };
 }
 
@@ -173,17 +181,21 @@ export function defineDynamicRoute<TParams>(
     request: NextRequest,
     routeCtx: { params: Promise<TParams> },
   ) => {
-    return withSpan(options.route, async () => {
-      try {
-        const user = await resolveRouteUser(authMode);
-        await runRouteGuards(options, authMode, user, request);
-        const params = await routeCtx.params;
-        const result = await handler({ user, request, params });
-        return ok(result);
-      } catch (error) {
-        return handleApiError(error, { route: options.route });
-      }
-    });
+    return withSpan(
+      options.route,
+      async () => {
+        try {
+          const user = await resolveRouteUser(authMode);
+          await runRouteGuards(options, authMode, user, request);
+          const params = await routeCtx.params;
+          const result = await handler({ user, request, params });
+          return ok(result);
+        } catch (error) {
+          return handleApiError(error, { route: options.route });
+        }
+      },
+      { auth: authMode, method: request.method },
+    );
   };
 }
 
@@ -197,16 +209,20 @@ export function defineDynamicRouteRaw<TParams>(
     request: NextRequest,
     routeCtx: { params: Promise<TParams> },
   ) => {
-    return withSpan(options.route, async () => {
-      try {
-        const user = await resolveRouteUser(authMode);
-        await runRouteGuards(options, authMode, user, request);
-        const params = await routeCtx.params;
-        return await handler({ user, request, params });
-      } catch (error) {
-        return handleApiError(error, { route: options.route });
-      }
-    });
+    return withSpan(
+      options.route,
+      async () => {
+        try {
+          const user = await resolveRouteUser(authMode);
+          await runRouteGuards(options, authMode, user, request);
+          const params = await routeCtx.params;
+          return await handler({ user, request, params });
+        } catch (error) {
+          return handleApiError(error, { route: options.route });
+        }
+      },
+      { auth: authMode, method: request.method },
+    );
   };
 }
 
@@ -222,17 +238,21 @@ export function defineCronRoute<T>(
   handler: (ctx: CronRouteContext) => Promise<T>,
 ) {
   return async (request: NextRequest) => {
-    return withSpan(route, async () => {
-      if (!verifyCronSecret(request)) {
-        return new Response("Unauthorized", { status: 401 });
-      }
-      try {
-        const result = await handler({ request });
-        return ok(result);
-      } catch (error) {
-        return handleApiError(error, { route });
-      }
-    });
+    return withSpan(
+      route,
+      async () => {
+        if (!verifyCronSecret(request)) {
+          return new Response("Unauthorized", { status: 401 });
+        }
+        try {
+          const result = await handler({ request });
+          return ok(result);
+        } catch (error) {
+          return handleApiError(error, { route });
+        }
+      },
+      { auth: "cron", method: request.method },
+    );
   };
 }
 
@@ -241,15 +261,19 @@ export function defineCronRouteRaw(
   handler: (ctx: CronRouteContext) => Promise<Response>,
 ) {
   return async (request: NextRequest) => {
-    return withSpan(route, async () => {
-      if (!verifyCronSecret(request)) {
-        return new Response("Unauthorized", { status: 401 });
-      }
-      try {
-        return await handler({ request });
-      } catch (error) {
-        return handleApiError(error, { route });
-      }
-    });
+    return withSpan(
+      route,
+      async () => {
+        if (!verifyCronSecret(request)) {
+          return new Response("Unauthorized", { status: 401 });
+        }
+        try {
+          return await handler({ request });
+        } catch (error) {
+          return handleApiError(error, { route });
+        }
+      },
+      { auth: "cron", method: request.method },
+    );
   };
 }

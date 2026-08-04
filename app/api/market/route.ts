@@ -1,5 +1,5 @@
 import { defineRoute } from "@/lib/api/route-handler";
-import { getMarketState } from "@/lib/services/market.service";
+import { getMarketState } from "@/lib/domains/market";
 
 export const dynamic = "force-dynamic";
 

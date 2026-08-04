@@ -8,13 +8,31 @@ import { useEffect, useState, useRef } from "react";
 import { ChatBubbles } from "@/components/ChatBubbles";
 import { ChatComposer } from "@/components/chat/ChatComposer";
 import { ContactAvatar } from "@/components/ContactAvatar";
-import { ImagePickerModal } from "@/components/ImagePickerModal";
+import dynamic from "next/dynamic";
 import { getContact, type ContactId } from "@/lib/contacts";
 import { resolveAvatarEffect } from "@/lib/aura-effects";
 import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
-import { LiveChatPanel } from "@/components/chat/LiveChatPanel";
+
+const LiveChatPanel = dynamic(
+  () =>
+    import("@/components/chat/LiveChatPanel").then((m) => m.LiveChatPanel),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex flex-1 items-center justify-center text-xs text-zinc-500">
+        Loading chat…
+      </div>
+    ),
+  },
+);
+
+const ImagePickerModal = dynamic(
+  () =>
+    import("@/components/ImagePickerModal").then((m) => m.ImagePickerModal),
+  { ssr: false },
+);
 
 export default function ChatPage() {
   const { t, lang } = useLang();

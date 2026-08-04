@@ -5,7 +5,7 @@ import {
   generateWeeklyTeamMeeting,
   getTeamChatHistory,
   teamMeetingWeekKey,
-} from "@/lib/services/team-chat.service";
+} from "@/lib/domains/ai";
 
 export const dynamic = "force-dynamic";
 

@@ -5,20 +5,23 @@
 
 ## Decision
 
-1. **Current:** Lightweight spans via `lib/observability/tracing.ts` + structured logger
+1. **Current:** Lightweight spans via `lib/observability/tracing.ts` — Sentry `startSpan` + breadcrumbs + structured logger (`withSpan` API)
 2. **Target:** OTel SDK with Vercel + Sentry exporters (Q3 2026)
 3. Migration steps:
-   - Add `@opentelemetry/api` wrapper preserving `withSpan` signature
-   - Propagate `x-request-id` as trace context attribute
-   - Export to Sentry performance + optional OTLP collector
+   - ✅ Preserve `withSpan` signature; attach route `auth`/`method` + `request.id`
+   - ✅ Export to Sentry performance spans (Faz 5)
+   - Add `@opentelemetry/api` wrapper when cross-service correlation is needed
+   - Propagate `x-request-id` as W3C trace context
+   - Optional OTLP collector export
 4. No breaking change to route handlers during migration
 
 ## Rationale
 
-Full OTW tracing deferred until traffic warrants cross-service correlation
-beyond single Vercel function boundaries.
+Full OTel tracing deferred until traffic warrants cross-service correlation
+beyond single Vercel function boundaries. Sentry spans cover latency debugging
+inside the app today.
 
 ## Consequences
 
-- TD-001 tracks implementation
-- Until then, rely on `X-Request-ID` + Sentry breadcrumbs for correlation
+- TD-001 tracks remaining OTel SDK work
+- Until then, rely on `X-Request-ID` + Sentry spans/breadcrumbs for correlation

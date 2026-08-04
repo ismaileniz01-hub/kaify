@@ -20,8 +20,15 @@ describe("domain facades", () => {
     expect(domains.compliance.USER_EXPORT_TABLES.length).toBeGreaterThan(20);
   });
 
-  it("platform facade exposes cache keys and flags", () => {
-    expect(typeof domains.platform.CacheKeys.marketItems).toBe("function");
-    expect(typeof domains.platform.isFeatureEnabled).toBe("function");
+  it("ai facade exposes chat + team helpers", () => {
+    expect(typeof domains.ai.getHistory).toBe("function");
+    expect(typeof domains.ai.analyzePhoto).toBe("function");
+    expect(typeof domains.ai.assertTeamChatUnlocked).toBe("function");
+    expect(typeof domains.ai.teamMeetingWeekKey).toBe("function");
+  });
+
+  it("billing facade exposes paddle verify + handle", () => {
+    expect(typeof domains.billing.verifyAndParsePaddleWebhook).toBe("function");
+    expect(typeof domains.billing.handleNormalizedPaddleEvent).toBe("function");
   });
 });

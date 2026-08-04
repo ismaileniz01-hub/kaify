@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   handleNormalizedPaddleEvent,
   verifyAndParsePaddleWebhook,
-} from "@/lib/services/billing.service";
+} from "@/lib/domains/billing";
 import { handleApiError } from "@/lib/api/response";
 
 export const runtime = "nodejs";

@@ -1,6 +1,6 @@
 import { ApiError } from "@/lib/api/errors";
 import { defineDynamicRoute } from "@/lib/api/route-handler";
-import { analyzePhoto } from "@/lib/services/analysis.service";
+import { analyzePhoto } from "@/lib/domains/ai";
 import {
   MAX_JSON_BODY_ANALYZE,
   parseJsonWithLimit,

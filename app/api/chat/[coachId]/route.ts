@@ -5,7 +5,7 @@ import {
   defineDynamicRouteRaw,
 } from "@/lib/api/route-handler";
 import { CHAT_TOKEN_RESERVE, reserveQuota } from "@/lib/ai/quota-guard";
-import { getHistory, streamCoachReply } from "@/lib/services/chat.service";
+import { getHistory, streamCoachReply } from "@/lib/domains/ai";
 import {
   MAX_JSON_BODY_CHAT,
   parseJsonWithLimit,

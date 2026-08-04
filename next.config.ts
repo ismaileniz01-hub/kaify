@@ -20,10 +20,40 @@ const securityHeaders = [
   { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
 ];
 
+function supabaseHostname(): string | null {
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!raw) return null;
+  try {
+    return new URL(raw).hostname;
+  } catch {
+    return null;
+  }
+}
+
+const supabaseHost = supabaseHostname();
+
 const nextConfig: NextConfig = {
   images: {
-    unoptimized: true,
-    remotePatterns: [],
+    // Enable Next/Image optimization for local + allowlisted remotes.
+    // Components still set unoptimized for data: URLs / pixel art.
+    unoptimized: false,
+    remotePatterns: [
+      ...(supabaseHost
+        ? [
+            {
+              protocol: "https" as const,
+              hostname: supabaseHost,
+              pathname: "/storage/v1/object/**",
+            },
+          ]
+        : [
+            {
+              protocol: "https" as const,
+              hostname: "*.supabase.co",
+              pathname: "/storage/v1/object/**",
+            },
+          ]),
+    ],
   },
   eslint: {
     ignoreDuringBuilds: false,

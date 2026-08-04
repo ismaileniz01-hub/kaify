@@ -13,7 +13,9 @@ import { useSession } from "@/lib/session-context";
 import { apiGet, apiPost, ApiClientError } from "@/lib/api/client";
 import { canUseTeamChat } from "@/lib/billing/team-chat-access";
 import { errorToMessage } from "@/lib/i18n/api-error";
+import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { ChatMessageDTO } from "@/lib/types/domain.types";
+import type { Database } from "@/lib/types/database.types";
 
 type TeamMessage = {
   id: string;
@@ -22,6 +24,8 @@ type TeamMessage = {
   time: string;
 };
 
+type ChatMessageRow = Database["public"]["Tables"]["chat_messages"]["Row"];
+
 function isMeetingThisWeek(messages: ChatMessageDTO[]): boolean {
   const weekStart = new Date();
   weekStart.setUTCDate(weekStart.getUTCDate() - 7);
@@ -29,6 +33,31 @@ function isMeetingThisWeek(messages: ChatMessageDTO[]): boolean {
     (m) =>
       m.messageType === "team_meeting" && new Date(m.createdAt) >= weekStart,
   );
+}
+
+function mapDtoToTeamMessage(m: ChatMessageDTO): TeamMessage {
+  return {
+    id: m.id,
+    coachId: (m.coachId ?? "kai") as ContactId,
+    text: m.content ?? "",
+    time: new Date(m.createdAt).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  };
+}
+
+function mapRowToTeamMessage(row: ChatMessageRow): TeamMessage | null {
+  if (row.thread_type !== "team") return null;
+  return {
+    id: row.id,
+    coachId: (row.coach_id ?? "kai") as ContactId,
+    text: row.content ?? "",
+    time: new Date(row.created_at).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  };
 }
 
 export default function TeamChatPage() {
@@ -67,21 +96,47 @@ export default function TeamChatPage() {
     apiGet<{ messages: ChatMessageDTO[] }>("/api/chat/team")
       .then((res) => {
         setMeetingDone(isMeetingThisWeek(res.messages));
-        setMessages(
-          res.messages.map((m) => ({
-            id: m.id,
-            coachId: (m.coachId ?? "kai") as ContactId,
-            text: m.content ?? "",
-            time: new Date(m.createdAt).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-          })),
-        );
+        setMessages(res.messages.map(mapDtoToTeamMessage));
       })
       .catch(() => setError(t("team.error.load")))
       .finally(() => setLoading(false));
   }, [isAuthenticated, profile?.tier, profile?.teamChatUnlocked, t]);
+
+  // TD-005: Realtime INSERT fan-out for team thread (deduped vs POST response).
+  useEffect(() => {
+    if (!isAuthenticated || !profile?.id || !unlocked) return;
+    const supabase = tryCreateBrowserSupabaseClient();
+    if (!supabase) return;
+
+    const channel = supabase
+      .channel(`team-chat:${profile.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "chat_messages",
+          filter: `user_id=eq.${profile.id}`,
+        },
+        (payload) => {
+          const row = payload.new as ChatMessageRow;
+          const mapped = mapRowToTeamMessage(row);
+          if (!mapped) return;
+          if (row.message_type === "team_meeting") {
+            setMeetingDone(true);
+          }
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === mapped.id)) return prev;
+            return [...prev, mapped];
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, profile?.id, unlocked]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -95,18 +150,13 @@ export default function TeamChatPage() {
     try {
       const res = await apiPost<{ messages: ChatMessageDTO[] }>("/api/chat/team");
       setMeetingDone(true);
-      setMessages((prev) => [
-        ...prev,
-        ...res.messages.map((m) => ({
-          id: m.id,
-          coachId: (m.coachId ?? "kai") as ContactId,
-          text: m.content ?? "",
-          time: new Date(m.createdAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        })),
-      ]);
+      setMessages((prev) => {
+        const next = [...prev];
+        for (const m of res.messages.map(mapDtoToTeamMessage)) {
+          if (!next.some((x) => x.id === m.id)) next.push(m);
+        }
+        return next;
+      });
     } catch (e) {
       if (e instanceof ApiClientError && e.code === "CONFLICT") {
         setMeetingDone(true);
