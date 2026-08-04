@@ -377,7 +377,7 @@ export default function SettingsPage() {
       <header className="animate-in animate-in--1 flex items-center justify-between px-4 pb-2 pt-12">
         <Link
           href="/welcome"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
+          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
           aria-label={t("nav.back")}
         >
           <ArrowLeft className="h-5 w-5" />

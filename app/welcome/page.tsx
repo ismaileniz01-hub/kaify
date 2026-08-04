@@ -102,7 +102,7 @@ function WelcomeContent() {
         <div className="flex items-center gap-2">
           <Link
             href={isAuthenticated ? "/myaccount" : "/login"}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition-all duration-300 hover:bg-white/20 hover:text-white hover:scale-110"
+            className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition-all duration-300 hover:bg-white/20 hover:text-white hover:scale-110"
             aria-label={t("nav.back")}
           >
             <ArrowLeft className="h-4 w-4" strokeWidth={2} />
@@ -110,7 +110,7 @@ function WelcomeContent() {
           <button
             type="button"
             onClick={() => setProfileOpen(true)}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500/20 text-purple-300 ring-2 ring-purple-400/30 transition-all duration-300 hover:bg-purple-500/30 hover:text-purple-200 hover:scale-110"
+            className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-purple-500/20 text-purple-300 ring-2 ring-purple-400/30 transition-all duration-300 hover:bg-purple-500/30 hover:text-purple-200 hover:scale-110"
             aria-label={t("profile.title")}
           >
             <User className="h-4 w-4" strokeWidth={2} />
@@ -120,7 +120,7 @@ function WelcomeContent() {
         {/* Center — Leaderboard button */}
         <Link
           href="/leaderboard"
-          className="flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-amber-400 ring-2 ring-amber-400/30 transition-all duration-300 hover:bg-amber-500/25 hover:text-amber-300 hover:scale-105"
+          className="touch-44 flex min-h-[44px] items-center gap-1 rounded-full bg-amber-500/15 px-3 py-2 text-amber-400 ring-2 ring-amber-400/30 transition-all duration-300 hover:bg-amber-500/25 hover:text-amber-300 hover:scale-105"
           aria-label={t("nav.leaderboard")}
         >
           <Globe className="h-3 w-3" />
@@ -133,7 +133,7 @@ function WelcomeContent() {
           <NotificationCenter />
           <Link
             href="/settings"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition-all duration-300 hover:bg-white/20 hover:text-white hover:scale-110"
+            className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition-all duration-300 hover:bg-white/20 hover:text-white hover:scale-110"
             aria-label={t("nav.settings")}
           >
             <Settings className="h-4 w-4" strokeWidth={2} />

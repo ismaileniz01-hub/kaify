@@ -13,8 +13,8 @@ const baseOptions = {
   environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? "development",
   // Ties every event to the exact deploy so regressions are traceable.
   release: process.env.VERCEL_GIT_COMMIT_SHA ?? undefined,
-  tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
-  enableLogs: true,
+  tracesSampleRate: process.env.NODE_ENV === "production" ? 0.05 : 1.0,
+  enableLogs: false,
   sendDefaultPii: false,
   beforeSend: scrubSentryEvent,
   // Drop noise from client-side network hiccups and user-cancelled requests.
@@ -29,9 +29,14 @@ const baseOptions = {
 
 export const sentryClientOptions: BrowserOptions = {
   ...baseOptions,
+  // Replay ships a large client chunk — keep off for launch perf (errors still report).
   replaysSessionSampleRate: 0,
-  replaysOnErrorSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 0,
-  integrations: (defaults) => defaults,
+  replaysOnErrorSampleRate: 0,
+  integrations: (defaults) =>
+    defaults.filter((integration) => {
+      const name = integration.name;
+      return name !== "Replay" && name !== "ReplayCanvas";
+    }),
 };
 
 export const sentryServerOptions: NodeOptions = {

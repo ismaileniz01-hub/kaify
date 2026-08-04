@@ -175,7 +175,7 @@ export default function TeamChatPage() {
       <header className="flex items-center gap-3 px-4 pb-2 pt-12">
         <Link
           href="/messages"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-zinc-400"
+          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400"
           aria-label={t("nav.back")}
         >
           <ArrowLeft className="h-5 w-5" />

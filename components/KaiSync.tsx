@@ -15,6 +15,7 @@ export function KaiSync() {
   const { syncFromServer, unlockLevel, setStreak, resetGuestState } = useKai();
   const syncedRef = useRef(false);
   const wasAuthenticatedRef = useRef(false);
+  const appliedKaiKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     setStreak(streak.currentStreak);
@@ -24,6 +25,7 @@ export function KaiSync() {
     if (wasAuthenticatedRef.current && !isAuthenticated && !isLoading) {
       resetGuestState();
       syncedRef.current = false;
+      appliedKaiKeyRef.current = null;
     }
     wasAuthenticatedRef.current = isAuthenticated;
   }, [isAuthenticated, isLoading, resetGuestState]);
@@ -32,22 +34,32 @@ export function KaiSync() {
     if (isLoading) return;
     if (!isAuthenticated) {
       syncedRef.current = false;
+      appliedKaiKeyRef.current = null;
       return;
     }
 
     let cancelled = false;
-    syncedRef.current = false;
 
     const applyState = (state: KaiStateDTO) => {
       if (cancelled) return;
+      const key = `${state.unlockedLevel}|${state.activeAura}|${state.ownedEffectIds.join(",")}`;
+      if (appliedKaiKeyRef.current === key) {
+        syncedRef.current = true;
+        return;
+      }
+      appliedKaiKeyRef.current = key;
       syncFromServer(state.ownedEffectIds, state.activeAura);
       const level = Math.min(4, Math.max(1, state.unlockedLevel)) as KaiLevel;
       unlockLevel(level);
       syncedRef.current = true;
     };
 
+    // Session bundle already includes kai — apply once, no poll/visibility refetch.
     if (kai) {
       applyState(kai);
+      return () => {
+        cancelled = true;
+      };
     }
 
     const sync = () =>
@@ -57,9 +69,7 @@ export function KaiSync() {
           syncedRef.current = false;
         });
 
-    if (!kai) {
-      void sync();
-    }
+    void sync();
 
     const retry = window.setInterval(() => {
       if (syncedRef.current || cancelled) {
@@ -70,7 +80,11 @@ export function KaiSync() {
     }, SYNC_RETRY_MS);
 
     const onVisible = () => {
-      if (document.visibilityState === "visible" && isAuthenticated) {
+      if (
+        document.visibilityState === "visible" &&
+        isAuthenticated &&
+        !syncedRef.current
+      ) {
         void sync();
       }
     };

@@ -157,7 +157,7 @@ export function StreakCard({ streak, kaiLevel, onClose }: StreakCardProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div className="relative flex flex-col items-center gap-4 max-w-sm w-full">
-        <button onClick={onClose} className="self-end flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-zinc-400 transition hover:bg-white/20 hover:text-white">
+        <button onClick={onClose} className="touch-44 self-end flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-zinc-400 transition hover:bg-white/20 hover:text-white" aria-label={t("common.close")}>
           <X className="h-4 w-4" />
         </button>
 
@@ -195,7 +195,7 @@ export function StreakCard({ streak, kaiLevel, onClose }: StreakCardProps) {
           {/* Sayı - üst kısımda */}
           <div className="absolute top-28 left-0 right-0 flex flex-col items-center z-10">
             {/* Dönen ışık çemberi */}
-            <div className="absolute w-64 h-64 rounded-full" style={{
+            <div className="streak-card-fx absolute w-64 h-64 rounded-full" style={{
               background: `conic-gradient(from 0deg, ${theme.flameColor}, ${theme.flameColor2}, ${theme.glowIntense}, ${theme.flameColor})`,
               animation: "spin 4s linear infinite",
               maskImage: "radial-gradient(circle, transparent 45%, black 46%, black 54%, transparent 55%)",
@@ -203,7 +203,7 @@ export function StreakCard({ streak, kaiLevel, onClose }: StreakCardProps) {
               opacity: 0.7,
             }} />
             {/* İkinci ters dönen çember */}
-            <div className="absolute w-80 h-80 rounded-full" style={{
+            <div className="streak-card-fx absolute w-80 h-80 rounded-full" style={{
               background: `conic-gradient(from 180deg, ${theme.flameColor2}, transparent, ${theme.glowIntense}, transparent)`,
               animation: "spin 6s linear infinite reverse",
               maskImage: "radial-gradient(circle, transparent 40%, black 41%, black 59%, transparent 60%)",
@@ -215,16 +215,16 @@ export function StreakCard({ streak, kaiLevel, onClose }: StreakCardProps) {
 
             {/* Yükselen kıvılcımlar */}
             {[...Array(12)].map((_, i) => (
-                <div key={i} className="absolute w-1.5 h-1.5 rounded-full" style={{
+                <div key={i} className="streak-card-fx absolute w-1.5 h-1.5 rounded-full" style={{
                   background: i % 2 === 0 ? theme.flameColor : theme.flameColor2,
                   boxShadow: `0 0 6px ${i % 2 === 0 ? theme.flameColor : theme.flameColor2}`,
-                  animation: `sparkFloat ${2 + Math.random() * 2}s ${Math.random() * 2}s ease-out infinite`,
+                  animation: `sparkFloat ${2 + (i % 3) * 0.5}s ${(i % 5) * 0.2}s ease-out infinite`,
                   opacity: 0.8,
                 }} />
             ))}
 
             {/* Alev tabanı - sayının altında */}
-            <div className="absolute bottom-0 w-32 h-16" style={{
+            <div className="streak-card-fx absolute bottom-0 w-32 h-16" style={{
               background: `linear-gradient(to top, ${theme.flameColor}, ${theme.flameColor2}80, transparent)`,
               filter: "blur(12px)",
               animation: "flameFlicker 0.8s ease-in-out infinite alternate",

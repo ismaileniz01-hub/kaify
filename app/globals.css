@@ -3257,6 +3257,32 @@ select:active {
     outline: 2px solid #a855f7;
     outline-offset: 2px;
   }
+
+  .fire-aura,
+  .fire-aura::before,
+  .fire-aura::after,
+  .electric-aura,
+  .premium-aura,
+  .premium-aura::before,
+  .premium-aura::after,
+  .premium-aura-phoenix::before,
+  .premium-aura-nebula::before,
+  .premium-aura-thunder::before,
+  .premium-aura-eclipse::before,
+  .premium-aura-prism::before,
+  .streak-drama-pulse,
+  .streak-card-fx,
+  .animate-in,
+  .animate-ping,
+  .animate-pulse {
+    animation: none !important;
+  }
+}
+
+/* WCAG 2.5.5 — primary header/icon controls */
+.touch-44 {
+  min-width: 44px;
+  min-height: 44px;
 }
 
 /* ===== STREAK CARD ANIMASYONLARI ===== */

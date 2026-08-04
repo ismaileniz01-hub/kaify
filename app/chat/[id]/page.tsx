@@ -158,7 +158,7 @@ export default function ChatPage() {
       <header className="pt-app-header relative z-20 flex items-center gap-3 px-4 pb-2">
         <Link
           href="/messages"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
+          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
           aria-label={t("nav.back")}
         >
           <ArrowLeft className="h-5 w-5" />
@@ -181,7 +181,7 @@ export default function ChatPage() {
             </span>
           </div>
         </div>
-        <div className="h-9 w-9" />
+        <div className="h-11 w-11" />
         <div
           className="absolute bottom-0 left-3 right-3 h-px"
           style={{

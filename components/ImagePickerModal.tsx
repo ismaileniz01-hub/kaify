@@ -111,7 +111,7 @@ export function ImagePickerModal({ isOpen, onClose, onImageSelect }: ImagePicker
             type="button"
             onClick={onClose}
             aria-label={t("common.close")}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
+            className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
           >
             <X className="h-4 w-4" aria-hidden />
           </button>

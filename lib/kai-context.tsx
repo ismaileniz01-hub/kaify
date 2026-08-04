@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { getKaiLevel, KAI_LEVEL_AVATARS, type KaiLevel } from "@/lib/kai-level";
 
 export type AuraColor = "default" | "blue" | "red" | "green" | "pink" | "purple" | "gold" | "white" | "orange" | "indigo" | "electric" | "phoenix" | "nebula" | "thunder" | "eclipse" | "prism";
@@ -156,44 +156,61 @@ export function KaiProvider({ children, initialStreak = 0 }: { children: ReactNo
   // unlockedLevel, StreakRoad'daki CLAIM sonrası güncellenir
   const avatar = KAI_LEVEL_AVATARS[unlockedLevel];
 
-  if (!mounted) {
-    return (
-      <KaiContext.Provider
-        value={{
-          unlockedLevel: 1,
-          currentLevel: 1,
-          avatar: KAI_LEVEL_AVATARS[1],
-          unlockLevel,
-          setStreak,
-          auraColor: "default",
-          setAuraColor,
-          ownedEffects: [],
-          purchaseEffect,
-          syncFromServer,
-          resetGuestState,
-        }}
-      >
-        {children}
-      </KaiContext.Provider>
-    );
-  }
+  const bootValue = useMemo<KaiContextType>(
+    () => ({
+      unlockedLevel: 1,
+      currentLevel: 1,
+      avatar: KAI_LEVEL_AVATARS[1],
+      unlockLevel,
+      setStreak,
+      auraColor: "default",
+      setAuraColor,
+      ownedEffects: [],
+      purchaseEffect,
+      syncFromServer,
+      resetGuestState,
+    }),
+    [
+      unlockLevel,
+      setStreak,
+      setAuraColor,
+      purchaseEffect,
+      syncFromServer,
+      resetGuestState,
+    ],
+  );
+
+  const value = useMemo<KaiContextType>(
+    () => ({
+      unlockedLevel,
+      currentLevel,
+      avatar,
+      unlockLevel,
+      setStreak,
+      auraColor,
+      setAuraColor,
+      ownedEffects,
+      purchaseEffect,
+      syncFromServer,
+      resetGuestState,
+    }),
+    [
+      unlockedLevel,
+      currentLevel,
+      avatar,
+      unlockLevel,
+      setStreak,
+      auraColor,
+      setAuraColor,
+      ownedEffects,
+      purchaseEffect,
+      syncFromServer,
+      resetGuestState,
+    ],
+  );
 
   return (
-    <KaiContext.Provider
-      value={{
-        unlockedLevel,
-        currentLevel,
-        avatar,
-        unlockLevel,
-        setStreak,
-        auraColor,
-        setAuraColor,
-        ownedEffects,
-        purchaseEffect,
-        syncFromServer,
-        resetGuestState,
-      }}
-    >
+    <KaiContext.Provider value={mounted ? value : bootValue}>
       {children}
     </KaiContext.Provider>
   );

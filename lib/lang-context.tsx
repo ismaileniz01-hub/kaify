@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import enFallback from "@/lib/lang/en.json";
 import { apiPatch } from "@/lib/api/client";
 
@@ -319,17 +319,27 @@ export function LangProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const ssrValue = useMemo<LangContextType>(
+    () => ({ lang: "en", setLang, unit: "metric", setUnit, t: ssrT }),
+    [setLang, setUnit, ssrT],
+  );
+
+  const value = useMemo<LangContextType>(
+    () => ({ lang, setLang, unit, setUnit, t }),
+    [lang, setLang, unit, setUnit, t],
+  );
+
   if (!mounted) {
     // SSR / hydration: İngilizce fallback — ham anahtar gösterme
     return (
-      <LangContext.Provider value={{ lang: "en", setLang, unit: "metric", setUnit, t: ssrT }}>
+      <LangContext.Provider value={ssrValue}>
         {children}
       </LangContext.Provider>
     );
   }
 
   return (
-    <LangContext.Provider value={{ lang, setLang, unit, setUnit, t }}>
+    <LangContext.Provider value={value}>
       {children}
     </LangContext.Provider>
   );

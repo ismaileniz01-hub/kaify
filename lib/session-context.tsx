@@ -174,7 +174,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         applyGuestState();
         return;
       }
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+      // TOKEN_REFRESHED already updates the client JWT — skip full /api/session + check-in cascade.
+      if (event === "SIGNED_IN") {
         void refreshSession();
       }
     });

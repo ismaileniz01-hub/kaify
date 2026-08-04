@@ -6,6 +6,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useMemo,
   type ReactNode,
 } from "react";
 import {
@@ -99,17 +100,20 @@ export function GemProvider({ children }: { children: ReactNode }) {
     }));
   }, [session.isAuthenticated]);
 
+  const value = useMemo<GemContextValue>(
+    () => ({
+      gemState,
+      earn,
+      spend,
+      lastTransaction,
+      todayEarned,
+      refreshBalance,
+    }),
+    [gemState, earn, spend, lastTransaction, todayEarned, refreshBalance],
+  );
+
   return (
-    <GemContext.Provider
-      value={{
-        gemState,
-        earn,
-        spend,
-        lastTransaction,
-        todayEarned,
-        refreshBalance,
-      }}
-    >
+    <GemContext.Provider value={value}>
       {children}
     </GemContext.Provider>
   );

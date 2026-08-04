@@ -83,7 +83,7 @@ export default function AnalyticsPage() {
         <Link
           href="/welcome"
           prefetch
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
+          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
           aria-label={t("nav.back")}
         >
           <ArrowLeft className="h-5 w-5" />
@@ -95,7 +95,7 @@ export default function AnalyticsPage() {
           type="button"
           onClick={() => loadAnalytics()}
           disabled={refreshing || !isAuthenticated}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white disabled:opacity-40"
+          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white disabled:opacity-40"
           aria-label={t("analytics.refresh")}
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
