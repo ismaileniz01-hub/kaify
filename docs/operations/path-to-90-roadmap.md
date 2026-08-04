@@ -38,8 +38,9 @@ Score lift (indicative):
 ### Security
 
 - [ ] Enable Supabase Auth leaked-password (HIBP) protection — **operator** (dashboard / Pro): see [faz1-advisor-waivers.md](./faz1-advisor-waivers.md)
-- [ ] Set `ADMIN_EMAIL` allowlist in Vercel production — **operator** on project **`kaify`** (owns `kaifyai.org`)
-- [ ] Confirm real secrets (not placeholders): `CRON_SECRET`, `CSRF_SECRET`, `ADMIN_HUB_*`, `PADDLE_NOTIFICATION_WEBHOOK_SECRET`, Upstash — redeploy — **operator**
+- [x] Confirm real secrets for cron/hub: strong `CRON_SECRET` + `ADMIN_HUB_SECRET` set on Vercel project **`kaify`** (prod/preview); vault `kaify_cron_secret` aligned; smoke `GET /api/cron/leaderboard-snapshot` → 200
+- [ ] Confirm remaining secrets are strong (not short placeholders): `CSRF_SECRET`, `ADMIN_HUB_PASSWORD`, Paddle, Upstash — **operator** rotate if still weak; redeploy
+- [ ] Set `ADMIN_EMAIL` allowlist in Vercel production — **operator** on project **`kaify`**
 - [x] Address `pg_net` in `public` schema advisor WARN — **waiver documented** ([faz1-advisor-waivers.md](./faz1-advisor-waivers.md)); extension comment on prod
 - [x] RLS-enabled / no-policy tables: service_role-only intent + `REVOKE` (`20260804170000_faz1_service_table_grants.sql`)
 

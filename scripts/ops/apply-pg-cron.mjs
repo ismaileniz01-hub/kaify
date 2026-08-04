@@ -12,9 +12,10 @@
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = new URL("../..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const TEMPLATE = join(ROOT, "docs/operations/pg-cron-frequent-schedules.sql");
 const VAULT_TEMPLATE = join(
   ROOT,
@@ -56,23 +57,28 @@ if (!secret) {
 }
 
 if (process.argv.includes("--seed-vault")) {
-  // Upsert-friendly: delete prior name then create (vault has no simple update-by-name).
-  const sql = `-- generated; delete after apply
+  // Prefer update when id known; create otherwise. delete_secret may be unavailable.
+  const sql = `-- generated; delete after use
 do $$
 declare
   sid uuid;
 begin
   select id into sid from vault.secrets where name = 'kaify_cron_secret' limit 1;
   if sid is not null then
-    perform vault.delete_secret(sid);
+    perform vault.update_secret(
+      sid,
+      ${sqlLiteral(secret)},
+      'kaify_cron_secret',
+      'Vercel CRON_SECRET for pg_cron → /api/cron/*'
+    );
+  else
+    perform vault.create_secret(
+      ${sqlLiteral(secret)},
+      'kaify_cron_secret',
+      'Vercel CRON_SECRET for pg_cron → /api/cron/*'
+    );
   end if;
 end $$;
-
-select vault.create_secret(
-  ${sqlLiteral(secret)},
-  'kaify_cron_secret',
-  'Vercel CRON_SECRET for pg_cron → /api/cron/*'
-);
 `;
   const out = join(tmpdir(), "kaify-vault-cron-seed.sql");
   writeFileSync(out, sql, "utf8");

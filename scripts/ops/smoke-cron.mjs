@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = new URL("../..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
 function loadCronSecret() {
   if (process.env.CRON_SECRET?.trim()) return process.env.CRON_SECRET.trim();
