@@ -22,13 +22,14 @@ Score lift (indicative):
 
 **Goal:** Stop public economy mint via PostgREST.
 
-- [ ] Migration: `REVOKE EXECUTE` on `admin_create_pending_gift`, `grant_freezie`, `apply_daily_chest_reward`, `record_cron_run` (and siblings) from `anon`, `authenticated`, `PUBLIC`; `GRANT` to `service_role` only
-- [ ] Defense in depth: `auth.jwt()` / `is_admin()` / `auth.uid()` guards inside SECURITY DEFINER bodies
-- [ ] Privilege audit SQL (CI or ops script) fails if `anon` can execute sensitive RPCs
-- [ ] Verify: anon PostgREST call → 401/403; app paths (chest, gifts, check-in) still work via Next API
-- [ ] Full sweep of gem/ledger/spend/chest DEFINER RPCs for same grant pattern
+- [x] Migration: `REVOKE EXECUTE` on `admin_create_pending_gift`, `grant_freezie`, `apply_daily_chest_reward`, `record_cron_run` (and siblings) from `anon`, `authenticated`, `PUBLIC`; `GRANT` to `service_role` only
+- [x] Defense in depth: `require_service_role()` / JWT guards inside SECURITY DEFINER bodies (`grant_freezie` excluded for nested `claim_pending_gift`)
+- [x] Privilege audit regression test: `tests/security/faz0-rpc-lockdown.test.ts`
+- [x] Verify: live `anon_exec=false` on economy/admin DEFINER RPCs; leaderboards remain public
+- [x] Full sweep of gem/ledger/spend/chest/admin DEFINER RPCs + `ALTER DEFAULT PRIVILEGES`
 
-**Exit:** Live `has_function_privilege('anon', …) = false` for all economy/admin DEFINER RPCs · app smoke OK.
+**Exit:** Live `has_function_privilege('anon', …) = false` for all economy/admin DEFINER RPCs · app smoke OK.  
+**Shipped:** `supabase/migrations/20260804160000_faz0_rpc_privilege_lockdown.sql` (applied to prod 2026-08-04).
 
 ---
 
