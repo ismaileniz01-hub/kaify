@@ -1,9 +1,17 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
-import { OnboardingProfileForm } from "@/components/onboarding/OnboardingProfileForm";
 import { useSession } from "@/lib/session-context";
 import { useLang } from "@/lib/lang-context";
+
+const OnboardingProfileForm = dynamic(
+  () =>
+    import("@/components/onboarding/OnboardingProfileForm").then((m) => ({
+      default: m.OnboardingProfileForm,
+    })),
+  { ssr: false },
+);
 
 /**
  * Blocks the app when profile forms are incomplete — except on /signup where

@@ -34,10 +34,14 @@ function supabaseHostname(): string | null {
 const supabaseHost = supabaseHostname();
 
 const nextConfig: NextConfig = {
+  experimental: {
+    optimizePackageImports: ["lucide-react"],
+  },
   images: {
     // Enable Next/Image optimization for local + allowlisted remotes.
     // Components still set unoptimized for data: URLs / pixel art.
     unoptimized: false,
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
         protocol: "https" as const,

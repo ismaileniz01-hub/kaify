@@ -28,7 +28,7 @@ type NotificationContextValue = {
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
 
-const POLL_INTERVAL_MS = 30_000;
+const POLL_INTERVAL_MS = 60_000;
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const session = useSession();
@@ -41,6 +41,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     if (!session.isAuthenticated || inFlight.current) return;
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      return;
+    }
     inFlight.current = true;
     setLoading(true);
     try {
@@ -66,7 +69,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   }, [session.isAuthenticated]);
 
-  // Initial load + polling while authenticated.
+  // Initial load + polling while authenticated and tab visible.
   useEffect(() => {
     if (!session.isAuthenticated) {
       setNotifications([]);
@@ -77,7 +80,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
     void refresh();
     const timer = setInterval(() => void refresh(), POLL_INTERVAL_MS);
-    return () => clearInterval(timer);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [session.isAuthenticated, refresh]);
 
   const markAllRead = useCallback(async () => {

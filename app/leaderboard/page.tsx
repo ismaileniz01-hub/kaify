@@ -57,15 +57,17 @@ function AnimatedNumber({ value, duration = 1500 }: { value: number; duration?: 
     startedRef.current = true;
 
     const startTime = Date.now();
+    let raf = 0;
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
       // easeOutExpo
       const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
       setDisplay(Math.floor(eased * value));
-      if (progress < 1) requestAnimationFrame(animate);
+      if (progress < 1) raf = requestAnimationFrame(animate);
     };
-    requestAnimationFrame(animate);
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
   }, [value, duration]);
 
   return <span ref={ref}>{display.toLocaleString()}</span>;

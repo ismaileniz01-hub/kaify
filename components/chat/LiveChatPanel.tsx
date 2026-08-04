@@ -67,6 +67,17 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const streamRafRef = useRef<number | null>(null);
 
   useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+      if (streamRafRef.current !== null) {
+        cancelAnimationFrame(streamRafRef.current);
+        streamRafRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     setLoadingHistory(true);
     apiGet<ChatMessageDTO[]>(`/api/chat/${coachId}?limit=30`)

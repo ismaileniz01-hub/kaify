@@ -17,11 +17,11 @@ type ContactAvatarProps = {
 };
 
 const sizes = {
-  xs: { box: "h-8 w-8", img: 32, scale: "sm" as const },
-  sm: { box: "h-11 w-11", img: 44, scale: "sm" as const },
-  md: { box: "h-14 w-14", img: 52, scale: "md" as const },
-  lg: { box: "h-20 w-20", img: 76, scale: "lg" as const },
-  xl: { box: "h-28 w-28", img: 104, scale: "lg" as const },
+  xs: { box: "h-8 w-8", img: 32, scale: "sm" as const, sizesAttr: "32px" },
+  sm: { box: "h-11 w-11", img: 44, scale: "sm" as const, sizesAttr: "44px" },
+  md: { box: "h-14 w-14", img: 56, scale: "md" as const, sizesAttr: "56px" },
+  lg: { box: "h-20 w-20", img: 80, scale: "lg" as const, sizesAttr: "80px" },
+  xl: { box: "h-28 w-28", img: 112, scale: "lg" as const, sizesAttr: "112px" },
 };
 
 export function ContactAvatar({
@@ -33,9 +33,12 @@ export function ContactAvatar({
   auraColor = "default",
   className = "",
 }: ContactAvatarProps) {
-  const { box, img, scale } = sizes[size];
+  const { box, img, scale, sizesAttr } = sizes[size];
   const visual = getAuraVisual(auraColor);
   const resolvedEffect = effect ?? resolveAvatarEffect(auraColor);
+  // Data URLs / blob previews cannot go through the optimizer.
+  const needsUnoptimized =
+    src.startsWith("data:") || src.startsWith("blob:");
 
   return (
     <div className={`relative ${className}`}>
@@ -52,7 +55,8 @@ export function ContactAvatar({
           alt={alt}
           width={img}
           height={img}
-          unoptimized
+          sizes={sizesAttr}
+          unoptimized={needsUnoptimized}
           className="relative z-10 h-full w-full object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)]"
         />
       </div>

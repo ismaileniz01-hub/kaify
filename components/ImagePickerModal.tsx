@@ -20,6 +20,7 @@ export function ImagePickerModal({ isOpen, onClose, onImageSelect }: ImagePicker
   const [scanComplete, setScanComplete] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scanLineRef = useRef<HTMLDivElement>(null);
+  const scanTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -27,8 +28,17 @@ export function ImagePickerModal({ isOpen, onClose, onImageSelect }: ImagePicker
       setPreview(null);
       setScanning(false);
       setScanComplete(false);
+      scanTimeoutsRef.current.forEach(clearTimeout);
+      scanTimeoutsRef.current = [];
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      scanTimeoutsRef.current.forEach(clearTimeout);
+      scanTimeoutsRef.current = [];
+    };
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -47,16 +57,21 @@ export function ImagePickerModal({ isOpen, onClose, onImageSelect }: ImagePicker
     setScanComplete(false);
     play("scan");
 
-    setTimeout(() => {
+    scanTimeoutsRef.current.forEach(clearTimeout);
+    scanTimeoutsRef.current = [];
+
+    const t1 = setTimeout(() => {
       setScanning(false);
       setScanComplete(true);
-      setTimeout(() => {
+      const t2 = setTimeout(() => {
         if (selectedFile) {
           onImageSelect(selectedFile);
         }
         onClose();
       }, 1000);
+      scanTimeoutsRef.current.push(t2);
     }, 2000);
+    scanTimeoutsRef.current.push(t1);
   };
 
   const handleOpenCamera = () => {

@@ -39,7 +39,7 @@ export function LandingStreak() {
             </div>
             <div className="landing-streak-glow landing-streak-glow--lv1" aria-hidden />
             <Image
-              src="/avatars/kai-level-1.png"
+              src="/avatars/kai-level-1.webp"
               alt="Kai — Level 1 dragon"
               width={280}
               height={280}
@@ -64,7 +64,7 @@ export function LandingStreak() {
             </div>
             <div className="landing-streak-glow landing-streak-glow--lv2" aria-hidden />
             <Image
-              src="/avatars/kai-level-2.png"
+              src="/avatars/kai-level-2.webp"
               alt="Kai — Level 2 dragon"
               width={280}
               height={280}

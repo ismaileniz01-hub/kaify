@@ -3,10 +3,10 @@
 export type KaiLevel = 1 | 2 | 3 | 4;
 
 export const KAI_LEVEL_AVATARS: Record<KaiLevel, string> = {
-  1: "/avatars/kai-level-1.png",
-  2: "/avatars/kai-level-2.png",
-  3: "/avatars/kai-level-3.png",
-  4: "/avatars/kai-level-4.png",
+  1: "/avatars/kai-level-1.webp",
+  2: "/avatars/kai-level-2.webp",
+  3: "/avatars/kai-level-3.webp",
+  4: "/avatars/kai-level-4.webp",
 };
 
 /** Fallback when a level asset is unavailable. */
