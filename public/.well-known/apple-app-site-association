@@ -1,0 +1,26 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "APPLE_TEAM_ID.org.kaify.app",
+        "paths": [
+          "/login*",
+          "/welcome*",
+          "/chat*",
+          "/pricing*",
+          "/privacy*",
+          "/terms*",
+          "/settings*",
+          "/streak*",
+          "/leaderboard*",
+          "/trophy-road*",
+          "/myaccount*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["APPLE_TEAM_ID.org.kaify.app"]
+  }
+}

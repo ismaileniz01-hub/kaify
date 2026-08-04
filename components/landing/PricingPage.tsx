@@ -14,6 +14,7 @@ import { PricingBillingToggle } from "./PricingBillingToggle";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { usePaddle } from "@/components/billing/PaddleProvider";
 import { useSession } from "@/lib/session-context";
+import { useNativeApp } from "@/lib/native/platform";
 import {
   PLAN_COMPARISON,
   PRICING_PLANS_WITH_PADDLE,
@@ -67,17 +68,54 @@ function PaddleCheckoutResume() {
   const { paddle, ready } = usePaddle();
 
   useEffect(() => {
-    if (!ready || !paddle) return;
-    const txn =
-      searchParams.get("_ptxn") ??
-      searchParams.get("transaction_id") ??
-      searchParams.get("transactionId");
-    if (txn) {
-      paddle.Checkout.open({ transactionId: txn });
-    }
+    let cancelled = false;
+    void (async () => {
+      const { shouldOpenPaddleCheckoutInApp } = await import(
+        "@/lib/billing/native-web-checkout"
+      );
+      if (cancelled || !(await shouldOpenPaddleCheckoutInApp())) return;
+      if (!ready || !paddle) return;
+      const txn =
+        searchParams.get("_ptxn") ??
+        searchParams.get("transaction_id") ??
+        searchParams.get("transactionId");
+      if (txn) {
+        paddle.Checkout.open({ transactionId: txn });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [paddle, ready, searchParams]);
 
   return null;
+}
+
+function NativeWebBillingBanner() {
+  const native = useNativeApp();
+  if (!native) return null;
+  return (
+    <div className="mx-auto mb-8 max-w-xl rounded-2xl border border-amber-400/30 bg-amber-500/10 px-5 py-4 text-center">
+      <p className="text-sm font-semibold text-amber-100">
+        Subscriptions are managed on the web
+      </p>
+      <p className="mt-1 text-xs leading-relaxed text-amber-100/70">
+        App Store / Play policies require checkout outside this app. Continue on
+        kaifyai.org in your browser — your account stays synced.
+      </p>
+      <button
+        type="button"
+        className="mt-3 inline-flex items-center justify-center rounded-full bg-white px-5 py-2 text-xs font-bold text-zinc-900 transition hover:bg-zinc-100"
+        onClick={() => {
+          void import("@/lib/billing/native-web-checkout").then(({ openWebBillingUrl }) =>
+            openWebBillingUrl(),
+          );
+        }}
+      >
+        Continue on kaifyai.org
+      </button>
+    </div>
+  );
 }
 
 function PlanCheckoutButton({
@@ -94,26 +132,33 @@ function PlanCheckoutButton({
   const router = useRouter();
   const { paddle, ready, configured } = usePaddle();
   const { isAuthenticated, profile } = useSession();
+  const native = useNativeApp();
 
   const handleClick = useCallback(() => {
-    const priceId =
-      interval === "yearly" ? plan.paddlePriceIdYearly : plan.paddlePriceId;
-    if (!isAuthenticated || !profile?.id) {
-      router.push("/signup?next=/pricing");
-      return;
-    }
-    if (configured && ready && paddle && priceId) {
-      paddle.Checkout.open({
-        items: [{ priceId, quantity: 1 }],
-        customData: { user_id: profile.id },
-        settings: {
-          showAddDiscounts: true,
-        },
-      });
-      return;
-    }
-    // Authenticated but checkout not ready yet — stay on pricing (avoid signup bounce).
-    return;
+    void (async () => {
+      const { shouldOpenPaddleCheckoutInApp, openWebBillingUrl } = await import(
+        "@/lib/billing/native-web-checkout"
+      );
+      if (!(await shouldOpenPaddleCheckoutInApp())) {
+        await openWebBillingUrl();
+        return;
+      }
+      const priceId =
+        interval === "yearly" ? plan.paddlePriceIdYearly : plan.paddlePriceId;
+      if (!isAuthenticated || !profile?.id) {
+        router.push("/signup?next=/pricing");
+        return;
+      }
+      if (configured && ready && paddle && priceId) {
+        paddle.Checkout.open({
+          items: [{ priceId, quantity: 1 }],
+          customData: { user_id: profile.id },
+          settings: {
+            showAddDiscounts: true,
+          },
+        });
+      }
+    })();
   }, [
     configured,
     interval,
@@ -128,7 +173,7 @@ function PlanCheckoutButton({
 
   return (
     <button type="button" onClick={handleClick} className={className}>
-      {children}
+      {native ? "Continue on kaifyai.org" : children}
     </button>
   );
 }
@@ -186,6 +231,7 @@ export function PricingPage() {
 
         <section className="landing-section !pt-4">
           <div className="landing-container">
+            <NativeWebBillingBanner />
             <ScrollReveal className="flex justify-center">
               <PricingBillingToggle value={billingInterval} onChange={setBillingInterval} />
             </ScrollReveal>

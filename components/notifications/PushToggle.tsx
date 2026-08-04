@@ -13,6 +13,7 @@ import {
   subscribeToPush,
   unsubscribeFromPush,
 } from "@/lib/push/unified";
+import { useNativeApp } from "@/lib/native/platform";
 
 type State = "loading" | "unsupported" | "denied" | "off" | "on" | "busy";
 
@@ -22,6 +23,7 @@ type State = "loading" | "unsupported" | "denied" | "off" | "on" | "busy";
  */
 export function PushToggle() {
   const { t } = useLang();
+  const native = useNativeApp();
   const [state, setState] = useState<State>("loading");
   const [consentChecked, setConsentChecked] = useState(false);
   const [hasConsent, setHasConsent] = useState(false);
@@ -114,10 +116,10 @@ export function PushToggle() {
           </p>
           <p className="mt-0.5 text-xs text-zinc-400">
             {state === "denied"
-              ? t("notif.push.denied")
+              ? t(native ? "notif.push.denied_native" : "notif.push.denied")
               : state === "on"
                 ? t("notif.push.enabled_desc")
-                : t("notif.push.enable_desc")}
+                : t(native ? "notif.push.enable_desc_native" : "notif.push.enable_desc")}
           </p>
           {state === "off" && !hasConsent && (
             <label className="mt-2 flex cursor-pointer items-start gap-2">

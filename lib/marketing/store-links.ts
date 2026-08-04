@@ -1,11 +1,13 @@
 /** Public store URLs for marketing CTAs (override via env when live). */
+import { NATIVE_APP_ID } from "@/lib/app-url";
+
 export const APP_STORE_URL =
   process.env.NEXT_PUBLIC_APP_STORE_URL?.trim() ||
   "https://apps.apple.com/app/kaify";
 
 export const PLAY_STORE_URL =
   process.env.NEXT_PUBLIC_PLAY_STORE_URL?.trim() ||
-  "https://play.google.com/store/apps/details?id=org.kaifyai.app";
+  `https://play.google.com/store/apps/details?id=${NATIVE_APP_ID}`;
 
 export type MobileStore = "ios" | "android" | "unknown";
 

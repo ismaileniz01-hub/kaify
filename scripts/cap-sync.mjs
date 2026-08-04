@@ -9,7 +9,7 @@
 import { execSync } from "node:child_process";
 
 const CANONICAL_APP_URL = "https://kaifyai.org";
-const NATIVE_ENTRY_PATH = "/welcome";
+const NATIVE_ENTRY_PATH = "/login";
 
 const argUrl = process.argv[2]?.trim();
 const serverUrl =

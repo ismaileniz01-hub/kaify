@@ -1,4 +1,4 @@
-import { resolveAppUrl } from "@/lib/app-url";
+import { resolveAppUrl } from "../app-url";
 
 /** First screen inside the native shell (not the marketing landing). */
 export const NATIVE_ENTRY_PATH = "/login";

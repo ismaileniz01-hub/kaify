@@ -181,6 +181,13 @@ export function MyAccountPage() {
     setSaveError(null);
     try {
       const { url } = await apiPost<{ url: string }>("/api/billing/portal", {});
+      const { isNativePlatform } = await import("@/lib/native/platform");
+      if (await isNativePlatform()) {
+        const { openExternalUrl } = await import("@/lib/native/open-external");
+        await openExternalUrl(url);
+        setPortalLoading(false);
+        return;
+      }
       window.location.assign(url);
     } catch {
       setSaveError(t("myaccount.portal_error"));

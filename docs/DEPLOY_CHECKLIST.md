@@ -98,7 +98,8 @@ Admin hesabınla giriş yap, şunları kontrol et:
 | `POST /api/onboarding` | Wired — `OnboardingGate` + `SignupWizard` / `OnboardingProfileForm` |
 | `npm run i18n:fill` | Gemini kotası dolunca 54 dil tamamlanır |
 | Paddle Billing | Production checkout + webhook (see `docs/billing`) |
-| Store IAP (Capacitor) | WebView Paddle blocked — native store path (Faz 5) |
+| Store IAP (Capacitor) | **ADR 019 Option B** — web-only Paddle; native opens kaifyai.org in system browser |
+| Store screenshots / TestFlight | Operator — `docs/operations/evidence/faz5-store-checklist.md` |
 | 4 leaderboard endpoint birleştirme | Çalışıyor, bakım kolaylığı için ileride sadeleştirilebilir |
 | `/api/subscribe` | `/api/waitlist` ile mükerrer; landing waitlist kullanıyor |
 

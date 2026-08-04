@@ -13,6 +13,7 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
+    // camera=() blocks getUserMedia; vision/avatar use OS file/capture pickers instead.
     value:
       "camera=(), microphone=(self), geolocation=(), browsing-topics=(), interest-cohort=()",
   },
@@ -65,6 +66,20 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      {
+        source: "/.well-known/apple-app-site-association",
+        headers: [
+          { key: "Content-Type", value: "application/json" },
+          ...securityHeaders,
+        ],
+      },
+      {
+        source: "/.well-known/assetlinks.json",
+        headers: [
+          { key: "Content-Type", value: "application/json" },
+          ...securityHeaders,
+        ],
+      },
       {
         source: "/(.*)",
         headers: securityHeaders,

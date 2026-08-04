@@ -21,6 +21,7 @@ maintainability. Process: [ADR 018](./adr/018-tech-debt-process.md).
 | Date | Reviewer | Notes |
 |------|----------|-------|
 | 2026-07-05 | Engineering | Initial register created (Sustainability Faz 4) |
+| 2026-08-04 | Engineering | Faz 5: ADR 019 web-only Paddle, PrivacyInfo, package ID align, native checkout gate |
 | 2026-08-04 | Engineering | Faz 4 complete: loading/not-found/EmptyState, resolveApiPath→v1, coverage extracts, lint:strict CI |
 | 2026-08-04 | Engineering | Faz 3/4: Playwright public smoke + coverage extracts + a11y/UX |
 | 2026-08-04 | Engineering | Faz 2: webhook/OTP/portal vitest + staging-gated auth Playwright (`e2e/auth-otp.spec.ts`) |

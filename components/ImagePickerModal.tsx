@@ -60,6 +60,8 @@ export function ImagePickerModal({ isOpen, onClose, onImageSelect }: ImagePicker
   };
 
   const handleOpenCamera = () => {
+    // Uses OS camera picker via <input capture> — does not need getUserMedia.
+    // Permissions-Policy camera=() remains deny (see docs/operations/store-readiness.md).
     if (fileInputRef.current) {
       fileInputRef.current.accept = "image/*";
       fileInputRef.current.capture = "environment";

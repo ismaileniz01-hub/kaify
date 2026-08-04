@@ -38,6 +38,7 @@
     "assets:chest": "node scripts/chroma-key-chest.mjs",
     "cap:sync": "node scripts/cap-sync.mjs",
     "cap:sync:prod": "node scripts/cap-sync.mjs https://kaifyai.org",
+    "cap:verify-fcm": "node scripts/ops/verify-google-services.mjs",
     "cap:sync:dev": "node scripts/cap-sync.mjs http://10.0.2.2:3000",
     "cap:android": "npx cap open android",
     "cap:ios": "npx cap open ios",
@@ -49,6 +50,7 @@
   "dependencies": {
     "@capacitor/android": "^8.4.1",
     "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.4",
     "@capacitor/cli": "^8.4.1",
     "@capacitor/core": "^8.4.1",
     "@capacitor/ios": "^8.4.1",

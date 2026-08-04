@@ -122,29 +122,30 @@ Score lift (indicative):
 
 ### Billing policy (must choose one)
 
-- [ ] **A)** Native IAP (StoreKit / Play Billing) for digital subscriptions, **or**
-- [ ] **B)** Gate Paddle Checkout to web-only; native → “Manage on kaifyai.org”, **or**
-- [ ] **C)** External purchase links per current Apple/Google rules (legal review)
+- [x] **B)** Gate Paddle Checkout to web-only; native → “Manage on kaifyai.org” — [ADR 019](../sustainability/adr/019-store-billing-policy.md)
+- [ ] ~~A) Native IAP~~ deferred
+- [ ] ~~C) External purchase links~~ legal track only
 
 ### iOS
 
-- [ ] `PrivacyInfo.xcprivacy`
-- [ ] `NSCameraUsageDescription` / photo library strings (vision + avatar)
-- [ ] Real App Store URL; HealthKit strings if steps feature ships
+- [x] `PrivacyInfo.xcprivacy`
+- [x] `NSCameraUsageDescription` / photo library strings (vision + avatar)
+- [x] App Store URL via `NEXT_PUBLIC_APP_STORE_URL` / `store-links.ts` (listing live URL when published)
+- [x] HealthKit strings **N/A** (feature not shipped)
 
 ### Android
 
-- [ ] Align `applicationId` with listing (`org.kaify.app` vs marketing `org.kaifyai.app`)
-- [ ] `google-services.json` in release pipeline
-- [ ] Notification permission UX
+- [x] Align `applicationId` with listing (`org.kaify.app`)
+- [x] `google-services.json` in release pipeline (example + `verify-google-services.mjs`)
+- [x] Notification permission UX (`PushToggle` native copy + consent)
 
 ### Both
 
-- [ ] `npm run cap:sync:prod`
-- [ ] Store screenshots; privacy/terms deep links
-- [ ] Permissions-Policy `camera` vs capture UX reconciled
+- [x] `npm run cap:sync:prod` script (+ entry path `/login`) — verified 2026-08-04
+- [x] Store screenshots checklist; privacy/terms deep links + `.well-known` templates
+- [x] Permissions-Policy `camera=()` reconciled with OS capture pickers (documented)
 
-**Exit:** Store billing ADR signed · package IDs match · privacy manifest present · TestFlight / internal track installs + signs in.
+**Exit:** Store billing ADR signed · package IDs match · privacy manifest present · TestFlight / internal track installs = **operator** (see evidence checklist).
 
 ---
 

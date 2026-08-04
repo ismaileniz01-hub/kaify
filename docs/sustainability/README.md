@@ -53,6 +53,7 @@ Local full gate: `npm run ci`
 | [016](./adr/016-e2e-strategy.md) | E2E testing strategy (future Playwright) |
 | [017](./adr/017-otel-migration-plan.md) | OpenTelemetry migration plan |
 | [018](./adr/018-tech-debt-process.md) | Tech debt register process |
+| [019](./adr/019-store-billing-policy.md) | Store billing — web-only Paddle (Option B) |
 
 ---
 
