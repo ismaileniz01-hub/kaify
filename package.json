@@ -10,6 +10,8 @@
     "lint:strict": "next lint --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "ci": "npm run lint && npm run typecheck && npm run test:coverage && npm run build",
+    "budget:bundle": "node scripts/ops/check-bundle-budget.mjs",
+    "budget:lighthouse": "lhci autorun --config=lighthouserc.cjs",
     "security:audit": "npm audit --audit-level=moderate",
     "security:check": "npm audit fix",
     "security:all": "npm audit --audit-level=moderate && npm audit fix --audit-level=moderate",

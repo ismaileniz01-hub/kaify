@@ -55,6 +55,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Bundle budget gate
+        run: npm run budget:bundle
+
       - name: Start production server
         run: npm run start &
         env:
@@ -74,6 +77,14 @@ jobs:
 
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
+
+      - name: Lighthouse CI budgets
+        run: |
+          export CHROME_PATH="$(node -e "console.log(require('playwright').chromium.executablePath())")"
+          echo "Using Chrome at $CHROME_PATH"
+          npx --yes @lhci/cli@0.14.0 autorun --config=lighthouserc.cjs
+        env:
+          LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.sha }}
 
       - name: Playwright public smoke
         run: npm run test:e2e
