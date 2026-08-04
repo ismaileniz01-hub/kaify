@@ -72,6 +72,15 @@ jobs:
           echo "Server did not become ready"
           exit 1
 
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright public smoke
+        run: npm run test:e2e
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+          CI: "true"
+
       - name: Setup k6
         uses: grafana/setup-k6-action@v1
 

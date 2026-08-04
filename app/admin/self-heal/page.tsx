@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api/client";
 import type { SelfHealSnapshot } from "@/lib/resilience/self-heal-report";
+import { InlineAlert } from "@/components/InlineAlert";
 
 export default function AdminSelfHealPage() {
   const [snapshot, setSnapshot] = useState<SelfHealSnapshot | null>(null);
@@ -76,7 +77,14 @@ export default function AdminSelfHealPage() {
           </button>
         </div>
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && (
+          <InlineAlert
+            variant="error"
+            message={error}
+            onRetry={() => void load(true)}
+            onDismiss={() => setError(null)}
+          />
+        )}
         {loading && !snapshot && <p className="text-zinc-500">Yükleniyor…</p>}
 
         {snapshot && (

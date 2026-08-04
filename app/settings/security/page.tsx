@@ -15,6 +15,7 @@ import {
 import { CSRF_HEADER_NAME, readCsrfCookieFromDocument } from "@/lib/security/csrf-client";
 import { apiDelete, apiGet } from "@/lib/api/client";
 import { CONSENT_TYPES } from "@/lib/legal/constants";
+import { InlineAlert } from "@/components/InlineAlert";
 
 type PendingEnrollment = {
   factorId: string;
@@ -337,8 +338,20 @@ export default function SecuritySettingsPage() {
           </section>
         )}
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        {message && <p className="text-sm text-emerald-400">{message}</p>}
+        {error && (
+          <InlineAlert
+            variant="error"
+            message={error}
+            onDismiss={() => setError(null)}
+          />
+        )}
+        {message && (
+          <InlineAlert
+            variant="success"
+            message={message}
+            onDismiss={() => setMessage(null)}
+          />
+        )}
 
         <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
           <p className="font-semibold">{t("settings.security.sessions.title")}</p>

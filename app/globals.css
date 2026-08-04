@@ -341,13 +341,17 @@ html.native-app .phone-shell.chat-shell {
   max-height: calc(100dvh - var(--keyboard-offset, 0px));
 }
 
-/* Web chat / app headers: clear status bar area; native overrides below */
+/* Web chat / app headers: clear status bar + notch safe area */
 .pt-app-header {
-  padding-top: 3.5rem;
+  padding-top: max(3.5rem, calc(3.5rem - 1rem + var(--safe-top)));
 }
 
 html.native-app .pt-app-header {
   padding-top: var(--app-header-top);
+}
+
+.session-error-banner {
+  padding-top: max(0.75rem, var(--safe-top));
 }
 
 html.native-app .session-error-banner {
@@ -3062,6 +3066,34 @@ html[data-cookie-banner="open"] .phone-shell {
 }
 
 /* ===== FOCUS-VISIBLE & ACTIVE STATES ===== */
+
+/* Skip link — keyboard-first navigation (WCAG 2.4.1) */
+.skip-to-content {
+  position: absolute;
+  left: 1rem;
+  top: 0;
+  z-index: 10000;
+  transform: translateY(-120%);
+  border-radius: 0.75rem;
+  background: #fafafa;
+  color: #0a0a0a;
+  padding: 0.65rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+
+.skip-to-content:focus,
+.skip-to-content:focus-visible {
+  transform: translateY(0.75rem);
+  outline: 3px solid #bc77ff !important;
+  outline-offset: 3px !important;
+}
+
+#main-content:focus {
+  outline: none;
+}
 
 /* Global focus-visible — inescapable override for WCAG compliance */
 *:focus-visible {

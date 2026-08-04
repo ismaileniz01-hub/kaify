@@ -15,6 +15,9 @@ import { mapChatMessageRow, type ChatMessageDTO } from "@/lib/types/domain.types
 import { resolveLocale } from "@/lib/i18n/dictionary";
 import { getAnalyticsBundle } from "@/lib/services/analytics.service";
 import { getStreakStatus } from "@/lib/services/streak-status.service";
+import { teamMeetingWeekKey } from "@/lib/team/meeting-week";
+
+export { teamMeetingWeekKey } from "@/lib/team/meeting-week";
 
 const COACH_VOICES = [
   { id: "alex", name: "Alex", tone: "tough motivating fitness coach" },
@@ -22,13 +25,6 @@ const COACH_VOICES = [
   { id: "leo", name: "Leo", tone: "competitive body analyst" },
   { id: "kai", name: "Kai", tone: "ride-or-die best friend; motivates gym, never enables skipping" },
 ] as const;
-
-/** Sunday UTC week key — shared with POST /api/chat/team idempotency. */
-export function teamMeetingWeekKey(now = new Date()): string {
-  const d = new Date(now);
-  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
-  return d.toISOString().slice(0, 10);
-}
 
 async function claimTeamMeetingWeek(userId: string, weekStart: string): Promise<boolean> {
   const admin = createAdminSupabaseClient();

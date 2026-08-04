@@ -56,8 +56,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Allow pinch-zoom (WCAG 1.4.4). Keep cover for notch/safe-area.
   viewportFit: "cover",
   themeColor: "#0a0a0a",
 };
@@ -75,6 +74,9 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         style={{ viewTransitionName: "root" }}
       >
+        <a href="#main-content" className="skip-to-content">
+          Skip to content
+        </a>
         <ThemeProvider>
           <LangProvider>
             <SessionProvider>
@@ -91,7 +93,9 @@ export default async function RootLayout({
                     <SubscriptionGate />
                     <KaiSync />
                     <SessionErrorBanner />
-                    {children}
+                    <div id="main-content" tabIndex={-1}>
+                      {children}
+                    </div>
                     <CookieConsentBanner />
                     <OptionalAnalytics nonce={nonce} />
                   </NotificationProvider>

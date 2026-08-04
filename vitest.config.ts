@@ -33,6 +33,9 @@ export default defineConfig({
         "lib/marketing/sender.ts",
         "lib/validations/profile.schema.ts",
         "lib/validations/pagination.schema.ts",
+        "lib/billing/paddle-period.ts",
+        "lib/team/meeting-week.ts",
+        "lib/security/csrf-client.ts",
       ],
       thresholds: {
         statements: 75,

@@ -13,6 +13,7 @@ import {
 } from "@/lib/billing/subscription-access";
 import { applyLegacyProfileWrites } from "@/lib/supabase/profile-compat";
 import type { SubscriptionTier } from "@/lib/types/database.types";
+import { parsePaddleExpiresAt } from "@/lib/billing/paddle-period";
 import { logger } from "@/lib/logger";
 
 type BillingCycle = "monthly" | "yearly";
@@ -412,22 +413,7 @@ function billingCycleFromData(data: Record<string, unknown>): BillingCycle {
 
 /** Prefer Paddle period end; fall back to next_billed_at. Returns ISO or null. */
 function expiresAtFromData(data: Record<string, unknown>): string | null {
-  const period =
-    asRecord(data.currentBillingPeriod) ??
-    asRecord(data.current_billing_period);
-  const endsAt = pickString(period?.endsAt, period?.ends_at);
-  if (endsAt) {
-    const ms = Date.parse(endsAt);
-    if (Number.isFinite(ms)) return new Date(ms).toISOString();
-  }
-
-  const nextBilled = pickString(data.nextBilledAt, data.next_billed_at);
-  if (nextBilled) {
-    const ms = Date.parse(nextBilled);
-    if (Number.isFinite(ms)) return new Date(ms).toISOString();
-  }
-
-  return null;
+  return parsePaddleExpiresAt(data);
 }
 
 function priceIdFromData(data: Record<string, unknown>): string | undefined {

@@ -6,6 +6,8 @@ import { useCallback, useEffect, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
 import type { SupportTicketDTO } from "@/lib/services/support.service";
+import { EmptyState } from "@/components/EmptyState";
+import { InlineAlert } from "@/components/InlineAlert";
 
 export default function ContactSupportPage() {
   const { t } = useLang();
@@ -72,11 +74,21 @@ export default function ContactSupportPage() {
             </div>
           ))}
           {!ticket?.messages.length && (
-            <p className="py-8 text-center text-xs text-zinc-600">{t("support.empty")}</p>
+            <EmptyState title={t("support.empty")} className="py-6" />
           )}
         </div>
 
-        {error && <p className="text-xs text-red-300">{error}</p>}
+        {error && (
+          <InlineAlert
+            variant="error"
+            message={error}
+            onRetry={() => {
+              setError(null);
+              load();
+            }}
+            onDismiss={() => setError(null)}
+          />
+        )}
 
         <div className="flex gap-2">
           <input

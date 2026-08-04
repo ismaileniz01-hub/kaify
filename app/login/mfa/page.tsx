@@ -12,6 +12,7 @@ import {
   listVerifiedTotpFactors,
   verifyTotpLogin,
 } from "@/lib/auth/mfa";
+import { InlineAlert } from "@/components/InlineAlert";
 
 export default function MfaVerifyPage() {
   const { t } = useLang();
@@ -126,7 +127,13 @@ export default function MfaVerifyPage() {
             <ArrowRight className="h-5 w-5" />
           </button>
 
-          {error && <p className="text-center text-xs text-red-300">{error}</p>}
+          {error && (
+            <InlineAlert
+              variant="error"
+              message={error}
+              onDismiss={() => setError(null)}
+            />
+          )}
 
           <Link
             href="/login"
