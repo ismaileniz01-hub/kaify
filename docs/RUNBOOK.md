@@ -174,6 +174,9 @@ If notifications stop: verify the job is `active`, `CRON_SECRET` matches, and
 
 ## 8. Incident response
 
+Severity taxonomy + on-call checklist: [`docs/reliability/incident-response.md`](./reliability/incident-response.md)
+(`lib/reliability/incident-severity.ts`).
+
 1. **Triage**: `curl -A "Mozilla/5.0" https://kaifyai.org/api/health`. If 503,
    the detail (with `CRON_SECRET`) shows which dependency is down.
 2. **Check Sentry** for the error spike; grab a `request_id`.

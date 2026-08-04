@@ -23,6 +23,7 @@ import { apiGet } from "@/lib/api/client";
 import type { UserSettingsDTO } from "@/lib/services/settings.service";
 import { getCountryName } from "@/lib/country-names";
 import type { CountryLeaderboardDTO } from "@/lib/types/domain.types";
+import { FlagImage } from "@/components/FlagImage";
 
 type CountryEntry = {
   countryCode: string;
@@ -38,31 +39,6 @@ type CountryLeaderboardData = {
   userCountryRank: number | null;
   totalCountries: number;
 };
-
-// Özel bayrak URL'leri (flagcdn'de olmayanlar için)
-const CUSTOM_FLAG_URLS: Record<string, string> = {
-  ct: "/flag-northern-cyprus.svg",
-};
-
-// FlagCDN'den daha yüksek çözünürlüklü bayrak
-function FlagImage({ flagCode, size = 40 }: { flagCode: string; size?: number }) {
-  const isCustom = flagCode in CUSTOM_FLAG_URLS;
-  const src = isCustom ? CUSTOM_FLAG_URLS[flagCode] : `https://flagcdn.com/h80/${flagCode}.png`;
-  const srcSet = isCustom ? undefined : `https://flagcdn.com/h40/${flagCode}.png 1x, https://flagcdn.com/h80/${flagCode}.png 2x`;
-
-  return (
-    <img
-      src={src}
-      srcSet={srcSet}
-      alt=""
-      width={size}
-      height={size * 0.6}
-      className="rounded-full object-cover shadow-lg"
-      style={flagCode === "tr" ? { objectPosition: "35% center" } : undefined}
-      loading="lazy"
-    />
-  );
-}
 
 // Sayı animasyonu: 0'dan hedef değere yükselme
 function formatStreak(value: number): string {

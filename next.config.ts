@@ -38,6 +38,11 @@ const nextConfig: NextConfig = {
     // Components still set unoptimized for data: URLs / pixel art.
     unoptimized: false,
     remotePatterns: [
+      {
+        protocol: "https" as const,
+        hostname: "flagcdn.com",
+        pathname: "/**",
+      },
       ...(supabaseHost
         ? [
             {

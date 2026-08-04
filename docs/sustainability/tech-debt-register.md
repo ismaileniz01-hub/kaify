@@ -13,7 +13,7 @@ maintainability. Process: [ADR 018](./adr/018-tech-debt-process.md).
 | TD-004 | Migrate remaining routes to `lib/domains/**` | Bounded context consistency | Eng | Ongoing | In progress — hot routes (chat/analyze/team, market, paddle webhook) on domains |
 | TD-005 | Supabase Realtime for team chat | Reduce polling load | Eng | Q3 2026 | Done — client subscribe + `20260804120000_faz5_chat_realtime.sql` |
 | TD-006 | Legal sign-off on compliance Faz 4 | Enterprise compliance 92+ gate | Legal | Pending | Blocked |
-| TD-007 | UptimeRobot + Sentry alert evidence | Reliability 92+ gate | Ops | Pending | Open |
+| TD-007 | UptimeRobot + Sentry alert evidence | Reliability 92+ gate | Ops | Partial — backup evidence + runbook link shipped; monitors checklist open | Open |
 | TD-008 | ZAP scan requires `STAGING_URL` secret | Security scan CI completeness | Eng | Open | Open |
 
 ## Review log

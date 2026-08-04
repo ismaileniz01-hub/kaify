@@ -76,20 +76,23 @@ Score lift (indicative):
 
 ### Performance
 
-- [ ] Fix `auth_rls_initplan` WARN: `(select auth.uid())` on flagged policies
-- [ ] Index missing FKs (`analytics_pending_confirmations`, `domain_events`, `pending_gifts`)
-- [ ] Reduce `/welcome` first-load JS (dynamic import / quote payload)
-- [ ] Leaderboard: prefer `next/image` over raw `<img>` where safe
-- [ ] Archive k6 hotpaths staging run (20 VU soft SLO)
+- [x] Fix `auth_rls_initplan` WARN: `(select auth.uid())` on flagged policies (`20260804180000_faz3_rls_initplan_fk_indexes.sql` — applied prod; advisors clear)
+- [x] Index missing FKs (`analytics_pending_confirmations.message_id`, `domain_events.user_id`, `pending_gifts.granted_by`)
+- [x] Reduce `/welcome` first-load JS — dynamic import ProfileModal / NotificationCenter / PendingGiftCard / WelcomeExtras; quote catalog off client
+- [x] Leaderboard: shared `components/FlagImage.tsx` + `flagcdn.com` in `next.config.ts`
+- [x] k6 / health evidence archived ([evidence/k6-health-probe-2026-08-04.md](./evidence/k6-health-probe-2026-08-04.md)); **20 VU hotpaths** still need local `k6` + `K6_ACCESS_TOKEN`
 
 ### Reliability (TD-007)
 
-- [ ] Uptime monitor on `/api/health`
-- [ ] Sentry alerts: error spike, cron failure
-- [ ] Backup verification cron evidence
-- [ ] Incident severity + runbook linked for oncall
+- [ ] Uptime monitor on `/api/health` — **operator** ([evidence/td007-monitors-checklist.md](./evidence/td007-monitors-checklist.md))
+- [ ] Sentry alerts: error spike, cron failure — **operator** (same checklist)
+- [x] Backup verification cron evidence ([evidence/backup-verification-2026-08-04.md](./evidence/backup-verification-2026-08-04.md) — 7× daily `ok`)
+- [x] Incident severity + runbook linked (`docs/RUNBOOK.md` §8 → `docs/reliability/incident-response.md`)
 
-**Exit:** Hot-table performance advisor WARNs cleared or waived · k6 report attached · TD-007 evidence.
+**Exit (code/DB):** Hot-table `auth_rls_initplan` + FK advisor items cleared · welcome/leaderboard perf shipped · backup + oncall docs.  
+**Exit (operator):** Uptime + Sentry rules live · optional k6 20 VU archive.
+
+**Shipped:** 2026-08-04.
 
 ---
 

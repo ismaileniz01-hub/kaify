@@ -1,24 +1,48 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { ArrowLeft, BarChart3, Flame, Globe, MessageCircle, Settings, ShoppingCart, User } from "lucide-react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { WelcomeCard } from "@/components/welcome/WelcomeCard";
-import { WelcomeExtras } from "@/components/welcome/WelcomeExtras";
 import { StreakAtRiskBanner } from "@/components/streak/StreakAtRiskBanner";
 import { GemBalance } from "@/components/GemBalance";
 import { FreezieBalance } from "@/components/FreezieBalance";
-import { ProfileModal } from "@/components/ProfileModal";
-import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { WelcomeSkeleton } from "@/components/welcome/WelcomeSkeleton";
 import { DailyMotivationQuote } from "@/components/welcome/DailyMotivationQuote";
-import { PendingGiftCard } from "@/components/gifts/PendingGiftCard";
 import { useSession } from "@/lib/session-context";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLang, LANG_OPTIONS, hasStoredLangPreference } from "@/lib/lang-context";
 import { captureReferralFromUrl, getPendingReferral } from "@/lib/referral";
 import { InlineAlert } from "@/components/InlineAlert";
+
+const ProfileModal = dynamic(
+  () =>
+    import("@/components/ProfileModal").then((m) => ({ default: m.ProfileModal })),
+  { ssr: false },
+);
+const NotificationCenter = dynamic(
+  () =>
+    import("@/components/notifications/NotificationCenter").then((m) => ({
+      default: m.NotificationCenter,
+    })),
+  { ssr: false },
+);
+const PendingGiftCard = dynamic(
+  () =>
+    import("@/components/gifts/PendingGiftCard").then((m) => ({
+      default: m.PendingGiftCard,
+    })),
+  { ssr: false },
+);
+const WelcomeExtras = dynamic(
+  () =>
+    import("@/components/welcome/WelcomeExtras").then((m) => ({
+      default: m.WelcomeExtras,
+    })),
+  { ssr: false },
+);
 
 function WelcomeContent() {
   const [profileOpen, setProfileOpen] = useState(false);

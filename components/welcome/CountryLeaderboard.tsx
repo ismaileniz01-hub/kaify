@@ -3,6 +3,7 @@
 import { Globe, X, Crown, Medal, Award, Flame } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLang } from "@/lib/lang-context";
+import { FlagImage } from "@/components/FlagImage";
 
 type CountryEntry = {
   countryCode: string;
@@ -24,20 +25,6 @@ function RankIcon({ rank }: { rank: number }) {
   if (rank === 2) return <Medal className="h-5 w-5 text-zinc-300" fill="currentColor" />;
   if (rank === 3) return <Award className="h-5 w-5 text-amber-700" fill="currentColor" />;
   return <span className="text-sm font-bold text-zinc-500">{rank}</span>;
-}
-
-function FlagImage({ flagCode, size = 32 }: { flagCode: string; size?: number }) {
-  return (
-    <img
-      src={`https://flagcdn.com/w40/${flagCode}.png`}
-      alt=""
-      width={size}
-      height={size * 0.6}
-      className="rounded-full object-cover"
-      style={flagCode === "tr" ? { objectPosition: "35% center" } : undefined}
-      loading="lazy"
-    />
-  );
 }
 
 export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {

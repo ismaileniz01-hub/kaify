@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
-import { getDailyMotivationQuoteSync } from "@/lib/motivation-quotes";
-import { useLang } from "@/lib/lang-context";
-
+/**
+ * Renders server-provided daily quote (from home.service).
+ * Avoids pulling the multi-locale quote catalog into the client bundle.
+ */
 export function DailyMotivationQuote({
   serverQuote,
   fallback,
@@ -11,11 +11,5 @@ export function DailyMotivationQuote({
   serverQuote?: string | null;
   fallback: string;
 }) {
-  const { lang } = useLang();
-  const clientQuote = useMemo(
-    () => getDailyMotivationQuoteSync(lang),
-    [lang],
-  );
-
-  return <>{clientQuote || serverQuote || fallback}</>;
+  return <>{serverQuote?.trim() || fallback}</>;
 }

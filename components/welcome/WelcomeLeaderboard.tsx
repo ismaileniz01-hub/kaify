@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/lib/session-context";
 import type { LeaderboardEntryDTO } from "@/lib/types/domain.types";
 import { useLang } from "@/lib/lang-context";
+import { FlagImage } from "@/components/FlagImage";
 
 type LeaderboardEntry = {
   userId: string;
@@ -25,20 +26,6 @@ function RankIcon({ rank }: { rank: number }) {
   if (rank === 2) return <Medal className="h-4 w-4 text-zinc-300" fill="currentColor" />;
   if (rank === 3) return <Award className="h-4 w-4 text-amber-700" fill="currentColor" />;
   return <span className="text-xs font-bold text-zinc-500">{rank}</span>;
-}
-
-function FlagImage({ flagCode, size = 24 }: { flagCode: string; size?: number }) {
-  return (
-    <img
-      src={`https://flagcdn.com/w40/${flagCode}.png`}
-      alt=""
-      width={size}
-      height={size * 0.6}
-      className="h-full w-full rounded-full object-cover"
-      style={flagCode === "tr" ? { objectPosition: "35% center" } : undefined}
-      loading="lazy"
-    />
-  );
 }
 
 export function WelcomeLeaderboard() {

@@ -3,6 +3,7 @@
 import { ScrollReveal } from "./ScrollReveal";
 import { Trophy, Flame, TrendingUp, Globe } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
+import { FlagImage } from "@/components/FlagImage";
 
 const COUNTRIES = [
   {
@@ -65,21 +66,6 @@ const FLOATING_FLAGS = [
   { flagCode: "us", x: "-12%", y: "90%", size: 38, delay: 1.2, duration: 6.2 },
   { flagCode: "in", x: "108%", y: "88%", size: 40, delay: 2, duration: 5.8 },
 ];
-
-function FlagImage({ flagCode, size = 40 }: { flagCode: string; size?: number }) {
-  return (
-    <img
-      src={`https://flagcdn.com/w80/${flagCode}.png`}
-      srcSet={`https://flagcdn.com/w40/${flagCode}.png 1x, https://flagcdn.com/w80/${flagCode}.png 2x`}
-      alt=""
-      width={size}
-      height={size * 0.6}
-      className="h-full w-full object-cover"
-      style={flagCode === "tr" ? { objectPosition: "35% center" } : undefined}
-      loading="lazy"
-    />
-  );
-}
 
 function FloatingFlag({
   flagCode,
