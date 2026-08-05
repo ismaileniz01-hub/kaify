@@ -738,6 +738,11 @@ html.native-app .chat-composer {
   ::view-transition-new(root) {
     animation: route-fade-in var(--motion-route) var(--ease-premium-out) both;
   }
+
+  /* Avoid stacking page-enter on top of an active route transition. */
+  html[data-route-transition="true"] .phone-shell {
+    animation: none !important;
+  }
 }
 
 @keyframes route-fade-out {

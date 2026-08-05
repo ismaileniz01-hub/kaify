@@ -79,6 +79,7 @@ export function NavigationExperience({ children }: { children: ReactNode }) {
     pendingPathRef.current = null;
     resolveTransitionRef.current?.();
     resolveTransitionRef.current = null;
+    document.documentElement.removeAttribute("data-route-transition");
     setIsNavigating(false);
   }, []);
 
@@ -92,6 +93,7 @@ export function NavigationExperience({ children }: { children: ReactNode }) {
     () => () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       resolveTransitionRef.current?.();
+      document.documentElement.removeAttribute("data-route-transition");
     },
     [],
   );
@@ -115,6 +117,7 @@ export function NavigationExperience({ children }: { children: ReactNode }) {
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
       if (documentWithTransitions.startViewTransition && !reduceMotion) {
+        document.documentElement.setAttribute("data-route-transition", "true");
         documentWithTransitions.startViewTransition(update).finished.catch(finishNavigation);
       } else {
         void update();
