@@ -7,6 +7,7 @@ import { KaiProvider } from "@/lib/kai-context";
 import { NotificationProvider } from "@/lib/notification-context";
 import { KaiSync } from "@/components/KaiSync";
 import { SessionErrorBanner } from "@/components/SessionErrorBanner";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { CapacitorShell } from "@/components/CapacitorShell";
 import { NativeAppEntry } from "@/components/NativeAppEntry";
 import { MfaGate } from "@/components/auth/MfaGate";
@@ -33,6 +34,7 @@ export function AppShellProviders({ children }: { children: ReactNode }) {
             <SubscriptionGate />
             <KaiSync />
             <SessionErrorBanner />
+            <OfflineBanner />
             {children}
           </NotificationProvider>
         </KaiProvider>

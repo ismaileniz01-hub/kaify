@@ -33,19 +33,19 @@ export function WelcomeExtras() {
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-2">
         <div className="analytics-card analytics-card--purple px-2.5 py-2.5 text-center">
-          <p className="text-[10px] text-zinc-500">{t("home.today")}</p>
+          <p className="type-caption type-muted">{t("home.today")}</p>
           <p className="text-sm font-bold text-white">{stepsLabel}</p>
-          <p className="text-[9px] text-purple-300">{t("home.steps")}</p>
+          <p className="type-caption text-purple-300">{t("home.steps")}</p>
         </div>
         <div className="analytics-card analytics-card--orange px-2.5 py-2.5 text-center">
-          <p className="text-[10px] text-zinc-500">{t("nav.streak")}</p>
+          <p className="type-caption type-muted">{t("nav.streak")}</p>
           <p className="text-sm font-bold text-white">{streak}</p>
-          <p className="text-[9px] text-orange-300">{t("home.day")}</p>
+          <p className="type-caption text-orange-300">{t("home.day")}</p>
         </div>
         <div className="analytics-card analytics-card--green px-2.5 py-2.5 text-center">
-          <p className="text-[10px] text-zinc-500">{t("home.goal")}</p>
+          <p className="type-caption type-muted">{t("home.goal")}</p>
           <p className="text-sm font-bold text-white">{goalLabel}</p>
-          <p className="text-[9px] text-emerald-300">{t("home.completed")}</p>
+          <p className="type-caption text-emerald-300">{t("home.completed")}</p>
         </div>
       </div>
 
@@ -93,12 +93,12 @@ export function WelcomeExtras() {
           />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] text-zinc-500">
+          <p className="type-caption type-muted">
             {t("home.kai_level", { level: kaiInfo.level, label: t(kaiInfo.labelKey) })}
           </p>
           <p className="text-sm font-semibold text-white">{t("home.chat_with_kai")}</p>
         </div>
-        <ChevronRight className="h-4 w-4 shrink-0 text-zinc-500" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" />
       </Link>
 
       <Link
@@ -109,10 +109,10 @@ export function WelcomeExtras() {
           <BookOpen className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] text-zinc-500">{t("home.exercise_library")}</p>
+          <p className="type-caption type-muted">{t("home.exercise_library")}</p>
           <p className="text-sm font-semibold text-white">{t("home.explore_exercises")}</p>
         </div>
-        <ChevronRight className="h-4 w-4 shrink-0 text-zinc-500" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" />
       </Link>
     </div>
   );

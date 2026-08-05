@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
+import { useLang } from "@/lib/lang-context";
 
 type InlineAlertProps = {
   variant?: "error" | "success" | "info";
@@ -17,10 +18,13 @@ export function InlineAlert({
   message,
   onDismiss,
   onRetry,
-  retryLabel = "Retry",
-  dismissLabel = "Dismiss",
+  retryLabel,
+  dismissLabel,
   className = "",
 }: InlineAlertProps) {
+  const { t } = useLang();
+  const resolvedRetry = retryLabel ?? t("common.retry");
+  const resolvedDismiss = dismissLabel ?? t("common.dismiss");
   const styles =
     variant === "success"
       ? "border-emerald-400/25 bg-gradient-to-r from-emerald-500/12 to-emerald-950/20 text-emerald-200"
@@ -47,7 +51,7 @@ export function InlineAlert({
             onClick={onRetry}
             className="touch-44 rounded-lg px-2 py-1 font-semibold underline-offset-2 hover:underline"
           >
-            {retryLabel}
+            {resolvedRetry}
           </button>
         )}
         {onDismiss && (
@@ -55,7 +59,7 @@ export function InlineAlert({
             type="button"
             onClick={onDismiss}
             className="touch-44 flex items-center justify-center rounded-lg p-1 opacity-70 hover:bg-white/5 hover:opacity-100"
-            aria-label={dismissLabel}
+            aria-label={resolvedDismiss}
           >
             <X className="h-3.5 w-3.5" />
           </button>

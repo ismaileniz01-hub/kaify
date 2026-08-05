@@ -74,28 +74,28 @@ export function MessageRow({
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-baseline gap-2">
           <p className="truncate text-sm font-semibold text-white">{name}</p>
-          <span className="type-caption truncate text-zinc-500">{role}</span>
+          <span className="type-caption truncate type-muted">{role}</span>
         </div>
         <p className="type-body mt-0.5 truncate text-xs text-zinc-400">{preview}</p>
       </div>
 
       <div className="flex shrink-0 flex-col items-end gap-1">
-        <span className="type-caption text-zinc-500">{time}</span>
+        <span className="type-caption type-muted">{time}</span>
         {badge !== undefined && badge > 0 && (
           <span
-            className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white shadow-sm"
+            className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold text-white shadow-sm"
             style={{ background: hexToRgba(color, 0.8) }}
           >
             {badge}
           </span>
         )}
         {tag && (
-          <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[9px] text-zinc-400">
+          <span className="type-caption rounded-full bg-white/5 px-1.5 py-0.5 type-muted">
             {tag}
           </span>
         )}
         <ChevronRight
-          className="mt-0.5 h-3.5 w-3.5 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-400"
+          className="mt-0.5 h-3.5 w-3.5 text-zinc-400 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-300"
           aria-hidden
         />
       </div>

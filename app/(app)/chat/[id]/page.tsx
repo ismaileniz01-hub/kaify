@@ -20,13 +20,18 @@ const LiveChatPanel = dynamic(
     import("@/components/chat/LiveChatPanel").then((m) => m.LiveChatPanel),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex flex-1 items-center justify-center text-xs text-zinc-500">
-        Loading chat…
-      </div>
-    ),
+    loading: () => <ChatLoadingFallback />,
   },
 );
+
+function ChatLoadingFallback() {
+  const { t } = useLang();
+  return (
+    <div className="flex flex-1 items-center justify-center text-xs type-muted">
+      {t("chat.loading")}
+    </div>
+  );
+}
 
 const ImagePickerModal = dynamic(
   () =>
@@ -174,7 +179,7 @@ export default function ChatPage() {
               </span>
               <span className="flex items-center gap-1 text-xs font-normal" style={{ color: contact.color.primaryLight }}>
                 <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: contact.color.primary }} />
-                {contact.role}
+                {t(contact.roleKey as "contact.alex.role")}
               </span>
             </span>
           </span>

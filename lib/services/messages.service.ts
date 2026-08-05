@@ -24,13 +24,6 @@ function formatRelativeTime(iso: string): string {
   return date.toLocaleDateString([], { weekday: "short", day: "numeric" });
 }
 
-const DEFAULT_PREVIEW: Record<string, string> = {
-  alex: "Ready for today's workout?",
-  maya: "Your meal plan is ready 🥗",
-  leo: "Upload a photo for analysis",
-  kai: "Hey! How are you feeling today?",
-};
-
 type InboxPreviewRow = {
   coach_id: string;
   content: string | null;
@@ -59,14 +52,14 @@ export async function getInbox(): Promise<InboxCoachDTO[]> {
   return coachIds.map((coachId) => {
     const latest = latestByCoach.get(coachId);
     const meta = CONTACTS[coachId];
-    const preview = latest?.content ?? DEFAULT_PREVIEW[coachId];
+    const preview = latest?.content?.slice(0, 60) ?? meta.previewKey;
 
     return {
       coachId,
       name: meta.name,
-      role: meta.role,
+      role: meta.roleKey,
       avatarUrl: meta.avatar,
-      preview: preview.slice(0, 60),
+      preview,
       time: latest ? formatRelativeTime(latest.created_at) : "",
       unreadCount: latest?.sender === "coach" ? 1 : 0,
     };

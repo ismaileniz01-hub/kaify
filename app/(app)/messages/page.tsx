@@ -53,14 +53,17 @@ export default function MessagesPage() {
           return {
             coachId: id,
             name: c.name,
-            role: c.role,
+            role: c.roleKey,
             avatarUrl: c.avatar,
-            preview: c.preview,
+            preview: c.previewKey,
             time: c.time,
             unreadCount: c.badge ?? 0,
           };
         })
       : []);
+
+  const localizeField = (value: string) =>
+    value.startsWith("contact.") ? t(value as "contact.alex.role") : value;
 
   const planAllowsTeam = !isAuthenticated || isTeamChatPlan(profile?.tier);
   const teamUnlocked =
@@ -76,7 +79,7 @@ export default function MessagesPage() {
         backHref="/welcome"
         backLabel={t("nav.back")}
         title={t("nav.messages")}
-        trailing={<span className="type-caption font-medium text-zinc-500">{t("messages.date")}</span>}
+        trailing={<span className="type-caption font-medium type-muted">{t("messages.date")}</span>}
         divider
       />
 
@@ -123,8 +126,8 @@ export default function MessagesPage() {
                 key={id}
                 index={i}
                 name={row.name}
-                role={row.role}
-                preview={row.preview}
+                role={localizeField(row.role)}
+                preview={localizeField(row.preview)}
                 time={row.time}
                 href={`/chat/${id}`}
                 coachId={id}

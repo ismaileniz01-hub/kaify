@@ -3,63 +3,46 @@
 import Image from "next/image";
 import { ScrollReveal } from "./ScrollReveal";
 import { publicAssetUrl } from "@/lib/public-asset-url";
+import { useLang } from "@/lib/lang-context";
 
 const COACHES = [
   {
     id: "alex",
     name: "Alex",
-    role: "Fitness Coach",
     color: "#ef4444",
     glow: "rgba(239, 68, 68, 0.4)",
     avatar: "/avatars/alex.webp",
     hero: "/avatars/alex 2.webp",
-    quote: "Great session today! Keep the momentum 💪",
-    desc: "Stop wondering if you're training right. Alex builds your workouts, tracks your sets, and pushes you on the days you'd rather skip — like a real trainer in your pocket.",
-    heading: "Train smarter with Alex",
-    reply: "Leg day was tough but I finished!",
   },
   {
     id: "maya",
     name: "Dr. Maya",
-    role: "Nutritionist",
     color: "#22c55e",
     glow: "rgba(34, 197, 94, 0.4)",
     avatar: "/avatars/dr maya 1.webp",
     hero: "/avatars/dr maya 2.webp",
-    quote: "Your meal plan is ready 🥗",
-    desc: "Nutrition is where most people fail — not the gym. Dr. Maya creates meal plans tailored to your goals, adjusts macros on training days, and answers the 'what should I eat?' question instantly.",
-    heading: "Eat right with Dr. Maya",
-    reply: "Perfect — any changes for lunch?",
   },
   {
     id: "leo",
     name: "Leo",
-    role: "Body Analyst",
     color: "#3b82f6",
     glow: "rgba(59, 130, 246, 0.4)",
     avatar: "/avatars/leo.webp",
     hero: "/avatars/Leo 2.webp",
-    quote: "Your posture scan results are in 📋",
-    desc: "You can't fix what you can't see. Leo analyzes your posture, scores your form, and gives you specific mobility work — so you train safely whether you're 25 or 55.",
-    heading: "Move better with Leo",
-    reply: "How did I score overall?",
   },
   {
     id: "kai",
     name: "Kai",
-    role: "Dragon Companion",
     color: "#a855f7",
     glow: "rgba(168, 85, 247, 0.45)",
     avatar: "/avatars/kai-level-1.webp",
     hero: "/avatars/kai-level-1.webp",
-    quote: "Hey! How are you feeling today?",
-    desc: "Fitness is emotional as much as physical. Kai is your dragon companion — always there to chat, celebrate wins, and remind you why you started. Chat when you need encouragement, earn gems as you hit goals, and watch your dragon grow as your habits do. New dragon forms unlock as you level up — reach a 31-day streak to unlock Kai Level 2.",
-    heading: "Never go alone with Kai",
-    reply: "Doing okay — let's keep going!",
   },
-];
+] as const;
 
 export function LandingCoaches() {
+  const { t } = useLang();
+
   return (
     <section id="coaches" className="landing-section landing-section--coaches relative overflow-hidden">
       <div className="landing-section-glow landing-section-glow--purple" aria-hidden />
@@ -67,17 +50,13 @@ export function LandingCoaches() {
       <div className="landing-container">
         <ScrollReveal className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-purple-400">
-            Pro Coaching Team
+            {t("landing.coaches.eyebrow")}
           </p>
           <h2 className="landing-section-title mt-4">
-            Four experts.{" "}
-            <span className="landing-gradient-text">One conversation away.</span>
+            {t("landing.coaches.headline")}{" "}
+            <span className="landing-gradient-text">{t("landing.coaches.headline_accent")}</span>
           </h2>
-          <p className="mt-6 text-lg text-zinc-400">
-            Hiring a trainer, nutritionist, and posture coach costs hundreds per
-            month. K.AIFY puts all four in your pocket — real coaches who know your
-            name, your goals, and your last workout, at a fraction of the cost.
-          </p>
+          <p className="mt-6 text-lg text-zinc-400">{t("landing.coaches.intro")}</p>
         </ScrollReveal>
 
         <div className="mt-12 space-y-20 sm:mt-20 sm:space-y-32">
@@ -85,6 +64,7 @@ export function LandingCoaches() {
             const reversed = i % 2 === 1;
             const heroSrc = publicAssetUrl(coach.hero);
             const avatarSrc = publicAssetUrl(coach.avatar);
+            const role = t(`landing.coaches.${coach.id}.role` as "landing.coaches.alex.role");
             return (
               <ScrollReveal
                 key={coach.id}
@@ -129,21 +109,18 @@ export function LandingCoaches() {
                       />
                       <div>
                         <p className="font-bold text-white">{coach.name}</p>
-                        <p
-                          className="text-sm font-medium"
-                          style={{ color: coach.color }}
-                        >
-                          {coach.role}
+                        <p className="text-sm font-medium" style={{ color: coach.color }}>
+                          {role}
                         </p>
                       </div>
                     </div>
 
                     <h3 className="mt-8 text-3xl font-bold text-white lg:text-4xl">
-                      {coach.heading}
+                      {t(`landing.coaches.${coach.id}.heading` as "landing.coaches.alex.heading")}
                     </h3>
 
                     <p className="mt-4 text-lg leading-relaxed text-zinc-400">
-                      {coach.desc}
+                      {t(`landing.coaches.${coach.id}.desc` as "landing.coaches.alex.desc")}
                     </p>
 
                     <div
@@ -165,19 +142,19 @@ export function LandingCoaches() {
                         <div>
                           <p className="text-sm font-semibold text-white">{coach.name}</p>
                           <p className="text-xs" style={{ color: coach.color }}>
-                            {coach.role}
+                            {role}
                           </p>
                         </div>
                       </div>
                       <div className="mt-4 space-y-3">
                         <div className="landing-bubble landing-bubble--coach max-w-[85%]">
-                          {coach.quote}
+                          {t(`landing.coaches.${coach.id}.quote` as "landing.coaches.alex.quote")}
                         </div>
                         <div
                           className="landing-bubble landing-bubble--user ml-auto max-w-[75%]"
                           style={{ background: coach.color }}
                         >
-                          {coach.reply}
+                          {t(`landing.coaches.${coach.id}.reply` as "landing.coaches.alex.reply")}
                         </div>
                       </div>
                     </div>

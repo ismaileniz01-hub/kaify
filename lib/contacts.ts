@@ -12,9 +12,15 @@ export type CoachColor = {
 export type Contact = {
   id: ContactId;
   name: string;
+  /** English role for AI prompts / internal use */
   role: string;
+  /** i18n key for UI */
+  roleKey: string;
   avatar: string;
+  /** English guest preview fallback */
   preview: string;
+  /** i18n key for empty-inbox preview */
+  previewKey: string;
   time: string;
   badge?: number;
   color: CoachColor;
@@ -25,8 +31,10 @@ export const CONTACTS: Record<ContactId, Contact> = {
     id: "alex",
     name: "Alex",
     role: "Fitness Coach",
+    roleKey: "contact.alex.role",
     avatar: "/avatars/alex.webp",
     preview: "Great session today! Keep the momentum 💪",
+    previewKey: "contact.alex.preview",
     time: "09:32",
     badge: 2,
     color: {
@@ -42,8 +50,10 @@ export const CONTACTS: Record<ContactId, Contact> = {
     id: "maya",
     name: "Dr. Maya",
     role: "Nutritionist",
+    roleKey: "contact.maya.role",
     avatar: "/avatars/maya.webp",
     preview: "Your meal plan is ready 🥗",
+    previewKey: "contact.maya.preview",
     time: "08:15",
     badge: 1,
     color: {
@@ -59,8 +69,10 @@ export const CONTACTS: Record<ContactId, Contact> = {
     id: "leo",
     name: "Leo",
     role: "Body rater",
+    roleKey: "contact.leo.role",
     avatar: "/avatars/leo.webp",
     preview: "Your posture scan results are in 📋",
+    previewKey: "contact.leo.preview",
     time: "Yesterday",
     color: {
       primary: "#3b82f6",
@@ -75,8 +87,10 @@ export const CONTACTS: Record<ContactId, Contact> = {
     id: "kai",
     name: "Kai",
     role: "Teammate",
+    roleKey: "contact.kai.role",
     avatar: "/kai-mascot-v2.png",
     preview: "Hey! How are you feeling today?",
+    previewKey: "contact.kai.preview",
     time: "14:04",
     color: {
       primary: "#a855f7",

@@ -1,6 +1,9 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { useLang } from "@/lib/lang-context";
 
 type AppHeaderProps = {
   title?: ReactNode;
@@ -15,12 +18,15 @@ type AppHeaderProps = {
 export function AppHeader({
   title,
   backHref,
-  backLabel = "Back",
+  backLabel,
   leading,
   trailing,
   className = "",
   divider = false,
 }: AppHeaderProps) {
+  const { t } = useLang();
+  const resolvedBackLabel = backLabel ?? t("nav.back");
+
   const leadingContent =
     leading ??
     (backHref ? (
@@ -28,7 +34,7 @@ export function AppHeader({
         href={backHref}
         prefetch
         className="app-header__action"
-        aria-label={backLabel}
+        aria-label={resolvedBackLabel}
       >
         <ArrowLeft className="h-5 w-5" />
       </Link>

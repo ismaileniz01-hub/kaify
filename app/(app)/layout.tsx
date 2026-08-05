@@ -3,6 +3,7 @@ import { AppShellProviders } from "@/components/providers/AppShellProviders";
 import { CookieConsentBanner } from "@/components/consent/CookieConsentBanner";
 import { OptionalAnalytics } from "@/components/consent/OptionalAnalytics";
 import { NavigationExperience } from "@/components/navigation/NavigationExperience";
+import { AppChrome } from "@/components/navigation/AppChrome";
 import { headers } from "next/headers";
 import "../light-theme.css";
 import "../styles/marketing.css";
@@ -14,9 +15,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <AppShellProviders>
       <NavigationExperience>
-        <div id="main-content" tabIndex={-1}>
-          {children}
-        </div>
+        <AppChrome>
+          <div id="main-content" tabIndex={-1}>
+            {children}
+          </div>
+        </AppChrome>
       </NavigationExperience>
       <CookieConsentBanner />
       <OptionalAnalytics nonce={nonce} />

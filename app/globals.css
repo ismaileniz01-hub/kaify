@@ -38,6 +38,9 @@
   --text-display: clamp(2rem, 8vw, 3rem);
   --leading-caption: 1.35;
   --leading-body: 1.55;
+  --fg-muted: #a1a1aa; /* zinc-400 — AA-friendly on dark surfaces */
+  --fg-subtle: #d4d4d8; /* zinc-300 */
+  --bottom-nav-height: 4rem;
   --tracking-label: 0.08em;
 }
 
@@ -86,6 +89,14 @@ body {
 .type-caption {
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
+}
+
+.type-muted {
+  color: var(--fg-muted);
+}
+
+.type-subtle {
+  color: var(--fg-subtle);
 }
 
 p, li, .text-zinc-400 {
@@ -506,8 +517,85 @@ html.native-app .pt-app-header {
   padding-top: max(0.75rem, var(--safe-top));
 }
 
-html.native-app .session-error-banner {
+.offline-banner {
   padding-top: max(0.75rem, var(--safe-top));
+}
+
+html.native-app .session-error-banner,
+html.native-app .offline-banner {
+  padding-top: max(0.75rem, var(--safe-top));
+}
+
+/* Persistent primary IA dock */
+.bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 60;
+  width: 100%;
+  max-width: 28rem;
+  transform: translateX(-50%);
+  padding: 0.35rem 0.5rem max(0.45rem, var(--safe-bottom));
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    to top,
+    rgba(10, 10, 10, 0.96) 55%,
+    rgba(10, 10, 10, 0.88)
+  );
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.bottom-nav__list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bottom-nav__link {
+  display: flex;
+  min-height: 2.75rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  border-radius: 0.9rem;
+  color: var(--fg-muted);
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.bottom-nav__link:hover {
+  color: var(--fg-subtle);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.bottom-nav__link--active {
+  color: #e9d5ff;
+  background: rgba(168, 85, 247, 0.14);
+}
+
+.bottom-nav__icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.bottom-nav__label {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+.has-bottom-nav .phone-shell {
+  padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom));
+}
+
+.has-bottom-nav .phone-shell > main,
+.has-bottom-nav .phone-shell .overflow-y-auto {
+  scroll-padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom));
 }
 
 html.native-app .chat-composer {
