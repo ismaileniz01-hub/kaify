@@ -22,6 +22,10 @@ Date: 2026-08-04 · Owner: Engineering
 
 ## Operator follow-ups
 
+> **2026-08-05:** Faz 5 deferred — no Apple/Google developer accounts yet.
+> Engineering freeze continues under [faz6-rescore-freeze.md](./faz6-rescore-freeze.md).
+
+- [ ] Open Apple Developer + Google Play Console accounts
 - [ ] Replace `APPLE_TEAM_ID` in `apple-app-site-association`
 - [ ] Replace Play signing SHA-256 in `assetlinks.json`
 - [ ] Set live `NEXT_PUBLIC_APP_STORE_URL` when App Store listing exists
