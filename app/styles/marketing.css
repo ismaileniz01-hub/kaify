@@ -947,6 +947,23 @@ html[data-cookie-banner="open"] .phone-shell {
 }
 
 /* Signup wizard — step-by-step flow */
+.signup-wizard-progress-sticky {
+  position: sticky;
+  top: max(4.5rem, env(safe-area-inset-top, 0px) + 3.25rem);
+  z-index: 30;
+  margin-inline: -0.25rem;
+  padding: 0.65rem 0.25rem 0.5rem;
+  border-radius: 1rem;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 4, 16, 0.92) 0%,
+    rgba(8, 4, 16, 0.78) 70%,
+    rgba(8, 4, 16, 0) 100%
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
 .signup-wizard-progress {
   height: 4px;
   border-radius: 9999px;

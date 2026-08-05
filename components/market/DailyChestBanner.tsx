@@ -8,6 +8,7 @@ import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { apiGet, apiPost, ApiClientError } from "@/lib/api/client";
 import { errorToMessage } from "@/lib/i18n/api-error";
+import { hapticNotification } from "@/lib/native/haptics";
 import type {
   DailyChestClaimDTO,
   DailyChestStatusDTO,
@@ -126,6 +127,7 @@ export function DailyChestBanner({ onClaimed }: Props) {
       setClaimData(result);
       setOpening(true);
       markClaimedToday();
+      void hapticNotification("success");
     } catch (err) {
       if (err instanceof ApiClientError && err.code === "CONFLICT") {
         markClaimedToday();
@@ -133,6 +135,7 @@ export function DailyChestBanner({ onClaimed }: Props) {
         loadStatus();
         return;
       }
+      void hapticNotification("error");
       setClaimError(errorToMessage(err, t) || t("chest.claim_failed"));
     } finally {
       setClaimLoading(false);

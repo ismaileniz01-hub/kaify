@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { AuraColor } from "@/lib/kai-context";
 import { AuraEffectLayer } from "@/components/AuraEffectLayer";
 import { getAuraVisual, resolveAvatarEffect, type AvatarEffect } from "@/lib/aura-effects";
@@ -14,6 +15,8 @@ type ContactAvatarProps = {
   effect?: AvatarEffect;
   auraColor?: AuraColor;
   className?: string;
+  /** Shared-element View Transition name (messages → chat). */
+  transitionName?: string;
 };
 
 const sizes = {
@@ -32,6 +35,7 @@ export function ContactAvatar({
   effect,
   auraColor = "default",
   className = "",
+  transitionName,
 }: ContactAvatarProps) {
   const { box, img, scale, sizesAttr } = sizes[size];
   const visual = getAuraVisual(auraColor);
@@ -39,9 +43,12 @@ export function ContactAvatar({
   // Data URLs / blob previews cannot go through the optimizer.
   const needsUnoptimized =
     src.startsWith("data:") || src.startsWith("blob:");
+  const transitionStyle = transitionName
+    ? ({ viewTransitionName: transitionName } as CSSProperties)
+    : undefined;
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className}`} style={transitionStyle}>
       {pulse && (
         <span
           className="absolute -inset-2 animate-ping rounded-full bg-purple-500/20"

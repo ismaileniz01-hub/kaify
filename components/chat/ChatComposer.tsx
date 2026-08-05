@@ -5,6 +5,7 @@ import { Camera, Mic, Send } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
 import { speechLocaleForLang } from "@/lib/speech-locale";
+import { hapticImpact } from "@/lib/native/haptics";
 
 type ChatComposerProps = {
   input: string;
@@ -89,6 +90,12 @@ export function ChatComposer({
       ? [input, interimTranscript].filter(Boolean).join(input ? " " : "")
       : input;
 
+  const fireSend = () => {
+    if (sending || !input.trim()) return;
+    void hapticImpact("light");
+    onSend();
+  };
+
   return (
     <footer
       className="chat-composer shrink-0 border-t border-white/[0.07] bg-[#0a0812]/95 px-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl"
@@ -115,7 +122,7 @@ export function ChatComposer({
             onInputChange(e.target.value);
           }}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !sending) onSend();
+            if (e.key === "Enter" && !sending) fireSend();
           }}
           placeholder={placeholder}
           disabled={sending}
@@ -143,7 +150,7 @@ export function ChatComposer({
         {compactSend ? (
           <button
             type="button"
-            onClick={onSend}
+            onClick={fireSend}
             disabled={sending || !input.trim()}
             className="touch-44 flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 text-white shadow-lg shadow-purple-950/40 active:scale-95 disabled:shadow-none disabled:opacity-35"
             aria-label={t("chat.aria.send")}
@@ -153,7 +160,7 @@ export function ChatComposer({
         ) : (
           <button
             type="button"
-            onClick={onSend}
+            onClick={fireSend}
             disabled={sending || !input.trim()}
             className="touch-44 shrink-0 rounded-2xl bg-gradient-to-r from-purple-500 to-violet-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-purple-950/30 active:scale-[0.97] disabled:shadow-none disabled:opacity-35"
           >

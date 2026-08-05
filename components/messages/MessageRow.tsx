@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { ChevronRight } from "lucide-react";
 import { publicAssetUrl } from "@/lib/public-asset-url";
 import { PremiumImage } from "@/components/ui/PremiumImage";
+import { coachAvatarTransitionName } from "@/lib/motion/shared-element";
 
 type MessageRowProps = {
   name: string;
@@ -16,6 +17,8 @@ type MessageRowProps = {
   index?: number;
   /** Hex renk kodu (örn: #ef4444) */
   color?: string;
+  /** Coach id for shared-element avatar View Transition */
+  coachId?: string;
 };
 
 /** Hex rengi rgba'ya çevir */
@@ -38,9 +41,16 @@ export function MessageRow({
   href,
   index = 0,
   color = "#a855f7",
+  coachId,
 }: MessageRowProps) {
   const delay = Math.min(index + 3, 8);
   const glowColor = hexToRgba(color, 0.2);
+  const transitionStyle = coachId
+    ? ({
+        boxShadow: `0 8px 20px ${glowColor}`,
+        viewTransitionName: coachAvatarTransitionName(coachId),
+      } as CSSProperties)
+    : ({ boxShadow: `0 8px 20px ${glowColor}` } as CSSProperties);
 
   return (
     <Link
@@ -50,7 +60,7 @@ export function MessageRow({
     >
       <div
         className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/80"
-        style={{ boxShadow: `0 8px 20px ${glowColor}` }}
+        style={transitionStyle}
       >
         <PremiumImage
           src={publicAssetUrl(avatarSrc)}

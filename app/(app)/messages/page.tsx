@@ -127,6 +127,7 @@ export default function MessagesPage() {
                 preview={row.preview}
                 time={row.time}
                 href={`/chat/${id}`}
+                coachId={id}
                 avatarSrc={id === "kai" ? kaiAvatar : row.avatarUrl || c.avatar}
                 badge={row.unreadCount > 0 ? row.unreadCount : undefined}
                 color={c.color.primary}

@@ -13,6 +13,7 @@ import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { AppHeader } from "@/components/navigation/AppHeader";
+import { coachAvatarTransitionName } from "@/lib/motion/shared-element";
 
 const LiveChatPanel = dynamic(
   () =>
@@ -165,6 +166,7 @@ export default function ChatPage() {
               size="xs"
               effect={getEffect()}
               auraColor={contactId === "kai" ? auraColor : "default"}
+              transitionName={coachAvatarTransitionName(contactId)}
             />
             <span className="flex flex-col items-start">
               <span className="font-semibold" style={{ color: contact.color.primaryLight }}>

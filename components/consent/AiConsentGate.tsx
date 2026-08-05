@@ -77,9 +77,9 @@ export function AiConsentGate() {
       variant="sheet"
       closeOnBackdrop={false}
       className="z-[100]"
-      panelClassName="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-zinc-900 p-6 shadow-2xl"
+      panelClassName="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-white/10 bg-zinc-900 p-6 shadow-2xl sm:rounded-2xl"
     >
-      <div>
+      <div data-sheet-scroll>
         <h2 id="ai-consent-title" className="text-lg font-bold text-white">
           {t("consent.ai.title")}
         </h2>

@@ -354,18 +354,30 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
         </ScrollReveal>
 
         <ScrollReveal delay={100} className="mx-auto mt-8 max-w-md">
-          <div className="signup-wizard-progress" aria-hidden>
-            <div
-              className="signup-wizard-progress__fill"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-          <p className="mt-2 text-center text-xs text-zinc-500">
-            {t("signup.wizard.progress", {
+          <div
+            className="signup-wizard-progress-sticky"
+            role="progressbar"
+            aria-valuemin={1}
+            aria-valuemax={flow.length}
+            aria-valuenow={stepIndex + 1}
+            aria-label={t("signup.wizard.progress", {
               current: String(stepIndex + 1),
               total: String(flow.length),
             })}
-          </p>
+          >
+            <div className="signup-wizard-progress" aria-hidden>
+              <div
+                className="signup-wizard-progress__fill"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <p className="mt-2 text-center text-xs text-zinc-500">
+              {t("signup.wizard.progress", {
+                current: String(stepIndex + 1),
+                total: String(flow.length),
+              })}
+            </p>
+          </div>
         </ScrollReveal>
 
         <ScrollReveal delay={160} className="mt-8">

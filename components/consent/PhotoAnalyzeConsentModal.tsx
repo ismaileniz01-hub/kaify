@@ -45,10 +45,11 @@ export function PhotoAnalyzeConsentModal({
       open={open}
       onClose={onClose}
       labelledBy="photo-consent-title"
+      variant="sheet"
       className="z-[90]"
-      panelClassName="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-900 p-5 shadow-2xl"
+      panelClassName="w-full max-w-md rounded-t-2xl border border-white/10 bg-zinc-900 p-5 shadow-2xl sm:rounded-2xl"
     >
-      <div>
+      <div data-sheet-scroll className="max-h-[70vh] overflow-y-auto">
         <h3 id="photo-consent-title" className="font-semibold text-white">{t("consent.photo.title")}</h3>
         <p className="mt-2 text-sm text-zinc-400">{t("consent.photo.desc")}</p>
         <label className="mt-4 flex cursor-pointer gap-3 text-sm text-zinc-300">

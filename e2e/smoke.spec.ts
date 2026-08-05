@@ -31,6 +31,7 @@ test.describe("public smoke", () => {
       name: /cookie|privacy|çerez/i,
     });
     await expect(banner).toBeVisible();
+    await expect(banner).toHaveClass(/motion-sheet/);
     await expect(banner).toHaveAttribute("data-state", "entered");
 
     await banner
@@ -62,5 +63,29 @@ test.describe("public smoke", () => {
     await page.getByRole("link", { name: /sign up|kayıt/i }).click();
     await expect(progress).toHaveAttribute("aria-hidden", "false");
     await expect(page).toHaveURL(/\/signup/);
+  });
+
+  test("signup wizard exposes sticky progress wayfinding", async ({ page }) => {
+    await page.goto("/signup");
+    const progress = page.getByRole("progressbar");
+    await expect(progress).toBeVisible();
+    await expect(progress.locator(".signup-wizard-progress__fill")).toBeVisible();
+    await expect(progress).toHaveClass(/signup-wizard-progress-sticky/);
+  });
+
+  test("messages list marks coach avatars for shared transitions", async ({ page }) => {
+    await page.goto("/messages");
+    const count = await page.locator(".message-row").count();
+    expect(count).toBeGreaterThan(0);
+    const hasTransitionName = await page.locator(".message-row").first().evaluate((row) => {
+      const avatar = row.querySelector("div");
+      if (!avatar) return false;
+      const style = avatar.getAttribute("style") ?? "";
+      return (
+        /view-transition-name\s*:/i.test(style) ||
+        Boolean((avatar as HTMLElement).style.viewTransitionName)
+      );
+    });
+    expect(hasTransitionName).toBe(true);
   });
 });

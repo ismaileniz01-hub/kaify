@@ -3,10 +3,14 @@
 import {
   useEffect,
   useRef,
+  useState,
+  type CSSProperties,
   type MouseEvent,
   type ReactNode,
+  type TouchEvent,
 } from "react";
 import { usePresence } from "@/lib/motion/use-presence";
+import { hapticSelection } from "@/lib/native/haptics";
 
 type MotionDialogProps = {
   open: boolean;
@@ -18,7 +22,11 @@ type MotionDialogProps = {
   variant?: "center" | "sheet";
   closeOnBackdrop?: boolean;
   fullBleed?: boolean;
+  /** Sheet drag handle. Defaults to true for sheet variant. */
+  showHandle?: boolean;
 };
+
+const DRAG_DISMISS_PX = 88;
 
 export function MotionDialog({
   open,
@@ -30,15 +38,33 @@ export function MotionDialog({
   variant = "center",
   closeOnBackdrop = true,
   fullBleed = false,
+  showHandle,
 }: MotionDialogProps) {
   const { mounted, state } = usePresence(open);
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
+  const dragStartY = useRef<number | null>(null);
+  const dragOffsetRef = useRef(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const handleVisible = showHandle ?? variant === "sheet";
+  const canDragDismiss = Boolean(onClose) && variant === "sheet";
 
   useEffect(() => {
     onCloseRef.current = onClose;
   });
+
+  useEffect(() => {
+    if (!open) {
+      dragStartY.current = null;
+      dragOffsetRef.current = 0;
+      setDragOffset(0);
+      setDragging(false);
+    } else if (variant === "sheet") {
+      void hapticSelection();
+    }
+  }, [open, variant]);
 
   useEffect(() => {
     if (!open) return;
@@ -108,6 +134,45 @@ export function MotionDialog({
     }
   };
 
+  const onTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    if (!canDragDismiss) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("[data-sheet-scroll]")) {
+      const scroller = target.closest("[data-sheet-scroll]") as HTMLElement;
+      if (scroller.scrollTop > 0) return;
+    }
+    dragStartY.current = event.touches[0]?.clientY ?? null;
+    setDragging(true);
+  };
+
+  const onTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    if (dragStartY.current == null) return;
+    const y = event.touches[0]?.clientY ?? dragStartY.current;
+    const next = Math.max(0, y - dragStartY.current);
+    dragOffsetRef.current = next;
+    setDragOffset(next);
+  };
+
+  const onTouchEnd = () => {
+    if (dragStartY.current == null) return;
+    const offset = dragOffsetRef.current;
+    dragStartY.current = null;
+    setDragging(false);
+    if (offset >= DRAG_DISMISS_PX && onCloseRef.current) {
+      onCloseRef.current();
+    }
+    dragOffsetRef.current = 0;
+    setDragOffset(0);
+  };
+
+  const panelStyle: CSSProperties | undefined =
+    variant === "sheet" && dragOffset > 0
+      ? {
+          transform: `translateY(${dragOffset}px)`,
+          transition: dragging ? "none" : undefined,
+        }
+      : undefined;
+
   return (
     <div
       className={`motion-overlay fixed inset-0 flex justify-center bg-black/70 backdrop-blur-sm ${
@@ -122,12 +187,23 @@ export function MotionDialog({
         aria-modal="true"
         aria-labelledby={labelledBy}
         data-motion-dialog="true"
+        data-variant={variant}
         tabIndex={-1}
         data-state={state}
+        style={panelStyle}
         className={`${
           variant === "sheet" ? "motion-sheet" : "motion-panel"
         } outline-none ${panelClassName}`}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchEnd}
       >
+        {handleVisible ? (
+          <div className="motion-sheet-handle" aria-hidden>
+            <span />
+          </div>
+        ) : null}
         {children}
       </div>
     </div>

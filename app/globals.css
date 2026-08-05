@@ -800,6 +800,28 @@ html.native-app .chat-composer {
   html[data-route-transition="true"] .phone-shell {
     animation: none !important;
   }
+
+  /* Shared coach avatar morph (messages list → chat header). */
+  ::view-transition-group(coach-avatar-kai),
+  ::view-transition-group(coach-avatar-alex),
+  ::view-transition-group(coach-avatar-maya),
+  ::view-transition-group(coach-avatar-leo) {
+    animation-duration: var(--motion-route);
+    animation-timing-function: var(--ease-premium-out);
+  }
+
+  ::view-transition-old(coach-avatar-kai),
+  ::view-transition-old(coach-avatar-alex),
+  ::view-transition-old(coach-avatar-maya),
+  ::view-transition-old(coach-avatar-leo),
+  ::view-transition-new(coach-avatar-kai),
+  ::view-transition-new(coach-avatar-alex),
+  ::view-transition-new(coach-avatar-maya),
+  ::view-transition-new(coach-avatar-leo) {
+    height: 100%;
+    object-fit: contain;
+    overflow: clip;
+  }
 }
 
 @keyframes route-fade-out {
@@ -851,6 +873,28 @@ html.native-app .chat-composer {
 .motion-sheet[data-state="entered"] {
   opacity: 1;
   transform: translateY(0);
+}
+
+.motion-sheet-handle {
+  display: flex;
+  justify-content: center;
+  padding: 0.35rem 0 0.55rem;
+  touch-action: none;
+  cursor: grab;
+}
+
+.motion-sheet-handle span {
+  display: block;
+  width: 2.25rem;
+  height: 0.25rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+@media (min-width: 640px) {
+  .motion-sheet-handle {
+    display: none;
+  }
 }
 
 .premium-toast {
@@ -2981,7 +3025,15 @@ select:active {
   }
 
   ::view-transition-old(root),
-  ::view-transition-new(root) {
+  ::view-transition-new(root),
+  ::view-transition-old(coach-avatar-kai),
+  ::view-transition-old(coach-avatar-alex),
+  ::view-transition-old(coach-avatar-maya),
+  ::view-transition-old(coach-avatar-leo),
+  ::view-transition-new(coach-avatar-kai),
+  ::view-transition-new(coach-avatar-alex),
+  ::view-transition-new(coach-avatar-maya),
+  ::view-transition-new(coach-avatar-leo) {
     animation: none !important;
   }
 
