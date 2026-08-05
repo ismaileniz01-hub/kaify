@@ -22,13 +22,15 @@ Last updated: 2026-08-04
 
 ## Leaked password protection (HIBP)
 
-Operator-owned GoTrue setting (Pro). Enable via dashboard or:
+Operator-owned GoTrue setting (**Supabase Pro**). Enable via dashboard or:
 
 ```bash
 node scripts/ops/enable-hibp.mjs
 ```
 
 Evidence checklist: [faz4-security-reliability.md](./operations/evidence/faz4-security-reliability.md)
+
+**Waiver (2026-08-05):** Deferred on Free/non-Pro plan (paid feature). App is OTP-first; revisit on Pro upgrade.
 
 ## API surface
 

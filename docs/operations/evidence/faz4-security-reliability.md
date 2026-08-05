@@ -15,11 +15,16 @@ Scope: Product Quality Audit path-to-90+ Faz 4 (HIBP · step-up · getUser · Se
 
 ## Operator: HIBP
 
+Supabase **Pro** feature (Have I Been Pwned leaked-password protection).
+
 - [ ] Run `node scripts/ops/enable-hibp.mjs` with `SUPABASE_ACCESS_TOKEN`, **or** enable in Supabase Dashboard → Auth → Email → Prevent use of leaked passwords
 - [ ] Confirm response / dashboard shows `password_hibp_enabled: true`
-- [ ] Paste confirmation timestamp below
 
-Confirmation: _pending operator_
+**2026-08-05 waiver:** Operator cannot enable HIBP on current plan (paid / Pro-only).  
+Accepted risk: Auth is **OTP-first**; password enrollment is uncommon. Revisit when Pro is active.  
+Status: **deferred — not a Faz 4/6 code blocker**
+
+Confirmation: _deferred — plan cost_
 
 ## Related routes
 

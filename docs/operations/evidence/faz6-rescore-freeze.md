@@ -48,7 +48,7 @@ See: `docs/operations/evidence/faz5-store-checklist.md`
 ## Operator leftovers (non-store)
 
 - [ ] Apply migration `supabase/migrations/20260805140000_faz1_goals_settings.sql` if not already
-- [ ] Enable HIBP (`node scripts/ops/enable-hibp.mjs` or dashboard) — `faz4-security-reliability.md`
+- [x] HIBP — **deferred** (Supabase Pro paid; OTP-first auth). See `faz4-security-reliability.md`
 - [ ] Uptime / Sentry alert rules (TD-007)
 
 ## Freeze rule
