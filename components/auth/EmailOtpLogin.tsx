@@ -64,7 +64,7 @@ export function EmailOtpLogin({
   onAuthSuccess,
   onStepChange,
 }: EmailOtpLoginProps) {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const router = useRouter();
   const { isAuthenticated, isLoading, profile, refreshSession } = useSession();
 
@@ -138,7 +138,11 @@ export function EmailOtpLogin({
     try {
       storePendingLegalConsent();
       const recaptchaToken = await executeInvisibleRecaptcha(captchaRef);
-      const result = await sendEmailLoginCode(trimmed, recaptchaToken);
+      const result = await sendEmailLoginCode(
+        trimmed,
+        recaptchaToken,
+        lang === "tr" ? "tr" : "en",
+      );
       if (!result.ok) {
         setError(apiErrorMessage(result.code, t));
         return;
@@ -153,7 +157,7 @@ export function EmailOtpLogin({
     } finally {
       setLoading(false);
     }
-  }, [captchaRef, email, goToStep, isSignup, legalAccepted, t]);
+  }, [captchaRef, email, goToStep, isSignup, lang, legalAccepted, t]);
 
   const applyPendingReferral = useCallback(async () => {
     const code = getPendingReferral();

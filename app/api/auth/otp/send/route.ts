@@ -28,7 +28,10 @@ export const POST = defineRouteRaw(
     }
 
     try {
-      const result = await sendAuthEmailOtp(parsed.data.email);
+      const result = await sendAuthEmailOtp(
+        parsed.data.email,
+        parsed.data.locale,
+      );
 
       if (!result.ok) {
         logger.warn("otp send failed", {

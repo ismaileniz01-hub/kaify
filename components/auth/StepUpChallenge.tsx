@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { apiPost, ApiClientError } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
+import { errorToMessage } from "@/lib/i18n/api-error";
 import { InlineAlert } from "@/components/InlineAlert";
 
 type StepUpChallengeProps = {
@@ -27,7 +28,7 @@ export function StepUpChallenge({ onVerified, onCancel }: StepUpChallengeProps) 
     } catch (err) {
       setError(
         err instanceof ApiClientError
-          ? err.message
+          ? errorToMessage(err, t)
           : t("settings.step_up.send_error"),
       );
     } finally {
@@ -45,7 +46,7 @@ export function StepUpChallenge({ onVerified, onCancel }: StepUpChallengeProps) 
     } catch (err) {
       setError(
         err instanceof ApiClientError
-          ? err.message
+          ? errorToMessage(err, t)
           : t("settings.step_up.verify_error"),
       );
     } finally {

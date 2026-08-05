@@ -9,20 +9,9 @@ export type InboxCoachDTO = {
   avatarUrl: string;
   preview: string;
   time: string;
+  createdAt: string | null;
   unreadCount: number;
 };
-
-function formatRelativeTime(iso: string): string {
-  const date = new Date(iso);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffHours = diffMs / (1000 * 60 * 60);
-  if (diffHours < 24) {
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-  if (diffHours < 48) return "Yesterday";
-  return date.toLocaleDateString([], { weekday: "short", day: "numeric" });
-}
 
 type InboxPreviewRow = {
   coach_id: string;
@@ -60,7 +49,8 @@ export async function getInbox(): Promise<InboxCoachDTO[]> {
       role: meta.roleKey,
       avatarUrl: meta.avatar,
       preview,
-      time: latest ? formatRelativeTime(latest.created_at) : "",
+      time: "",
+      createdAt: latest?.created_at ?? null,
       unreadCount: latest?.sender === "coach" ? 1 : 0,
     };
   });

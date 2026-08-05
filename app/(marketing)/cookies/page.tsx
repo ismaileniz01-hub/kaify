@@ -1,16 +1,20 @@
 import { LegalPageShell } from "@/components/legal/LegalPageShell";
 import { CookiePolicyContent } from "@/components/legal/CookiePolicyContent";
-import { COOKIES_VERSION } from "@/lib/legal/constants";
+import type { Metadata } from "next";
+import { cookies } from "next/headers";
 
-export const metadata = {
-  title: "Cookie Policy — Kaify",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const isTurkish = (await cookies()).get("kaify-lang")?.value === "tr";
+  return {
+    title: isTurkish ? "Çerez Politikası — Kaify" : "Cookie Policy — Kaify",
+  };
+}
 
 export default function CookiesPage() {
   return (
     <LegalPageShell
       title="Cookie Policy"
-      subtitle={`Last updated: July 05, 2026 · Version ${COOKIES_VERSION}`}
+      titleKey="legal.cookie_policy"
     >
       <CookiePolicyContent />
     </LegalPageShell>

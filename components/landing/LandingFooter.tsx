@@ -4,16 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useLang } from "@/lib/lang-context";
 
-const EN = {
-  about: "About",
-  coaches: "Coaches",
-  features: "Features",
-  pricing: "Pricing",
-} as const;
-
-export function LandingFooter({ forceEnglish = false }: { forceEnglish?: boolean }) {
+export function LandingFooter() {
   const { t } = useLang();
-  const label = (key: string, english: string) => (forceEnglish ? english : t(key));
 
   return (
     <footer className="landing-footer">
@@ -33,29 +25,29 @@ export function LandingFooter({ forceEnglish = false }: { forceEnglish?: boolean
 
         <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-zinc-500">
           <Link href="/#about" className="transition hover:text-white">
-            {label("landing.nav.about", EN.about)}
+            {t("landing.nav.about")}
           </Link>
           <Link href="/#coaches" className="transition hover:text-white">
-            {label("landing.nav.coaches", EN.coaches)}
+            {t("landing.nav.coaches")}
           </Link>
           <Link href="/#features" className="transition hover:text-white">
-            {label("landing.nav.features", EN.features)}
+            {t("landing.nav.features")}
           </Link>
           <Link href="/pricing" className="transition hover:text-white">
-            {label("landing.nav.pricing", EN.pricing)}
+            {t("landing.nav.pricing")}
           </Link>
           <Link href="/privacy" className="transition hover:text-white">
-            Privacy
+            {t("legal.privacy")}
           </Link>
-          <Link href="/terms&conditions" className="transition hover:text-white">
-            Terms & Conditions
+          <Link href="/terms" className="transition hover:text-white">
+            {t("legal.terms")}
           </Link>
           <Link href="/cookies" className="transition hover:text-white">
-            Cookies
+            {t("legal.cookies")}
           </Link>
         </nav>
 
-        <p className="text-xs text-zinc-600">Fitness · Coaching · Made enjoyable</p>
+        <p className="text-xs text-zinc-600">{t("landing.hero.eyebrow")}</p>
       </div>
     </footer>
   );

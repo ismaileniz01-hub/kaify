@@ -1,6 +1,7 @@
 "use client";
 
 import type { BillingInterval } from "@/lib/marketing/pricing-plans";
+import { useLang } from "@/lib/lang-context";
 
 type Props = {
   value: BillingInterval;
@@ -8,8 +9,14 @@ type Props = {
 };
 
 export function PricingBillingToggle({ value, onChange }: Props) {
+  const { t } = useLang();
+
   return (
-    <div className="pricing-billing-toggle" role="group" aria-label="Billing period">
+    <div
+      className="pricing-billing-toggle"
+      role="group"
+      aria-label={t("pricing.billing_period")}
+    >
       <button
         type="button"
         className={`pricing-billing-toggle__btn ${
@@ -18,7 +25,7 @@ export function PricingBillingToggle({ value, onChange }: Props) {
         onClick={() => onChange("monthly")}
         aria-pressed={value === "monthly"}
       >
-        Monthly
+        {t("pricing.monthly")}
       </button>
       <button
         type="button"
@@ -28,8 +35,10 @@ export function PricingBillingToggle({ value, onChange }: Props) {
         onClick={() => onChange("yearly")}
         aria-pressed={value === "yearly"}
       >
-        Yearly
-        <span className="pricing-billing-toggle__badge">1 month free</span>
+        {t("pricing.yearly")}
+        <span className="pricing-billing-toggle__badge">
+          {t("pricing.one_month_free")}
+        </span>
       </button>
     </div>
   );

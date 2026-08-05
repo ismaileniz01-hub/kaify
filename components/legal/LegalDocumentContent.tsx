@@ -1,10 +1,15 @@
+"use client";
+
 import type { LegalDocument } from "@/lib/legal/documents/types";
+import { useLang } from "@/lib/lang-context";
 
 type LegalDocumentContentProps = {
   document: LegalDocument;
 };
 
 export function LegalDocumentContent({ document }: LegalDocumentContentProps) {
+  const { t } = useLang();
+
   return (
     <article className="prose prose-invert max-w-none prose-headings:scroll-mt-24 prose-a:text-emerald-400">
       <p className="text-sm text-zinc-400">{document.subtitle}</p>
@@ -13,7 +18,7 @@ export function LegalDocumentContent({ document }: LegalDocumentContentProps) {
       ) : null}
       <nav className="not-prose mb-8 rounded-xl border border-white/10 bg-white/5 p-4">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
-          Contents
+          {t("legal.contents")}
         </p>
         <ul className="grid gap-1 text-sm text-emerald-300/90 sm:grid-cols-2">
           {document.sections.map((section) => (

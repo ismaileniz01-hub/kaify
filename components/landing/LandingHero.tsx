@@ -52,7 +52,7 @@ export function LandingHero() {
                 <div className="landing-kai-float">
                   <Image
                     src="/avatars/kai-level-1.webp"
-                    alt="Kai — your dragon companion"
+                    alt={t("landing.hero.kai_alt")}
                     width={420}
                     height={420}
                     className="relative z-10 h-auto w-full max-w-[280px] drop-shadow-[0_24px_80px_rgba(168,85,247,0.45)] sm:max-w-[340px] lg:max-w-[420px]"
@@ -67,27 +67,25 @@ export function LandingHero() {
           <div className="flex flex-col items-center text-center lg:order-1 lg:items-start lg:text-left">
             <ScrollReveal delay={80}>
               <p className="mb-6 text-sm font-semibold uppercase tracking-[0.25em] text-purple-300/80 sm:mb-5">
-                Fitness · Coaching · Made enjoyable
+                {t("landing.hero.eyebrow")}
               </p>
             </ScrollReveal>
 
             <ScrollReveal delay={160}>
               <h1 className="landing-hero-title">
-                Your personal
+                {t("landing.hero.title_line1")}
                 <br />
-                <span className="landing-gradient-text">Pro Coaching Team</span>
+                <span className="landing-gradient-text">
+                  {t("landing.hero.title_accent")}
+                </span>
                 <br />
-                in one app.
+                {t("landing.hero.title_line3")}
               </h1>
             </ScrollReveal>
 
             <ScrollReveal delay={240}>
               <p className="mt-8 max-w-lg text-lg leading-relaxed text-zinc-400 sm:mt-6">
-                Stop juggling five apps and guessing your macros. K.AIFY gives you
-                <strong className="text-zinc-200"> 4 expert coaches</strong>, real progress tracking,
-                and <strong className="text-zinc-200">Kai</strong> — your dragon companion who keeps you
-                showing up every day. Whether you're 22 or 52, getting healthier
-                shouldn't feel overwhelming.
+                {t("landing.hero.description")}
               </p>
             </ScrollReveal>
 
@@ -99,7 +97,7 @@ export function LandingHero() {
                 {t("landing.pricing.explore_plans")}
               </Link>
               <p className="text-base font-semibold tracking-[0.2em] text-purple-300/90">
-                ↓ Scroll to explore
+                {t("landing.hero.scroll_explore")}
               </p>
             </ScrollReveal>
           </div>
@@ -108,7 +106,7 @@ export function LandingHero() {
         <a
           href="#about"
           className="landing-scroll-hint absolute bottom-10 left-1/2 -translate-x-1/2"
-          aria-label="Scroll down"
+          aria-label={t("landing.hero.scroll_down")}
         >
           <ChevronDown className="h-6 w-6 text-purple-300/60" />
         </a>

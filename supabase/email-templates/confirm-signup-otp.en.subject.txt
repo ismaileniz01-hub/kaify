@@ -1,1 +1,1 @@
-Your KAIFY verification code
+{{ if eq .Data.language "tr" }}K.AIFY doğrulama kodun{{ else }}Your K.AIFY verification code{{ end }}

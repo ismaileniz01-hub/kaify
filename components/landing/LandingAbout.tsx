@@ -2,67 +2,60 @@
 
 import { BarChart3, Flame, MessageCircle, ShoppingCart } from "lucide-react";
 import { ScrollReveal } from "./ScrollReveal";
+import { useLang } from "@/lib/lang-context";
 
 const PILLARS = [
   {
     icon: BarChart3,
-    title: "Analytics",
-    subtitle: "See real progress",
-    desc: "Weight, calories, workouts, hydration — tracked automatically so you always know where you stand, not where you guess you are.",
+    key: "analytics",
     color: "#22c55e",
     glow: "rgba(34, 197, 94, 0.35)",
   },
   {
     icon: MessageCircle,
-    title: "Coaching",
-    subtitle: "Talk to your team",
-    desc: "Ask Alex about your workout. Get meal plans from Dr. Maya. Review posture with Leo. Real answers, instantly — no booking calls.",
+    key: "coaching",
     color: "#3b82f6",
     glow: "rgba(59, 130, 246, 0.35)",
   },
   {
     icon: Flame,
-    title: "Streaks",
-    subtitle: "Build the habit",
-    desc: "The #1 reason people quit? They stop showing up. Daily streaks turn consistency into something you can see — and Kai evolves as you do.",
+    key: "streaks",
     color: "#f97316",
     glow: "rgba(249, 115, 22, 0.35)",
   },
   {
     icon: ShoppingCart,
-    title: "Rewards",
-    subtitle: "Stay motivated",
-    desc: "Earn gems, unlock Kai's new looks, and celebrate milestones. Positive reinforcement that actually works — for teens and parents alike.",
+    key: "rewards",
     color: "#fbbf24",
     glow: "rgba(251, 191, 36, 0.35)",
   },
 ];
 
 export function LandingAbout() {
+  const { t } = useLang();
+
   return (
     <section id="about" className="landing-section relative">
       <div className="landing-container">
         <ScrollReveal className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-purple-400">
-            Why K.AIFY
+            {t("landing.about.eyebrow")}
           </p>
           <h2 className="landing-section-title mt-4">
-            4 Expert Coaches,{" "}
-            <span className="landing-gradient-text">One Team,</span>
-            {" "}Built For You
+            {t("landing.about.title_line1")}{" "}
+            <span className="landing-gradient-text">
+              {t("landing.about.title_accent")}
+            </span>{" "}
+            {t("landing.about.title_line3")}
           </h2>
           <p className="mt-6 text-lg leading-relaxed text-zinc-400">
-            Most fitness apps dump data on you and disappear. K.AIFY is different:
-            a polished experience with coaches who guide you, analytics that make
-            sense, and a companion dragon who makes the journey feel human. Built
-            for busy professionals, students, and parents who want results without
-            the complexity.
+            {t("landing.about.description")}
           </p>
         </ScrollReveal>
 
         <div className="mt-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {PILLARS.map((pillar, i) => (
-            <ScrollReveal key={pillar.title} delay={i * 100} direction="up">
+            <ScrollReveal key={pillar.key} delay={i * 100} direction="up">
               <article
                 className="landing-pillar-card group focus-visible:outline-2 focus-visible:outline-purple-400 focus-visible:outline-offset-4 focus-visible:ring-4 focus-visible:ring-purple-500/20"
                 tabIndex={0}
@@ -76,12 +69,14 @@ export function LandingAbout() {
                 <div className="landing-pillar-icon">
                   <pillar.icon className="h-6 w-6" strokeWidth={2} />
                 </div>
-                <h3 className="mt-5 text-xl font-bold text-white">{pillar.title}</h3>
+                <h3 className="mt-5 text-xl font-bold text-white">
+                  {t(`landing.about.pillar.${pillar.key}.title`)}
+                </h3>
                 <p className="mt-1 text-sm font-medium text-purple-300/70">
-                  {pillar.subtitle}
+                  {t(`landing.about.pillar.${pillar.key}.subtitle`)}
                 </p>
                 <p className="mt-3 text-sm leading-relaxed text-zinc-500">
-                  {pillar.desc}
+                  {t(`landing.about.pillar.${pillar.key}.description`)}
                 </p>
               </article>
             </ScrollReveal>
@@ -101,24 +96,26 @@ export function LandingAbout() {
               {/* Başlık */}
               <div className="mb-8 text-center">
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-purple-400/80">
-                  Value comparison
+                  {t("landing.value.eyebrow")}
                 </p>
                 <h3 className="mt-3 text-2xl font-bold text-white sm:text-3xl">
-                  What you'd pay elsewhere{" "}
-                  <span className="landing-gradient-text">vs. Kaify</span>
+                  {t("landing.value.title")}{" "}
+                  <span className="landing-gradient-text">
+                    {t("landing.value.title_accent")}
+                  </span>
                 </h3>
               </div>
 
               {/* Karşılaştırma satırları */}
               <div className="space-y-3">
                 {[
-                  { label: "Personal Trainer", price: "$50+", delay: 0, icon: "🏋️" },
-                  { label: "Nutrition Coach", price: "$40+", delay: 100, icon: "🥗" },
-                  { label: "Calorie Tracking", price: "$10+", delay: 150, icon: "📊" },
-                  { label: "Posture Coach", price: "$40+", delay: 200, icon: "🧍" },
+                  { key: "trainer", price: "$50+", delay: 0, icon: "🏋️" },
+                  { key: "nutrition", price: "$40+", delay: 100, icon: "🥗" },
+                  { key: "calories", price: "$10+", delay: 150, icon: "📊" },
+                  { key: "posture", price: "$40+", delay: 200, icon: "🧍" },
                 ].map((item) => (
                   <div
-                    key={item.label}
+                    key={item.key}
                     className="group flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4 transition-all duration-500 hover:border-purple-500/30 hover:bg-white/[0.06] hover:shadow-[0_0_20px_rgba(168,85,247,0.08)]"
                     style={{ animation: `fade-in-up 0.5s ease-out ${item.delay}ms both` }}
                   >
@@ -127,7 +124,9 @@ export function LandingAbout() {
                         ✕
                       </span>
                       <span className="text-sm">{item.icon}</span>
-                      <span className="text-sm font-medium text-zinc-300">{item.label}</span>
+                      <span className="text-sm font-medium text-zinc-300">
+                        {t(`landing.value.item.${item.key}`)}
+                      </span>
                     </div>
                     <span className="text-lg font-bold text-red-400">{item.price}</span>
                   </div>
@@ -152,7 +151,7 @@ export function LandingAbout() {
 
                 {/* BEST VALUE rozeti */}
                 <div className="absolute -right-8 top-4 z-20 rotate-45 bg-gradient-to-r from-emerald-500 to-green-600 px-8 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-white shadow-lg">
-                  Best Value
+                  {t("landing.value.best_value")}
                 </div>
 
                 <div className="relative z-10 flex items-center justify-between">
@@ -162,14 +161,18 @@ export function LandingAbout() {
                     </span>
                     <div>
                       <p className="text-lg font-bold text-white">Kaify</p>
-                      <p className="text-xs text-emerald-400/70">All-in-one fitness platform</p>
+                      <p className="text-xs text-emerald-400/70">
+                        {t("landing.value.all_in_one")}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-3xl font-extrabold text-white">
                       $14.99
                     </p>
-                    <p className="text-xs text-zinc-500">starting from</p>
+                    <p className="text-xs text-zinc-500">
+                      {t("landing.value.starting_from")}
+                    </p>
                   </div>
                 </div>
 
@@ -177,9 +180,18 @@ export function LandingAbout() {
                 <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/15 px-4 py-3">
                   <span className="text-lg text-emerald-400">💰</span>
                   <span className="text-sm font-bold text-emerald-400">
-                    Save up to <span className="text-base">$125+/month</span> · <span className="text-base">$1,500+/year</span>
+                    {t("landing.value.save_up_to")}{" "}
+                    <span className="text-base">
+                      $125+/{t("pricing.unit.month")}
+                    </span>{" "}
+                    ·{" "}
+                    <span className="text-base">
+                      $1,500+/{t("pricing.unit.year")}
+                    </span>
                   </span>
-                  <span className="ml-auto text-[10px] font-medium text-emerald-400/60">compared to hiring individual coaches</span>
+                  <span className="ml-auto text-[10px] font-medium text-emerald-400/60">
+                    {t("landing.value.comparison_note")}
+                  </span>
                 </div>
               </div>
             </div>

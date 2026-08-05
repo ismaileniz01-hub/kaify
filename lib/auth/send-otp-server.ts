@@ -14,6 +14,7 @@ export type GoTrueOtpError = {
  */
 export async function sendAuthEmailOtp(
   email: string,
+  locale: "tr" | "en" = "en",
 ): Promise<{ ok: true } | { ok: false; error: GoTrueOtpError }> {
   const { url, anonKey } = getSupabasePublicEnv();
   const normalizedEmail = email.trim().toLowerCase();
@@ -28,6 +29,7 @@ export async function sendAuthEmailOtp(
     body: JSON.stringify({
       email: normalizedEmail,
       create_user: true,
+      data: { language: locale },
     }),
   });
 

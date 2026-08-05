@@ -278,7 +278,11 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
       try {
         storePendingLegalConsent();
         const recaptchaToken = await executeInvisibleRecaptcha(captchaRef);
-        const result = await sendEmailLoginCode(trimmedEmail, recaptchaToken);
+        const result = await sendEmailLoginCode(
+          trimmedEmail,
+          recaptchaToken,
+          lang === "tr" ? "tr" : "en",
+        );
         if (!result.ok) {
           setError(apiErrorMessage(result.code, t));
           setBusy(false);
@@ -310,6 +314,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     currentStep,
     email,
     flow.length,
+    lang,
     stepIndex,
     t,
   ]);

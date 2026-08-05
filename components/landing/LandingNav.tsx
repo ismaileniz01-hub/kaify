@@ -8,32 +8,19 @@ import { useLang } from "@/lib/lang-context";
 import { useSessionOptional } from "@/lib/session-context";
 
 const LINKS = [
-  { href: "#about", labelKey: "landing.nav.about", en: "About" },
-  { href: "#coaches", labelKey: "landing.nav.coaches", en: "Coaches" },
-  { href: "#features", labelKey: "landing.nav.features", en: "Features" },
-  { href: "#streak", labelKey: "landing.nav.streak", en: "Streak" },
-  { href: "#kai", labelKey: "landing.nav.kai", en: "Dragon Kai" },
+  { href: "#about", labelKey: "landing.nav.about" },
+  { href: "#coaches", labelKey: "landing.nav.coaches" },
+  { href: "#features", labelKey: "landing.nav.features" },
+  { href: "#streak", labelKey: "landing.nav.streak" },
+  { href: "#kai", labelKey: "landing.nav.kai" },
 ] as const;
-
-const EN = {
-  about: "About",
-  coaches: "Coaches",
-  features: "Features",
-  pricing: "Pricing",
-  login: "Sign in",
-  signup: "Create account",
-  myAccount: "My account",
-  explore: "Explore Plans",
-} as const;
 
 export function LandingNav({
   pricingPage = false,
   accountPage = false,
-  forceEnglish = false,
 }: {
   pricingPage?: boolean;
   accountPage?: boolean;
-  forceEnglish?: boolean;
 }) {
   const { t } = useLang();
   const session = useSessionOptional();
@@ -41,7 +28,6 @@ export function LandingNav({
   const isLoading = session?.isLoading ?? false;
   const displayName = session?.displayName ?? "";
   const profile = session?.profile ?? null;
-  const label = (key: string, english: string) => (forceEnglish ? english : t(key));
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -67,9 +53,9 @@ export function LandingNav({
     ? "…"
     : isAuthenticated
       ? accountPage
-        ? label("myaccount.open_app", "Open app")
-        : label("landing.nav.my_account", EN.myAccount)
-      : label("landing.nav.signup", EN.signup);
+        ? t("myaccount.open_app")
+        : t("landing.nav.my_account")
+      : t("landing.nav.signup");
 
   return (
     <header className={`landing-nav ${scrolled ? "landing-nav--scrolled" : ""}`}>
@@ -91,19 +77,19 @@ export function LandingNav({
                 href="/#about"
                 className="text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-white"
               >
-                {label("landing.nav.about", EN.about)}
+                {t("landing.nav.about")}
               </Link>
               <Link
                 href="/#coaches"
                 className="text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-white"
               >
-                {label("landing.nav.coaches", EN.coaches)}
+                {t("landing.nav.coaches")}
               </Link>
               <Link
                 href="/#features"
                 className="text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-white"
               >
-                {label("landing.nav.features", EN.features)}
+                {t("landing.nav.features")}
               </Link>
             </>
           ) : (
@@ -113,7 +99,7 @@ export function LandingNav({
                 href={`${homePrefix}${link.href}`}
                 className="text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-white focus-visible:outline-2 focus-visible:outline-purple-400 focus-visible:outline-offset-4 rounded-sm"
               >
-                {label(link.labelKey, link.en)}
+                {t(link.labelKey)}
               </a>
             ))
           )}
@@ -123,7 +109,7 @@ export function LandingNav({
               pricingPage ? "text-purple-300" : "text-zinc-400"
             }`}
           >
-            {label("landing.nav.pricing", EN.pricing)}
+            {t("landing.nav.pricing")}
           </Link>
         </nav>
 
@@ -133,14 +119,14 @@ export function LandingNav({
               href="/myaccount"
               className="hidden text-sm font-medium text-zinc-300 transition hover:text-white sm:inline"
             >
-              {displayName || label("landing.nav.my_account", EN.myAccount)}
+              {displayName || t("landing.nav.my_account")}
             </Link>
           ) : !isLoading && !isAuthenticated ? (
             <Link
               href="/login?mode=signin"
               className="hidden text-sm font-medium text-zinc-400 transition hover:text-white sm:inline"
             >
-              {label("landing.nav.login", EN.login)}
+              {t("landing.nav.login")}
             </Link>
           ) : null}
           <Link

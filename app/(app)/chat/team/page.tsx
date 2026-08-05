@@ -8,7 +8,8 @@ import { InlineAlert } from "@/components/InlineAlert";
 import { EmptyState } from "@/components/EmptyState";
 import { CONTACTS, type ContactId } from "@/lib/contacts";
 import { useKai } from "@/lib/kai-context";
-import { useLang } from "@/lib/lang-context";
+import { useLang, type LangCode } from "@/lib/lang-context";
+import { localeFor } from "@/lib/i18n/format";
 import { useSession } from "@/lib/session-context";
 import { apiGet, apiPost, ApiClientError } from "@/lib/api/client";
 import { canUseTeamChat } from "@/lib/billing/team-chat-access";
@@ -36,25 +37,25 @@ function isMeetingThisWeek(messages: ChatMessageDTO[]): boolean {
   );
 }
 
-function mapDtoToTeamMessage(m: ChatMessageDTO): TeamMessage {
+function mapDtoToTeamMessage(m: ChatMessageDTO, lang: LangCode): TeamMessage {
   return {
     id: m.id,
     coachId: (m.coachId ?? "kai") as ContactId,
     text: m.content ?? "",
-    time: new Date(m.createdAt).toLocaleTimeString([], {
+    time: new Date(m.createdAt).toLocaleTimeString(localeFor(lang), {
       hour: "2-digit",
       minute: "2-digit",
     }),
   };
 }
 
-function mapRowToTeamMessage(row: ChatMessageRow): TeamMessage | null {
+function mapRowToTeamMessage(row: ChatMessageRow, lang: LangCode): TeamMessage | null {
   if (row.thread_type !== "team") return null;
   return {
     id: row.id,
     coachId: (row.coach_id ?? "kai") as ContactId,
     text: row.content ?? "",
-    time: new Date(row.created_at).toLocaleTimeString([], {
+    time: new Date(row.created_at).toLocaleTimeString(localeFor(lang), {
       hour: "2-digit",
       minute: "2-digit",
     }),
@@ -62,7 +63,7 @@ function mapRowToTeamMessage(row: ChatMessageRow): TeamMessage | null {
 }
 
 export default function TeamChatPage() {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const { avatar: kaiAvatar } = useKai();
   const { isAuthenticated, profile } = useSession();
   const [messages, setMessages] = useState<TeamMessage[]>([]);
@@ -97,11 +98,11 @@ export default function TeamChatPage() {
     apiGet<{ messages: ChatMessageDTO[] }>("/api/chat/team")
       .then((res) => {
         setMeetingDone(isMeetingThisWeek(res.messages));
-        setMessages(res.messages.map(mapDtoToTeamMessage));
+        setMessages(res.messages.map((message) => mapDtoToTeamMessage(message, lang)));
       })
       .catch(() => setError(t("team.error.load")))
       .finally(() => setLoading(false));
-  }, [isAuthenticated, profile?.tier, profile?.teamChatUnlocked, t]);
+  }, [isAuthenticated, lang, profile?.tier, profile?.teamChatUnlocked, t]);
 
   // TD-005: Realtime INSERT fan-out for team thread (deduped vs POST response).
   useEffect(() => {
@@ -121,7 +122,7 @@ export default function TeamChatPage() {
         },
         (payload) => {
           const row = payload.new as ChatMessageRow;
-          const mapped = mapRowToTeamMessage(row);
+          const mapped = mapRowToTeamMessage(row, lang);
           if (!mapped) return;
           if (row.message_type === "team_meeting") {
             setMeetingDone(true);
@@ -137,7 +138,7 @@ export default function TeamChatPage() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [isAuthenticated, profile?.id, unlocked]);
+  }, [isAuthenticated, lang, profile?.id, unlocked]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -153,7 +154,7 @@ export default function TeamChatPage() {
       setMeetingDone(true);
       setMessages((prev) => {
         const next = [...prev];
-        for (const m of res.messages.map(mapDtoToTeamMessage)) {
+        for (const m of res.messages.map((message) => mapDtoToTeamMessage(message, lang))) {
           if (!next.some((x) => x.id === m.id)) next.push(m);
         }
         return next;

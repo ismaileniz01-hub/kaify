@@ -26,7 +26,7 @@ type Props = {
 };
 
 export function SignupVerifyStep({ email, onVerified, onBack }: Props) {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +44,11 @@ export function SignupVerifyStep({ email, onVerified, onBack }: Props) {
     setError(null);
     try {
       const recaptchaToken = await executeInvisibleRecaptcha(captchaRef);
-      const result = await sendEmailLoginCode(email, recaptchaToken);
+      const result = await sendEmailLoginCode(
+        email,
+        recaptchaToken,
+        lang === "tr" ? "tr" : "en",
+      );
       if (!result.ok) {
         setError(apiErrorMessage(result.code, t));
         return;
@@ -54,7 +58,7 @@ export function SignupVerifyStep({ email, onVerified, onBack }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [captchaRef, email, t]);
+  }, [captchaRef, email, lang, t]);
 
   const verify = useCallback(
     async (token = code) => {

@@ -1,1 +1,1 @@
-Your KAIFY login code
+{{ if eq .Data.language "tr" }}K.AIFY giriş kodun{{ else }}Your K.AIFY login code{{ end }}

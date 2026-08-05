@@ -87,7 +87,7 @@ const BG_ICONS = [
 ];
 
 export function StreakCard({ open, streak, kaiLevel, onClose }: StreakCardProps) {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const cardRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -245,7 +245,7 @@ export function StreakCard({ open, streak, kaiLevel, onClose }: StreakCardProps)
               <span className="text-[120px] font-black leading-none tracking-tighter" style={{ color: "#ffffff", textShadow: `0 0 60px ${theme.glow}, 0 0 120px ${theme.glowIntense}, 0 0 180px ${theme.flameColor}` }}>{streak}</span>
             </div>
             <span id="streak-card-title" className="text-xl font-bold mt-3 tracking-[0.4em]" style={{ color: theme.flameColor2, textShadow: `0 0 30px ${theme.glow}, 0 0 60px ${theme.glowIntense}` }}>
-              {t("streak.daily").toUpperCase()}
+              {t("streak.daily").toLocaleUpperCase(lang)}
             </span>
           </div>
 

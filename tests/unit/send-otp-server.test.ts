@@ -25,6 +25,7 @@ describe("sendAuthEmailOtp", () => {
         body: JSON.stringify({
           email: "user@example.com",
           create_user: true,
+          data: { language: "en" },
         }),
       }),
     );
@@ -32,6 +33,20 @@ describe("sendAuthEmailOtp", () => {
     const body = JSON.parse(String(init.body));
     expect(body).not.toHaveProperty("redirect_to");
     expect(body).not.toHaveProperty("code_challenge");
+  });
+
+  it("passes the selected language to localized email templates", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-key");
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await sendAuthEmailOtp("user@example.com", "tr");
+
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      data: { language: "tr" },
+    });
   });
 
   it("returns structured error on non-2xx", async () => {

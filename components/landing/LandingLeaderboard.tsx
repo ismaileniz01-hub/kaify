@@ -3,13 +3,15 @@
 import { ScrollReveal } from "./ScrollReveal";
 import { Trophy, Flame, TrendingUp, Globe } from "lucide-react";
 import { FlagImage } from "@/components/FlagImage";
+import { useLang } from "@/lib/lang-context";
+import { formatNumber } from "@/lib/i18n/format";
 
 const COUNTRIES = [
   {
     rank: 1,
     flagCode: "tr",
-    name: "Türkiye",
-    users: "12.4K",
+    countryKey: "turkey",
+    users: 12_400,
     totalStreaks: 284_500,
     color: "#f97316",
     glow: "rgba(249, 115, 22, 0.35)",
@@ -17,8 +19,8 @@ const COUNTRIES = [
   {
     rank: 2,
     flagCode: "us",
-    name: "United States",
-    users: "9.8K",
+    countryKey: "united_states",
+    users: 9_800,
     totalStreaks: 212_300,
     color: "#3b82f6",
     glow: "rgba(59, 130, 246, 0.35)",
@@ -26,8 +28,8 @@ const COUNTRIES = [
   {
     rank: 3,
     flagCode: "br",
-    name: "Brazil",
-    users: "7.2K",
+    countryKey: "brazil",
+    users: 7_200,
     totalStreaks: 158_900,
     color: "#22c55e",
     glow: "rgba(34, 197, 94, 0.35)",
@@ -35,8 +37,8 @@ const COUNTRIES = [
   {
     rank: 4,
     flagCode: "de",
-    name: "Germany",
-    users: "5.1K",
+    countryKey: "germany",
+    users: 5_100,
     totalStreaks: 112_400,
     color: "#a855f7",
     glow: "rgba(168, 85, 247, 0.35)",
@@ -44,8 +46,8 @@ const COUNTRIES = [
   {
     rank: 5,
     flagCode: "gb",
-    name: "United Kingdom",
-    users: "3.6K",
+    countryKey: "united_kingdom",
+    users: 3_600,
     totalStreaks: 79_800,
     color: "#fbbf24",
     glow: "rgba(251, 191, 36, 0.35)",
@@ -107,6 +109,7 @@ function CountryRow({
   country: (typeof COUNTRIES)[number];
   index: number;
 }) {
+  const { lang, t } = useLang();
   const isTop = country.rank <= 3;
 
   return (
@@ -156,9 +159,16 @@ function CountryRow({
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-white">
-              {country.name}
+              {t(`landing.leaderboard.country.${country.countryKey}`)}
             </p>
-            <p className="text-xs text-zinc-500">{country.users} active users</p>
+            <p className="text-xs text-zinc-500">
+              {t("landing.leaderboard.active_users", {
+                count: formatNumber(country.users, lang, {
+                  notation: "compact",
+                  maximumFractionDigits: 1,
+                }),
+              })}
+            </p>
           </div>
         </div>
 
@@ -167,7 +177,10 @@ function CountryRow({
           <div className="flex items-center gap-1.5 rounded-full bg-orange-500/10 px-2.5 py-1 ring-1 ring-orange-500/20 sm:px-3 sm:py-1.5">
             <Flame className="h-3 w-3 text-orange-400 sm:h-3.5 sm:w-3.5" />
             <span className="text-xs font-bold tabular-nums text-white sm:text-sm">
-              {(country.totalStreaks / 1000).toFixed(1)}K
+              {formatNumber(country.totalStreaks, lang, {
+                notation: "compact",
+                maximumFractionDigits: 1,
+              })}
             </span>
           </div>
         </div>
@@ -177,6 +190,8 @@ function CountryRow({
 }
 
 export function LandingLeaderboard() {
+  const { t } = useLang();
+
   return (
     <section id="leaderboard" className="landing-section relative">
       {/* Background glow */}
@@ -192,16 +207,17 @@ export function LandingLeaderboard() {
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-amber-500/10 px-4 py-1.5 ring-1 ring-amber-500/20">
             <Globe className="h-4 w-4 text-amber-400" />
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-400/80">
-              Global Leaderboard
+              {t("landing.leaderboard.eyebrow")}
             </p>
           </div>
           <h2 className="landing-section-title mt-4">
-            Which country{" "}
-            <span className="landing-gradient-text">stays strongest?</span>
+            {t("landing.leaderboard.headline")}{" "}
+            <span className="landing-gradient-text">
+              {t("landing.leaderboard.headline_accent")}
+            </span>
           </h2>
           <p className="mt-6 text-lg text-zinc-400">
-            The more users track their streaks in a country, the higher it climbs.
-            Where does your nation rank?
+            {t("landing.leaderboard.description")}
           </p>
         </ScrollReveal>
 
@@ -220,21 +236,21 @@ export function LandingLeaderboard() {
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-amber-400" />
                 <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Top Countries
+                  {t("landing.leaderboard.top_countries")}
                 </span>
               </div>
               <span className="text-xs font-medium text-zinc-600">
-                Total Streaks
+                {t("landing.leaderboard.total_streaks")}
               </span>
             </div>
 
             {COUNTRIES.map((country, i) => (
-              <CountryRow key={country.name} country={country} index={i} />
+              <CountryRow key={country.countryKey} country={country} index={i} />
             ))}
           </div>
 
           <p className="mt-6 text-center text-xs text-zinc-600">
-            Live rankings update daily based on total active streak days per country.
+            {t("landing.leaderboard.live_note")}
           </p>
         </div>
       </div>

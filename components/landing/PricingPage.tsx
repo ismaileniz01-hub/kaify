@@ -16,6 +16,7 @@ import { usePaddle } from "@/components/billing/PaddleProvider";
 import { useSession } from "@/lib/session-context";
 import { useNativeApp } from "@/lib/native/platform";
 import { NATIVE_CHECKOUT_RETURN_URL } from "@/lib/billing/native-web-checkout";
+import { useLang } from "@/lib/lang-context";
 import {
   PLAN_COMPARISON,
   PRICING_PLANS_WITH_PADDLE,
@@ -29,20 +30,24 @@ import {
 function FeatureValue({
   value,
   emphasize,
+  includedLabel,
+  excludedLabel,
 }: {
   value: string | boolean;
   emphasize?: boolean;
+  includedLabel: string;
+  excludedLabel: string;
 }) {
   if (value === true) {
     return (
-      <span className="pricing-check" aria-label="Included">
+      <span className="pricing-check" aria-label={includedLabel}>
         <Check className="h-4 w-4" strokeWidth={2.5} />
       </span>
     );
   }
   if (value === false) {
     return (
-      <span className="pricing-dash" aria-label="Not included">
+      <span className="pricing-dash" aria-label={excludedLabel}>
         <Minus className="h-4 w-4" />
       </span>
     );
@@ -94,6 +99,7 @@ function PaddleCheckoutResume() {
 
 function WebCheckoutReturn() {
   const { checkoutCompleted } = usePaddle();
+  const { t } = useLang();
   if (!checkoutCompleted) return null;
 
   return (
@@ -101,15 +107,17 @@ function WebCheckoutReturn() {
       role="status"
       className="fixed inset-x-4 top-6 z-[10000] mx-auto max-w-md rounded-2xl border border-emerald-400/30 bg-zinc-950/95 p-5 text-center backdrop-blur-xl"
     >
-      <p className="text-base font-semibold text-white">Subscription activated</p>
+      <p className="text-base font-semibold text-white">
+        {t("pricing.checkout.activated")}
+      </p>
       <p className="mt-1 text-sm leading-relaxed text-zinc-300">
-        Return to K.AIFY and sign in with the email address you used here.
+        {t("pricing.checkout.return_hint")}
       </p>
       <a
         href={NATIVE_CHECKOUT_RETURN_URL}
         className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-500 px-6 text-sm font-bold text-zinc-950 transition hover:bg-emerald-400"
       >
-        Open K.AIFY app
+        {t("pricing.checkout.open_app")}
       </a>
     </div>
   );
@@ -130,6 +138,7 @@ function PlanCheckoutButton({
   const { paddle, ready, configured } = usePaddle();
   const { isAuthenticated, profile } = useSession();
   const native = useNativeApp();
+  const { t } = useLang();
 
   const handleClick = useCallback(() => {
     void (async () => {
@@ -174,7 +183,7 @@ function PlanCheckoutButton({
       disabled={native !== false}
       className={className}
     >
-      {native ? "Available on kaifyai.org" : children}
+      {native ? t("pricing.available_on_web") : children}
     </button>
   );
 }
@@ -182,6 +191,7 @@ function PlanCheckoutButton({
 export function PricingPage() {
   const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly");
   const native = useNativeApp();
+  const { lang, t } = useLang();
 
   // Defense in depth: NativeAppEntry redirects this route to /login. Until
   // native detection completes, never paint prices or an external purchase CTA.
@@ -199,7 +209,7 @@ export function PricingPage() {
       <Suspense fallback={null}>
         <PaddleCheckoutResume />
       </Suspense>
-      <LandingNav pricingPage forceEnglish />
+      <LandingNav pricingPage />
       <main>
         <section className="pricing-hero relative overflow-hidden pb-8 pt-28 sm:pt-36">
           <div className="absolute inset-0">
@@ -211,31 +221,32 @@ export function PricingPage() {
           <div className="landing-container relative z-10">
             <ScrollReveal>
               <p className="mb-4 text-center text-sm font-semibold uppercase tracking-[0.28em] text-purple-300/80">
-                Simple pricing · Cancel anytime
+                {t("pricing.hero.eyebrow")}
               </p>
             </ScrollReveal>
             <ScrollReveal delay={100}>
               <h1 className="landing-hero-title text-center">
-                Invest in a coach team
+                {t("pricing.hero.title")}
                 <br />
-                <span className="landing-gradient-text">that never clocks out.</span>
+                <span className="landing-gradient-text">
+                  {t("pricing.hero.title_accent")}
+                </span>
               </h1>
             </ScrollReveal>
             <ScrollReveal delay={180}>
               <p className="mx-auto mt-6 max-w-2xl text-center text-lg leading-relaxed text-zinc-400">
-                One subscription replaces scattered apps, guesswork, and motivation crashes.
-                Pick the plan that matches your ambition — upgrade or downgrade whenever you want.
+                {t("pricing.hero.description")}
               </p>
             </ScrollReveal>
             <ScrollReveal delay={260}>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-sm text-zinc-500">
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2">
                   <Shield className="h-4 w-4 text-emerald-400" />
-                  Secure checkout via Paddle
+                  {t("pricing.hero.secure_checkout")}
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2">
                   <Sparkles className="h-4 w-4 text-purple-400" />
-                  All plans include Kai
+                  {t("pricing.hero.includes_kai")}
                 </span>
               </div>
             </ScrollReveal>
@@ -262,38 +273,52 @@ export function PricingPage() {
                         {plan.popular && (
                           <div className="pricing-popular-badge">
                             <Zap className="h-3.5 w-3.5" />
-                            Most Popular
+                            {t("landing.pricing.most_popular")}
                           </div>
                         )}
 
                         <div className="pricing-card-header">
                           <div className="flex items-center gap-2">
                             <PlanIcon id={plan.id} />
-                            <h2 className="text-xl font-bold text-white">{plan.name}</h2>
+                            <h2 className="text-xl font-bold text-white">
+                              {t(`pricing.plan.${plan.id}.name`)}
+                            </h2>
                           </div>
                           <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                            {plan.tagline}
+                            {t(`pricing.plan.${plan.id}.tagline`)}
                           </p>
                         </div>
 
                         <div className="pricing-card-price">
                           <span className="pricing-amount">{formatPrice(display.amount)}</span>
-                          <span className="text-sm text-zinc-500">{display.suffix}</span>
+                          <span className="text-sm text-zinc-500">
+                            / {t("pricing.unit.month")}
+                          </span>
                         </div>
-                        <p className="mt-1 text-xs text-zinc-500">{display.billedNote}</p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          {billingInterval === "monthly"
+                            ? t("pricing.billed_monthly")
+                            : t("pricing.billed_yearly_note", {
+                                amount: formatPrice(
+                                  plan.priceYearlyTotal ?? plan.priceMonthly * 11,
+                                ),
+                              })}
+                        </p>
 
                         <p className="mt-4 text-sm leading-relaxed text-zinc-400">
-                          {plan.description}
+                          {t(`pricing.plan.${plan.id}.description`)}
                         </p>
 
                         <ul className="mt-6 flex flex-1 flex-col gap-2.5">
-                          {plan.perks.map((perk) => (
+                          {plan.perks.map((_, perkIndex) => (
                             <li
-                              key={perk}
+                              key={`${plan.id}-${perkIndex}`}
                               className="flex items-start gap-2 text-sm text-zinc-300"
                             >
                               <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                              <span>{perk}</span>
+                              <span>
+                                {t(`pricing.plan.${plan.id}.perk.${perkIndex}`)}
+                              </span>
                             </li>
                           ))}
                         </ul>
@@ -305,7 +330,11 @@ export function PricingPage() {
                             plan.popular ? "landing-btn--primary" : "landing-btn--ghost"
                           }`}
                         >
-                          {plan.popular ? "Start with Pro" : `Get ${plan.name}`}
+                          {plan.popular
+                            ? t("pricing.cta.start_pro")
+                            : t("pricing.cta.get_plan", {
+                                plan: t(`pricing.plan.${plan.id}.name`),
+                              })}
                         </PlanCheckoutButton>
                       </article>
 
@@ -322,10 +351,11 @@ export function PricingPage() {
           <div className="landing-container">
             <ScrollReveal>
               <div className="text-center">
-                <h2 className="landing-section-title">See how each plan climbs</h2>
+                <h2 className="landing-section-title">
+                  {t("pricing.comparison.title")}
+                </h2>
                 <p className="mx-auto mt-4 max-w-xl text-zinc-400">
-                  Essential gets you started. Pro unlocks serious training power.
-                  Premium takes every limit higher — a clear ladder, no guesswork.
+                  {t("pricing.comparison.description")}
                 </p>
               </div>
             </ScrollReveal>
@@ -335,30 +365,60 @@ export function PricingPage() {
                 <table className="pricing-table">
                   <thead>
                     <tr>
-                      <th scope="col">Feature</th>
-                      <th scope="col">Essential</th>
+                      <th scope="col">{t("pricing.comparison.feature")}</th>
+                      <th scope="col">{t("pricing.plan.essential.name")}</th>
                       <th scope="col" className="pricing-th-popular">
-                        Pro
-                        <span className="pricing-th-badge">Popular</span>
+                        {t("pricing.plan.pro.name")}
+                        <span className="pricing-th-badge">
+                          {t("pricing.comparison.popular")}
+                        </span>
                       </th>
-                      <th scope="col">Premium</th>
+                      <th scope="col">{t("pricing.plan.premium.name")}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {PLAN_COMPARISON.map((row) => (
+                    {PLAN_COMPARISON.map((row, rowIndex) => (
                       <tr
                         key={row.label}
                         className={row.highlight ? "pricing-row--highlight" : undefined}
                       >
-                        <th scope="row">{row.label}</th>
+                        <th scope="row">
+                          {t(`pricing.comparison.row.${rowIndex}.label`)}
+                        </th>
                         <td>
-                          <FeatureValue value={row.essential} />
+                          <FeatureValue
+                            value={
+                              typeof row.essential === "string"
+                                ? t(`pricing.comparison.row.${rowIndex}.essential`)
+                                : row.essential
+                            }
+                            includedLabel={t("pricing.included")}
+                            excludedLabel={t("pricing.not_included")}
+                          />
                         </td>
                         <td className="pricing-td-popular">
-                          <FeatureValue value={row.pro} emphasize />
+                          <FeatureValue
+                            value={
+                              typeof row.pro === "string"
+                                ? t(`pricing.comparison.row.${rowIndex}.pro`)
+                                : row.pro
+                            }
+                            emphasize
+                            includedLabel={t("pricing.included")}
+                            excludedLabel={t("pricing.not_included")}
+                          />
                         </td>
                         <td>
-                          <FeatureValue value={row.premium} emphasize />
+                          <FeatureValue
+                            value={
+                              typeof row.premium === "string"
+                                ? t(`pricing.comparison.row.${rowIndex}.premium`)
+                                : row.premium
+                            }
+                            emphasize
+                            includedLabel={t("pricing.included")}
+                            excludedLabel={t("pricing.not_included")}
+                          />
                         </td>
                       </tr>
                     ))}
@@ -375,30 +435,33 @@ export function PricingPage() {
               <div className="landing-cta-panel pricing-final-cta">
                 <div className="landing-cta-glow" aria-hidden />
                 <h2 className="text-center text-3xl font-bold text-white md:text-4xl">
-                  Your future self is already thanking you.
+                  {t("pricing.final.title")}
                 </h2>
                 <p className="mx-auto mt-4 max-w-lg text-center text-lg text-zinc-400">
-                  Download K.AIFY free and start training with coaches who remember your goals,
-                  celebrate your streaks, and never judge a bad day.
+                  {t("pricing.final.description")}
                 </p>
                 <div className="mt-10">
                   <StoreDownloadButtons />
                 </div>
                 <div className="mt-6 flex justify-center">
                   <Link href="/" className="landing-btn landing-btn--ghost">
-                    Back to home
+                    {t("pricing.final.back_home")}
                   </Link>
                 </div>
                 <p className="mt-6 text-center text-xs text-zinc-600">
-                  Prices in USD. Billed {billingInterval === "yearly" ? "yearly" : "monthly"} via
-                  Paddle. Manage or cancel anytime in Settings.
+                  {t("pricing.final.disclaimer", {
+                    interval:
+                      billingInterval === "yearly"
+                        ? t("pricing.yearly").toLocaleLowerCase(lang)
+                        : t("pricing.monthly").toLocaleLowerCase(lang),
+                  })}
                 </p>
               </div>
             </ScrollReveal>
           </div>
         </section>
       </main>
-      <LandingFooter forceEnglish />
+      <LandingFooter />
     </div>
   );
 }

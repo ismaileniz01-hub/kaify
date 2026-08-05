@@ -1,0 +1,5 @@
+"NSMicrophoneUsageDescription" = "K.AIFY, koçlarınla sesli konuşabilmen için mikrofon erişimine ihtiyaç duyar.";
+"NSSpeechRecognitionUsageDescription" = "K.AIFY, koç sohbetinde sesli girişi kullandığında konuşmanı metne dönüştürür.";
+"NSCameraUsageDescription" = "K.AIFY, koçların görsel analiz yapabilmesi için öğünlerini ve formunu fotoğraflamana ve profil fotoğrafını güncellemene olanak tanımak için kamerayı kullanır.";
+"NSPhotoLibraryUsageDescription" = "K.AIFY, koç analizi için öğün veya form fotoğrafı seçebilmen ve profil görseli ayarlayabilmen için fotoğraf arşivine erişir.";
+"NSPhotoLibraryAddUsageDescription" = "K.AIFY, dışa aktardığın veya indirdiğin görselleri koç ekibinle paylaşmayı seçtiğinde kaydedebilir.";

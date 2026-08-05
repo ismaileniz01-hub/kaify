@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import enFallback from "@/lib/lang/en.json";
+import trFallback from "@/lib/lang/tr.json";
 import { apiPatch } from "@/lib/api/client";
 
 // Sadece JSON dosyası olan diller
@@ -22,62 +23,11 @@ export interface LangOption {
   label: string;
 }
 
-// Tek kaynak: Tüm diller ve görünen adları
+// Yalnızca insan gözüyle doğrulanmış diller kullanıcıya açılır.
+// Diğer sözlükler Faz 3 kalite incelemesinden sonra kademeli açılacaktır.
 export const LANG_OPTIONS: LangOption[] = [
   { code: "tr", label: "🇹🇷 Türkçe" },
   { code: "en", label: "🇬🇧 English" },
-  { code: "de", label: "🇩🇪 Deutsch" },
-  { code: "fr", label: "🇫🇷 Français" },
-  { code: "es", label: "🇪🇸 Español" },
-  { code: "es-mx", label: "🇲🇽 Español (MX)" },
-  { code: "es-ar", label: "🇦🇷 Español (AR)" },
-  { code: "it", label: "🇮🇹 Italiano" },
-  { code: "pt", label: "🇵🇹 Português" },
-  { code: "nl", label: "🇳🇱 Nederlands" },
-  { code: "ru", label: "🇷🇺 Русский" },
-  { code: "pl", label: "🇵🇱 Polski" },
-  { code: "ro", label: "🇷🇴 Română" },
-  { code: "el", label: "🇬🇷 Ελληνικά" },
-  { code: "sv", label: "🇸🇪 Svenska" },
-  { code: "cs", label: "🇨🇿 Čeština" },
-  { code: "hu", label: "🇭🇺 Magyar" },
-  { code: "uk", label: "🇺🇦 Українська" },
-  { code: "da", label: "🇩🇰 Dansk" },
-  { code: "no", label: "🇳🇴 Norsk" },
-  { code: "fi", label: "🇫🇮 Suomi" },
-  { code: "lt", label: "🇱🇹 Lietuvių" },
-  { code: "lv", label: "🇱🇻 Latviešu" },
-  { code: "et", label: "🇪🇪 Eesti" },
-  { code: "sk", label: "🇸🇰 Slovenčina" },
-  { code: "sl", label: "🇸🇮 Slovenščina" },
-  { code: "hr", label: "🇭🇷 Hrvatski" },
-  { code: "bg", label: "🇧🇬 Български" },
-  { code: "sr", label: "🇷🇸 Српски" },
-  { code: "is", label: "🇮🇸 Íslenska" },
-  { code: "mt", label: "🇲🇹 Malti" },
-  { code: "sq", label: "🇦🇱 Shqip" },
-  { code: "bs", label: "🇧🇦 Bosanski" },
-  { code: "mk", label: "🇲🇰 Македонски" },
-  { code: "be", label: "🇧🇾 Беларуская" },
-  { code: "lb", label: "🇱🇺 Lëtzebuergesch" },
-  { code: "ar", label: "🇸🇦 العربية" },
-  { code: "he", label: "🇮🇱 עברית" },
-  { code: "fa", label: "🇮🇷 فارسی" },
-  { code: "ur", label: "🇵🇰 اردو" },
-  { code: "af", label: "🇿🇦 Afrikaans" },
-  { code: "yo", label: "🇳🇬 Yorùbá" },
-  { code: "hi", label: "🇮🇳 हिन्दी" },
-  { code: "zh-CN", label: "🇨🇳 中文" },
-  { code: "ja", label: "🇯🇵 日本語" },
-  { code: "ko", label: "🇰🇷 한국어" },
-  { code: "vi", label: "🇻🇳 Tiếng Việt" },
-  { code: "th", label: "🇹🇭 ภาษาไทย" },
-  { code: "id", label: "🇮🇩 Bahasa Indonesia" },
-  { code: "ms", label: "🇲🇾 Bahasa Melayu" },
-  { code: "bn", label: "🇧🇩 বাংলা" },
-  { code: "kk", label: "🇰🇿 Қазақша" },
-  { code: "uz", label: "🇺🇿 Oʻzbekcha" },
-  { code: "az", label: "🇦🇿 Azərbaycan dili" },
 ];
 
 export type UnitSystem = "metric" | "imperial";
@@ -126,28 +76,23 @@ const LangContext = createContext<LangContextType | null>(null);
 
 const STORAGE_KEY = "kaify-lang";
 const UNIT_STORAGE_KEY = "kaify-unit";
+const LANG_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+const SUPPORTED_LANGS = new Set<LangCode>(LANG_OPTIONS.map(({ code }) => code));
 
-/** Tarayıcı diline göre varsayılan dili belirle */
-
-function detectBrowserLang(): LangCode {
-  if (typeof window === "undefined") return "en";
-  const navLang = (navigator.language ?? "en").toLowerCase();
-  const base = navLang.split("-")[0];
-  const exact = LANG_OPTIONS.find((o) => o.code === navLang || o.code === base);
-  if (exact) return exact.code;
-  if (navLang.startsWith("tr")) return "tr";
-  if (navLang.startsWith("de")) return "de";
-  if (navLang.startsWith("fr")) return "fr";
-  if (navLang.startsWith("es")) return "es";
-  return "en";
+function isSupportedLang(value: string | null): value is LangCode {
+  return value !== null && SUPPORTED_LANGS.has(value as LangCode);
 }
 
-/** localStorage'dan dili oku, yoksa tarayıcı dilini kullan */
-function getStoredLang(): LangCode {
-  if (typeof window === "undefined") return "en";
-  const stored = localStorage.getItem(STORAGE_KEY) as LangCode | null;
-  if (stored) return stored;
-  return detectBrowserLang();
+function persistLangCookie(code: LangCode): void {
+  document.cookie = `${STORAGE_KEY}=${encodeURIComponent(code)}; Path=/; Max-Age=${LANG_COOKIE_MAX_AGE}; SameSite=Lax`;
+}
+
+/** localStorage tercihini oku; yoksa sunucunun seçtiği istek dilini koru. */
+function getStoredLang(requestLang: LangCode): LangCode {
+  if (typeof window === "undefined") return requestLang;
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (isSupportedLang(stored)) return stored;
+  return requestLang;
 }
 
 /**
@@ -219,23 +164,29 @@ const langModules: Record<string, () => Promise<{ default: LangDict }>> = {
   bn: () => import("@/lib/lang/bn.json"),
 };
 
-export function LangProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<LangCode>("en");
+export function LangProvider({
+  children,
+  initialLang = "en",
+}: {
+  children: ReactNode;
+  initialLang?: LangCode;
+}) {
+  const initialDictionary = initialLang === "tr" ? trFallback : enFallback;
+  const [lang, setLangState] = useState<LangCode>(initialLang);
   const [unit, setUnitState] = useState<UnitSystem>("metric");
-  const [dict, setDict] = useState<LangDict>({});
-  const [enDict, setEnDict] = useState<LangDict>({});
-  const [mounted, setMounted] = useState(false);
+  const [dict, setDict] = useState<LangDict>(initialDictionary);
+  const [enDict, setEnDict] = useState<LangDict>(enFallback);
 
-  // İlk mount: localStorage + tarayıcı dilini oku
+  // Hydration sonrası eski localStorage tercihini cookie ile eşitle.
   useEffect(() => {
-    const detected = getStoredLang();
-    setLangState(detected);
+    const detected = getStoredLang(initialLang);
+    if (detected !== initialLang) setLangState(detected);
+    persistLangCookie(detected);
     const storedUnit = localStorage.getItem(UNIT_STORAGE_KEY) as UnitSystem | null;
     if (storedUnit === "metric" || storedUnit === "imperial") {
       setUnitState(storedUnit);
     }
-    setMounted(true);
-  }, []);
+  }, [initialLang]);
 
 
   // Her zaman en.json'u da yükle (fallback için)
@@ -257,6 +208,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
 
   const setLang = useCallback((code: LangCode) => {
     localStorage.setItem(STORAGE_KEY, code);
+    persistLangCookie(code);
     setLangState(code);
     // html lang + dir attribute'larını güncelle (RTL diller için)
     document.documentElement.lang = code;
@@ -270,14 +222,11 @@ export function LangProvider({ children }: { children: ReactNode }) {
     setUnitState(newUnit);
   }, []);
 
-  // İlk yüklemede html lang'i ayarla
-
+  // Dil değiştiğinde doküman semantiğini de eşitle.
   useEffect(() => {
-    if (mounted) {
-      document.documentElement.lang = lang;
-      document.documentElement.dir = isRtlLang(lang) ? "rtl" : "ltr";
-    }
-  }, [mounted, lang]);
+    document.documentElement.lang = lang;
+    document.documentElement.dir = isRtlLang(lang) ? "rtl" : "ltr";
+  }, [lang]);
 
   const t = useCallback(
     (key: string, params?: Record<string, string | number>): string => {
@@ -305,38 +254,10 @@ export function LangProvider({ children }: { children: ReactNode }) {
     [dict, enDict],
   );
 
-  const ssrT = useCallback(
-    (key: string, params?: Record<string, string | number>): string => {
-      let text = enFallback[key as keyof typeof enFallback];
-      if (text === undefined) return key;
-      if (params) {
-        for (const [k, v] of Object.entries(params)) {
-          text = text.replace(`{${k}}`, String(v));
-        }
-      }
-      return text;
-    },
-    [],
-  );
-
-  const ssrValue = useMemo<LangContextType>(
-    () => ({ lang: "en", setLang, unit: "metric", setUnit, t: ssrT }),
-    [setLang, setUnit, ssrT],
-  );
-
   const value = useMemo<LangContextType>(
     () => ({ lang, setLang, unit, setUnit, t }),
     [lang, setLang, unit, setUnit, t],
   );
-
-  if (!mounted) {
-    // SSR / hydration: İngilizce fallback — ham anahtar gösterme
-    return (
-      <LangContext.Provider value={ssrValue}>
-        {children}
-      </LangContext.Provider>
-    );
-  }
 
   return (
     <LangContext.Provider value={value}>

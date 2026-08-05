@@ -7,10 +7,12 @@ import { isCompleteOtp, normalizeOtpInput } from "@/lib/auth/otp";
 export async function sendEmailLoginCode(
   email: string,
   recaptchaToken?: string,
+  locale: "tr" | "en" = "en",
 ): Promise<{ ok: true } | { ok: false; code: string; message: string }> {
   try {
     await apiPost<{ sent: true }>("/api/auth/otp/send", {
       email: email.trim().toLowerCase(),
+      locale,
       ...(recaptchaToken ? { recaptchaToken } : {}),
     });
     return { ok: true };

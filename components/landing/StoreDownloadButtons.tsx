@@ -7,6 +7,7 @@ import {
   detectMobileStore,
   type MobileStore,
 } from "@/lib/marketing/store-links";
+import { useLang } from "@/lib/lang-context";
 
 type Props = {
   /** Primary CTA style; secondary buttons stay ghost. */
@@ -16,6 +17,7 @@ type Props = {
 
 export function StoreDownloadButtons({ size = "lg", className = "" }: Props) {
   const [store, setStore] = useState<MobileStore>("unknown");
+  const { t } = useLang();
 
   useEffect(() => {
     setStore(detectMobileStore());
@@ -35,7 +37,7 @@ export function StoreDownloadButtons({ size = "lg", className = "" }: Props) {
           rel="noopener noreferrer"
           className={`${btn} landing-btn--primary`}
         >
-          Download for Free
+          {t("landing.store.download_free")}
         </a>
       </div>
     );
@@ -50,7 +52,7 @@ export function StoreDownloadButtons({ size = "lg", className = "" }: Props) {
           rel="noopener noreferrer"
           className={`${btn} landing-btn--primary`}
         >
-          Download for Free
+          {t("landing.store.download_free")}
         </a>
       </div>
     );
@@ -64,7 +66,7 @@ export function StoreDownloadButtons({ size = "lg", className = "" }: Props) {
         rel="noopener noreferrer"
         className={`${btn} landing-btn--primary`}
       >
-        Download for Free · App Store
+        {t("landing.store.download_app_store")}
       </a>
       <a
         href={PLAY_STORE_URL}
@@ -72,7 +74,7 @@ export function StoreDownloadButtons({ size = "lg", className = "" }: Props) {
         rel="noopener noreferrer"
         className={`${btn} landing-btn--ghost`}
       >
-        Download for Free · Google Play
+        {t("landing.store.download_google_play")}
       </a>
     </div>
   );

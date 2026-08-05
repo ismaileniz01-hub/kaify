@@ -15,12 +15,13 @@ import { useSession } from "@/lib/session-context";
 import { apiGet } from "@/lib/api/client";
 import { canUseTeamChat, isTeamChatPlan } from "@/lib/billing/team-chat-access";
 import { errorToMessage } from "@/lib/i18n/api-error";
+import { formatInboxTime } from "@/lib/i18n/format";
 import type { InboxCoachDTO } from "@/lib/services/messages.service";
 import { CONTACTS, CONTACT_LIST } from "@/lib/contacts";
 import { AppHeader } from "@/components/navigation/AppHeader";
 
 export default function MessagesPage() {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const { avatar: kaiAvatar } = useKai();
   const { isAuthenticated, profile } = useSession();
   const [inbox, setInbox] = useState<InboxCoachDTO[] | null>(null);
@@ -57,6 +58,7 @@ export default function MessagesPage() {
             avatarUrl: c.avatar,
             preview: c.previewKey,
             time: c.time,
+            createdAt: null,
             unreadCount: c.badge ?? 0,
           };
         })
@@ -128,7 +130,11 @@ export default function MessagesPage() {
                 name={row.name}
                 role={localizeField(row.role)}
                 preview={localizeField(row.preview)}
-                time={row.time}
+                time={
+                  row.createdAt
+                    ? formatInboxTime(row.createdAt, lang, t)
+                    : row.time
+                }
                 href={`/chat/${id}`}
                 coachId={id}
                 avatarSrc={id === "kai" ? kaiAvatar : row.avatarUrl || c.avatar}

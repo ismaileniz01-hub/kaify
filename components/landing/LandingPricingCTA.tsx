@@ -42,12 +42,18 @@ export function LandingPricingCTA() {
                     {t("landing.pricing.most_popular")}
                   </span>
                 )}
-                <p className="text-sm font-semibold text-zinc-400">{plan.name}</p>
+                <p className="text-sm font-semibold text-zinc-400">
+                  {t(`pricing.plan.${plan.id}.name`)}
+                </p>
                 <p className="mt-2 text-3xl font-bold text-white">
                   {formatPrice(plan.priceMonthly)}
-                  <span className="text-sm font-normal text-zinc-500">/mo</span>
+                  <span className="text-sm font-normal text-zinc-500">
+                    /{t("pricing.unit.month_short")}
+                  </span>
                 </p>
-                <p className="mt-3 text-xs leading-relaxed text-zinc-500">{plan.tagline}</p>
+                <p className="mt-3 text-xs leading-relaxed text-zinc-500">
+                  {t(`pricing.plan.${plan.id}.tagline`)}
+                </p>
               </div>
             </ScrollReveal>
           ))}
