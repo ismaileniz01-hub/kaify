@@ -76,7 +76,7 @@ export default function MessagesPage() {
         backHref="/welcome"
         backLabel={t("nav.back")}
         title={t("nav.messages")}
-        trailing={<span className="text-[11px] font-medium text-zinc-500">{t("messages.date")}</span>}
+        trailing={<span className="type-caption font-medium text-zinc-500">{t("messages.date")}</span>}
         divider
       />
 
@@ -96,7 +96,7 @@ export default function MessagesPage() {
             {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-[72px] animate-pulse rounded-2xl bg-white/5"
+                className="premium-skeleton h-[76px] rounded-2xl"
                 aria-hidden
               />
             ))}
@@ -109,6 +109,7 @@ export default function MessagesPage() {
             title={t("messages.empty.title")}
             subtitle={t("messages.empty.subtitle")}
             className="py-16"
+            tone="info"
           />
         )}
 
@@ -136,9 +137,9 @@ export default function MessagesPage() {
         {planAllowsTeam && (
           <Link
             href={teamUnlocked ? "/chat/team" : "/streak"}
-            className={`animate-in mt-4 flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition ${
+            className={`animate-in mt-4 flex min-h-[76px] items-center gap-3 rounded-2xl border px-4 py-3.5 shadow-lg shadow-black/15 ${
               teamUnlocked
-                ? "border-purple-500/20 bg-purple-500/10 hover:bg-purple-500/15"
+                ? "border-purple-400/20 bg-gradient-to-r from-purple-500/10 to-violet-950/10 hover:border-purple-400/30 hover:from-purple-500/15"
                 : "border-zinc-700/50 bg-zinc-900/50 opacity-60"
             }`}
           >
@@ -160,7 +161,7 @@ export default function MessagesPage() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-white">{t("messages.team_title")}</p>
-              <p className="text-[11px] text-zinc-400">
+              <p className="type-caption text-zinc-400">
                 {teamUnlocked ? t("messages.team_sub") : t("messages.team_locked")}
               </p>
             </div>

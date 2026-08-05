@@ -275,17 +275,17 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
                   <div className="flex max-w-[90%] items-start gap-2">
                     <div className="relative h-8 w-8 shrink-0 mt-1"><Image src={contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain" /></div>
                     <div className="flex flex-col gap-1">
-                      <div className="animate-message px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 0 15px ${ring}`, border: `1px solid ${ring}` }}>{msg.text}</div>
+                      <div className="chat-message-bubble animate-message px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}>{msg.text}</div>
                       {renderCard(msg)}
-                      <span className="pl-1 text-[10px] text-zinc-600">{msg.time}</span>
+                      <span className="chat-message-time pl-1 text-zinc-600">{msg.time}</span>
                     </div>
                   </div>
                 ) : (
                   <div className="flex max-w-[82%] items-end gap-2">
                     <div className="relative h-8 w-8 shrink-0"><Image src={contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain" /></div>
                     <div className="flex flex-col gap-1">
-                      <div className="animate-message px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 0 15px ${ring}`, border: `1px solid ${ring}` }}>{msg.text}</div>
-                      <span className="pl-1 text-[10px] text-zinc-600">{msg.time}</span>
+                      <div className="chat-message-bubble animate-message px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}>{msg.text}</div>
+                      <span className="chat-message-time pl-1 text-zinc-600">{msg.time}</span>
                     </div>
                   </div>
                 )
@@ -293,8 +293,8 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
                 <div className="ml-auto flex max-w-[82%] flex-col items-end gap-1">
                   <div className="flex items-end gap-2">
                     <div className="flex flex-col items-end gap-1">
-                      <div className="animate-message px-4 py-2.5 text-sm leading-relaxed text-white" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})`, borderRadius: "18px 18px 4px 18px", boxShadow: `0 4px 15px ${shadow}` }}>{msg.text}</div>
-                      <span className="pr-1 text-[10px] text-zinc-600">{msg.time}</span>
+                      <div className="chat-message-bubble animate-message px-4 py-2.5 text-sm leading-relaxed text-white" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})`, borderRadius: "18px 18px 4px 18px", boxShadow: `0 8px 22px ${shadow}` }}>{msg.text}</div>
+                      <span className="chat-message-time pr-1 text-zinc-600">{msg.time}</span>
                     </div>
                     <div className="relative h-8 w-8 shrink-0"><Image src={DEMO_USER_PROFILE.avatar} alt={DEMO_USER_PROFILE.name} width={32} height={32} className="h-full w-full rounded-full object-cover" /></div>
                   </div>

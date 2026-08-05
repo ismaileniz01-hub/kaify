@@ -24,6 +24,34 @@ const EFFECTS = MARKET_EFFECTS;
 const STANDARD_EFFECTS = EFFECTS.filter((e) => !e.premium);
 const PREMIUM_EFFECTS = EFFECTS.filter((e) => e.premium);
 
+function MarketSectionHeader({
+  id,
+  label,
+  description,
+  premium = false,
+}: {
+  id: string;
+  label: string;
+  description?: string;
+  premium?: boolean;
+}) {
+  return (
+    <div className="market-section__heading">
+      <div className="min-w-0">
+        <h2
+          id={id}
+          className={`type-label ${premium ? "text-amber-300" : "text-purple-300"}`}
+        >
+          {label}
+        </h2>
+        {description ? (
+          <p className="type-caption mt-1 max-w-[30ch] text-zinc-500">{description}</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export default function MarketPage() {
   const { t } = useLang();
   const { gemState, spend, refreshBalance } = useGem();
@@ -114,9 +142,9 @@ export default function MarketPage() {
     return (
       <div
         key={effect.id}
-        className={`relative overflow-hidden rounded-2xl border ${effect.borderColor} ${effect.glowColor} shadow-lg transition-all duration-300 ${
-          isBuying ? "scale-95 opacity-70" : ""
-        } ${isActive ? "ring-2 ring-white/30" : ""} ${effect.premium ? "border-amber-400/40" : ""}`}
+        className={`relative overflow-hidden rounded-3xl border bg-black/20 ${effect.borderColor} shadow-lg transition-[transform,border-color,box-shadow,opacity] duration-200 ${
+          isBuying ? "scale-[0.985] opacity-70" : ""
+        } ${isActive ? "ring-2 ring-white/25" : ""} ${effect.premium ? "border-amber-400/40 shadow-amber-950/20" : "shadow-black/25"}`}
       >
         {effect.premium && (
           <span className="absolute right-2 top-2 z-10 rounded-full border border-amber-400/40 bg-amber-500/20 px-2 py-0.5 text-[9px] font-bold tracking-wide text-amber-200">
@@ -126,12 +154,12 @@ export default function MarketPage() {
 
         <div className={`absolute inset-0 bg-gradient-to-b ${effect.bgGradient} opacity-60`} />
 
-        <div className="relative flex items-center justify-center pt-6 pb-3">
+        <div className="relative flex items-center justify-center pb-3 pt-6">
           <MarketAuraPreview auraId={effect.id} />
         </div>
 
         <div className="relative px-3 pb-4 text-center">
-          <h3 className="text-sm font-semibold text-white">{t(effect.nameKey)}</h3>
+          <h3 className="text-sm font-semibold tracking-tight text-white">{t(effect.nameKey)}</h3>
           <p className="mt-1 flex items-center justify-center gap-1 text-xs text-zinc-400">
             <span>{effect.price}</span>
             <GemIcon size={12} />
@@ -205,9 +233,9 @@ export default function MarketPage() {
         title={t("market.title")}
         trailing={
           <>
-            <GemBalance balance={gemState.balance} size="sm" animate />
+            <GemBalance balance={gemState.balance} size="sm" />
             {isAuthenticated && (
-              <FreezieBalance size="sm" animate balance={streak.freezieBalance} />
+              <FreezieBalance size="sm" balance={streak.freezieBalance} />
             )}
           </>
         }
@@ -221,15 +249,6 @@ export default function MarketPage() {
           }}
         />
 
-        {/* Banner */}
-        <div className="rounded-2xl border border-purple-400/30 bg-gradient-to-r from-purple-900/40 to-violet-900/30 px-5 py-4 text-center">
-          <Sparkles className="mx-auto mb-2 h-6 w-6 text-purple-300" />
-          <h2 className="text-sm font-semibold text-white">{t("market.catalog")}</h2>
-          <p className="mt-1 text-xs text-purple-200/60">
-            {t("market.catalog.desc")}
-          </p>
-        </div>
-
         {error && (
           <InlineAlert
             message={error}
@@ -238,17 +257,8 @@ export default function MarketPage() {
           />
         )}
 
-        {/* Başarılı ekranı */}
         {successEffect && (
-          <div className="relative overflow-hidden rounded-2xl border border-emerald-400/40 bg-gradient-to-b from-emerald-900/40 to-emerald-950/30 px-5 py-6 text-center">
-            {/* Partikül animasyonu */}
-            <div className="absolute inset-0 overflow-hidden">
-              <span className="absolute left-1/4 top-2 h-2 w-2 animate-ping rounded-full bg-emerald-400/60" />
-              <span className="absolute right-1/4 top-4 h-1.5 w-1.5 animate-ping rounded-full bg-emerald-300/50" style={{ animationDelay: "0.3s" }} />
-              <span className="absolute left-1/3 bottom-6 h-2 w-2 animate-ping rounded-full bg-emerald-400/40" style={{ animationDelay: "0.6s" }} />
-              <span className="absolute right-1/3 bottom-4 h-1.5 w-1.5 animate-ping rounded-full bg-emerald-300/50" style={{ animationDelay: "0.9s" }} />
-            </div>
-
+          <div className="relative overflow-hidden rounded-3xl border border-emerald-400/30 bg-gradient-to-br from-emerald-900/35 to-emerald-950/20 px-5 py-6 text-center shadow-xl shadow-emerald-950/20">
             <PartyPopper className="relative mx-auto mb-3 h-8 w-8 text-emerald-400" />
             <h3 className="relative text-base font-bold text-emerald-300">
               {t("market.purchase_success")}
@@ -260,10 +270,9 @@ export default function MarketPage() {
               {t("market.earned_effect", { name: "" })}
             </p>
 
-            {/* Uygula butonu */}
             <button
               onClick={() => handleApply(successEffect)}
-              className={`relative mx-auto mt-4 flex items-center gap-2 rounded-xl bg-gradient-to-r ${successEffect.gradient} px-6 py-2.5 text-sm font-semibold text-white shadow-lg ${successEffect.glowColor} transition active:scale-95 hover:opacity-90`}
+              className={`touch-44 relative mx-auto mt-4 flex items-center gap-2 rounded-2xl bg-gradient-to-r ${successEffect.gradient} px-6 py-2.5 text-sm font-semibold text-white shadow-lg active:scale-[0.98] hover:opacity-90`}
             >
               <Sparkles className="h-4 w-4" />
               {t("market.apply")}
@@ -271,40 +280,56 @@ export default function MarketPage() {
           </div>
         )}
 
-        {/* Efekt Grid */}
         {showGridSkeleton ? (
-          <div className="grid grid-cols-2 gap-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-52 animate-pulse rounded-2xl bg-white/[0.06]" />
-            ))}
-          </div>
+          <section className="market-section" aria-labelledby="market-standard-title">
+            <MarketSectionHeader
+              id="market-standard-title"
+              label={t("market.catalog")}
+              description={t("market.catalog.desc")}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="premium-skeleton h-52 rounded-3xl" />
+              ))}
+            </div>
+          </section>
         ) : STANDARD_EFFECTS.length === 0 && PREMIUM_EFFECTS.length === 0 ? (
           <EmptyState
             title={t("market.empty.title")}
             subtitle={t("market.empty.subtitle")}
             icon={<ShoppingCart className="h-5 w-5" aria-hidden />}
+            tone="info"
           />
         ) : (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            {STANDARD_EFFECTS.map((effect) => renderEffectCard(effect))}
-          </div>
-
-          {PREMIUM_EFFECTS.length > 0 && (
-            <>
-              <div className="mt-6 mb-3 flex items-center gap-2">
-                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
-                <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-[10px] font-bold tracking-widest text-amber-300">
-                  {t("market.premium_section")}
-                </span>
-                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
-              </div>
+          <>
+            <section className="market-section" aria-labelledby="market-standard-title">
+              <MarketSectionHeader
+                id="market-standard-title"
+                label={t("market.catalog")}
+                description={t("market.catalog.desc")}
+              />
               <div className="grid grid-cols-2 gap-3">
-                {PREMIUM_EFFECTS.map((effect) => renderEffectCard(effect))}
+                {STANDARD_EFFECTS.map((effect) => renderEffectCard(effect))}
               </div>
-            </>
-          )}
-        </>
+            </section>
+
+            {PREMIUM_EFFECTS.length > 0 && (
+              <section
+                className="market-section mt-4"
+                data-premium="true"
+                aria-labelledby="market-premium-title"
+              >
+                <MarketSectionHeader
+                  id="market-premium-title"
+                  label={t("market.premium_section")}
+                  premium
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  {PREMIUM_EFFECTS.map((effect) => renderEffectCard(effect))}
+                </div>
+              </section>
+            )}
+          </>
         )}
       </main>
     </div>

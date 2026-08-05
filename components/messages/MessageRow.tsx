@@ -1,4 +1,6 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
+import { ChevronRight } from "lucide-react";
 import { publicAssetUrl } from "@/lib/public-asset-url";
 import { PremiumImage } from "@/components/ui/PremiumImage";
 
@@ -39,54 +41,53 @@ export function MessageRow({
 }: MessageRowProps) {
   const delay = Math.min(index + 3, 8);
   const glowColor = hexToRgba(color, 0.2);
-  const bgColor = hexToRgba(color, 0.06);
 
   return (
     <Link
       href={href}
-      className={`animate-in animate-in--${delay} group flex items-center gap-3 rounded-xl border-2 px-3.5 py-3.5 shadow-lg transition hover:brightness-110 active:scale-[0.99]`}
-      style={{
-        borderColor: hexToRgba(color, 0.6),
-        background: bgColor,
-        boxShadow: `0 0 10px ${glowColor}, inset 0 0 6px ${hexToRgba(color, 0.06)}`,
-        animation: `color-shift 4s ease-in-out infinite`,
-      }}
+      className={`message-row animate-in animate-in--${delay} group flex min-h-[76px] items-center gap-3 rounded-2xl px-3.5 py-3`}
+      style={{ "--message-accent": color } as CSSProperties}
     >
       <div
-        className="relative h-[52px] w-[52px] shrink-0 overflow-hidden rounded-full bg-zinc-900/80"
-        style={{ boxShadow: `0 0 8px ${glowColor}` }}
+        className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/80"
+        style={{ boxShadow: `0 8px 20px ${glowColor}` }}
       >
         <PremiumImage
           src={publicAssetUrl(avatarSrc)}
           alt={name}
-          width={52}
-          height={52}
+          width={48}
+          height={48}
           className="h-full w-full object-contain p-0.5"
         />
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-base font-semibold text-white">
-          {name} — {role}
-        </p>
-        <p className="truncate text-sm text-zinc-500">{preview}</p>
+        <div className="flex min-w-0 items-baseline gap-2">
+          <p className="truncate text-sm font-semibold text-white">{name}</p>
+          <span className="type-caption truncate text-zinc-500">{role}</span>
+        </div>
+        <p className="type-body mt-0.5 truncate text-xs text-zinc-400">{preview}</p>
       </div>
 
-      <div className="flex shrink-0 flex-col items-end gap-1.5">
-        <span className="text-xs text-zinc-500">{time}</span>
-        {badge !== undefined && (
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        <span className="type-caption text-zinc-500">{time}</span>
+        {badge !== undefined && badge > 0 && (
           <span
-            className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold text-white"
+            className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white shadow-sm"
             style={{ background: hexToRgba(color, 0.8) }}
           >
             {badge}
           </span>
         )}
         {tag && (
-          <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[9px] text-zinc-400">
+          <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[9px] text-zinc-400">
             {tag}
           </span>
         )}
+        <ChevronRight
+          className="mt-0.5 h-3.5 w-3.5 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-400"
+          aria-hidden
+        />
       </div>
     </Link>
   );

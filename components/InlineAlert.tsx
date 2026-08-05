@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 
 type InlineAlertProps = {
   variant?: "error" | "success" | "info";
@@ -23,26 +23,29 @@ export function InlineAlert({
 }: InlineAlertProps) {
   const styles =
     variant === "success"
-      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+      ? "border-emerald-400/25 bg-gradient-to-r from-emerald-500/12 to-emerald-950/20 text-emerald-200"
       : variant === "info"
-        ? "border-blue-500/30 bg-blue-500/10 text-blue-200"
-        : "border-red-500/30 bg-red-500/10 text-red-200";
+        ? "border-blue-400/25 bg-gradient-to-r from-blue-500/12 to-blue-950/20 text-blue-200"
+        : "border-red-400/25 bg-gradient-to-r from-red-500/12 to-red-950/20 text-red-200";
 
-  const Icon = variant === "success" ? CheckCircle2 : AlertCircle;
+  const Icon =
+    variant === "success" ? CheckCircle2 : variant === "info" ? Info : AlertCircle;
 
   return (
     <div
-      role="alert"
-      className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs ${styles} ${className}`}
+      role={variant === "error" ? "alert" : "status"}
+      className={`premium-inline-alert flex items-start gap-2.5 border px-3.5 py-3 text-xs ${styles} ${className}`}
     >
-      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
-      <p className="flex-1 leading-relaxed">{message}</p>
+      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-current/10">
+        <Icon className="h-4 w-4" aria-hidden />
+      </span>
+      <p className="type-body flex-1 text-current">{message}</p>
       <div className="flex shrink-0 items-center gap-1">
         {onRetry && (
           <button
             type="button"
             onClick={onRetry}
-            className="rounded-lg px-2 py-1 font-medium underline-offset-2 hover:underline"
+            className="touch-44 rounded-lg px-2 py-1 font-semibold underline-offset-2 hover:underline"
           >
             {retryLabel}
           </button>
@@ -51,7 +54,7 @@ export function InlineAlert({
           <button
             type="button"
             onClick={onDismiss}
-            className="rounded-lg p-1 opacity-70 hover:opacity-100"
+            className="touch-44 flex items-center justify-center rounded-lg p-1 opacity-70 hover:bg-white/5 hover:opacity-100"
             aria-label={dismissLabel}
           >
             <X className="h-3.5 w-3.5" />

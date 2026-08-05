@@ -55,93 +55,38 @@ export default function StreakPage() {
     }
   };
 
-  const [particles, setParticles] = useState<
-    { left: number; top: number; color: string; shadow: string; duration: number; delay: number }[]
-  >([]);
-
-  useEffect(() => {
-    setParticles(
-      [...Array(20)].map((_, i) => ({
-        left: 5 + Math.random() * 90,
-        top: 5 + Math.random() * 90,
-        color:
-          i % 3 === 0
-            ? "rgba(251,146,60,0.4)"
-            : i % 3 === 1
-              ? "rgba(168,85,247,0.3)"
-              : "rgba(251,191,36,0.3)",
-        shadow:
-          i % 3 === 0
-            ? "rgba(251,146,60,0.3)"
-            : i % 3 === 1
-              ? "rgba(168,85,247,0.3)"
-              : "rgba(251,191,36,0.3)",
-        duration: 3 + Math.random() * 4,
-        delay: Math.random() * 5,
-      })),
-    );
-  }, []);
-
   const currentStreak = streak.currentStreak;
 
   if (isLoading && isAuthenticated) {
     return (
       <div className="phone-shell flex flex-col px-4 pt-16">
-        <div className="h-8 w-32 animate-pulse rounded-lg bg-white/5" />
-        <div className="mt-6 h-64 animate-pulse rounded-2xl bg-white/5" />
+        <div className="premium-skeleton h-8 w-32 rounded-lg" />
+        <div className="premium-skeleton mt-6 h-64 rounded-2xl" />
         <p className="sr-only">{t("common.loading")}</p>
       </div>
     );
   }
 
   return (
-    <div
-      className="phone-shell relative flex flex-col"
-      style={{
-        background: `
-        radial-gradient(ellipse 100% 60% at 50% -10%, rgba(251,146,60,0.25), transparent),
-        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(168,85,247,0.15), transparent),
-        radial-gradient(ellipse 50% 30% at 20% 100%, rgba(251,191,36,0.1), transparent),
-        linear-gradient(180deg, #0c0614 0%, #0a0a0a 50%, #08060f 100%)
-      `,
-      }}
-    >
-      {particles.length > 0 && (
-        <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          {particles.map((p, i) => (
-            <div
-              key={i}
-              className="absolute h-1 w-1 rounded-full"
-              style={{
-                left: `${p.left}%`,
-                top: `${p.top}%`,
-                background: p.color,
-                animation: `sparkFloat ${p.duration}s ${p.delay}s ease-out infinite`,
-                boxShadow: `0 0 6px ${p.shadow}`,
-              }}
-            />
-          ))}
-        </div>
-      )}
+    <div className="phone-shell streak-page relative flex flex-col">
       <AppHeader
         backHref="/welcome"
         backLabel={t("nav.back")}
         title={t("nav.streak")}
         trailing={
           <>
-          <button
-            onClick={() => setShowCard(true)}
+            <button
+              onClick={() => setShowCard(true)}
               className="app-header__action border-orange-500/25 bg-orange-500/10 text-orange-300"
-            aria-label={t("streak.get_card")}
-          >
-            <ImageIcon className="h-4 w-4" />
-          </button>
-          <GemBalance balance={gemState.balance} size="sm" animate />
-          <FreezieBalance
-            size="sm"
-            animate
-            balance={isAuthenticated ? streak.freezieBalance : undefined}
-          />
+              aria-label={t("streak.get_card")}
+            >
+              <ImageIcon className="h-4 w-4" />
+            </button>
+            <GemBalance balance={gemState.balance} size="sm" />
+            <FreezieBalance
+              size="sm"
+              balance={isAuthenticated ? streak.freezieBalance : undefined}
+            />
           </>
         }
       />
@@ -157,7 +102,7 @@ export default function StreakPage() {
             type="button"
             onClick={() => void handleCheckIn()}
             disabled={checkingIn}
-            className="w-full rounded-xl bg-orange-500/20 py-2.5 text-sm font-semibold text-orange-200 ring-1 ring-orange-400/30 transition hover:bg-orange-500/30 disabled:opacity-50"
+            className="touch-44 w-full rounded-2xl border border-orange-300/20 bg-gradient-to-r from-orange-500/20 to-amber-500/10 px-4 py-2.5 text-sm font-semibold text-orange-100 shadow-lg shadow-orange-950/20 hover:border-orange-300/30 hover:from-orange-500/28 hover:to-amber-500/16 active:scale-[0.985] disabled:opacity-50"
           >
             {checkingIn ? t("common.loading") : t("streak.checkin_button")}
           </button>

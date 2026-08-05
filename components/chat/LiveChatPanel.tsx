@@ -375,7 +375,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         {loadingHistory && (
           <div className="space-y-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-12 animate-pulse rounded-2xl bg-white/5" aria-hidden />
+              <div key={i} className="premium-skeleton h-12 rounded-2xl" aria-hidden />
             ))}
             <p className="sr-only">{t("common.loading")}</p>
           </div>
@@ -404,6 +404,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             title={t("chat.empty.title")}
             subtitle={t("chat.empty.subtitle")}
             icon={<MessageCircle className="h-5 w-5" aria-hidden />}
+            tone="info"
           />
         )}
         {messages.map((msg) => {
@@ -443,24 +444,24 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                 ) : (
                   <>
                     <div
-                      className="animate-message rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed"
+                      className="chat-message-bubble animate-message rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed"
                       style={
                         isCoach
                           ? {
                               backgroundColor: `${primary}18`,
                               border: `1px solid ${ring}`,
                               color: "#fff",
-                              boxShadow: `0 0 15px ${ring}`,
+                              boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`,
                             }
                           : {
                               background: `linear-gradient(135deg, ${primary}, ${secondary})`,
                               color: "#fff",
-                              boxShadow: `0 4px 15px ${shadow}`,
+                              boxShadow: `0 8px 22px ${shadow}`,
                             }
                       }
                     >
                       <ChatMessageText text={msg.text} />
-                      <p className="mt-1 text-[10px] opacity-60">{msg.time}</p>
+                      <p className="chat-message-time mt-1 opacity-60">{msg.time}</p>
                     </div>
                     {isCoach &&
                     msg.payload &&
