@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
+import { formatRelativeShort } from "@/lib/i18n/format";
 import { useNotifications } from "@/lib/notification-context";
 import { PushToggle } from "@/components/notifications/PushToggle";
 import { MotionDialog } from "@/components/ui/MotionDialog";
@@ -45,18 +46,6 @@ function hexToRgba(hex: string, alpha: number): string {
   const g = parseInt(clean.substring(2, 4), 16);
   const b = parseInt(clean.substring(4, 6), 16);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-function relativeTime(iso: string, locale: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diff / 60_000);
-  if (min < 1) return "now";
-  if (min < 60) return `${min}m`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h`;
-  const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}d`;
-  return new Date(iso).toLocaleDateString(locale, { month: "short", day: "numeric" });
 }
 
 function NotificationCard({
@@ -121,7 +110,7 @@ function NotificationCard({
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-semibold leading-snug text-white">{title}</p>
           <span className="shrink-0 text-[10px] text-zinc-500">
-            {relativeTime(item.createdAt, lang)}
+            {formatRelativeShort(item.createdAt, lang, t)}
           </span>
         </div>
         <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide" style={{ color: hexToRgba(color, 0.9) }}>

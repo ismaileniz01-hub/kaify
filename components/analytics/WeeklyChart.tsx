@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLang } from "@/lib/lang-context";
+import { formatNumber } from "@/lib/i18n/format";
 
 type Period = "W" | "M" | "3M";
 
@@ -42,7 +43,7 @@ function toPoints(values: number[]) {
 }
 
 export function WeeklyChart({ stepsData }: { stepsData?: StepsPoint[] }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [period, setPeriod] = useState<Period>("W");
   const polylineRef = useRef<SVGPolylineElement>(null);
   const polygonRef = useRef<SVGPolygonElement>(null);
@@ -147,7 +148,7 @@ export function WeeklyChart({ stepsData }: { stepsData?: StepsPoint[] }) {
         <span className="text-zinc-500">
           {t("analytics.avg_steps")}{" "}
           <span className="font-semibold text-purple-300">
-            {Math.round(displayAvg).toLocaleString()}
+            {formatNumber(Math.round(displayAvg), lang)}
           </span>{" "}
           {t("analytics.steps")}
         </span>

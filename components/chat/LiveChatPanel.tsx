@@ -15,6 +15,7 @@ import { InlineAlert } from "@/components/InlineAlert";
 import { EmptyState } from "@/components/EmptyState";
 import { PhotoAnalyzeConsentModal } from "@/components/consent/PhotoAnalyzeConsentModal";
 import { useLang } from "@/lib/lang-context";
+import { formatTime } from "@/lib/i18n/format";
 import { useKai } from "@/lib/kai-context";
 import { useSession } from "@/lib/session-context";
 import { ChatComposer } from "@/components/chat/ChatComposer";
@@ -40,16 +41,18 @@ type LiveChatPanelProps = {
   onCoachTyping?: (typing: boolean) => void;
 };
 
-function formatTime(iso?: string): string {
-  const date = iso ? new Date(iso) : new Date();
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+function formatMessageTime(
+  iso: string | undefined,
+  lang: Parameters<typeof formatTime>[1],
+): string {
+  return formatTime(iso ?? new Date(), lang);
 }
 
 const VISION_COACHES = new Set<ContactId>(["maya", "leo"]);
 
 export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const contact = CONTACTS[coachId];
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { avatar: kaiAvatar } = useKai();
   const { userProfile } = useSession();
   const { primary, primaryLight, secondary, ring, shadow } = contact.color;
@@ -92,7 +95,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             id: row.id,
             from: row.sender === "user" ? "user" : "coach",
             text: row.content ?? "",
-            time: formatTime(row.createdAt),
+            time: formatMessageTime(row.createdAt, lang),
             messageType: row.messageType,
             payload: row.payload ?? undefined,
           })),
@@ -107,7 +110,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [coachId, t]);
+  }, [coachId, t, lang]);
 
   useEffect(() => {
     if (!VISION_COACHES.has(coachId)) return;
@@ -143,13 +146,13 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
       id: `local-user-${Date.now()}`,
       from: "user",
       text,
-      time: formatTime(),
+      time: formatMessageTime(undefined, lang),
     };
     const coachMsgId = `local-coach-${Date.now()}`;
     setMessages((prev) => [
       ...prev,
       userMsg,
-      { id: coachMsgId, from: "coach", text: "", time: formatTime(), streaming: true },
+      { id: coachMsgId, from: "coach", text: "", time: formatMessageTime(undefined, lang), streaming: true },
     ]);
 
     abortRef.current?.abort();
@@ -259,13 +262,13 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         id: photoUserId,
         from: "user",
         text: t("chat.photo.sent"),
-        time: formatTime(),
+        time: formatMessageTime(undefined, lang),
       },
       {
         id: coachPlaceholderId,
         from: "coach",
         text: "",
-        time: formatTime(),
+        time: formatMessageTime(undefined, lang),
         streaming: true,
       },
     ]);

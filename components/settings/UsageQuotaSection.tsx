@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiGet } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
+import { formatNumber } from "@/lib/i18n/format";
 import { formatTierLabel } from "@/lib/billing/tier-labels";
 import type { UsageStatusDTO } from "@/lib/types/domain.types";
 
@@ -22,7 +23,7 @@ function UsageBar({
   warning?: string | null;
   warningLabel?: string;
 }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const pct = Math.min(100, Math.max(0, percent));
   const color =
     pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-purple-500";
@@ -35,8 +36,8 @@ function UsageBar({
       </div>
       <p className="mb-1 text-[10px] text-zinc-500">
         {t("usage.used_of", {
-          used: used.toLocaleString(),
-          limit: limit.toLocaleString(),
+          used: formatNumber(used, lang),
+          limit: formatNumber(limit, lang),
         })}
       </p>
       <div className="h-1.5 overflow-hidden rounded-full bg-white/10">

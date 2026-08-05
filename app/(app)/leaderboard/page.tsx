@@ -16,6 +16,7 @@ import { useEffect, useState, useRef } from "react";
 import { InlineAlert } from "@/components/InlineAlert";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { useLang } from "@/lib/lang-context";
+import { formatNumber } from "@/lib/i18n/format";
 import { useSession } from "@/lib/session-context";
 import { apiGet } from "@/lib/api/client";
 import type { UserSettingsDTO } from "@/lib/services/settings.service";
@@ -42,11 +43,19 @@ type CountryLeaderboardData = {
 };
 
 // Sayı animasyonu: 0'dan hedef değere yükselme
-function formatStreak(value: number): string {
-  return value.toLocaleString();
+function formatStreak(value: number, lang: Parameters<typeof formatNumber>[1]): string {
+  return formatNumber(value, lang);
 }
 
-function AnimatedNumber({ value, duration = 1500 }: { value: number; duration?: number }) {
+function AnimatedNumber({
+  value,
+  lang,
+  duration = 1500,
+}: {
+  value: number;
+  lang: Parameters<typeof formatNumber>[1];
+  duration?: number;
+}) {
   const [display, setDisplay] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
   const startedRef = useRef(false);
@@ -69,7 +78,7 @@ function AnimatedNumber({ value, duration = 1500 }: { value: number; duration?: 
     return () => cancelAnimationFrame(raf);
   }, [value, duration]);
 
-  return <span ref={ref}>{display.toLocaleString()}</span>;
+  return <span ref={ref}>{formatNumber(display, lang)}</span>;
 }
 
 function PodiumStep({
@@ -78,12 +87,14 @@ function PodiumStep({
   barHeight,
   delay,
   usersLabel,
+  lang,
 }: {
   entry: CountryEntry;
   rank: number;
   barHeight: string;
   delay: number;
   usersLabel: string;
+  lang: Parameters<typeof formatNumber>[1];
 }) {
   const colors = [
     {
@@ -150,7 +161,7 @@ function PodiumStep({
       <div className="flex items-center gap-1 text-sm text-orange-400">
         <Flame className="h-4 w-4 transition-all duration-300 group-hover:scale-125 group-hover:text-orange-300" />
         <span className="font-extrabold">
-          <AnimatedNumber value={entry.totalStreak} duration={2000} />
+          <AnimatedNumber value={entry.totalStreak} lang={lang} duration={2000} />
         </span>
       </div>
 
@@ -166,7 +177,7 @@ function PodiumStep({
 }
 
 export default function LeaderboardPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { profile, isAuthenticated } = useSession();
   const [data, setData] = useState<CountryLeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -283,6 +294,7 @@ export default function LeaderboardPage() {
                       barHeight="4rem"
                       delay={300}
                       usersLabel={t("leaderboard.country_users", { count: data.leaderboard[1].userCount })}
+                      lang={lang}
                     />
                   )}
                   {data.leaderboard[0] && (
@@ -292,6 +304,7 @@ export default function LeaderboardPage() {
                       barHeight="6rem"
                       delay={150}
                       usersLabel={t("leaderboard.country_users", { count: data.leaderboard[0].userCount })}
+                      lang={lang}
                     />
                   )}
                   {data.leaderboard[2] && (
@@ -301,6 +314,7 @@ export default function LeaderboardPage() {
                       barHeight="3rem"
                       delay={450}
                       usersLabel={t("leaderboard.country_users", { count: data.leaderboard[2].userCount })}
+                      lang={lang}
                     />
                   )}
                 </div>
@@ -374,7 +388,7 @@ export default function LeaderboardPage() {
                           <div className="flex items-center gap-1.5">
                             <Flame className="h-3.5 w-3.5 text-orange-400/70 transition-all duration-300 group-hover:scale-125 group-hover:text-orange-300" />
                             <span className="text-sm font-bold text-orange-300">
-                              {formatStreak(entry.totalStreak)}
+                              {formatStreak(entry.totalStreak, lang)}
                             </span>
                           </div>
                         </div>

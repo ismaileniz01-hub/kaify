@@ -57,6 +57,28 @@ describe("EN/TR localization quality", () => {
     expect(tr["market.title"]).toBe("Market");
   });
 
+  it("keeps banned Turkish terminology pairs out of product copy", () => {
+    const navShopKeys = ["nav.market", "welcome.market", "market.title"];
+    for (const key of navShopKeys) {
+      expect(tr[key]).not.toMatch(/\bpazar\b/i);
+    }
+    expect(tr["a11y.loading_page"]).toBe("Sayfa yükleniyor");
+    expect(tr["error.global.retry"]).toBe("Yeniden dene");
+    expect(en["admin.costs.title"]).toContain("Cost");
+    expect(tr["admin.costs.title"]).toContain("Maliyet");
+  });
+
+  it("ships admin costs/audit/self-heal keys in both locales", () => {
+    const prefixes = ["admin.costs.", "admin.audit.", "admin.self_heal."];
+    const keys = Object.keys(en).filter((key) =>
+      prefixes.some((prefix) => key.startsWith(prefix)),
+    );
+    expect(keys.length).toBeGreaterThan(20);
+    for (const key of keys) {
+      expect(tr[key]).toBeTruthy();
+    }
+  });
+
   it("has real Turkish copy for critical public surfaces", () => {
     const keys = Object.keys(en).filter(
       (key) =>

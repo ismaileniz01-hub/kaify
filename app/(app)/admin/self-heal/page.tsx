@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api/client";
+import { useLang } from "@/lib/lang-context";
+import { formatDateTime } from "@/lib/i18n/format";
 import type { SelfHealSnapshot } from "@/lib/resilience/self-heal-report";
 import { InlineAlert } from "@/components/InlineAlert";
 
 export default function AdminSelfHealPage() {
+  const { t, lang } = useLang();
   const [snapshot, setSnapshot] = useState<SelfHealSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [recovering, setRecovering] = useState(false);
@@ -21,7 +24,7 @@ export default function AdminSelfHealPage() {
       );
       setSnapshot(data);
     } catch {
-      setError("Self-heal verisi alınamadı.");
+      setError(t("admin.self_heal.load_error"));
     } finally {
       setLoading(false);
     }
@@ -29,6 +32,7 @@ export default function AdminSelfHealPage() {
 
   useEffect(() => {
     void load(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only bootstrap
   }, []);
 
   const recover = async () => {
@@ -37,7 +41,7 @@ export default function AdminSelfHealPage() {
       await apiPost("/api/admin/self-heal", {});
       await load(false);
     } catch {
-      setError("Kurtarma komutu başarısız.");
+      setError(t("admin.self_heal.recover_error"));
     } finally {
       setRecovering(false);
     }
@@ -47,13 +51,13 @@ export default function AdminSelfHealPage() {
     <div className="min-h-screen bg-zinc-950 p-6 text-white">
       <div className="mx-auto max-w-3xl space-y-6">
         <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Self-Heal Monitor</h1>
+          <h1 className="text-2xl font-bold">{t("admin.self_heal.title")}</h1>
           <div className="flex gap-3 text-sm">
             <Link href="/admin" className="text-purple-400">
-              ← Admin
+              {t("admin.self_heal.back_admin")}
             </Link>
             <Link href="/welcome" className="text-zinc-500">
-              Uygulama
+              {t("admin.self_heal.back_app")}
             </Link>
           </div>
         </header>
@@ -65,7 +69,7 @@ export default function AdminSelfHealPage() {
             disabled={loading}
             className="rounded-lg bg-white/10 px-4 py-2 text-sm disabled:opacity-50"
           >
-            Yenile (+ AI rapor)
+            {t("admin.self_heal.refresh")}
           </button>
           <button
             type="button"
@@ -73,7 +77,9 @@ export default function AdminSelfHealPage() {
             disabled={recovering}
             className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold disabled:opacity-50"
           >
-            {recovering ? "Kurtarılıyor…" : "Degraded + circuit sıfırla"}
+            {recovering
+              ? t("admin.self_heal.recovering")
+              : t("admin.self_heal.recover")}
           </button>
         </div>
 
@@ -85,41 +91,64 @@ export default function AdminSelfHealPage() {
             onDismiss={() => setError(null)}
           />
         )}
-        {loading && !snapshot && <p className="text-zinc-500">Yükleniyor…</p>}
+        {loading && !snapshot && (
+          <p className="text-zinc-500">{t("common.loading")}</p>
+        )}
 
         {snapshot && (
           <>
             <section className="rounded-xl border border-white/10 p-4">
-              <h2 className="mb-2 font-semibold">Durum</h2>
+              <h2 className="mb-2 font-semibold">
+                {t("admin.self_heal.status")}
+              </h2>
               <p className="text-sm text-zinc-400">
-                Zaman: {snapshot.timestamp}
+                {t("admin.self_heal.time", {
+                  time: formatDateTime(snapshot.timestamp, lang),
+                })}
               </p>
               <p className="mt-2 text-sm">
-                Degraded mode:{" "}
+                {t("admin.self_heal.degraded")}{" "}
                 <span
                   className={
-                    snapshot.degraded.active ? "text-amber-400" : "text-emerald-400"
+                    snapshot.degraded.active
+                      ? "text-amber-400"
+                      : "text-emerald-400"
                   }
                 >
-                  {snapshot.degraded.active ? "AKTİF" : "kapalı"}
+                  {snapshot.degraded.active
+                    ? t("admin.self_heal.degraded_on")
+                    : t("admin.self_heal.degraded_off")}
                 </span>
               </p>
               {snapshot.degraded.reason && (
-                <p className="mt-1 text-xs text-zinc-500">{snapshot.degraded.reason}</p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {snapshot.degraded.reason}
+                </p>
               )}
             </section>
 
             <section className="rounded-xl border border-white/10 p-4">
-              <h2 className="mb-2 font-semibold">Circuit breakers</h2>
+              <h2 className="mb-2 font-semibold">
+                {t("admin.self_heal.circuits")}
+              </h2>
               {snapshot.circuits.length === 0 ? (
-                <p className="text-sm text-zinc-500">Henüz tetiklenmedi.</p>
+                <p className="text-sm text-zinc-500">
+                  {t("admin.self_heal.circuits.empty")}
+                </p>
               ) : (
                 <ul className="space-y-1 text-sm">
                   {snapshot.circuits.map((c) => (
                     <li key={c.name} className="flex justify-between">
                       <span>{c.name}</span>
-                      <span className={c.open ? "text-red-400" : "text-zinc-400"}>
-                        {c.open ? "OPEN" : "closed"} ({c.failures} fail)
+                      <span
+                        className={c.open ? "text-red-400" : "text-zinc-400"}
+                      >
+                        {c.open
+                          ? t("admin.self_heal.circuit_open")
+                          : t("admin.self_heal.circuit_closed")}{" "}
+                        {t("admin.self_heal.circuit_fail", {
+                          count: c.failures,
+                        })}
                       </span>
                     </li>
                   ))}
@@ -128,9 +157,13 @@ export default function AdminSelfHealPage() {
             </section>
 
             <section className="rounded-xl border border-white/10 p-4">
-              <h2 className="mb-2 font-semibold">Hata sayaçları (5 dk)</h2>
+              <h2 className="mb-2 font-semibold">
+                {t("admin.self_heal.errors")}
+              </h2>
               {snapshot.errorCounters.length === 0 ? (
-                <p className="text-sm text-zinc-500">5xx spike yok.</p>
+                <p className="text-sm text-zinc-500">
+                  {t("admin.self_heal.errors.empty")}
+                </p>
               ) : (
                 <ul className="text-sm">
                   {snapshot.errorCounters.map((e) => (
@@ -145,7 +178,7 @@ export default function AdminSelfHealPage() {
             {snapshot.aiReport && (
               <section className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
                 <h2 className="mb-2 font-semibold text-purple-200">
-                  AI kök-neden raporu (öneri — otomatik uygulanmaz)
+                  {t("admin.self_heal.ai_report")}
                 </h2>
                 <pre className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
                   {snapshot.aiReport}

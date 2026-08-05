@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api/client";
+import { useLang } from "@/lib/lang-context";
+import { formatDateTime } from "@/lib/i18n/format";
 import type { AdminAuditRow } from "@/lib/services/audit.service";
 
 export default function AdminAuditPage() {
+  const { t, lang } = useLang();
   const [items, setItems] = useState<AdminAuditRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,21 +24,19 @@ export default function AdminAuditPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Admin Audit Log</h1>
-            <p className="text-sm text-zinc-500">
-              Kim, ne zaman, hangi yönetici işlemini yaptı
-            </p>
+            <h1 className="text-2xl font-bold">{t("admin.audit.title")}</h1>
+            <p className="text-sm text-zinc-500">{t("admin.audit.subtitle")}</p>
           </div>
           <Link href="/admin" className="text-sm text-purple-400">
-            ← Hub
+            {t("admin.costs.back_hub")}
           </Link>
         </header>
 
-        {loading && <p className="text-zinc-500">Yükleniyor…</p>}
+        {loading && <p className="text-zinc-500">{t("common.loading")}</p>}
 
         <div className="overflow-hidden rounded-xl border border-white/10">
           {items.length === 0 && !loading ? (
-            <p className="p-4 text-sm text-zinc-500">Kayıt yok.</p>
+            <p className="p-4 text-sm text-zinc-500">{t("admin.audit.empty")}</p>
           ) : (
             items.map((row) => (
               <div
@@ -45,7 +46,7 @@ export default function AdminAuditPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-mono text-purple-300">{row.action}</span>
                   <span className="text-xs text-zinc-500">
-                    {new Date(row.createdAt).toLocaleString("tr-TR")}
+                    {formatDateTime(row.createdAt, lang)}
                   </span>
                 </div>
                 <p className="mt-1 text-zinc-400">

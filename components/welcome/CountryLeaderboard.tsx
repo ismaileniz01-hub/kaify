@@ -3,6 +3,7 @@
 import { Globe, X, Crown, Medal, Award, Flame } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLang } from "@/lib/lang-context";
+import { formatNumber } from "@/lib/i18n/format";
 import { FlagImage } from "@/components/FlagImage";
 import { MotionDialog } from "@/components/ui/MotionDialog";
 import { resolveApiPath } from "@/lib/api/client";
@@ -30,7 +31,7 @@ function RankIcon({ rank }: { rank: number }) {
 }
 
 export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [data, setData] = useState<CountryLeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -111,7 +112,7 @@ export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClo
                   <span className="text-xs font-semibold text-zinc-200">{entry.countryName}</span>
                   <div className="flex items-center gap-1 text-[10px] text-orange-400/80">
                     <Flame className="h-3 w-3" />
-                    <span>{entry.totalStreak.toLocaleString()}</span>
+                    <span>{formatNumber(entry.totalStreak, lang)}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <RankIcon rank={i + 1} />
@@ -154,7 +155,7 @@ export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClo
                     </div>
                     <div className="flex items-center gap-1 text-sm text-orange-400/80">
                       <Flame className="h-3.5 w-3.5" />
-                      <span className="font-semibold">{entry.totalStreak.toLocaleString()}</span>
+                      <span className="font-semibold">{formatNumber(entry.totalStreak, lang)}</span>
                     </div>
                   </div>
                 );

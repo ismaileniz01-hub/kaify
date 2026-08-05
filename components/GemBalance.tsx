@@ -1,4 +1,8 @@
+"use client";
+
 import { GemIcon } from "@/components/GemIcon";
+import { useLang } from "@/lib/lang-context";
+import { formatNumber } from "@/lib/i18n/format";
 
 type GemBalanceProps = {
   balance: number;
@@ -19,6 +23,7 @@ export function GemBalance({
   animate = false,
   className = "",
 }: GemBalanceProps) {
+  const { lang } = useLang();
   const s = sizeMap[size];
 
   return (
@@ -33,7 +38,7 @@ export function GemBalance({
           textShadow: "0 0 12px rgba(168,85,247,0.3)",
         }}
       >
-        {balance.toLocaleString()}
+        {formatNumber(balance, lang)}
       </span>
     </div>
   );

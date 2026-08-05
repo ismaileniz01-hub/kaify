@@ -83,7 +83,10 @@ export default async function RootLayout({
     cookieStore.get("kaify-lang")?.value,
     headerStore.get("accept-language"),
   );
-  const skipLabel = initialLang === "tr" ? "İçeriğe geç" : "Skip to content";
+  const skipLabel =
+    initialLang === "tr"
+      ? "İçeriğe geç"
+      : "Skip to content";
 
   return (
     <html

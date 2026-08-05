@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLang } from "@/lib/lang-context";
+import { formatNumber } from "@/lib/i18n/format";
 import type { LucideIcon } from "lucide-react";
 
 type GradientVariant = "blue" | "orange" | "green" | "purple" | "water";
@@ -42,6 +44,7 @@ export function StatCard({
   gradient,
   animate = true,
 }: StatCardProps) {
+  const { lang } = useLang();
   const [displayNum, setDisplayNum] = useState(0);
   const [displayBar, setDisplayBar] = useState(0);
   const parsed = parseValue(value ?? "");
@@ -75,7 +78,7 @@ export function StatCard({
 
   const formattedNum =
     targetNum % 1 === 0
-      ? Math.round(displayNum).toLocaleString()
+      ? formatNumber(Math.round(displayNum), lang)
       : displayNum.toFixed(1);
 
   return (

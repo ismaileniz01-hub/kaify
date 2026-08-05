@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useLang } from "@/lib/lang-context";
 
 type ViewTransitionDocument = Document & {
   startViewTransition?: (update: () => Promise<void> | void) => {
@@ -66,6 +67,7 @@ function getEligibleNavigation(
 }
 
 export function NavigationExperience({ children }: { children: ReactNode }) {
+  const { t } = useLang();
   const router = useRouter();
   const pathname = usePathname();
   const [isNavigating, setIsNavigating] = useState(false);
@@ -147,7 +149,7 @@ export function NavigationExperience({ children }: { children: ReactNode }) {
       <div
         className="route-progress"
         role="progressbar"
-        aria-label="Loading page"
+        aria-label={t("a11y.loading_page")}
         aria-hidden={!isNavigating}
       >
         <span />

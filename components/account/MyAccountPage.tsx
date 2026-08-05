@@ -39,6 +39,7 @@ import { formatTierLabel } from "@/lib/billing/tier-labels";
 import { hasActiveSubscription } from "@/lib/auth/post-auth-redirect";
 import { parseGenderInput } from "@/lib/profile-mapper";
 import { useLang } from "@/lib/lang-context";
+import { formatNumber } from "@/lib/i18n/format";
 import { useSession } from "@/lib/session-context";
 import type { UserProfile } from "@/lib/user";
 
@@ -376,7 +377,7 @@ export function MyAccountPage() {
                     <Gem className="h-5 w-5 text-purple-300" />
                     <div>
                       <p className="account-stat__label">{t("myaccount.gems")}</p>
-                      <p className="account-stat__value">{gemBalance.balance.toLocaleString()}</p>
+                      <p className="account-stat__value">{formatNumber(gemBalance.balance, lang)}</p>
                     </div>
                   </div>
                   <div className="account-stat">

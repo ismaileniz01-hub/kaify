@@ -12,12 +12,13 @@ import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { InlineAlert } from "@/components/InlineAlert";
 import { errorToMessage } from "@/lib/i18n/api-error";
+import { formatTime } from "@/lib/i18n/format";
 import { apiGet } from "@/lib/api/client";
 import type { AnalyticsBundleDTO } from "@/lib/services/analytics.service";
 import { AppHeader } from "@/components/navigation/AppHeader";
 
 export default function AnalyticsPage() {
-  const { t, unit } = useLang();
+  const { t, lang, unit } = useLang();
   const { isAuthenticated, home, refreshHome } = useSession();
   const [data, setData] = useState<AnalyticsBundleDTO | null>(() => readAnalyticsCache());
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -101,7 +102,7 @@ export default function AnalyticsPage() {
       {lastUpdated && !loadError && (
         <p className="px-4 pb-1 text-center text-[10px] text-zinc-600">
           {t("analytics.updated", {
-            time: lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            time: formatTime(lastUpdated, lang),
           })}
         </p>
       )}
