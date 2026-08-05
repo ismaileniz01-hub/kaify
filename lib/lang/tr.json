@@ -305,6 +305,7 @@
   "login.mode.label": "Hesap türü",
   "login.mode.signin": "Giriş yap",
   "login.mode.signup": "Hesap oluştur",
+  "login.native.account_notice": "K.AIFY'da yeni misin? Hesabını kaifyai.org'da oluştur, sonra giriş yapmak için buraya dön.",
   "login.signup.subtitle": "Ücretsiz hesabını oluştur — uygulamadaki koçların aynısı.",
   "login.signup.submit": "Doğrulama kodu gönder",
   "login.signup.verify": "Hesabı oluştur",

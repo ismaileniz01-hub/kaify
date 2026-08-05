@@ -4,7 +4,7 @@ Capture on a physical device or high-res simulator (phone + optional tablet).
 
 ## Required frames (both stores)
 
-1. Login / OTP entry  
+1. Login / OTP entry (existing-customer sign-in; no clickable purchase/signup link)  
 2. Welcome hub with coaches  
 3. Live coach chat (Kai or Maya)  
 4. Vision / photo analyze flow (gallery or camera picker)  
@@ -12,7 +12,7 @@ Capture on a physical device or high-res simulator (phone + optional tablet).
 6. Leaderboard  
 7. Trophy road / market  
 8. Settings (privacy + terms links visible)  
-9. Pricing **native banner** (“Manage on kaifyai.org”) — proves no in-app IAP claim  
+9. Website checkout success with “Open K.AIFY app” return action (web evidence; not an App Store screenshot)  
 
 ## Listing URLs
 

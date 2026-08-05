@@ -4,10 +4,12 @@ Date: 2026-08-04 · Owner: Engineering
 
 | Gate | Status | Evidence |
 |------|--------|----------|
-| Billing ADR (Option B) | Done | `docs/sustainability/adr/019-store-billing-policy.md` |
-| Native checkout gated | Done | `lib/billing/native-web-checkout.ts` + PricingPage |
+| Billing ADR (consumption-only B) | Done | `docs/sustainability/adr/019-store-billing-policy.md` |
+| Native commerce surfaces blocked | Done | `/signup` + `/pricing` route guard; native login has no clickable purchase/signup link |
+| Website → app return | Done | Paddle completion → `kaify://login` |
 | Package ID alignment | Done | `org.kaify.app` everywhere; Play URL fixed in `store-links.ts` |
 | PrivacyInfo.xcprivacy | Done | `ios/App/App/PrivacyInfo.xcprivacy` |
+| Privacy label parity | Operator | Compare Xcode privacy report with App Store Connect + Play Data Safety |
 | Camera / photo Info.plist strings | Done | `ios/App/App/Info.plist` |
 | HealthKit strings | N/A | Feature not shipped |
 | google-services pipeline | Done | example + verify script + gitignore |

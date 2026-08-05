@@ -41,6 +41,7 @@
     "cap:sync": "node scripts/cap-sync.mjs",
     "cap:sync:prod": "node scripts/cap-sync.mjs https://kaifyai.org",
     "cap:verify-fcm": "node scripts/ops/verify-google-services.mjs",
+    "cap:verify-store": "node scripts/ops/verify-store-readiness.mjs",
     "cap:sync:dev": "node scripts/cap-sync.mjs http://10.0.2.2:3000",
     "cap:android": "npx cap open android",
     "cap:ios": "npx cap open ios",

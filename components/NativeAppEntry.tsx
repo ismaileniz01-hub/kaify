@@ -7,7 +7,8 @@ import { isNativePlatform } from "@/lib/native/platform";
 
 /**
  * Keeps the store build inside the app UI. Marketing landing (/) is web-only;
- * native users always land on the in-app home (/welcome).
+ * native users always land on sign-in. Signup and pricing are website-only
+ * under the consumption-only store policy.
  */
 export function NativeAppEntry() {
   const pathname = usePathname();

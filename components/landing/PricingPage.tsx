@@ -15,6 +15,7 @@ import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { usePaddle } from "@/components/billing/PaddleProvider";
 import { useSession } from "@/lib/session-context";
 import { useNativeApp } from "@/lib/native/platform";
+import { NATIVE_CHECKOUT_RETURN_URL } from "@/lib/billing/native-web-checkout";
 import {
   PLAN_COMPARISON,
   PRICING_PLANS_WITH_PADDLE,
@@ -91,29 +92,25 @@ function PaddleCheckoutResume() {
   return null;
 }
 
-function NativeWebBillingBanner() {
-  const native = useNativeApp();
-  if (!native) return null;
+function WebCheckoutReturn() {
+  const { checkoutCompleted } = usePaddle();
+  if (!checkoutCompleted) return null;
+
   return (
-    <div className="mx-auto mb-8 max-w-xl rounded-2xl border border-amber-400/30 bg-amber-500/10 px-5 py-4 text-center">
-      <p className="text-sm font-semibold text-amber-100">
-        Subscriptions are managed on the web
+    <div
+      role="status"
+      className="fixed inset-x-4 top-6 z-[10000] mx-auto max-w-md rounded-2xl border border-emerald-400/30 bg-zinc-950/95 p-5 text-center backdrop-blur-xl"
+    >
+      <p className="text-base font-semibold text-white">Subscription activated</p>
+      <p className="mt-1 text-sm leading-relaxed text-zinc-300">
+        Return to K.AIFY and sign in with the email address you used here.
       </p>
-      <p className="mt-1 text-xs leading-relaxed text-amber-100/70">
-        App Store / Play policies require checkout outside this app. Continue on
-        kaifyai.org in your browser — your account stays synced.
-      </p>
-      <button
-        type="button"
-        className="mt-3 inline-flex items-center justify-center rounded-full bg-white px-5 py-2 text-xs font-bold text-zinc-900 transition hover:bg-zinc-100"
-        onClick={() => {
-          void import("@/lib/billing/native-web-checkout").then(({ openWebBillingUrl }) =>
-            openWebBillingUrl(),
-          );
-        }}
+      <a
+        href={NATIVE_CHECKOUT_RETURN_URL}
+        className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-500 px-6 text-sm font-bold text-zinc-950 transition hover:bg-emerald-400"
       >
-        Continue on kaifyai.org
-      </button>
+        Open K.AIFY app
+      </a>
     </div>
   );
 }
@@ -136,11 +133,10 @@ function PlanCheckoutButton({
 
   const handleClick = useCallback(() => {
     void (async () => {
-      const { shouldOpenPaddleCheckoutInApp, openWebBillingUrl } = await import(
+      const { shouldOpenPaddleCheckoutInApp } = await import(
         "@/lib/billing/native-web-checkout"
       );
       if (!(await shouldOpenPaddleCheckoutInApp())) {
-        await openWebBillingUrl();
         return;
       }
       const priceId =
@@ -172,17 +168,34 @@ function PlanCheckoutButton({
   ]);
 
   return (
-    <button type="button" onClick={handleClick} className={className}>
-      {native ? "Continue on kaifyai.org" : children}
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={native !== false}
+      className={className}
+    >
+      {native ? "Available on kaifyai.org" : children}
     </button>
   );
 }
 
 export function PricingPage() {
   const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly");
+  const native = useNativeApp();
+
+  // Defense in depth: NativeAppEntry redirects this route to /login. Until
+  // native detection completes, never paint prices or an external purchase CTA.
+  if (native !== false) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-black">
+        <div className="h-9 w-9 animate-spin rounded-full border-2 border-white/15 border-t-purple-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="landing-site">
+      <WebCheckoutReturn />
       <Suspense fallback={null}>
         <PaddleCheckoutResume />
       </Suspense>
@@ -231,7 +244,6 @@ export function PricingPage() {
 
         <section className="landing-section !pt-4">
           <div className="landing-container">
-            <NativeWebBillingBanner />
             <ScrollReveal className="flex justify-center">
               <PricingBillingToggle value={billingInterval} onChange={setBillingInterval} />
             </ScrollReveal>

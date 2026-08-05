@@ -3,11 +3,17 @@ import { resolveAppUrl } from "../app-url";
 /** First screen inside the native shell (not the marketing landing). */
 export const NATIVE_ENTRY_PATH = "/login";
 
-/** Paths that belong to the public website, not the in-app experience. */
-export const WEB_ONLY_PATHS = ["/"] as const;
+/**
+ * Public website surfaces that must never render inside the consumption-only
+ * native shell. Account creation and subscriptions happen on the website;
+ * the installed app is for existing customers to sign in and use.
+ */
+export const WEB_ONLY_PATHS = ["/", "/signup", "/pricing"] as const;
 
 export function isWebOnlyPath(pathname: string): boolean {
-  return (WEB_ONLY_PATHS as readonly string[]).includes(pathname);
+  return WEB_ONLY_PATHS.some((path) =>
+    path === "/" ? pathname === path : pathname === path || pathname.startsWith(`${path}/`),
+  );
 }
 
 /**

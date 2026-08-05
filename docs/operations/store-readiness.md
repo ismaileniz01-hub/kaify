@@ -1,6 +1,6 @@
 # Store readiness (Faz 5)
 
-Last updated: 2026-08-04 · Policy: **ADR 019 (Option B — web-only Paddle)**
+Last updated: 2026-08-05 · Policy: **ADR 019 (consumption-only native; web-only signup + Paddle)**
 
 ## Package IDs (single source of truth)
 
@@ -25,7 +25,23 @@ Places `google-services.json` at `android/app/google-services.json` (gitignored)
 ```bash
 # Optional release gate
 node scripts/ops/verify-google-services.mjs
+npm run cap:verify-store
 ```
+
+`cap:verify-store` intentionally fails until the real Apple Team ID and Play
+signing SHA-256 replace the checked-in placeholders.
+
+## Native account and billing flow
+
+1. The installed app opens at `/login`.
+2. Existing customers sign in with email OTP.
+3. Native UI contains no clickable signup, pricing, purchase, or external-payment link.
+4. Account creation and Paddle checkout exist only on the public website.
+5. Successful website checkout offers `kaify://login` to return to the installed app.
+6. Native navigations to `/signup` or `/pricing` are redirected to `/login`.
+
+This is a consumption-only app policy. K.AIFY is not submitted as an Apple
+reader app, and no reader-app external-link entitlement is claimed.
 
 ## Permissions
 
@@ -36,6 +52,21 @@ node scripts/ops/verify-google-services.mjs
 | Push | `POST_NOTIFICATIONS` + `PushToggle` consent + runtime request |
 | HealthKit | **Not shipped** — no HealthKit entitlements/strings until a steps sync feature ships |
 
+## Store privacy declarations
+
+The iOS privacy manifest and App Store Connect / Play Data Safety forms must
+describe the same data practices:
+
+- account identifiers and email
+- health and fitness data entered by the user
+- photos/videos submitted for analysis
+- device ID used for push delivery
+- purchase history / subscription entitlement
+- crash and performance diagnostics
+
+Generate the Xcode archive privacy report before every submission and compare
+it to the store forms.
+
 ## Deep links
 
 | File | Purpose |
@@ -43,6 +74,9 @@ node scripts/ops/verify-google-services.mjs
 | `public/.well-known/apple-app-site-association` | Universal Links — replace `APPLE_TEAM_ID` |
 | `public/.well-known/assetlinks.json` | Android App Links — replace SHA-256 fingerprints |
 | In-app | `/privacy`, `/terms`, `/terms&conditions` → rewrite |
+
+`APPLE_TEAM_ID` and the Play signing SHA-256 placeholders are release blockers,
+not optional documentation work.
 
 ## Screenshots
 

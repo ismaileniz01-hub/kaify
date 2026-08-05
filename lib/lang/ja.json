@@ -305,6 +305,7 @@
   "login.mode.label": "Account type",
   "login.mode.signin": "Sign in",
   "login.mode.signup": "Create account",
+  "login.native.account_notice": "New to K.AIFY? Create your account at kaifyai.org, then return here to sign in.",
   "login.signup.subtitle": "Create your free account — same coaches as the app.",
   "login.signup.submit": "Send verification code",
   "login.signup.verify": "Create account",

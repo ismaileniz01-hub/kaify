@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { AuthMode } from "@/lib/auth/safe-redirect";
 import { useLang } from "@/lib/lang-context";
+import { useNativeApp } from "@/lib/native/platform";
 
 type Props = {
   mode: AuthMode;
@@ -11,6 +12,7 @@ type Props = {
 
 export function AuthModeToggle({ mode, redirectTo }: Props) {
   const { t } = useLang();
+  const native = useNativeApp();
 
   const signinHref = (() => {
     const params = new URLSearchParams({ mode: "signin" });
@@ -36,6 +38,19 @@ export function AuthModeToggle({ mode, redirectTo }: Props) {
         <Link href={signinHref} className="font-medium text-purple-300 hover:text-white">
           {t("login.mode.signin")}
         </Link>
+      </p>
+    );
+  }
+
+  // Consumption-only native builds must not link users into an external
+  // purchase/signup flow. The website can deep-link back after checkout.
+  if (native !== false) {
+    if (native === null) {
+      return <span className="block h-5" aria-hidden />;
+    }
+    return (
+      <p className="max-w-xs text-center text-sm leading-relaxed text-zinc-400">
+        {t("login.native.account_notice")}
       </p>
     );
   }
