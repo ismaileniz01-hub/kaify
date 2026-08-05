@@ -37,7 +37,7 @@ Score lift (indicative):
 
 ### Security
 
-- [ ] Enable Supabase Auth leaked-password (HIBP) protection — **dashboard** (login required): https://supabase.com/dashboard/project/urnetodzvszmddzdazdj/auth/providers?provider=Email — or `SUPABASE_ACCESS_TOKEN` + `node scripts/ops/enable-hibp.mjs`
+- [ ] Enable Supabase Auth leaked-password (HIBP) protection — **dashboard** (login required): https://supabase.com/dashboard/project/urnetodzvszmddzdazdj/auth/providers?provider=Email — or `SUPABASE_ACCESS_TOKEN` + `node scripts/ops/enable-hibp.mjs` · evidence: [faz4-security-reliability.md](./evidence/faz4-security-reliability.md)
 - [x] Confirm real secrets for cron/hub: strong `CRON_SECRET` + `ADMIN_HUB_SECRET` set on Vercel project **`kaify`** (prod/preview); vault `kaify_cron_secret` aligned; smoke `GET /api/cron/leaderboard-snapshot` → 200
 - [x] Confirm remaining secrets are strong: `CSRF_SECRET` + `ADMIN_HUB_PASSWORD` rotated (2026-08-04); Paddle/Upstash still operator-verify
 - [x] Set `ADMIN_EMAIL` allowlist — `ismaileniz01@gmail.com` on Vercel `kaify` production+preview; profile already `role=admin`

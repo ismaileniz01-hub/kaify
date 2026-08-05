@@ -2,6 +2,8 @@ import type { ApiResponseBody } from "@/lib/api/response";
 import { CSRF_HEADER_NAME, readCsrfCookieFromDocument } from "@/lib/security/csrf-client";
 export { resolveApiPath } from "@/lib/api/resolve-api-path";
 import { resolveApiPath } from "@/lib/api/resolve-api-path";
+import { withRetry } from "@/lib/resilience/retry";
+import { UpstreamHttpError } from "@/lib/resilience/error-taxonomy";
 
 function csrfHeaders(): HeadersInit {
   const token = readCsrfCookieFromDocument();
@@ -12,22 +14,67 @@ function mergeHeaders(init?: HeadersInit): HeadersInit {
   return { ...csrfHeaders(), ...(init ?? {}) };
 }
 
-/** Typed fetch wrapper for Kaify API routes (cookie session). */
+function isIdempotentMethod(method: string): boolean {
+  return method === "GET" || method === "HEAD";
+}
+
+/** Typed fetch wrapper for Kaify API routes (cookie session). Soft-retries GETs. */
 export async function apiFetch<T>(
   path: string,
   init?: RequestInit,
 ): Promise<ApiResponseBody<T>> {
-  const response = await fetch(resolveApiPath(path), {
-    ...init,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...mergeHeaders(init?.headers),
-    },
-  });
+  const method = (init?.method ?? "GET").toUpperCase();
+  const idempotent = isIdempotentMethod(method);
 
-  const json = (await response.json()) as ApiResponseBody<T>;
-  return json;
+  return withRetry(
+    async () => {
+      let response: Response;
+      try {
+        response = await fetch(resolveApiPath(path), {
+          ...init,
+          method,
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...mergeHeaders(init?.headers),
+          },
+        });
+      } catch (error) {
+        // Network / DNS — taxonomy marks retryable.
+        throw error;
+      }
+
+      if (
+        idempotent &&
+        (response.status === 502 || response.status === 503 || response.status === 504)
+      ) {
+        throw new UpstreamHttpError(response.status, `API ${response.status}`);
+      }
+
+      const json = (await response.json()) as ApiResponseBody<T>;
+      return json;
+    },
+    {
+      retries: idempotent ? 2 : 1,
+      baseDelayMs: 200,
+      maxDelayMs: 1500,
+      signal: init?.signal ?? undefined,
+      // Mutating calls: only retry pure network failures (no HTTP 5xx retry).
+      isRetryable: (error) => {
+        if (error instanceof UpstreamHttpError) return idempotent;
+        if (error instanceof TypeError) return true;
+        if (error instanceof Error) {
+          const msg = error.message.toLowerCase();
+          return (
+            msg.includes("fetch failed") ||
+            msg.includes("network") ||
+            msg.includes("failed to fetch")
+          );
+        }
+        return false;
+      },
+    },
+  );
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
@@ -194,3 +241,4 @@ export async function streamChatMessage(
     }
   }
 }
+

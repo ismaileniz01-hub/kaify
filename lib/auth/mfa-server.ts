@@ -42,13 +42,5 @@ export async function requireMfaIfEnrolled(): Promise<void> {
   }
 }
 
-/**
- * Step-up auth for destructive / data-export actions (passwordless: MFA when enrolled).
- * `user` is accepted for call-site clarity; MFA is resolved from the session cookie.
- */
-export async function requireSensitiveActionAuth(_user: {
-  id: string;
-}): Promise<void> {
-  void _user;
-  await requireMfaIfEnrolled();
-}
+/** @deprecated Import from `@/lib/auth/step-up` — kept for domain re-exports. */
+export { requireSensitiveActionAuth } from "@/lib/auth/step-up";

@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { apiDelete } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
+import {
+  StepUpChallenge,
+  isStepUpRequiredError,
+} from "@/components/auth/StepUpChallenge";
 
 export function DeleteAccountSection() {
   const { t } = useLang();
@@ -15,6 +19,7 @@ export function DeleteAccountSection() {
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsStepUp, setNeedsStepUp] = useState(false);
 
   const deleteAccount = async () => {
     if (confirm !== "DELETE" || busy) return;
@@ -27,8 +32,13 @@ export function DeleteAccountSection() {
       });
       await signOut();
       router.replace("/login");
-    } catch {
-      setError(t("settings.delete.error"));
+    } catch (err) {
+      if (isStepUpRequiredError(err)) {
+        setNeedsStepUp(true);
+        setError(null);
+      } else {
+        setError(t("settings.delete.error"));
+      }
     } finally {
       setBusy(false);
     }
@@ -46,12 +56,26 @@ export function DeleteAccountSection() {
     );
   }
 
+  if (needsStepUp) {
+    return (
+      <div className="mt-3">
+        <StepUpChallenge
+          onCancel={() => setNeedsStepUp(false)}
+          onVerified={() => {
+            setNeedsStepUp(false);
+            void deleteAccount();
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="mt-3 space-y-3 rounded-xl border border-red-500/20 bg-red-500/5 p-4">
       <p className="text-sm font-semibold text-red-200">{t("settings.delete.title")}</p>
       <p className="text-xs leading-relaxed text-zinc-400">{t("settings.delete.retention")}</p>
       <label className="block">
-        <span className="text-[11px] text-zinc-500">{t("settings.delete.reason_label")}</span>
+        <span className="type-caption type-muted">{t("settings.delete.reason_label")}</span>
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
@@ -61,7 +85,7 @@ export function DeleteAccountSection() {
         />
       </label>
       <label className="block">
-        <span className="text-[11px] text-zinc-500">{t("settings.delete.confirm_label")}</span>
+        <span className="type-caption type-muted">{t("settings.delete.confirm_label")}</span>
         <input
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
@@ -80,11 +104,11 @@ export function DeleteAccountSection() {
         </button>
         <button
           type="button"
-          disabled={busy || confirm !== "DELETE"}
+          disabled={confirm !== "DELETE" || busy}
           onClick={() => void deleteAccount()}
-          className="flex-1 rounded-lg bg-red-600 py-2 text-xs font-semibold text-white disabled:opacity-40"
+          className="flex-1 rounded-lg bg-red-600/80 py-2 text-xs font-semibold text-white disabled:opacity-40"
         >
-          {t("settings.delete.submit")}
+          {busy ? t("common.loading") : t("settings.delete.submit")}
         </button>
       </div>
     </div>

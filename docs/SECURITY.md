@@ -17,8 +17,18 @@ Last updated: 2026-08-04
 1. Email OTP → Supabase session (AAL1)
 2. TOTP enrolled users → `/login/mfa` → AAL2 required for API (`requireMfaIfEnrolled`)
 3. Admin routes → `requireAdmin()` = admin role + **AAL2 (enrolled TOTP)** + hub password session
-4. Sensitive actions (delete, export, purchase) → MFA step-up + CSRF token
+4. Sensitive actions (delete, export, billing portal) → MFA AAL2 when enrolled, else email OTP step-up cookie / fresh login (≤10m) + CSRF
 5. All authenticated mutating APIs → CSRF by default (`defineRoute`)
+
+## Leaked password protection (HIBP)
+
+Operator-owned GoTrue setting (Pro). Enable via dashboard or:
+
+```bash
+node scripts/ops/enable-hibp.mjs
+```
+
+Evidence checklist: [faz4-security-reliability.md](./operations/evidence/faz4-security-reliability.md)
 
 ## API surface
 

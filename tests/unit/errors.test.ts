@@ -6,6 +6,7 @@ describe("ApiError", () => {
     expect(new ApiError("VALIDATION_ERROR", "x").status).toBe(400);
     expect(new ApiError("UNAUTHORIZED", "x").status).toBe(401);
     expect(new ApiError("FORBIDDEN", "x").status).toBe(403);
+    expect(new ApiError("STEP_UP_REQUIRED", "x").status).toBe(403);
     expect(new ApiError("NOT_FOUND", "x").status).toBe(404);
     expect(new ApiError("CONFLICT", "x").status).toBe(409);
     expect(new ApiError("RATE_LIMITED", "x").status).toBe(429);

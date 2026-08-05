@@ -16,6 +16,11 @@ import { CSRF_HEADER_NAME, readCsrfCookieFromDocument } from "@/lib/security/csr
 import { apiDelete, apiGet, resolveApiPath } from "@/lib/api/client";
 import { CONSENT_TYPES } from "@/lib/legal/constants";
 import { InlineAlert } from "@/components/InlineAlert";
+import {
+  StepUpChallenge,
+  isStepUpRequiredError,
+} from "@/components/auth/StepUpChallenge";
+import { ApiClientError } from "@/lib/api/client";
 
 type PendingEnrollment = {
   factorId: string;
@@ -36,6 +41,7 @@ export default function SecuritySettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [aiConsentActive, setAiConsentActive] = useState(false);
   const [pushConsentActive, setPushConsentActive] = useState(false);
+  const [needsStepUp, setNeedsStepUp] = useState<"export" | "delete" | null>(null);
 
   const refresh = async () => {
     const supabase = tryCreateBrowserSupabaseClient();
@@ -185,7 +191,14 @@ export default function SecuritySettingsPage() {
         headers: csrf ? { [CSRF_HEADER_NAME]: csrf } : {},
       });
       if (!res.ok) {
-        setError(t("login.error.failed"));
+        const body = (await res.json().catch(() => null)) as {
+          error?: { code?: string };
+        } | null;
+        if (body?.error?.code === "STEP_UP_REQUIRED") {
+          setNeedsStepUp("export");
+          return;
+        }
+        setError(t("settings.export.error"));
         return;
       }
       const blob = await res.blob();
@@ -197,9 +210,9 @@ export default function SecuritySettingsPage() {
         "kaify-export.json";
       a.click();
       URL.revokeObjectURL(url);
-      setMessage("Veri dışa aktarıldı.");
+      setMessage(t("settings.export.success"));
     } catch {
-      setError(t("login.error.failed"));
+      setError(t("settings.export.error"));
     } finally {
       setLoading(false);
     }
@@ -247,8 +260,12 @@ export default function SecuritySettingsPage() {
     try {
       await apiDelete<{ deleted: boolean }>("/api/profile", { confirm: "DELETE" });
       window.location.href = "/login";
-    } catch {
-      setError(t("settings.delete.error"));
+    } catch (err) {
+      if (isStepUpRequiredError(err) || (err instanceof ApiClientError && err.code === "STEP_UP_REQUIRED")) {
+        setNeedsStepUp("delete");
+      } else {
+        setError(t("settings.delete.error"));
+      }
     } finally {
       setLoading(false);
     }
@@ -257,6 +274,18 @@ export default function SecuritySettingsPage() {
   return (
     <div className="min-h-screen bg-zinc-950 px-4 py-6 text-white">
       <div className="mx-auto max-w-lg space-y-6">
+        {needsStepUp && (
+          <StepUpChallenge
+            onCancel={() => setNeedsStepUp(null)}
+            onVerified={() => {
+              const next = needsStepUp;
+              setNeedsStepUp(null);
+              if (next === "export") void exportData();
+              else void deleteAccount();
+            }}
+          />
+        )}
+
         <header className="flex items-center gap-3">
           <Link href="/settings" className="rounded-full p-2 hover:bg-white/10">
             <ArrowLeft className="h-5 w-5" />

@@ -31,8 +31,8 @@ export default function MfaVerifyPage() {
         return;
       }
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
         router.replace("/login");
         return;
       }

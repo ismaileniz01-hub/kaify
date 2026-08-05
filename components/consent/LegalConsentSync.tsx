@@ -45,8 +45,8 @@ export function LegalConsentSync() {
 
       const supabase = tryCreateBrowserSupabaseClient();
       if (!supabase) return;
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) return;
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
 
       try {
         await apiPost("/api/consent", {

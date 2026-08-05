@@ -38,8 +38,8 @@ export function AiConsentGate() {
     void (async () => {
       const supabase = tryCreateBrowserSupabaseClient();
       if (!supabase) return;
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
         setOpen(false);
         return;
       }

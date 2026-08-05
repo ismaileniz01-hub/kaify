@@ -9,7 +9,7 @@ import {
   enforceUserRateLimit,
   type AiRateAction,
 } from "@/lib/api/rate-guard";
-import { requireSensitiveActionAuth } from "@/lib/auth/mfa-server";
+import { requireSensitiveActionAuth } from "@/lib/auth/step-up";
 import { assertUserDailyAiBudget, assertPlatformDailyAiBudget } from "@/lib/ai/daily-cost-cap";
 import { assertCsrf } from "@/lib/security/csrf";
 import { getClientIP } from "@/lib/api-security";
@@ -37,6 +37,8 @@ export type DefineRouteOptions = {
   dailyAiBudget?: boolean;
   /** MFA step-up for delete/export and similar destructive actions. */
   sensitiveAction?: boolean;
+  /** Skip AAL2 for pre-MFA / step-up bootstrap routes. */
+  skipMfa?: boolean;
   /**
    * Double-submit CSRF token. Defaults to required for authenticated
    * POST/PUT/PATCH/DELETE. Set `false` only for intentional exceptions;
@@ -66,7 +68,7 @@ async function runRouteGuards(
   }
 
   if (authMode !== "none" && options.sensitiveAction) {
-    await requireSensitiveActionAuth(user);
+    await requireSensitiveActionAuth(user, request);
   }
 
   // Default CSRF on cookie-auth mutating requests; opt out with requireCsrf: false.
@@ -101,14 +103,17 @@ async function runRouteGuards(
   }
 }
 
-async function resolveRouteUser(authMode: RouteAuth): Promise<AuthedUser> {
+async function resolveRouteUser(
+  authMode: RouteAuth,
+  options: DefineRouteOptions,
+): Promise<AuthedUser> {
   if (authMode === "admin") {
     return requireAdmin();
   }
   if (authMode === "none") {
     return { id: "", email: undefined };
   }
-  return requireUser();
+  return requireUser({ skipMfa: options.skipMfa });
 }
 
 /**
@@ -125,7 +130,7 @@ export function defineRoute<T>(
       options.route,
       async () => {
         try {
-          const user = await resolveRouteUser(authMode);
+          const user = await resolveRouteUser(authMode, options);
           await runRouteGuards(options, authMode, user, request);
           const result = await handler({ user, request });
           return ok(result);
@@ -152,7 +157,7 @@ export function defineRouteRaw(
       options.route,
       async () => {
         try {
-          const user = await resolveRouteUser(authMode);
+          const user = await resolveRouteUser(authMode, options);
           await runRouteGuards(options, authMode, user, request);
           return await handler({ user, request });
         } catch (error) {
@@ -185,7 +190,7 @@ export function defineDynamicRoute<TParams>(
       options.route,
       async () => {
         try {
-          const user = await resolveRouteUser(authMode);
+          const user = await resolveRouteUser(authMode, options);
           await runRouteGuards(options, authMode, user, request);
           const params = await routeCtx.params;
           const result = await handler({ user, request, params });
@@ -213,7 +218,7 @@ export function defineDynamicRouteRaw<TParams>(
       options.route,
       async () => {
         try {
-          const user = await resolveRouteUser(authMode);
+          const user = await resolveRouteUser(authMode, options);
           await runRouteGuards(options, authMode, user, request);
           const params = await routeCtx.params;
           return await handler({ user, request, params });

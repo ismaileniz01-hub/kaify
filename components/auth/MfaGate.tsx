@@ -32,8 +32,8 @@ export function MfaGate() {
           return;
         }
 
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (!sessionData.session) {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) {
           setChecked(true);
           return;
         }
@@ -46,10 +46,10 @@ export function MfaGate() {
       } catch {
         // Fail closed — ambiguous MFA state requires verification.
         const supabase = tryCreateBrowserSupabaseClient();
-        const { data: sessionData } = supabase
-          ? await supabase.auth.getSession()
-          : { data: { session: null } };
-        if (sessionData.session && pathname !== MFA_VERIFY_PATH) {
+        const { data: userData } = supabase
+          ? await supabase.auth.getUser()
+          : { data: { user: null } };
+        if (userData.user && pathname !== MFA_VERIFY_PATH) {
           router.replace(MFA_VERIFY_PATH);
           return;
         }

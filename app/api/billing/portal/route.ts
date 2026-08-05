@@ -9,6 +9,7 @@ export const POST = defineRoute(
     route: "POST /api/billing/portal",
     auth: "user",
     requireCsrf: true,
+    sensitiveAction: true,
   },
   async ({ user }) => {
     const url = await createCustomerPortalUrl(user.id);

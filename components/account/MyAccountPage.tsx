@@ -31,6 +31,10 @@ import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { InlineAlert } from "@/components/InlineAlert";
 import { apiPost } from "@/lib/api/client";
+import {
+  StepUpChallenge,
+  isStepUpRequiredError,
+} from "@/components/auth/StepUpChallenge";
 import { formatTierLabel } from "@/lib/billing/tier-labels";
 import { hasActiveSubscription } from "@/lib/auth/post-auth-redirect";
 import { parseGenderInput } from "@/lib/profile-mapper";
@@ -106,6 +110,7 @@ export function MyAccountPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [needsBillingStepUp, setNeedsBillingStepUp] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -189,8 +194,12 @@ export function MyAccountPage() {
         return;
       }
       window.location.assign(url);
-    } catch {
-      setSaveError(t("myaccount.portal_error"));
+    } catch (err) {
+      if (isStepUpRequiredError(err)) {
+        setNeedsBillingStepUp(true);
+      } else {
+        setSaveError(t("myaccount.portal_error"));
+      }
       setPortalLoading(false);
     }
   };
@@ -449,6 +458,17 @@ export function MyAccountPage() {
                     {t("myaccount.sign_out")}
                   </button>
                 </div>
+                {needsBillingStepUp && (
+                  <div className="border-t border-white/8 px-6 py-4 sm:px-10">
+                    <StepUpChallenge
+                      onCancel={() => setNeedsBillingStepUp(false)}
+                      onVerified={() => {
+                        setNeedsBillingStepUp(false);
+                        void openBillingPortal();
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </ScrollReveal>
           </div>
