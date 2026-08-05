@@ -66,6 +66,11 @@ describe("EN/TR localization quality", () => {
     expect(tr["error.global.retry"]).toBe("Yeniden dene");
     expect(en["admin.costs.title"]).toContain("Cost");
     expect(tr["admin.costs.title"]).toContain("Maliyet");
+    expect(tr["common.retry"]).toBe("Tekrar dene");
+    expect(tr["offline.retry"]).toMatch(/dene/i);
+    expect(tr["signup.wizard.continue"]).toMatch(/^Devam/);
+    expect(tr["landing.waitlist.join"]).toBe("Katıl");
+    expect(tr["login.otp.a11y_group"]).toContain("giriş");
   });
 
   it("ships admin costs/audit/self-heal keys in both locales", () => {
@@ -133,5 +138,10 @@ describe("EN/TR localization quality", () => {
       expect(template).toContain("{{ .Token }}");
       expect(template).toContain("{{ else }}");
     }
+    const runbook = readFileSync(
+      join(process.cwd(), "supabase", "email-templates", "RUNBOOK.md"),
+      "utf8",
+    );
+    expect(runbook).toContain("npm run auth:otp-template");
   });
 });

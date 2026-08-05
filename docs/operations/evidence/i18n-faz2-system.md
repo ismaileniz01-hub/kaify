@@ -10,9 +10,10 @@ Yeniden puan (tahmini): **90–93/100 sistem tamamlığı** (Faz 1’deki 93 kul
 - Admin costs / audit / self-heal → `t('admin.*')` + `formatNumber` / `formatCurrency` / `formatDateTime(lang)`
 - Merkezi formatters: `formatDate`, `formatTime`, `formatDateTime`, `formatRelativeShort` eklendi; chat, analytics, leaderboard, gem, kota, bildirim call site’ları bağlandı
 - `global-error` cookie/localStorage diline göre EN/TR + doğru `html lang`
-- NavigationExperience `a11y.loading_page`
+- NavigationExperience `a11y.loading_page`; route `loading.tsx` → `SrOnlyLoading` (`common.loading`)
+- WaitlistForm + OtpDigitInput a11y/copy → `t()`
 - Android `values-tr/strings.xml`
-- Sözlük: `docs/i18n/terminology.md` + kalite testleri genişletildi
+- Sözlük: `docs/i18n/terminology.md` + kalite testleri; OTP `supabase/email-templates/RUNBOOK.md`
 
 ## Bilinçli sınır
 

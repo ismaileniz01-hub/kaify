@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { ArrowRight, Check, Loader2, AlertCircle } from "lucide-react";
 import ReCAPTCHA from "react-google-recaptcha";
+import { useLang } from "@/lib/lang-context";
 
 type FieldErrors = {
   firstName?: string;
@@ -11,11 +12,13 @@ type FieldErrors = {
 };
 
 export function WaitlistForm({ className = "" }: { className?: string }) {
+  const { t } = useLang();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [submittedFirstName, setSubmittedFirstName] = useState("");
   const recaptchaRef = useRef<ReCAPTCHA>(null);
   const errorRef = useRef<HTMLDivElement>(null);
 
@@ -23,19 +26,19 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
     const errors: FieldErrors = {};
 
     if (!firstName.trim()) {
-      errors.firstName = "First name is required";
+      errors.firstName = t("landing.waitlist.first_name_required");
     } else if (firstName.trim().length < 2) {
-      errors.firstName = "First name must be at least 2 characters";
+      errors.firstName = t("landing.waitlist.first_name_min");
     }
 
     if (lastName.trim() && lastName.trim().length < 2) {
-      errors.lastName = "Last name must be at least 2 characters";
+      errors.lastName = t("landing.waitlist.last_name_min");
     }
 
     if (!email.trim()) {
-      errors.email = "Email is required";
+      errors.email = t("landing.waitlist.email_required");
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errors.email = "Please enter a valid email address";
+      errors.email = t("landing.waitlist.email_invalid");
     }
 
     setFieldErrors(errors);
@@ -48,19 +51,22 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
 
     if (!validate()) {
       setStatus("error");
-      // Focus the first error for screen readers
       errorRef.current?.focus();
       return;
     }
 
-    // Execute reCAPTCHA (if configured — skip if no site key set)
     const token = await recaptchaRef.current?.executeAsync();
-    if (!token && process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && !process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY.includes("YOUR_")) {
+    if (
+      !token &&
+      process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY &&
+      !process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY.includes("YOUR_")
+    ) {
       setStatus("error");
       return;
     }
 
     setStatus("loading");
+    const trimmedFirst = firstName.trim();
 
     try {
       const response = await fetch("/api/waitlist", {
@@ -70,7 +76,7 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
         },
         body: JSON.stringify({
           email: email.trim(),
-          firstName: firstName.trim(),
+          firstName: trimmedFirst,
           lastName: lastName.trim() || undefined,
           recaptchaToken: token,
           honeypot: "",
@@ -80,6 +86,7 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        setSubmittedFirstName(trimmedFirst);
         setStatus("success");
         setFirstName("");
         setLastName("");
@@ -99,12 +106,16 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/20">
           <Check className="h-7 w-7 text-emerald-400" />
         </div>
-        <p className="text-lg font-semibold text-white">You're on the list! 🎉</p>
+        <p className="text-lg font-semibold text-white">
+          {t("landing.waitlist.success")}
+        </p>
         <p className="text-sm text-zinc-400">
-          Thanks{firstName ? ` ${firstName}` : ""}, we'll keep you posted.
+          {t("landing.waitlist.success_thanks", {
+            name: submittedFirstName ? ` ${submittedFirstName}` : "",
+          })}
         </p>
         <p className="mt-1 text-xs text-amber-400/80">
-          💡 If our email lands in Promotions/Spam, move it to Primary to stay in the loop!
+          {t("landing.waitlist.spam_hint")}
         </p>
       </div>
     );
@@ -114,9 +125,8 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
 
   return (
     <form onSubmit={handleSubmit} className={`flex flex-col gap-3 ${className}`} noValidate>
-      {/* Honeypot — CSS ile gizli, sadece botlar görür */}
       <div style={{ position: "absolute", left: "-9999px" }} aria-hidden="true">
-        <label htmlFor="honeypot">Leave this empty</label>
+        <label htmlFor="honeypot">{t("landing.waitlist.honeypot")}</label>
         <input
           id="honeypot"
           type="text"
@@ -127,7 +137,6 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
         />
       </div>
 
-      {/* Live error region for screen readers */}
       <div
         ref={errorRef}
         aria-live="polite"
@@ -135,20 +144,24 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
         tabIndex={-1}
         className="sr-only focus:not-sr-only focus:absolute focus:p-2 focus:bg-red-900 focus:text-white focus:rounded"
       >
-        {hasErrors && `Form errors: ${Object.values(fieldErrors).join(". ")}`}
+        {hasErrors &&
+          t("landing.waitlist.form_errors", {
+            errors: Object.values(fieldErrors).join(". "),
+          })}
       </div>
 
       <div className="flex gap-2">
         <div className="flex-1">
           <input
             type="text"
-            placeholder="First Name"
+            placeholder={t("landing.waitlist.first_name")}
             value={firstName}
             onChange={(e) => {
               setFirstName(e.target.value);
-              if (fieldErrors.firstName) setFieldErrors((prev) => ({ ...prev, firstName: undefined }));
+              if (fieldErrors.firstName)
+                setFieldErrors((prev) => ({ ...prev, firstName: undefined }));
             }}
-            aria-label="First Name"
+            aria-label={t("landing.waitlist.first_name")}
             aria-required="true"
             aria-invalid={!!fieldErrors.firstName}
             aria-describedby={fieldErrors.firstName ? "firstName-error" : undefined}
@@ -167,13 +180,14 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
         <div className="flex-1">
           <input
             type="text"
-            placeholder="Last Name"
+            placeholder={t("landing.waitlist.last_name")}
             value={lastName}
             onChange={(e) => {
               setLastName(e.target.value);
-              if (fieldErrors.lastName) setFieldErrors((prev) => ({ ...prev, lastName: undefined }));
+              if (fieldErrors.lastName)
+                setFieldErrors((prev) => ({ ...prev, lastName: undefined }));
             }}
-            aria-label="Last Name"
+            aria-label={t("landing.waitlist.last_name")}
             aria-invalid={!!fieldErrors.lastName}
             aria-describedby={fieldErrors.lastName ? "lastName-error" : undefined}
             className={`w-full rounded-xl border px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none transition focus:bg-white/10 ${
@@ -194,13 +208,14 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
         <div className="min-w-0 flex-1">
           <input
             type="email"
-            placeholder="you@example.com"
+            placeholder={t("landing.waitlist.email_placeholder")}
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
-              if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+              if (fieldErrors.email)
+                setFieldErrors((prev) => ({ ...prev, email: undefined }));
             }}
-            aria-label="Email address"
+            aria-label={t("landing.waitlist.email_label")}
             aria-required="true"
             aria-invalid={!!fieldErrors.email}
             aria-describedby={fieldErrors.email ? "email-error" : undefined}
@@ -225,7 +240,7 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <>
-              Join <ArrowRight className="h-4 w-4" />
+              {t("landing.waitlist.join")} <ArrowRight className="h-4 w-4" />
             </>
           )}
         </button>
@@ -242,7 +257,7 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
       {status === "error" && !hasErrors && (
         <div className="flex items-center gap-2 text-xs text-red-400" role="alert">
           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-          <span>Something went wrong. Please try again.</span>
+          <span>{t("landing.waitlist.error")}</span>
         </div>
       )}
     </form>

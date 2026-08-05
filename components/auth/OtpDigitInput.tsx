@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { OTP_LENGTH, normalizeOtpInput } from "@/lib/auth/otp";
 import { isCompleteOtp } from "@/lib/auth/otp";
+import { useLang } from "@/lib/lang-context";
 
 type OtpDigitInputProps = {
   value: string;
@@ -19,6 +20,7 @@ export function OtpDigitInput({
   disabled = false,
   autoFocus = false,
 }: OtpDigitInputProps) {
+  const { t } = useLang();
   const length = OTP_LENGTH;
   const refs = useRef<(HTMLInputElement | null)[]>([]);
   const digits = Array.from({ length }, (_, i) => value[i] ?? "");
@@ -81,7 +83,7 @@ export function OtpDigitInput({
   }, [autoFocus, focusIndex]);
 
   return (
-    <div className="otp-digit-row" role="group" aria-label="Email login code">
+    <div className="otp-digit-row" role="group" aria-label={t("login.otp.a11y_group")}>
       {digits.map((digit, index) => (
         <input
           key={index}
@@ -94,7 +96,10 @@ export function OtpDigitInput({
           maxLength={index === 0 ? OTP_LENGTH : 1}
           value={digit}
           disabled={disabled}
-          aria-label={`Digit ${index + 1} of ${length}`}
+          aria-label={t("login.otp.a11y_digit", {
+            index: index + 1,
+            total: length,
+          })}
           className={`otp-digit-cell ${digit ? "otp-digit-cell--filled" : ""}`}
           onChange={(e) => setDigitAt(index, e.target.value)}
           onKeyDown={(e) => onKeyDown(index, e.key)}

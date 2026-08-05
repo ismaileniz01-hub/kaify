@@ -1,3 +1,5 @@
+import { SrOnlyLoading } from "@/components/i18n/SrOnlyLoading";
+
 export default function MessagesLoading() {
   return (
     <div className="phone-shell flex flex-col gap-3 px-4 pb-8 pt-14">
@@ -5,7 +7,7 @@ export default function MessagesLoading() {
       {[0, 1, 2, 3].map((i) => (
         <div key={i} className="h-[72px] premium-skeleton rounded-2xl" />
       ))}
-      <p className="sr-only">Loading</p>
+      <SrOnlyLoading />
     </div>
   );
 }
