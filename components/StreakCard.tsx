@@ -7,6 +7,7 @@ import { KAI_LEVEL_AVATARS, type KaiLevel } from "@/lib/kai-level";
 import { useLang } from "@/lib/lang-context";
 import { toPng } from "html-to-image";
 import { MotionDialog } from "@/components/ui/MotionDialog";
+import { particleCount } from "@/lib/motion/perf-guards";
 
 type StreakCardProps = {
   open: boolean;
@@ -222,7 +223,7 @@ export function StreakCard({ open, streak, kaiLevel, onClose }: StreakCardProps)
             <div className="absolute w-96 h-96 rounded-full blur-3xl opacity-60" style={{ background: `radial-gradient(circle, ${theme.glowIntense}, ${theme.flameColor}40, transparent 70%)` }} />
 
             {/* Yükselen kıvılcımlar */}
-            {[...Array(12)].map((_, i) => (
+            {[...Array(particleCount(12))].map((_, i) => (
                 <div key={i} className="streak-card-fx absolute w-1.5 h-1.5 rounded-full" style={{
                   background: i % 2 === 0 ? theme.flameColor : theme.flameColor2,
                   boxShadow: `0 0 6px ${i % 2 === 0 ? theme.flameColor : theme.flameColor2}`,

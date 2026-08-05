@@ -20,6 +20,10 @@ import { useSession } from "@/lib/session-context";
 import { ChatComposer } from "@/components/chat/ChatComposer";
 import { apiErrorMessage, errorToMessage } from "@/lib/i18n/api-error";
 import { MessageCircle } from "lucide-react";
+import { prefersReducedMotion } from "@/lib/motion/perf-guards";
+
+/** Keep DOM light when long threads accumulate locally after send. */
+const MESSAGE_RENDER_WINDOW = 48;
 
 type LiveMessage = {
   id: string;
@@ -121,7 +125,9 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   }, [coachId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    bottomRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
   }, [messages, sending]);
 
   const handleSend = async () => {
@@ -407,7 +413,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             tone="info"
           />
         )}
-        {messages.map((msg) => {
+        {messages.slice(-MESSAGE_RENDER_WINDOW).map((msg) => {
           const isCoach = msg.from === "coach";
           const isTyping = isCoach && msg.streaming && msg.text === "";
           return (

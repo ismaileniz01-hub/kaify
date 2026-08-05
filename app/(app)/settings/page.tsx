@@ -448,14 +448,14 @@ export default function SettingsPage() {
                         type="button"
                         disabled={isAuthenticated && !settingsLoaded}
                         onClick={() => void toggleSwitch(item.label)}
-                        className={`relative h-6 w-10 rounded-full transition-colors disabled:opacity-50 ${
+                        className={`touch-44 relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
                           toggles[item.label] ? "bg-purple-500" : "bg-zinc-700"
                         }`}
                         aria-pressed={toggles[item.label]}
                       >
                         <span
-                          className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                            toggles[item.label] ? "translate-x-4" : "translate-x-0"
+                          className={`absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                            toggles[item.label] ? "translate-x-5" : "translate-x-0"
                           }`}
                         />
                       </button>
@@ -465,7 +465,7 @@ export default function SettingsPage() {
                         <button
                           type="button"
                           onClick={() => setLangPickerOpen(!langPickerOpen)}
-                          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-zinc-200 transition-all hover:border-white/20 hover:bg-white/[0.06]"
+                          className="touch-44 flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-zinc-200 transition-all hover:border-white/20 hover:bg-white/[0.06]"
                         >
                           <span className="max-w-[130px] truncate">{currentLangLabel}</span>
                           <svg

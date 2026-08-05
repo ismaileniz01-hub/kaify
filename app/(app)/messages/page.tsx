@@ -144,17 +144,17 @@ export default function MessagesPage() {
                 : "border-zinc-700/50 bg-zinc-900/50 opacity-60"
             }`}
           >
-            <div className="flex -space-x-2">
+            <div className="flex -space-x-2" aria-hidden>
               {(["alex", "maya", "leo", "kai"] as ContactId[]).map((id) => (
                 <div
                   key={id}
-                  className="relative h-8 w-8 overflow-hidden rounded-full border-2 border-zinc-900"
+                  className="relative h-11 w-11 overflow-hidden rounded-full border-2 border-zinc-900"
                 >
                   <Image
                     src={id === "kai" ? publicAssetUrl(kaiAvatar) : publicAssetUrl(CONTACTS[id].avatar)}
                     alt=""
-                    width={32}
-                    height={32}
+                    width={44}
+                    height={44}
                     className="h-full w-full object-cover"
                   />
                 </div>

@@ -15,6 +15,7 @@ import {
   SPECIAL_STATION_GEM_REWARD,
   STATION_GEM_REWARD,
 } from "@/lib/streak-rewards.constants";
+import { getMotionBudget, particleCount } from "@/lib/motion/perf-guards";
 
 type StreakRoadProps = {
   currentStreak: number;
@@ -658,28 +659,35 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
           ? '0 0 20px rgba(139,92,246,0.5), 0 0 40px rgba(124,58,237,0.3)'
           : '0 0 20px rgba(168,85,247,0.5), 0 0 40px rgba(147,51,234,0.3)';
 
+        const motion = getMotionBudget();
+        const p = (n: number) => particleCount(n, motion);
+        const shake =
+          !motion.effects
+            ? "none"
+            : evolutionPhase === "burning"
+              ? "screenShake 0.03s ease-in-out infinite, screenShake2 0.05s ease-in-out infinite 0.015s"
+              : evolutionPhase === "evolving"
+                ? "screenShake 0.04s ease-in-out infinite, screenShake3 0.06s ease-in-out infinite 0.02s"
+                : evolutionPhase === "done" && isLevel4
+                  ? "screenShake 0.05s ease-in-out infinite, screenShake4 0.07s ease-in-out infinite 0.025s, screenShake2 0.09s ease-in-out infinite 0.04s"
+                  : evolutionPhase === "done"
+                    ? "screenShake 0.06s ease-in-out infinite, screenShake3 0.08s ease-in-out infinite 0.03s"
+                    : "none";
+
         return (
           <div className="reduced-motion-static fixed inset-0 z-50 flex items-center justify-center bg-black/95" style={{
-            animation: evolutionPhase === "burning" 
-              ? 'screenShake 0.03s ease-in-out infinite, screenShake2 0.05s ease-in-out infinite 0.015s' 
-              : evolutionPhase === "evolving" 
-              ? 'screenShake 0.04s ease-in-out infinite, screenShake3 0.06s ease-in-out infinite 0.02s'
-              : evolutionPhase === "done" && isLevel4
-              ? 'screenShake 0.05s ease-in-out infinite, screenShake4 0.07s ease-in-out infinite 0.025s, screenShake2 0.09s ease-in-out infinite 0.04s'
-              : evolutionPhase === "done"
-              ? 'screenShake 0.06s ease-in-out infinite, screenShake3 0.08s ease-in-out infinite 0.03s'
-              : 'none' 
+            animation: shake,
           }}>
             
             {/* ===== YANMA FAZI ===== */}
             {evolutionPhase === "burning" && (
               <div className="relative flex flex-col items-center gap-4">
                 {/* Alev tabanı - büyük ateş topu */}
-                <div className={`absolute bottom-[25%] left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-gradient-to-t ${bgGrad} blur-3xl`} style={{ animation: 'fireBase 0.5s ease-in-out infinite' }} />
-                <div className={`absolute bottom-[25%] left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-gradient-to-t ${bgGrad2} blur-2xl`} style={{ animation: 'fireBase 0.7s ease-in-out infinite 0.15s' }} />
+                <div className={`absolute bottom-[25%] left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-gradient-to-t ${bgGrad} blur-3xl`} style={{ animation: motion.effects ? 'fireBase 0.5s ease-in-out infinite' : 'none' }} />
+                <div className={`absolute bottom-[25%] left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-gradient-to-t ${bgGrad2} blur-2xl`} style={{ animation: motion.effects ? 'fireBase 0.7s ease-in-out infinite 0.15s' : 'none' }} />
                 
                 {/* Duman bulutları */}
-                {[...Array(6)].map((_, i) => {
+                {[...Array(p(6))].map((_, i) => {
                   const angle = (i / 6) * Math.PI * 2;
                   const dist = 80 + Math.random() * 60;
                   const x = Math.cos(angle) * dist;
@@ -703,7 +711,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                 })}
 
                 {/* Yükselen alevler - 3 katman */}
-                {[...Array(8)].map((_, i) => {
+                {[...Array(p(8))].map((_, i) => {
                   const angle = (i / 8) * Math.PI * 2;
                   const x = Math.cos(angle) * 50;
                   const delay = i * 0.12;
@@ -732,7 +740,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                 })}
 
                 {/* Level 3 için ekstra mor kristal kıvılcımları */}
-                {extraEffects && [...Array(20)].map((_, i) => {
+                {extraEffects && [...Array(p(20))].map((_, i) => {
                   const angle = Math.random() * Math.PI * 2;
                   const dist = 50 + Math.random() * 150;
                   const x = Math.cos(angle) * dist;
@@ -765,7 +773,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                 })}
 
                 {/* Kıvılcım yağmuru - 30 adet */}
-                {[...Array(30)].map((_, i) => {
+                {[...Array(p(30))].map((_, i) => {
                   const angle = Math.random() * Math.PI * 2;
                   const dist = 30 + Math.random() * 120;
                   const x = Math.cos(angle) * dist;
@@ -844,7 +852,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
             {evolutionPhase === "evolving" && (
               <div className="relative flex flex-col items-center gap-4" style={{ animation: 'screenShake 0.1s ease-in-out infinite' }}>
                 {/* Işık halkaları - çok katmanlı */}
-                {[...Array(8)].map((_, i) => (
+                {[...Array(p(8))].map((_, i) => (
                   <div
                     key={`ring-${i}`}
                     className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
@@ -867,7 +875,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                 </div>
 
                 {/* Level 3 için büyülü semboller */}
-                {extraEffects && [...Array(8)].map((_, i) => {
+                {extraEffects && [...Array(p(8))].map((_, i) => {
                   const angle = (i / 8) * Math.PI * 2;
                   const dist = 100 + Math.random() * 80;
                   const x = Math.cos(angle) * dist;
@@ -893,7 +901,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                 })}
 
                 {/* Level 3 için kristal oluşumu */}
-                {extraEffects && [...Array(12)].map((_, i) => {
+                {extraEffects && [...Array(p(12))].map((_, i) => {
                   const angle = (i / 12) * Math.PI * 2;
                   const dist = 40 + Math.random() * 60;
                   const x = Math.cos(angle) * dist;
@@ -927,7 +935,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                 })}
 
                 {/* Yükselen enerji parçacıkları */}
-                {[...Array(15)].map((_, i) => (
+                {[...Array(p(15))].map((_, i) => (
                   <div
                     key={`particle-${i}`}
                     className="absolute rounded-full"
@@ -1021,7 +1029,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
             {evolutionPhase === "done" && (
               <div className="relative flex flex-col items-center gap-4">
                 {/* Patlama halkaları */}
-                {[...Array(12)].map((_, i) => (
+                {[...Array(p(12))].map((_, i) => (
                   <div
                     key={`explosion-${i}`}
                     className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
@@ -1045,7 +1053,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                 </div>
 
                 {/* Yükselen ışık sütunları */}
-                {[...Array(8)].map((_, i) => {
+                {[...Array(p(8))].map((_, i) => {
                   const angle = (i / 8) * Math.PI * 2;
                   const x = Math.cos(angle) * 60;
                   return (

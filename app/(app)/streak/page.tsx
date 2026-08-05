@@ -13,6 +13,7 @@ import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/navigation/AppHeader";
+import { hapticNotification } from "@/lib/native/haptics";
 
 export default function StreakPage() {
   const { gemState } = useGem();
@@ -39,6 +40,7 @@ export default function StreakPage() {
         kind: "ok",
         text: t("streak.checkin_success", { streak: result.currentStreak }),
       });
+      void hapticNotification("success");
     } catch (error) {
       console.error("[streak] check-in failed:", error);
       const already =
@@ -49,6 +51,8 @@ export default function StreakPage() {
           ? t("streak.checkin_already")
           : t("streak.checkin_error"),
       });
+      if (!already) void hapticNotification("error");
+      else void hapticNotification("warning");
     } finally {
       setCheckingIn(false);
       setTimeout(() => setCheckInMsg(null), 4000);

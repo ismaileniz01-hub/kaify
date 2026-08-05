@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, Flame, MessageCircle, Target } from "lucide-react";
 import type { TodayJob } from "@/lib/activation/today-job";
 import { useLang } from "@/lib/lang-context";
+import { hapticSelection } from "@/lib/native/haptics";
 
 const ICONS = {
   check_in: Flame,
@@ -48,14 +49,27 @@ export function TodaysJobCard({ job, onGoalsClick }: Props) {
 
   if (job.kind === "set_goals" && onGoalsClick) {
     return (
-      <button type="button" onClick={onGoalsClick} className={className}>
+      <button
+        type="button"
+        onClick={() => {
+          void hapticSelection();
+          onGoalsClick();
+        }}
+        className={className}
+      >
         {content}
       </button>
     );
   }
 
   return (
-    <Link href={job.href} className={className}>
+    <Link
+      href={job.href}
+      onClick={() => {
+        void hapticSelection();
+      }}
+      className={className}
+    >
       {content}
     </Link>
   );

@@ -1,5 +1,8 @@
+"use client";
+
 import type { AvatarEffect } from "@/lib/aura-effects";
 import { auraCssVars, type AuraVisualConfig } from "@/lib/aura-effects";
+import { getMotionBudget, particleCount, prefersReducedMotion } from "@/lib/motion/perf-guards";
 
 type AuraEffectLayerProps = {
   effect: AvatarEffect;
@@ -15,42 +18,60 @@ const scaleClass = {
   lg: "premium-aura--lg",
 };
 
-function FireLayer({ style }: { style: React.CSSProperties }) {
+function FireLayer({ style, count }: { style: React.CSSProperties; count: number }) {
+  if (count <= 0) return null;
   return (
     <div className="fire-aura" style={style}>
-      {Array.from({ length: 8 }, (_, i) => (
+      {Array.from({ length: count }, (_, i) => (
         <span key={i} className="fire-spark" style={style} />
       ))}
     </div>
   );
 }
 
-function ElectricLayer({ style }: { style: React.CSSProperties }) {
+function ElectricLayer({ style, count }: { style: React.CSSProperties; count: number }) {
+  if (count <= 0) return null;
   return (
     <div className="electric-aura" style={style}>
-      {Array.from({ length: 6 }, (_, i) => (
+      {Array.from({ length: count }, (_, i) => (
         <span key={i} className="electric-bolt" style={style} />
       ))}
     </div>
   );
 }
 
-function PhoenixLayer({ style, scale }: { style: React.CSSProperties; scale: string }) {
+function PhoenixLayer({
+  style,
+  scale,
+  count,
+}: {
+  style: React.CSSProperties;
+  scale: string;
+  count: number;
+}) {
   return (
     <div className={`premium-aura premium-aura-phoenix ${scale}`} style={style}>
       <span className="phoenix-wing phoenix-wing--left" aria-hidden />
       <span className="phoenix-wing phoenix-wing--right" aria-hidden />
-      {Array.from({ length: 10 }, (_, i) => (
+      {Array.from({ length: count }, (_, i) => (
         <span key={i} className="phoenix-ember" style={style} aria-hidden />
       ))}
     </div>
   );
 }
 
-function NebulaLayer({ style, scale }: { style: React.CSSProperties; scale: string }) {
+function NebulaLayer({
+  style,
+  scale,
+  count,
+}: {
+  style: React.CSSProperties;
+  scale: string;
+  count: number;
+}) {
   return (
     <div className={`premium-aura premium-aura-nebula ${scale}`} style={style}>
-      {Array.from({ length: 12 }, (_, i) => (
+      {Array.from({ length: count }, (_, i) => (
         <span key={i} className="nebula-star" aria-hidden />
       ))}
       <span className="nebula-core" aria-hidden />
@@ -58,10 +79,18 @@ function NebulaLayer({ style, scale }: { style: React.CSSProperties; scale: stri
   );
 }
 
-function ThunderLayer({ style, scale }: { style: React.CSSProperties; scale: string }) {
+function ThunderLayer({
+  style,
+  scale,
+  count,
+}: {
+  style: React.CSSProperties;
+  scale: string;
+  count: number;
+}) {
   return (
     <div className={`premium-aura premium-aura-thunder ${scale}`} style={style}>
-      {Array.from({ length: 8 }, (_, i) => (
+      {Array.from({ length: count }, (_, i) => (
         <span key={i} className="thunder-bolt" style={style} aria-hidden />
       ))}
       <span className="thunder-core" aria-hidden />
@@ -83,10 +112,18 @@ function EclipseLayer({ style, scale }: { style: React.CSSProperties; scale: str
   );
 }
 
-function PrismLayer({ style, scale }: { style: React.CSSProperties; scale: string }) {
+function PrismLayer({
+  style,
+  scale,
+  count,
+}: {
+  style: React.CSSProperties;
+  scale: string;
+  count: number;
+}) {
   return (
     <div className={`premium-aura premium-aura-prism ${scale}`} style={style}>
-      {Array.from({ length: 6 }, (_, i) => (
+      {Array.from({ length: count }, (_, i) => (
         <span key={i} className="prism-shard" aria-hidden />
       ))}
       <span className="prism-beam prism-beam--1" aria-hidden />
@@ -104,19 +141,31 @@ export function AuraEffectLayer({
   className = "",
 }: AuraEffectLayerProps) {
   if (effect === "none") return null;
+  if (prefersReducedMotion()) return null;
 
+  const budget = getMotionBudget();
   const style = auraCssVars(config);
   const scaleCls = scaleClass[scale];
 
   return (
     <div className={`pointer-events-none absolute inset-0 ${className}`} aria-hidden>
-      {effect === "fire" && <FireLayer style={style} />}
-      {effect === "electric" && <ElectricLayer style={style} />}
-      {effect === "phoenix" && <PhoenixLayer style={style} scale={scaleCls} />}
-      {effect === "nebula" && <NebulaLayer style={style} scale={scaleCls} />}
-      {effect === "thunder" && <ThunderLayer style={style} scale={scaleCls} />}
+      {effect === "fire" && <FireLayer style={style} count={particleCount(8, budget)} />}
+      {effect === "electric" && (
+        <ElectricLayer style={style} count={particleCount(6, budget)} />
+      )}
+      {effect === "phoenix" && (
+        <PhoenixLayer style={style} scale={scaleCls} count={particleCount(10, budget)} />
+      )}
+      {effect === "nebula" && (
+        <NebulaLayer style={style} scale={scaleCls} count={particleCount(12, budget)} />
+      )}
+      {effect === "thunder" && (
+        <ThunderLayer style={style} scale={scaleCls} count={particleCount(8, budget)} />
+      )}
       {effect === "eclipse" && <EclipseLayer style={style} scale={scaleCls} />}
-      {effect === "prism" && <PrismLayer style={style} scale={scaleCls} />}
+      {effect === "prism" && (
+        <PrismLayer style={style} scale={scaleCls} count={particleCount(6, budget)} />
+      )}
     </div>
   );
 }

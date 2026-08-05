@@ -2,6 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { applyGreenScreenKey } from "@/lib/chroma-key";
+import {
+  getMotionBudget,
+  useDocumentVisible,
+} from "@/lib/motion/perf-guards";
 
 type Props = {
   src: string;
@@ -16,7 +20,8 @@ type Props = {
 
 /**
  * Plays a green-screen video with real-time chroma key on a canvas.
- * Audio from the source video is preserved when `muted` is false.
+ * Pauses the rAF loop when the tab is hidden; skips CPU keying on
+ * reduced-motion / when the motion budget disables chroma.
  */
 export function ChromaKeyVideo({
   src,
@@ -32,6 +37,9 @@ export function ChromaKeyVideo({
   const rafRef = useRef<number>(0);
   const onEndedRef = useRef(onEnded);
   const onStartRef = useRef(onStart);
+  const visible = useDocumentVisible();
+  const budget = getMotionBudget();
+  const skipKeying = budget.chromaScale <= 0;
 
   useEffect(() => {
     onEndedRef.current = onEnded;
@@ -40,8 +48,32 @@ export function ChromaKeyVideo({
 
   useEffect(() => {
     const video = videoRef.current;
+    if (!video) return;
+
+    if (skipKeying) {
+      const handleEnded = () => onEndedRef.current?.();
+      const handlePlaying = () => {
+        if (!startedRef.current) {
+          startedRef.current = true;
+          onStartRef.current?.();
+        }
+      };
+      video.addEventListener("ended", handleEnded);
+      video.addEventListener("playing", handlePlaying);
+      if (autoPlay) {
+        void video.play().catch(() => {
+          video.muted = true;
+          void video.play().catch(() => {});
+        });
+      }
+      return () => {
+        video.removeEventListener("ended", handleEnded);
+        video.removeEventListener("playing", handlePlaying);
+      };
+    }
+
     const canvas = canvasRef.current;
-    if (!video || !canvas) return;
+    if (!canvas) return;
 
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
@@ -51,6 +83,10 @@ export function ChromaKeyVideo({
     if (!offCtx) return;
 
     const paint = () => {
+      if (document.visibilityState !== "visible") {
+        rafRef.current = 0;
+        return;
+      }
       if (video.readyState < 2) {
         rafRef.current = requestAnimationFrame(paint);
         return;
@@ -63,18 +99,22 @@ export function ChromaKeyVideo({
         return;
       }
 
-      if (canvas.width !== w || canvas.height !== h) {
-        canvas.width = w;
-        canvas.height = h;
-        offscreen.width = w;
-        offscreen.height = h;
+      const scale = budget.chromaScale;
+      const cw = Math.max(1, Math.round(w * scale));
+      const ch = Math.max(1, Math.round(h * scale));
+
+      if (canvas.width !== cw || canvas.height !== ch) {
+        canvas.width = cw;
+        canvas.height = ch;
+        offscreen.width = cw;
+        offscreen.height = ch;
       }
 
-      offCtx.drawImage(video, 0, 0, w, h);
-      const frame = offCtx.getImageData(0, 0, w, h);
-      applyGreenScreenKey(frame.data, w, h);
+      offCtx.drawImage(video, 0, 0, cw, ch);
+      const frame = offCtx.getImageData(0, 0, cw, ch);
+      applyGreenScreenKey(frame.data, cw, ch);
 
-      ctx.clearRect(0, 0, w, h);
+      ctx.clearRect(0, 0, cw, ch);
       ctx.putImageData(frame, 0, 0);
 
       if (!startedRef.current && !video.paused) {
@@ -90,7 +130,9 @@ export function ChromaKeyVideo({
     const handlePlay = () => {
       startedRef.current = false;
       cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(paint);
+      if (document.visibilityState === "visible") {
+        rafRef.current = requestAnimationFrame(paint);
+      }
     };
 
     const handleEnded = () => {
@@ -98,12 +140,22 @@ export function ChromaKeyVideo({
       onEndedRef.current?.();
     };
 
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && !video.paused && !video.ended) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(paint);
+        return;
+      }
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    };
+
     video.addEventListener("play", handlePlay);
     video.addEventListener("ended", handleEnded);
+    document.addEventListener("visibilitychange", handleVisibility);
 
     if (autoPlay) {
       void video.play().catch(() => {
-        // Autoplay blocked — fall back to muted playback.
         video.muted = true;
         void video.play().catch(() => {});
       });
@@ -113,28 +165,27 @@ export function ChromaKeyVideo({
       cancelAnimationFrame(rafRef.current);
       video.removeEventListener("play", handlePlay);
       video.removeEventListener("ended", handleEnded);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [src, autoPlay]);
+  }, [src, autoPlay, skipKeying, budget.chromaScale, visible]);
 
   return (
     <div className={`relative ${className}`}>
       <video
         ref={videoRef}
         src={src}
-        className="pointer-events-none absolute h-0 w-0 opacity-0"
         playsInline
         muted={muted}
-        preload="auto"
+        className={skipKeying ? "h-full w-full object-contain" : "pointer-events-none absolute h-px w-px opacity-0"}
+        aria-hidden={!skipKeying}
       />
-      <canvas ref={canvasRef} className="mx-auto h-auto max-h-[280px] w-full max-w-[320px]" />
-      {/* Fade any residual floor green into the modal background */}
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[22%] max-h-[64px]"
-        style={{
-          background:
-            "linear-gradient(to top, rgba(15, 7, 32, 0.95) 0%, rgba(15, 7, 32, 0.55) 55%, transparent 100%)",
-        }}
-      />
+      {!skipKeying && (
+        <canvas
+          ref={canvasRef}
+          className="h-full w-full object-contain"
+          aria-hidden
+        />
+      )}
     </div>
   );
 }

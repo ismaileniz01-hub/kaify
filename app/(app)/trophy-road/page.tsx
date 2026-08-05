@@ -17,6 +17,7 @@ import { MarketAuraPreview } from "@/components/market/MarketAuraPreview";
 import { EmptyState } from "@/components/EmptyState";
 import { MARKET_EFFECTS, type MarketEffect } from "@/lib/market-catalog";
 import { AppHeader } from "@/components/navigation/AppHeader";
+import { hapticImpact, hapticNotification } from "@/lib/native/haptics";
 
 type EffectColor = MarketEffect;
 
@@ -79,6 +80,7 @@ export default function MarketPage() {
 
     setPurchasing(effect.id);
     setError(null);
+    void hapticImpact("medium");
 
     if (isAuthenticated) {
       try {
@@ -89,8 +91,10 @@ export default function MarketPage() {
         await refreshMarketState();
         await refreshBalance?.();
         setSuccessEffect(effect);
+        void hapticNotification("success");
       } catch (err) {
         setError(errorToMessage(err, t) || t("market.error.purchase"));
+        void hapticNotification("error");
       } finally {
         setPurchasing(null);
       }
@@ -102,8 +106,10 @@ export default function MarketPage() {
       if (success) {
         purchaseEffect(effect.id);
         setSuccessEffect(effect);
+        void hapticNotification("success");
       } else {
         setError(t("market.insufficient"));
+        void hapticNotification("error");
       }
       setPurchasing(null);
     }, 800);

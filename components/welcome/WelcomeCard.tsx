@@ -1,5 +1,8 @@
+"use client";
+
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { hapticSelection } from "@/lib/native/haptics";
 
 type GradientVariant = "purple" | "blue" | "orange" | "gold" | "green";
 
@@ -22,6 +25,9 @@ export function WelcomeCard({
     <Link
       href={href}
       prefetch
+      onClick={() => {
+        void hapticSelection();
+      }}
       className={`analytics-card analytics-card--${gradient} relative flex min-h-[118px] flex-col justify-between p-4 transition active:scale-[0.97]`}
     >
       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-purple-200 ring-1 ring-white/10">
