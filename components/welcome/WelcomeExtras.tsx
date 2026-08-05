@@ -10,13 +10,9 @@ import { useSession } from "@/lib/session-context";
 import { useEffect } from "react";
 
 export function WelcomeExtras() {
-  const { t, lang } = useLang();
+  const { t } = useLang();
   const { avatar: kaiAvatar, unlockedLevel, unlockLevel } = useKai();
-  const { home, refreshHome } = useSession();
-
-  useEffect(() => {
-    void refreshHome(lang);
-  }, [lang, refreshHome]);
+  const { home } = useSession();
 
   useEffect(() => {
     if (home?.kaiLevel && home.kaiLevel > unlockedLevel) {

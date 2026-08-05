@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 
-import { ArrowLeft } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { ChatBubbles } from "@/components/ChatBubbles";
 import { ChatComposer } from "@/components/chat/ChatComposer";
@@ -14,6 +12,7 @@ import { resolveAvatarEffect } from "@/lib/aura-effects";
 import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
+import { AppHeader } from "@/components/navigation/AppHeader";
 
 const LiveChatPanel = dynamic(
   () =>
@@ -155,40 +154,31 @@ export default function ChatPage() {
   return (
     <div className={`phone-shell chat-shell chat-gradient ${patternClass} relative flex h-[100dvh] flex-col`}>
 
-      <header className="pt-app-header relative z-20 flex items-center gap-3 px-4 pb-2">
-        <Link
-          href="/messages"
-          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
-          aria-label={t("nav.back")}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div className="flex flex-1 items-center justify-center gap-2">
-          <ContactAvatar
-            src={getAvatarSrc()}
-            alt={contact.name}
-            size="xs"
-            effect={getEffect()}
-            auraColor={contactId === "kai" ? auraColor : "default"}
-          />
-          <div className="flex flex-col items-start">
-            <span className="text-sm font-semibold" style={{ color: contact.color.primaryLight }}>
-              {contact.name}
+      <AppHeader
+        backHref="/messages"
+        backLabel={t("nav.back")}
+        title={
+          <span className="flex items-center justify-center gap-2">
+            <ContactAvatar
+              src={getAvatarSrc()}
+              alt={contact.name}
+              size="xs"
+              effect={getEffect()}
+              auraColor={contactId === "kai" ? auraColor : "default"}
+            />
+            <span className="flex flex-col items-start">
+              <span className="font-semibold" style={{ color: contact.color.primaryLight }}>
+                {contact.name}
+              </span>
+              <span className="flex items-center gap-1 text-xs font-normal" style={{ color: contact.color.primaryLight }}>
+                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: contact.color.primary }} />
+                {contact.role}
+              </span>
             </span>
-            <span className="flex items-center gap-1 text-xs" style={{ color: contact.color.primaryLight }}>
-              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: contact.color.primary }} />
-              {contact.role}
-            </span>
-          </div>
-        </div>
-        <div className="h-11 w-11" />
-        <div
-          className="absolute bottom-0 left-3 right-3 h-px"
-          style={{
-            background: `linear-gradient(to right, transparent, ${contact.color.primary}60, transparent)`,
-          }}
-        />
-      </header>
+          </span>
+        }
+        divider
+      />
 
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
         {sessionLoading ? (

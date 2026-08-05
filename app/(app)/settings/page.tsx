@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Fingerprint,
-  ArrowLeft,
   Bell,
   Globe,
   LogOut,
@@ -26,6 +25,7 @@ import { useSession } from "@/lib/session-context";
 import { apiGet, apiPatch } from "@/lib/api/client";
 import type { UserSettingsDTO } from "@/lib/services/settings.service";
 import { UsageQuotaSection } from "@/components/settings/UsageQuotaSection";
+import { AppHeader } from "@/components/navigation/AppHeader";
 import { DeleteAccountSection } from "@/components/settings/DeleteAccountSection";
 
 type SettingItem = {
@@ -374,17 +374,11 @@ export default function SettingsPage() {
 
   return (
     <div className="phone-shell analytics-gradient relative flex flex-col">
-      <header className="animate-in animate-in--1 flex items-center justify-between px-4 pb-2 pt-12">
-        <Link
-          href="/welcome"
-          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
-          aria-label={t("nav.back")}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <h1 className="flex-1 text-center text-sm font-medium text-white">{t("settings.title")}</h1>
-        <div className="h-9 w-9" />
-      </header>
+      <AppHeader
+        backHref="/welcome"
+        backLabel={t("nav.back")}
+        title={t("settings.title")}
+      />
 
       <main className="flex-1 overflow-y-auto px-4 pb-8">
         {loadError && (

@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { Activity, ArrowLeft, Droplets, Dumbbell, Flame, RefreshCw } from "lucide-react";
+import { Activity, Droplets, Dumbbell, Flame, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { MacroRing } from "@/components/analytics/MacroRing";
 import { StatCard } from "@/components/analytics/StatCard";
@@ -14,6 +13,7 @@ import { InlineAlert } from "@/components/InlineAlert";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import { apiGet } from "@/lib/api/client";
 import type { AnalyticsBundleDTO } from "@/lib/services/analytics.service";
+import { AppHeader } from "@/components/navigation/AppHeader";
 
 export default function AnalyticsPage() {
   const { t, unit } = useLang();
@@ -79,28 +79,22 @@ export default function AnalyticsPage() {
 
   return (
     <div className="phone-shell analytics-gradient relative flex flex-col">
-      <header className="animate-in animate-in--1 flex items-center justify-between px-4 pb-2 pt-12">
-        <Link
-          href="/welcome"
-          prefetch
-          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
-          aria-label={t("nav.back")}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <h1 className="flex-1 text-center text-sm font-medium text-white">
-          {t("analytics.page_title")}
-        </h1>
-        <button
-          type="button"
-          onClick={() => loadAnalytics()}
-          disabled={refreshing || !isAuthenticated}
-          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white disabled:opacity-40"
-          aria-label={t("analytics.refresh")}
-        >
-          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-        </button>
-      </header>
+      <AppHeader
+        backHref="/welcome"
+        backLabel={t("nav.back")}
+        title={t("analytics.page_title")}
+        trailing={
+          <button
+            type="button"
+            onClick={() => loadAnalytics()}
+            disabled={refreshing || !isAuthenticated}
+            className="app-header__action disabled:opacity-40"
+            aria-label={t("analytics.refresh")}
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+          </button>
+        }
+      />
 
       {lastUpdated && !loadError && (
         <p className="px-4 pb-1 text-center text-[10px] text-zinc-600">

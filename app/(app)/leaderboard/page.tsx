@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
 import {
-  ArrowLeft,
   Globe,
   Flame,
   Crown,
@@ -23,6 +21,7 @@ import { apiGet } from "@/lib/api/client";
 import type { UserSettingsDTO } from "@/lib/services/settings.service";
 import { getCountryName } from "@/lib/country-names";
 import type { CountryLeaderboardDTO } from "@/lib/types/domain.types";
+import { AppHeader } from "@/components/navigation/AppHeader";
 import { FlagImage } from "@/components/FlagImage";
 import { EmptyState } from "@/components/EmptyState";
 import { resolveApiPath } from "@/lib/api/client";
@@ -226,23 +225,18 @@ export default function LeaderboardPage() {
     <div className="phone-shell relative flex flex-col overflow-hidden">
       <FitnessWallpaper softVignette />
 
-      {/* Header */}
-      <header className="animate-in animate-in--1 relative z-20 flex items-center justify-between px-4 pt-14">
-        <Link
-          href="/welcome"
-          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition-all duration-300 hover:bg-white/20 hover:text-white hover:scale-110"
-          aria-label={t("nav.back")}
-        >
-          <ArrowLeft className="h-4 w-4" strokeWidth={2} />
-        </Link>
-        <div className="flex items-center gap-2">
+      <AppHeader
+        backHref="/welcome"
+        backLabel={t("nav.back")}
+        title={
+          <span className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/20 ring-2 ring-amber-400/30">
             <Globe className="h-3.5 w-3.5 text-amber-400" />
           </div>
-          <span className="text-sm font-bold text-white">{t("nav.leaderboard")}</span>
-        </div>
-        <div className="h-8 w-8" />
-      </header>
+            <span>{t("nav.leaderboard")}</span>
+          </span>
+        }
+      />
 
       <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto">
         {leaderboardHidden && isAuthenticated && (

@@ -48,4 +48,19 @@ test.describe("public smoke", () => {
       .evaluate((element) => getComputedStyle(element).animationName);
     expect(animationName).toBe("none");
   });
+
+  test("in-app navigation exposes immediate route progress", async ({ page }) => {
+    await page.goto("/login");
+    const progress = page.locator(".route-progress");
+    await expect(progress).toHaveAttribute("aria-hidden", "true");
+
+    await page.route("**/signup**", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      await route.continue();
+    });
+
+    await page.getByRole("link", { name: /sign up|kayıt/i }).click();
+    await expect(progress).toHaveAttribute("aria-hidden", "false");
+    await expect(page).toHaveURL(/\/signup/);
+  });
 });

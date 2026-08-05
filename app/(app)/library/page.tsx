@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Dumbbell, Home, BookOpen } from "lucide-react";
+import { Dumbbell, Home, BookOpen } from "lucide-react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { useLang } from "@/lib/lang-context";
+import { AppHeader } from "@/components/navigation/AppHeader";
 
 export default function LibraryPage() {
   const { t } = useLang();
@@ -11,23 +12,18 @@ export default function LibraryPage() {
     <div className="phone-shell relative flex flex-col overflow-hidden">
       <FitnessWallpaper softVignette />
 
-      {/* Header */}
-      <header className="animate-in animate-in--1 relative z-20 flex items-center justify-between px-4 pt-14">
-        <Link
-          href="/welcome"
-          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition-all duration-300 hover:bg-white/20 hover:text-white hover:scale-110"
-          aria-label={t("nav.back")}
-        >
-          <ArrowLeft className="h-4 w-4" strokeWidth={2} />
-        </Link>
-        <div className="flex items-center gap-2">
+      <AppHeader
+        backHref="/welcome"
+        backLabel={t("nav.back")}
+        title={
+          <span className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/20 ring-2 ring-emerald-400/30">
             <BookOpen className="h-3.5 w-3.5 text-emerald-400" />
           </div>
-          <span className="text-sm font-bold text-white">{t("library.title")}</span>
-        </div>
-        <div className="h-8 w-8" />
-      </header>
+            <span>{t("library.title")}</span>
+          </span>
+        }
+      />
 
       <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto">
         {/* Title */}

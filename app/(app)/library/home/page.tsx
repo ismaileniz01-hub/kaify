@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft, Home, ChevronRight } from "lucide-react";
+import { Home, ChevronRight } from "lucide-react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { useLang } from "@/lib/lang-context";
+import { AppHeader } from "@/components/navigation/AppHeader";
 import {
   HOME_EXERCISE_GROUPS,
   groupColors,
@@ -17,23 +17,18 @@ export default function HomeLibraryPage() {
     <div className="phone-shell relative flex flex-col overflow-hidden">
       <FitnessWallpaper softVignette />
 
-      {/* Header */}
-      <header className="animate-in animate-in--1 relative z-20 flex items-center justify-between px-4 pt-14">
-        <Link
-          href="/library"
-          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition-all duration-300 hover:bg-white/20 hover:text-white hover:scale-110"
-          aria-label={t("nav.back")}
-        >
-          <ArrowLeft className="h-4 w-4" strokeWidth={2} />
-        </Link>
-        <div className="flex items-center gap-2">
+      <AppHeader
+        backHref="/library"
+        backLabel={t("nav.back")}
+        title={
+          <span className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/20 ring-2 ring-amber-400/30">
             <Home className="h-3.5 w-3.5 text-amber-400" />
           </div>
-          <span className="text-sm font-bold text-white">{t("library.home")}</span>
-        </div>
-        <div className="h-8 w-8" />
-      </header>
+            <span>{t("library.home")}</span>
+          </span>
+        }
+      />
 
       <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto">
         {/* Title */}

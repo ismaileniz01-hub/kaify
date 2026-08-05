@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft, Check, ShoppingCart, Sparkles, PartyPopper } from "lucide-react";
+import { Check, ShoppingCart, Sparkles, PartyPopper } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { InlineAlert } from "@/components/InlineAlert";
 import { useSession } from "@/lib/session-context";
@@ -17,6 +16,7 @@ import { DailyChestBanner } from "@/components/market/DailyChestBanner";
 import { MarketAuraPreview } from "@/components/market/MarketAuraPreview";
 import { EmptyState } from "@/components/EmptyState";
 import { MARKET_EFFECTS, type MarketEffect } from "@/lib/market-catalog";
+import { AppHeader } from "@/components/navigation/AppHeader";
 
 type EffectColor = MarketEffect;
 
@@ -199,22 +199,19 @@ export default function MarketPage() {
 
   return (
     <div className="phone-shell welcome-gradient relative flex flex-col">
-      <header className="flex items-center gap-3 px-4 pb-2 pt-12">
-        <Link
-          href="/welcome"
-          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
-          aria-label={t("nav.back")}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <h1 className="flex-1 text-center text-sm font-medium text-white">
-          {t("market.title")}
-        </h1>
-        <GemBalance balance={gemState.balance} size="sm" animate />
-        {isAuthenticated && (
-          <FreezieBalance size="sm" animate balance={streak.freezieBalance} />
-        )}
-      </header>
+      <AppHeader
+        backHref="/welcome"
+        backLabel={t("nav.back")}
+        title={t("market.title")}
+        trailing={
+          <>
+            <GemBalance balance={gemState.balance} size="sm" animate />
+            {isAuthenticated && (
+              <FreezieBalance size="sm" animate balance={streak.freezieBalance} />
+            )}
+          </>
+        }
+      />
 
       <main className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-8 pt-4">
         <DailyChestBanner

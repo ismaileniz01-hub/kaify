@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { MessageRow } from "@/components/messages/MessageRow";
 import { InlineAlert } from "@/components/InlineAlert";
@@ -17,6 +17,7 @@ import { canUseTeamChat, isTeamChatPlan } from "@/lib/billing/team-chat-access";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import type { InboxCoachDTO } from "@/lib/services/messages.service";
 import { CONTACTS, CONTACT_LIST } from "@/lib/contacts";
+import { AppHeader } from "@/components/navigation/AppHeader";
 
 export default function MessagesPage() {
   const { t } = useLang();
@@ -71,21 +72,13 @@ export default function MessagesPage() {
 
   return (
     <div className="phone-shell messages-gradient messages-pattern relative flex flex-col">
-      <header className="animate-in animate-in--1 relative flex items-center justify-between px-4 pb-3 pt-16">
-        <Link
-          href="/welcome"
-          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
-          aria-label={t("nav.back")}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div className="flex flex-col items-center">
-          <h1 className="text-base font-semibold text-white">{t("nav.messages")}</h1>
-          <div className="mt-0.5 h-px w-16 bg-gradient-to-r from-transparent via-purple-400/50 to-transparent" />
-        </div>
-        <span className="text-[11px] font-medium text-zinc-500">{t("messages.date")}</span>
-        <div className="absolute bottom-0 left-3 right-3 h-px bg-gradient-to-r from-transparent via-purple-400/30 to-transparent" />
-      </header>
+      <AppHeader
+        backHref="/welcome"
+        backLabel={t("nav.back")}
+        title={t("nav.messages")}
+        trailing={<span className="text-[11px] font-medium text-zinc-500">{t("messages.date")}</span>}
+        divider
+      />
 
       <main className="flex-1 space-y-2.5 overflow-y-auto px-4 pb-8">
         {loadError && (

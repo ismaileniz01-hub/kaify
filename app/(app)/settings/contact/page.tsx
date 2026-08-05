@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
 import type { SupportTicketDTO } from "@/lib/services/support.service";
 import { EmptyState } from "@/components/EmptyState";
 import { InlineAlert } from "@/components/InlineAlert";
+import { AppHeader } from "@/components/navigation/AppHeader";
 
 export default function ContactSupportPage() {
   const { t } = useLang();
@@ -45,17 +45,11 @@ export default function ContactSupportPage() {
 
   return (
     <div className="phone-shell analytics-gradient relative flex flex-col">
-      <header className="flex items-center justify-between px-4 pb-2 pt-12">
-        <Link
-          href="/settings"
-          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400"
-          aria-label={t("nav.back")}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <h1 className="text-sm font-medium text-white">{t("settings.contact")}</h1>
-        <div className="h-9 w-9" />
-      </header>
+      <AppHeader
+        backHref="/settings"
+        backLabel={t("nav.back")}
+        title={t("settings.contact")}
+      />
 
       <main className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 pb-6">
         <p className="text-xs text-zinc-500">{t("support.intro")}</p>

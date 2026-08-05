@@ -1,9 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { ChatMessageText } from "@/components/chat/ChatMessageText";
-import { ArrowLeft, Send, Users } from "lucide-react";
+import { Send, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { InlineAlert } from "@/components/InlineAlert";
 import { EmptyState } from "@/components/EmptyState";
@@ -16,6 +15,7 @@ import { canUseTeamChat } from "@/lib/billing/team-chat-access";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { ChatMessageDTO } from "@/lib/types/domain.types";
+import { AppHeader } from "@/components/navigation/AppHeader";
 import type { Database } from "@/lib/types/database.types";
 
 type TeamMessage = {
@@ -172,20 +172,17 @@ export default function TeamChatPage() {
 
   return (
     <div className="phone-shell messages-gradient relative flex min-h-0 flex-col">
-      <header className="flex items-center gap-3 px-4 pb-2 pt-12">
-        <Link
-          href="/messages"
-          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400"
-          aria-label={t("nav.back")}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div className="flex flex-1 flex-col items-center">
-          <h1 className="text-sm font-semibold text-white">{t("messages.team_title")}</h1>
-          <p className="text-[10px] text-zinc-500">{t("messages.team_sub")}</p>
-        </div>
-        <Users className="h-5 w-5 text-purple-400" aria-hidden />
-      </header>
+      <AppHeader
+        backHref="/messages"
+        backLabel={t("nav.back")}
+        title={
+          <span className="flex flex-col items-center">
+            <span>{t("messages.team_title")}</span>
+            <span className="text-[10px] text-zinc-500">{t("messages.team_sub")}</span>
+          </span>
+        }
+        trailing={<Users className="mr-3 h-5 w-5 text-purple-400" aria-hidden />}
+      />
 
       {!unlocked && (
         <InlineAlert

@@ -350,6 +350,101 @@ html.native-app .pt-app-header {
   padding-top: var(--app-header-top);
 }
 
+.app-navigation-root {
+  min-height: 100dvh;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: minmax(44px, 1fr) minmax(0, auto) minmax(44px, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  min-height: calc(3.5rem + var(--safe-top));
+  padding:
+    max(0.75rem, var(--safe-top))
+    1rem
+    0.5rem;
+  isolation: isolate;
+}
+
+.app-header::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  background: linear-gradient(180deg, rgba(10, 10, 10, 0.9), rgba(10, 10, 10, 0.68) 72%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  backdrop-filter: blur(16px) saturate(130%);
+  mask-image: linear-gradient(to bottom, black 72%, transparent);
+  pointer-events: none;
+}
+
+.app-header__side {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-header__side--trailing {
+  justify-content: flex-end;
+}
+
+.app-header__title {
+  overflow: hidden;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-header__action,
+.app-header__spacer {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-header__action {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.055);
+  color: #a1a1aa;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-premium-out);
+}
+
+.app-header__action:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.app-header__action:active {
+  transform: scale(0.94);
+}
+
+.app-header__divider {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0;
+  left: 0.75rem;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(168, 85, 247, 0.3), transparent);
+}
+
 .session-error-banner {
   padding-top: max(0.75rem, var(--safe-top));
 }
@@ -592,8 +687,71 @@ html.native-app .chat-composer {
   --motion-fast: 160ms;
   --motion-base: 220ms;
   --motion-slow: 320ms;
+  --motion-route: 360ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-premium-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-premium-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-premium-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.route-progress {
+  position: fixed;
+  z-index: 100;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--ease-standard);
+}
+
+.route-progress span {
+  display: block;
+  width: 45%;
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, #c084fc 38%, #fff 55%, #a855f7);
+  box-shadow: 0 0 12px rgba(192, 132, 252, 0.7);
+  transform: translateX(-110%);
+}
+
+.app-navigation-root[data-navigating="true"] .route-progress {
+  opacity: 1;
+}
+
+.app-navigation-root[data-navigating="true"] .route-progress span {
+  animation: route-progress 900ms var(--ease-premium-out) infinite;
+}
+
+@keyframes route-progress {
+  0% { transform: translateX(-110%); }
+  70%, 100% { transform: translateX(240%); }
+}
+
+@supports (view-transition-name: none) {
+  ::view-transition-old(root) {
+    animation: route-fade-out var(--motion-fast) var(--ease-premium-in) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: route-fade-in var(--motion-route) var(--ease-premium-out) both;
+  }
+}
+
+@keyframes route-fade-out {
+  to {
+    opacity: 0;
+    transform: scale(0.995);
+  }
+}
+
+@keyframes route-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.995);
+  }
 }
 
 .motion-overlay {
@@ -704,7 +862,7 @@ html.native-app .chat-composer {
 }
 
 .phone-shell {
-  animation: page-enter 0.35s ease-out both;
+  animation: page-enter var(--motion-slow) var(--ease-premium-out) both;
 }
 
 /* Item'lar için sıralı fade-in-up */
@@ -720,7 +878,7 @@ html.native-app .chat-composer {
 }
 
 .animate-in {
-  animation: fade-in-up 0.15s ease-out both;
+  animation: fade-in-up var(--motion-fast) var(--ease-premium-out) both;
 }
 
 .animate-in--1 { animation-delay: 0s; }
@@ -745,7 +903,7 @@ html.native-app .chat-composer {
 }
 
 .slide-in {
-  animation: slide-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: slide-in var(--motion-route) var(--ease-premium-out) both;
 }
 
 .slide-in--0 { animation-delay: 0.00s; }
@@ -770,7 +928,7 @@ html.native-app .chat-composer {
 }
 
 .animate-message {
-  animation: message-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: message-in var(--motion-slow) var(--ease-premium-out) both;
 }
 
 /* Yazıyor animasyonu — üç nokta */
@@ -805,7 +963,8 @@ html.native-app .chat-composer {
 
 /* Smooth geçiş — sadece etkileşimli öğeler (mobil performans için daraltıldı) */
 a, button, input, select, textarea, label {
-  transition: all 0.2s ease;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--ease-standard);
 }
 
 
@@ -2587,6 +2746,7 @@ select:active {
   .scan-corner,
   .premium-toast,
   .premium-skeleton::after,
+  .route-progress span,
   .signup-wizard-panel,
   [class*="chest-"],
   [class*="screenShake"] {
@@ -2606,6 +2766,11 @@ select:active {
   .analytics-card,
   .premium-image {
     transform: none !important;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
   }
 
   .reduced-motion-static,

@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft, Image as ImageIcon } from "lucide-react";
+import { Image as ImageIcon } from "lucide-react";
 import { StreakRoad } from "@/components/StreakRoad";
 import { StreakAtRiskBanner } from "@/components/streak/StreakAtRiskBanner";
 import { StreakCard } from "@/components/StreakCard";
@@ -13,6 +12,7 @@ import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { useEffect, useState } from "react";
+import { AppHeader } from "@/components/navigation/AppHeader";
 
 export default function StreakPage() {
   const { gemState } = useGem();
@@ -123,21 +123,15 @@ export default function StreakPage() {
           ))}
         </div>
       )}
-      <header className="flex items-center gap-3 px-4 pb-2 pt-12">
-        <Link
-          href="/welcome"
-          className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
-          aria-label={t("nav.back")}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <h1 className="flex-1 text-center text-sm font-medium text-white">
-          {t("nav.streak")}
-        </h1>
-        <div className="flex items-center gap-2">
+      <AppHeader
+        backHref="/welcome"
+        backLabel={t("nav.back")}
+        title={t("nav.streak")}
+        trailing={
+          <>
           <button
             onClick={() => setShowCard(true)}
-            className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-orange-500/20 to-amber-600/10 text-orange-300 ring-1 ring-orange-500/30 transition-all hover:from-orange-500/30 hover:to-amber-600/20 hover:text-orange-200 active:scale-90"
+              className="app-header__action border-orange-500/25 bg-orange-500/10 text-orange-300"
             aria-label={t("streak.get_card")}
           >
             <ImageIcon className="h-4 w-4" />
@@ -148,8 +142,9 @@ export default function StreakPage() {
             animate
             balance={isAuthenticated ? streak.freezieBalance : undefined}
           />
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {isAuthenticated && (
         <div className="space-y-2 px-4 pb-2">

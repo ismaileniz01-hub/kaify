@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { ArrowLeft, BarChart3, Flame, Globe, MessageCircle, Settings, ShoppingCart, User } from "lucide-react";
+import { BarChart3, Flame, Globe, MessageCircle, Settings, ShoppingCart, User } from "lucide-react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { WelcomeCard } from "@/components/welcome/WelcomeCard";
 import { StreakAtRiskBanner } from "@/components/streak/StreakAtRiskBanner";
@@ -16,6 +16,7 @@ import { useSearchParams } from "next/navigation";
 import { useLang, LANG_OPTIONS, hasStoredLangPreference } from "@/lib/lang-context";
 import { captureReferralFromUrl, getPendingReferral } from "@/lib/referral";
 import { InlineAlert } from "@/components/InlineAlert";
+import { AppHeader } from "@/components/navigation/AppHeader";
 
 const ProfileModal = dynamic(
   () =>
@@ -97,55 +98,46 @@ function WelcomeContent() {
     <div className="phone-shell welcome-page relative flex flex-col overflow-hidden">
       <FitnessWallpaper softVignette />
 
-      {/* Header — left: profile + back, center: Leaderboard, right: Gems + Settings */}
-      <header className="animate-in animate-in--1 relative z-20 flex items-center justify-between px-4 pt-14">
-        <div className="flex items-center gap-2">
-          <Link
-            href={isAuthenticated ? "/myaccount" : "/login"}
-            className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition-all duration-300 hover:bg-white/20 hover:text-white hover:scale-110"
-            aria-label={t("nav.back")}
-          >
-            <ArrowLeft className="h-4 w-4" strokeWidth={2} />
-          </Link>
+      <AppHeader
+        leading={
+          <>
           <button
             type="button"
             onClick={() => setProfileOpen(true)}
-            className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-purple-500/20 text-purple-300 ring-2 ring-purple-400/30 transition-all duration-300 hover:bg-purple-500/30 hover:text-purple-200 hover:scale-110"
+              className="app-header__action border-purple-400/25 bg-purple-500/15 text-purple-300"
             aria-label={t("profile.title")}
           >
             <User className="h-4 w-4" strokeWidth={2} />
           </button>
-        </div>
-
-        {/* Center — Leaderboard button */}
-        <Link
-          href="/leaderboard"
-          className="touch-44 flex min-h-[44px] items-center gap-1 rounded-full bg-amber-500/15 px-3 py-2 text-amber-400 ring-2 ring-amber-400/30 transition-all duration-300 hover:bg-amber-500/25 hover:text-amber-300 hover:scale-105"
-          aria-label={t("nav.leaderboard")}
-        >
-          <Globe className="h-3 w-3" />
-          <span className="text-[10px] font-semibold">{t("nav.leaderboard")}</span>
-        </Link>
-
-        <div className="flex items-center gap-2">
+            <Link
+              href="/leaderboard"
+              className="app-header__action border-amber-400/25 bg-amber-500/10 text-amber-400"
+              aria-label={t("nav.leaderboard")}
+            >
+              <Globe className="h-4 w-4" />
+            </Link>
+          </>
+        }
+        trailing={
+          <>
           <GemBalance balance={gemBalance.balance} size="sm" animate />
           <FreezieBalance balance={streak.freezieBalance} size="sm" animate />
           <NotificationCenter />
           <Link
             href="/settings"
-            className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition-all duration-300 hover:bg-white/20 hover:text-white hover:scale-110"
+              className="app-header__action"
             aria-label={t("nav.settings")}
           >
             <Settings className="h-4 w-4" strokeWidth={2} />
           </Link>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto">
-        {/* Welcome — big and bold */}
-        <section className="animate-in animate-in--2 flex flex-col items-center px-6 pt-6 text-center">
+        <section className="animate-in animate-in--2 flex flex-col items-center px-6 pt-5 text-center">
           <h1
-            className="welcome-title text-5xl font-extrabold leading-none tracking-tight drop-shadow-[0_4px_32px_rgba(168,85,247,0.35)]"
+            className="welcome-title text-4xl font-extrabold leading-[1.05] tracking-tight drop-shadow-[0_4px_32px_rgba(168,85,247,0.35)] sm:text-5xl"
             style={{
               fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
             }}
@@ -180,8 +172,7 @@ function WelcomeContent() {
 
         {isAuthenticated && <PendingGiftCard />}
 
-        {/* Main cards — opaque with 3D shadows */}
-        <section className="mt-8 px-4">
+        <section className="mt-6 px-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="animate-in animate-in--3">
               <WelcomeCard
