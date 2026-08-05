@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { PremiumImage } from "@/components/ui/PremiumImage";
 
 const CUSTOM_FLAG_URLS: Record<string, string> = {
   ct: "/flag-northern-cyprus.svg",
@@ -27,7 +27,7 @@ export function FlagImage({
     : `https://flagcdn.com/h80/${code}.png`;
 
   return (
-    <Image
+    <PremiumImage
       src={src}
       alt=""
       width={size}

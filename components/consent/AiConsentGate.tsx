@@ -7,6 +7,7 @@ import { apiGet, apiPost } from "@/lib/api/client";
 import { CONSENT_TYPES } from "@/lib/legal/constants";
 import { useLang } from "@/lib/lang-context";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
+import { MotionDialog } from "@/components/ui/MotionDialog";
 
 const SKIP_PREFIXES = ["/login", "/privacy", "/terms", "/cookies", "/api/"];
 
@@ -69,16 +70,16 @@ export function AiConsentGate() {
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-4 sm:items-center">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ai-consent-title"
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-zinc-900 p-6 shadow-2xl"
-      >
+    <MotionDialog
+      open={open}
+      labelledBy="ai-consent-title"
+      variant="sheet"
+      closeOnBackdrop={false}
+      className="z-[100]"
+      panelClassName="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-zinc-900 p-6 shadow-2xl"
+    >
+      <div>
         <h2 id="ai-consent-title" className="text-lg font-bold text-white">
           {t("consent.ai.title")}
         </h2>
@@ -122,6 +123,6 @@ export function AiConsentGate() {
           {loading ? t("common.loading") : t("consent.ai.accept")}
         </button>
       </div>
-    </div>
+    </MotionDialog>
   );
 }

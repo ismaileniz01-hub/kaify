@@ -181,13 +181,12 @@ export default function StreakPage() {
         <StreakRoad currentStreak={currentStreak} />
       </main>
 
-      {showCard && (
-        <StreakCard
-          streak={currentStreak}
-          kaiLevel={unlockedLevel}
-          onClose={() => setShowCard(false)}
-        />
-      )}
+      <StreakCard
+        open={showCard}
+        streak={currentStreak}
+        kaiLevel={unlockedLevel}
+        onClose={() => setShowCard(false)}
+      />
     </div>
   );
 }

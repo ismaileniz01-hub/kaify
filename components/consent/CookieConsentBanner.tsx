@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { useLang } from "@/lib/lang-context";
@@ -11,6 +11,7 @@ import {
   writeCookieConsent,
 } from "@/lib/legal/cookie-consent";
 import { COOKIES_PATH, TERMS_PATH } from "@/lib/legal/constants";
+import { MOTION_EXIT_MS, usePresence } from "@/lib/motion/use-presence";
 
 const LEGAL_ONLY_PREFIXES = ["/privacy", "/terms", "/terms&conditions", "/cookies"];
 
@@ -24,10 +25,21 @@ export function CookieConsentBanner() {
   const isNativeApp = useNativeApp();
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
+  const presence = usePresence(visible);
+  const attributeTimerRef = useRef<number | null>(null);
 
   useLayoutEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(
+    () => () => {
+      if (attributeTimerRef.current !== null) {
+        window.clearTimeout(attributeTimerRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (isNativeApp !== false) {
@@ -52,17 +64,24 @@ export function CookieConsentBanner() {
   const choose = (choice: "accepted" | "rejected") => {
     writeCookieConsent(choice);
     setVisible(false);
-    document.documentElement.removeAttribute("data-cookie-banner");
+    if (attributeTimerRef.current !== null) {
+      window.clearTimeout(attributeTimerRef.current);
+    }
+    attributeTimerRef.current = window.setTimeout(() => {
+      document.documentElement.removeAttribute("data-cookie-banner");
+      attributeTimerRef.current = null;
+    }, MOTION_EXIT_MS);
   };
 
-  if (!mounted || !visible || isNativeApp !== false) return null;
+  if (!mounted || !presence.mounted || isNativeApp !== false) return null;
 
   return createPortal(
     <div
       role="dialog"
       aria-labelledby="cookie-banner-title"
       aria-live="polite"
-      className="fixed inset-x-0 bottom-0 z-[9999] border-t border-white/10 bg-zinc-950/98 p-4 shadow-[0_-8px_40px_rgba(0,0,0,0.45)] backdrop-blur-md sm:p-5"
+      data-state={presence.state}
+      className="motion-sheet fixed inset-x-0 bottom-0 z-[9999] border-t border-white/10 bg-zinc-950/98 p-4 shadow-[0_-8px_40px_rgba(0,0,0,0.45)] backdrop-blur-md sm:p-5"
     >
       <div className="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">

@@ -5,6 +5,8 @@ import { useState } from "react";
 import { apiPost } from "@/lib/api/client";
 import { CONSENT_TYPES } from "@/lib/legal/constants";
 import { useLang } from "@/lib/lang-context";
+import { MotionDialog } from "@/components/ui/MotionDialog";
+import { useToast } from "@/components/ui/ToastProvider";
 
 type PhotoAnalyzeConsentModalProps = {
   open: boolean;
@@ -18,10 +20,9 @@ export function PhotoAnalyzeConsentModal({
   onAccepted,
 }: PhotoAnalyzeConsentModalProps) {
   const { t } = useLang();
+  const { toast } = useToast();
   const [checked, setChecked] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  if (!open) return null;
 
   const accept = async () => {
     if (!checked) return;
@@ -33,16 +34,22 @@ export function PhotoAnalyzeConsentModal({
       });
       onAccepted();
     } catch {
-      // Parent can surface error; still allow retry
+      toast({ title: t("consent.error"), tone: "error" });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-900 p-5">
-        <h3 className="font-semibold text-white">{t("consent.photo.title")}</h3>
+    <MotionDialog
+      open={open}
+      onClose={onClose}
+      labelledBy="photo-consent-title"
+      className="z-[90]"
+      panelClassName="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-900 p-5 shadow-2xl"
+    >
+      <div>
+        <h3 id="photo-consent-title" className="font-semibold text-white">{t("consent.photo.title")}</h3>
         <p className="mt-2 text-sm text-zinc-400">{t("consent.photo.desc")}</p>
         <label className="mt-4 flex cursor-pointer gap-3 text-sm text-zinc-300">
           <input
@@ -76,6 +83,6 @@ export function PhotoAnalyzeConsentModal({
           </button>
         </div>
       </div>
-    </div>
+    </MotionDialog>
   );
 }

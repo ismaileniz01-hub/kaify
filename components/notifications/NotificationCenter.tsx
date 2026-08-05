@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
 import {
   Award,
   BarChart3,
@@ -21,10 +20,12 @@ import {
 import { useLang } from "@/lib/lang-context";
 import { useNotifications } from "@/lib/notification-context";
 import { PushToggle } from "@/components/notifications/PushToggle";
-import { InlineAlert } from "@/components/InlineAlert";
+import { MotionDialog } from "@/components/ui/MotionDialog";
+import { useToast } from "@/components/ui/ToastProvider";
 import { visualFor } from "@/lib/notifications/config";
 import type { NotificationDTO } from "@/lib/services/notifications.service";
 import type { NotificationType } from "@/lib/types/database.types";
+import { PremiumImage } from "@/components/ui/PremiumImage";
 
 const TYPE_ICON: Record<NotificationType, LucideIcon> = {
   streak_risk: Flame,
@@ -99,7 +100,7 @@ function NotificationCard({
             boxShadow: item.read ? "none" : `0 0 14px ${hexToRgba(color, 0.35)}`,
           }}
         >
-          <Image
+          <PremiumImage
             src={visual.avatar}
             alt={visual.from}
             width={48}
@@ -149,52 +150,28 @@ function NotificationPanel({
   const { t } = useLang();
   const { notifications, unreadCount, loading, markAllRead, markRead, refresh } =
     useNotifications();
-  const [markAllSuccess, setMarkAllSuccess] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (open) void refresh();
   }, [open, refresh]);
 
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
   const handleMarkAllRead = async () => {
     await markAllRead();
-    setMarkAllSuccess(true);
-    setTimeout(() => setMarkAllSuccess(false), 2500);
+    toast({ title: t("notif.mark_all_success"), tone: "success" });
   };
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-[200] flex justify-center"
-      role="presentation"
-      onClick={onClose}
+    <MotionDialog
+      open={open}
+      onClose={onClose}
+      labelledBy="notif-panel-title"
+      fullBleed
+      className="z-[200] bg-[#030208]/90 backdrop-blur-xl"
+      panelClassName="notif-panel relative flex h-[100dvh] w-full max-w-[420px] flex-col overflow-hidden shadow-2xl"
     >
-      <div className="absolute inset-0 bg-[#030208]/90 backdrop-blur-xl" />
-
       <div
-        className="notif-panel relative flex h-[100dvh] w-full max-w-[420px] flex-col overflow-hidden shadow-2xl"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="notif-panel-title"
-        onClick={(e) => e.stopPropagation()}
+        className="flex min-h-0 flex-1 flex-col"
       >
         {/* Header */}
         <div className="relative shrink-0 overflow-hidden border-b border-white/10 px-4 pb-4 pt-14">
@@ -254,12 +231,6 @@ function NotificationPanel({
           </div>
         </div>
 
-        {markAllSuccess && (
-          <div className="shrink-0 px-4 pt-3">
-            <InlineAlert variant="success" message={t("notif.mark_all_success")} />
-          </div>
-        )}
-
         <div className="shrink-0 border-b border-white/5 bg-[#0a0612]/80">
           <PushToggle />
         </div>
@@ -269,7 +240,7 @@ function NotificationPanel({
           {loading && notifications.length === 0 ? (
             <div className="space-y-3 py-4">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="h-20 animate-pulse rounded-2xl bg-white/5" aria-hidden />
+                <div key={i} className="premium-skeleton h-20 rounded-2xl" aria-hidden />
               ))}
             </div>
           ) : notifications.length === 0 ? (
@@ -298,7 +269,7 @@ function NotificationPanel({
           )}
         </div>
       </div>
-    </div>
+    </MotionDialog>
   );
 }
 
@@ -330,7 +301,6 @@ export function NotificationCenter() {
       </button>
 
       {mounted &&
-        open &&
         createPortal(
           <NotificationPanel open={open} onClose={() => setOpen(false)} />,
           document.body,

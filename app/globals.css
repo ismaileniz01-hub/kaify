@@ -585,6 +585,110 @@ html.native-app .chat-composer {
     linear-gradient(180deg, #0c0614 0%, #0a0a0a 45%, #08060f 100%);
 }
 
+/* ── Premium motion foundation ── */
+
+:root {
+  --motion-instant: 100ms;
+  --motion-fast: 160ms;
+  --motion-base: 220ms;
+  --motion-slow: 320ms;
+  --ease-premium-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-premium-in: cubic-bezier(0.4, 0, 1, 1);
+}
+
+.motion-overlay {
+  opacity: 0;
+  transition: opacity var(--motion-fast) var(--ease-premium-out);
+}
+
+.motion-overlay[data-state="entered"] {
+  opacity: 1;
+}
+
+.motion-panel {
+  opacity: 0;
+  transform: translateY(12px) scale(0.975);
+  transition:
+    opacity var(--motion-fast) var(--ease-premium-out),
+    transform var(--motion-base) var(--ease-premium-out);
+  will-change: transform, opacity;
+}
+
+.motion-panel[data-state="entered"] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.motion-sheet {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity var(--motion-fast) var(--ease-premium-out),
+    transform var(--motion-base) var(--ease-premium-out);
+  will-change: transform, opacity;
+}
+
+.motion-sheet[data-state="entered"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.premium-toast {
+  animation: premium-toast-in var(--motion-base) var(--ease-premium-out) both;
+  will-change: transform, opacity;
+}
+
+.premium-toast--leaving {
+  animation: premium-toast-out var(--motion-fast) var(--ease-premium-in) both;
+}
+
+@keyframes premium-toast-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes premium-toast-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-8px) scale(0.98); }
+}
+
+.premium-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.premium-skeleton::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.09) 48%,
+    transparent 66%
+  );
+  transform: translateX(-100%);
+  animation: premium-shimmer 1.6s var(--ease-premium-out) infinite;
+}
+
+@keyframes premium-shimmer {
+  to { transform: translateX(100%); }
+}
+
+.premium-image {
+  opacity: 0;
+  transform: scale(0.985);
+  transition:
+    opacity var(--motion-base) var(--ease-premium-out),
+    transform var(--motion-base) var(--ease-premium-out);
+}
+
+.premium-image[data-loaded="true"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
 /* ── Sayfa geçiş animasyonları ── */
 
 /* Sayfa bazında fade-in */
@@ -717,6 +821,20 @@ a, button, input, select, textarea, label {
     inset 0 -2px 6px rgba(0, 0, 0, 0.25);
   overflow: hidden;
   background: #0a0612;
+  transition:
+    transform var(--motion-fast) var(--ease-premium-out),
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-base) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .analytics-card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.analytics-card:active {
+  transform: translateY(0) scale(0.975);
 }
 
 .analytics-card::before {
@@ -2458,10 +2576,43 @@ select:active {
   .premium-aura-prism::before,
   .streak-drama-pulse,
   .streak-card-fx,
+  .phone-shell,
   .animate-in,
+  .animate-message,
+  .slide-in,
   .animate-ping,
-  .animate-pulse {
+  .animate-pulse,
+  .animate-scan-line,
+  .scan-grid,
+  .scan-corner,
+  .premium-toast,
+  .premium-skeleton::after,
+  .signup-wizard-panel,
+  [class*="chest-"],
+  [class*="screenShake"] {
     animation: none !important;
+  }
+
+  .motion-overlay,
+  .motion-panel,
+  .motion-sheet,
+  .analytics-card,
+  .premium-image {
+    transition-duration: 1ms !important;
+  }
+
+  .motion-panel,
+  .motion-sheet,
+  .analytics-card,
+  .premium-image {
+    transform: none !important;
+  }
+
+  .reduced-motion-static,
+  .reduced-motion-static * {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
   }
 }
 

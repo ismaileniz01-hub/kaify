@@ -659,7 +659,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
           : '0 0 20px rgba(168,85,247,0.5), 0 0 40px rgba(147,51,234,0.3)';
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95" style={{ 
+          <div className="reduced-motion-static fixed inset-0 z-50 flex items-center justify-center bg-black/95" style={{
             animation: evolutionPhase === "burning" 
               ? 'screenShake 0.03s ease-in-out infinite, screenShake2 0.05s ease-in-out infinite 0.015s' 
               : evolutionPhase === "evolving" 

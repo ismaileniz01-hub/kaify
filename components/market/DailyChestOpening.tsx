@@ -165,7 +165,7 @@ export function DailyChestOpening({ claim, onClose }: Props) {
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex flex-col ${
+      className={`reduced-motion-static fixed inset-0 z-[100] flex flex-col ${
         isRewardPhase ? "chest-reward-overlay" : "bg-gradient-to-b from-[#0f0720] via-[#1a0a2e] to-[#0a0514]"
       }`}
     >

@@ -2,9 +2,11 @@
 
 import { useState, useRef } from "react";
 import { X, MapPin, Ruler, Weight, VenusAndMars, Leaf, Sparkles, Pencil, Check, Camera } from "lucide-react";
-import Image from "next/image";
 import { useLang } from "@/lib/lang-context";
 import { InlineAlert } from "@/components/InlineAlert";
+import { MotionDialog } from "@/components/ui/MotionDialog";
+import { useToast } from "@/components/ui/ToastProvider";
+import { PremiumImage } from "@/components/ui/PremiumImage";
 import { genderLabelKey, parseGenderInput } from "@/lib/profile-mapper";
 import type { UserProfile } from "@/lib/user";
 
@@ -17,15 +19,13 @@ type ProfileModalProps = {
 
 export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalProps) {
   const { t, unit } = useLang();
+  const { toast } = useToast();
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<UserProfile>({ ...profile });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveSuccess, setSaveSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  if (!isOpen) return null;
 
   const handleChange = (field: keyof UserProfile, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -39,12 +39,10 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
     }
     setSaving(true);
     setSaveError(null);
-    setSaveSuccess(false);
     try {
       await onSave(form);
-      setSaveSuccess(true);
       setEditing(false);
-      setTimeout(() => setSaveSuccess(false), 2500);
+      toast({ title: t("profile.save_success"), tone: "success" });
     } catch {
       setSaveError(t("profile.save_error"));
     } finally {
@@ -61,13 +59,14 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
   // Görüntüleme modu
   if (!editing) {
     return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="profile-modal-title"
+      <MotionDialog
+        open={isOpen}
+        onClose={onClose}
+        labelledBy="profile-modal-title"
+        className="z-50"
+        panelClassName="relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-zinc-900 shadow-2xl"
       >
-        <div className="relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-zinc-900 shadow-2xl">
+        <div>
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
             <h2 id="profile-modal-title" className="text-sm font-semibold text-white">{t("profile.modal_title")}</h2>
@@ -86,7 +85,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
             <div className="relative mb-4">
               <div className="absolute -inset-2 rounded-full bg-gradient-to-br from-purple-500/30 to-violet-600/20 blur-xl" />
               <div className="relative h-24 w-24 overflow-hidden rounded-full border-2 border-purple-400/30">
-                <Image
+                <PremiumImage
                   src={profile.avatar}
                   alt={profile.name}
                   width={96}
@@ -178,9 +177,6 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
             </div>
 
             {/* Düzenle butonu */}
-            {saveSuccess && (
-              <p className="mb-3 text-center text-xs text-emerald-400">{t("profile.save_success")}</p>
-            )}
             <button
               onClick={() => { setForm({ ...profile }); setEditing(true); }}
               className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-500 py-3 text-sm font-medium text-white transition hover:bg-purple-400 active:scale-95"
@@ -190,19 +186,20 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
             </button>
           </div>
         </div>
-      </div>
+      </MotionDialog>
     );
   }
 
   // Düzenleme modu
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="profile-edit-title"
+    <MotionDialog
+      open={isOpen}
+      onClose={handleCancel}
+      labelledBy="profile-edit-title"
+      className="z-50"
+      panelClassName="relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-zinc-900 shadow-2xl"
     >
-      <div className="relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-zinc-900 shadow-2xl">
+      <div>
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
           <h2 id="profile-edit-title" className="text-sm font-semibold text-white">{t("profile.edit_title")}</h2>
@@ -243,7 +240,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
             >
               <div className="absolute -inset-2 rounded-full bg-gradient-to-br from-purple-500/30 to-violet-600/20 blur-xl" />
               <div className="relative h-24 w-24 overflow-hidden rounded-full border-2 border-purple-400/30 transition group-hover:border-purple-400/60">
-                <Image
+                <PremiumImage
                   src={form.avatar}
                   alt={form.name}
                   width={96}
@@ -395,6 +392,6 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
           </div>
         </div>
       </div>
-    </div>
+    </MotionDialog>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useLang } from "@/lib/lang-context";
+import { PremiumImage } from "@/components/ui/PremiumImage";
 
 type Props = {
   size?: number;
@@ -21,7 +21,7 @@ export function KaiChestImage({ size = 72, className = "", pulse = false }: Prop
       {pulse && (
         <div className="absolute inset-0 animate-pulse rounded-2xl bg-amber-400/10" />
       )}
-      <Image
+      <PremiumImage
         src="/assets/kai-chest.png"
         alt={t("market.kai_chest_alt")}
         width={size}

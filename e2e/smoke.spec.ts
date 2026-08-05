@@ -24,4 +24,28 @@ test.describe("public smoke", () => {
     await page.goto("/login");
     await expect(page.locator("body")).toBeVisible();
   });
+
+  test("cookie banner enters and exits with premium presence", async ({ page }) => {
+    await page.goto("/");
+    const banner = page.getByRole("dialog", {
+      name: /cookie|privacy|çerez/i,
+    });
+    await expect(banner).toBeVisible();
+    await expect(banner).toHaveAttribute("data-state", "entered");
+
+    await banner
+      .getByRole("button", { name: /reject|reddet|decline/i })
+      .click();
+    await expect(banner).toBeHidden({ timeout: 1_000 });
+  });
+
+  test("reduced motion disables page entrance animation", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/login");
+    const animationName = await page
+      .locator(".phone-shell")
+      .first()
+      .evaluate((element) => getComputedStyle(element).animationName);
+    expect(animationName).toBe("none");
+  });
 });

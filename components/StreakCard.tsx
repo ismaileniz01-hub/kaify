@@ -6,8 +6,10 @@ import { Download, Share2, X, Flame } from "lucide-react";
 import { KAI_LEVEL_AVATARS, type KaiLevel } from "@/lib/kai-level";
 import { useLang } from "@/lib/lang-context";
 import { toPng } from "html-to-image";
+import { MotionDialog } from "@/components/ui/MotionDialog";
 
 type StreakCardProps = {
+  open: boolean;
   streak: number;
   kaiLevel: KaiLevel;
   userName?: string;
@@ -83,7 +85,7 @@ const BG_ICONS = [
   { icon: "🥇", x: "78%", y: "70%", size: 22 },
 ];
 
-export function StreakCard({ streak, kaiLevel, onClose }: StreakCardProps) {
+export function StreakCard({ open, streak, kaiLevel, onClose }: StreakCardProps) {
   const { t } = useLang();
   const cardRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
@@ -155,8 +157,14 @@ export function StreakCard({ streak, kaiLevel, onClose }: StreakCardProps) {
   }, [streak]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="relative flex flex-col items-center gap-4 max-w-sm w-full">
+    <MotionDialog
+      open={open}
+      onClose={onClose}
+      labelledBy="streak-card-title"
+      className="z-50 bg-black/80"
+      panelClassName="relative flex w-full max-w-sm flex-col items-center gap-4"
+    >
+      <>
         <button onClick={onClose} className="touch-44 self-end flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-zinc-400 transition hover:bg-white/20 hover:text-white" aria-label={t("common.close")}>
           <X className="h-4 w-4" />
         </button>
@@ -235,7 +243,7 @@ export function StreakCard({ streak, kaiLevel, onClose }: StreakCardProps) {
               <Flame className="w-14 h-14" style={{ color: theme.flameColor, filter: `drop-shadow(0 0 30px ${theme.flameColor}) drop-shadow(0 0 60px ${theme.glow})` }} />
               <span className="text-[120px] font-black leading-none tracking-tighter" style={{ color: "#ffffff", textShadow: `0 0 60px ${theme.glow}, 0 0 120px ${theme.glowIntense}, 0 0 180px ${theme.flameColor}` }}>{streak}</span>
             </div>
-            <span className="text-xl font-bold mt-3 tracking-[0.4em]" style={{ color: theme.flameColor2, textShadow: `0 0 30px ${theme.glow}, 0 0 60px ${theme.glowIntense}` }}>
+            <span id="streak-card-title" className="text-xl font-bold mt-3 tracking-[0.4em]" style={{ color: theme.flameColor2, textShadow: `0 0 30px ${theme.glow}, 0 0 60px ${theme.glowIntense}` }}>
               {t("streak.daily").toUpperCase()}
             </span>
           </div>
@@ -274,7 +282,7 @@ export function StreakCard({ streak, kaiLevel, onClose }: StreakCardProps) {
             {copied ? t("common.copied") : t("streak.share")}
           </button>
         </div>
-      </div>
-    </div>
+      </>
+    </MotionDialog>
   );
 }

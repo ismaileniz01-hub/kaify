@@ -4,6 +4,7 @@ import { Globe, X, Crown, Medal, Award, Flame } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLang } from "@/lib/lang-context";
 import { FlagImage } from "@/components/FlagImage";
+import { MotionDialog } from "@/components/ui/MotionDialog";
 import { resolveApiPath } from "@/lib/api/client";
 
 type CountryEntry = {
@@ -45,18 +46,17 @@ export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClo
       .catch(() => setLoading(false));
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className="relative z-10 mx-4 mb-0 w-full max-w-sm animate-slide-up rounded-t-2xl border border-white/[0.08] bg-zinc-900/95 p-5 shadow-2xl backdrop-blur-xl sm:mb-auto sm:rounded-2xl">
+    <MotionDialog
+      open={isOpen}
+      onClose={onClose}
+      labelledBy="country-leaderboard-title"
+      variant="sheet"
+      fullBleed
+      className="z-50 sm:p-4"
+      panelClassName="relative z-10 mx-4 mb-0 w-full max-w-sm rounded-t-2xl border border-white/[0.08] bg-zinc-900/95 p-5 shadow-2xl backdrop-blur-xl sm:mb-auto sm:rounded-2xl"
+    >
+      <div>
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -64,14 +64,15 @@ export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClo
               <Globe className="h-4 w-4 text-amber-400" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white">{t("leaderboard.country_title")}</h2>
+              <h2 id="country-leaderboard-title" className="text-sm font-bold text-white">{t("leaderboard.country_title")}</h2>
               <p className="text-[10px] text-zinc-500">{t("leaderboard.country_subtitle")}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
+            aria-label={t("common.close")}
+            className="touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -80,10 +81,10 @@ export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClo
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex items-center gap-3 animate-pulse">
-                <div className="h-8 w-8 rounded-full bg-white/10" />
-                <div className="h-4 flex-1 rounded bg-white/10" />
-                <div className="h-4 w-16 rounded bg-white/10" />
+              <div key={i} className="flex items-center gap-3">
+                <div className="premium-skeleton h-8 w-8 rounded-full" />
+                <div className="premium-skeleton h-4 flex-1 rounded" />
+                <div className="premium-skeleton h-4 w-16 rounded" />
               </div>
             ))}
           </div>
@@ -168,6 +169,6 @@ export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClo
           <p className="py-8 text-center text-sm text-zinc-500">{t("leaderboard.error.load")}</p>
         )}
       </div>
-    </div>
+    </MotionDialog>
   );
 }

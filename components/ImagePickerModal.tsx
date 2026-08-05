@@ -4,6 +4,9 @@ import { useState, useRef, useEffect } from "react";
 import { Camera, Image as ImageIcon, X, ScanLine, Check } from "lucide-react";
 import { useSound } from "@/lib/use-sound";
 import { useLang } from "@/lib/lang-context";
+import { MotionDialog } from "@/components/ui/MotionDialog";
+import { useToast } from "@/components/ui/ToastProvider";
+import { MOTION_EXIT_MS } from "@/lib/motion/use-presence";
 
 type ImagePickerModalProps = {
   isOpen: boolean;
@@ -14,6 +17,7 @@ type ImagePickerModalProps = {
 export function ImagePickerModal({ isOpen, onClose, onImageSelect }: ImagePickerModalProps) {
   const { t } = useLang();
   const { play } = useSound();
+  const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
@@ -23,14 +27,16 @@ export function ImagePickerModal({ isOpen, onClose, onImageSelect }: ImagePicker
   const scanTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) return;
+    const resetTimer = window.setTimeout(() => {
       setSelectedFile(null);
       setPreview(null);
       setScanning(false);
       setScanComplete(false);
       scanTimeoutsRef.current.forEach(clearTimeout);
       scanTimeoutsRef.current = [];
-    }
+    }, MOTION_EXIT_MS);
+    return () => window.clearTimeout(resetTimer);
   }, [isOpen]);
 
   useEffect(() => {
@@ -67,6 +73,11 @@ export function ImagePickerModal({ isOpen, onClose, onImageSelect }: ImagePicker
         if (selectedFile) {
           onImageSelect(selectedFile);
         }
+        toast({
+          title: t("chat.scan_complete_title"),
+          description: t("chat.scan_complete_subtitle"),
+          tone: "success",
+        });
         onClose();
       }, 1000);
       scanTimeoutsRef.current.push(t2);
@@ -92,10 +103,14 @@ export function ImagePickerModal({ isOpen, onClose, onImageSelect }: ImagePicker
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <MotionDialog
+      open={isOpen}
+      onClose={onClose}
+      labelledBy="image-picker-title"
+      className="z-50"
+      panelClassName="relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-zinc-900 shadow-2xl"
+    >
       <input
         ref={fileInputRef}
         type="file"
@@ -104,9 +119,9 @@ export function ImagePickerModal({ isOpen, onClose, onImageSelect }: ImagePicker
         onChange={handleFileSelect}
       />
 
-      <div className="relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-zinc-900 shadow-2xl">
+      <div>
         <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
-          <h2 className="text-sm font-semibold text-white">{t("chat.photo")}</h2>
+          <h2 id="image-picker-title" className="text-sm font-semibold text-white">{t("chat.photo")}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -216,6 +231,6 @@ export function ImagePickerModal({ isOpen, onClose, onImageSelect }: ImagePicker
           )}
         </div>
       </div>
-    </div>
+    </MotionDialog>
   );
 }
