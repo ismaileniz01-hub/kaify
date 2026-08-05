@@ -27,6 +27,21 @@ vi.mock("@/lib/services/home.service", () => ({
     kaiFoodInsight: null,
     stats: { steps: null, streak: 3, goalPercent: null },
     kaiLevel: 2,
+    todayJob: {
+      kind: "chat_kai",
+      href: "/chat/kai",
+      titleKey: "home.today_job.chat.title",
+      bodyKey: "home.today_job.chat.body",
+      ctaKey: "home.today_job.chat.cta",
+    },
+    firstTask: { checkInDone: true, goalsDone: true, chatDone: false },
+    goals: {
+      configured: true,
+      primaryGoal: "stay_fit",
+      calorieGoal: 2100,
+      workoutsTarget: 5,
+      waterGoalLiters: 2.5,
+    },
   }),
 }));
 vi.mock("@/lib/cache", () => ({

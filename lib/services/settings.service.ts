@@ -2,16 +2,30 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PrimaryGoal } from "@/lib/validations/goals.schema";
+import { PRIMARY_GOALS } from "@/lib/validations/goals.schema";
 
 export type UserSettingsDTO = {
+  /** DB column workout_reminders — gates streak_risk push jobs. */
   workoutReminders: boolean;
+  /** Alias for workoutReminders (correct product name). */
+  streakRiskReminders: boolean;
   waterReminder: boolean;
   soundEffects: boolean;
   chatSounds: boolean;
   unitSystem: "metric" | "imperial";
   leaderboardOptOut: boolean;
   marketingEmails: boolean;
+  primaryGoal: PrimaryGoal | null;
+  goalsConfigured: boolean;
 };
+
+function parsePrimaryGoal(value: unknown): PrimaryGoal | null {
+  if (typeof value !== "string") return null;
+  return (PRIMARY_GOALS as readonly string[]).includes(value)
+    ? (value as PrimaryGoal)
+    : null;
+}
 
 function mapRow(row: {
   workout_reminders: boolean;
@@ -20,16 +34,34 @@ function mapRow(row: {
   chat_sounds: boolean;
   unit_system: string;
   marketing_emails?: boolean;
+  primary_goal?: string | null;
+  goals_configured?: boolean;
 }): Omit<UserSettingsDTO, "leaderboardOptOut"> {
+  const workoutReminders = row.workout_reminders;
   return {
-    workoutReminders: row.workout_reminders,
+    workoutReminders,
+    streakRiskReminders: workoutReminders,
     waterReminder: row.water_reminder,
     soundEffects: row.sound_effects,
     chatSounds: row.chat_sounds,
     unitSystem: row.unit_system === "imperial" ? "imperial" : "metric",
     marketingEmails: row.marketing_emails ?? true,
+    primaryGoal: parsePrimaryGoal(row.primary_goal),
+    goalsConfigured: Boolean(row.goals_configured),
   };
 }
+
+const DEFAULTS: Omit<UserSettingsDTO, "leaderboardOptOut"> = {
+  workoutReminders: true,
+  streakRiskReminders: true,
+  waterReminder: false,
+  soundEffects: true,
+  chatSounds: true,
+  unitSystem: "metric",
+  marketingEmails: true,
+  primaryGoal: null,
+  goalsConfigured: false,
+};
 
 export async function getUserSettings(userId: string): Promise<UserSettingsDTO> {
   const supabase = await createServerSupabaseClient();
@@ -47,15 +79,7 @@ export async function getUserSettings(userId: string): Promise<UserSettingsDTO> 
   const leaderboardOptOut = profile?.leaderboard_opt_out ?? false;
 
   if (!data) {
-    return {
-      workoutReminders: true,
-      waterReminder: false,
-      soundEffects: true,
-      chatSounds: true,
-      unitSystem: "metric",
-      leaderboardOptOut,
-      marketingEmails: true,
-    };
+    return { ...DEFAULTS, leaderboardOptOut };
   }
 
   return { ...mapRow(data), leaderboardOptOut };
@@ -81,8 +105,19 @@ export async function upsertUserSettings(
 
   const settingsPatch = { ...patch };
   delete settingsPatch.leaderboardOptOut;
+  delete settingsPatch.streakRiskReminders;
 
-  if (Object.keys(settingsPatch).length === 0) {
+  const streakToggle =
+    patch.streakRiskReminders !== undefined
+      ? patch.streakRiskReminders
+      : patch.workoutReminders;
+
+  if (
+    Object.keys(settingsPatch).length === 0 &&
+    streakToggle === undefined &&
+    patch.primaryGoal === undefined &&
+    patch.goalsConfigured === undefined
+  ) {
     return getUserSettings(userId);
   }
 
@@ -91,8 +126,8 @@ export async function upsertUserSettings(
     .upsert(
       {
         user_id: userId,
-        ...(settingsPatch.workoutReminders !== undefined
-          ? { workout_reminders: settingsPatch.workoutReminders }
+        ...(streakToggle !== undefined
+          ? { workout_reminders: streakToggle }
           : {}),
         ...(settingsPatch.waterReminder !== undefined
           ? { water_reminder: settingsPatch.waterReminder }
@@ -108,6 +143,12 @@ export async function upsertUserSettings(
           : {}),
         ...(settingsPatch.marketingEmails !== undefined
           ? { marketing_emails: settingsPatch.marketingEmails }
+          : {}),
+        ...(patch.primaryGoal !== undefined
+          ? { primary_goal: patch.primaryGoal }
+          : {}),
+        ...(patch.goalsConfigured !== undefined
+          ? { goals_configured: patch.goalsConfigured }
           : {}),
       },
       { onConflict: "user_id" },

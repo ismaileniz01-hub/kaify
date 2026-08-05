@@ -1,11 +1,12 @@
 "use client";
 
-import { Activity, Droplets, Dumbbell, Flame, RefreshCw } from "lucide-react";
+import { Activity, Droplets, Dumbbell, Flame, RefreshCw, Target } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { MacroRing } from "@/components/analytics/MacroRing";
 import { StatCard } from "@/components/analytics/StatCard";
 import { WeeklyChart } from "@/components/analytics/WeeklyChart";
 import { WeeklyScoreCard } from "@/components/analytics/WeeklyScoreCard";
+import { GoalsEditor } from "@/components/goals/GoalsEditor";
 import { readAnalyticsCache, writeAnalyticsCache } from "@/lib/analytics-client-cache";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
@@ -17,11 +18,12 @@ import { AppHeader } from "@/components/navigation/AppHeader";
 
 export default function AnalyticsPage() {
   const { t, unit } = useLang();
-  const { isAuthenticated } = useSession();
+  const { isAuthenticated, home, refreshHome } = useSession();
   const [data, setData] = useState<AnalyticsBundleDTO | null>(() => readAnalyticsCache());
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [goalsOpen, setGoalsOpen] = useState(false);
 
   const loadAnalytics = useCallback(() => {
     if (!isAuthenticated) return;
@@ -115,6 +117,39 @@ export default function AnalyticsPage() {
             onDismiss={() => setLoadError(null)}
           />
         )}
+
+        {isAuthenticated && (
+          <div className="mb-4">
+            {goalsOpen ? (
+              <GoalsEditor
+                initial={{
+                  primaryGoal: home?.goals.primaryGoal ?? null,
+                  calorieGoal: today?.calorieGoal ?? home?.goals.calorieGoal ?? 2100,
+                  workoutsTarget:
+                    today?.workoutsTarget ?? home?.goals.workoutsTarget ?? 5,
+                  waterGoalLiters:
+                    today?.waterGoalLiters ?? home?.goals.waterGoalLiters ?? 2.5,
+                }}
+                onCancel={() => setGoalsOpen(false)}
+                onSaved={async () => {
+                  setGoalsOpen(false);
+                  loadAnalytics();
+                  await refreshHome();
+                }}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setGoalsOpen(true)}
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-purple-200 transition hover:bg-white/[0.07]"
+              >
+                <Target className="h-4 w-4" />
+                {t("goals.title")}
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <StatCard
             icon={Activity}

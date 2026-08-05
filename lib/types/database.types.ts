@@ -627,6 +627,9 @@ export type Database = {
           sound_effects: boolean;
           chat_sounds: boolean;
           unit_system: string;
+          marketing_emails?: boolean;
+          primary_goal?: string | null;
+          goals_configured?: boolean;
           updated_at: string;
         };
         Insert: { user_id: string } & Partial<

@@ -1,6 +1,7 @@
 import { getOptionalIdempotencyKey } from "@/lib/api/idempotency";
 import { withIdempotency } from "@/lib/api/idempotency-store";
 import { defineRoute } from "@/lib/api/route-handler";
+import { tryActivateUser } from "@/lib/services/onboarding.service";
 import { performCheckIn } from "@/lib/services/streak.service";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,8 @@ export const dynamic = "force-dynamic";
  * Accepts an optional `Idempotency-Key` header (response replay on retry);
  * daily de-duplication is additionally enforced server-side by the user's
  * local date.
+ *
+ * First successful habit also promotes FORMS_COMPLETED → ACTIVE.
  */
 export const POST = defineRoute(
   { route: "POST /api/check-in", rateLimit: "checkin", requireCsrf: true },
@@ -24,7 +27,11 @@ export const POST = defineRoute(
       endpoint: "POST /api/check-in",
       key: requestKey,
       requestBody: null,
-      handler: () => performCheckIn(user.id, requestKey),
+      handler: async () => {
+        const result = await performCheckIn(user.id, requestKey);
+        await tryActivateUser();
+        return result;
+      },
     });
   },
 );

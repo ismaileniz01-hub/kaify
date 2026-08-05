@@ -410,8 +410,34 @@ export async function patchAnalyticsDaily(
   if (patch.carbsGoalG !== undefined) jsonPatch.carbs_goal_g = patch.carbsGoalG;
   if (patch.fatGoalG !== undefined) jsonPatch.fat_goal_g = patch.fatGoalG;
   if (patch.calorieGoal !== undefined) jsonPatch.calorie_goal = patch.calorieGoal;
+  if (patch.waterGoalLiters !== undefined)
+    jsonPatch.water_goal_liters = patch.waterGoalLiters;
 
   await writeAnalyticsDailyPatch(userId, date, jsonPatch);
+}
+
+/** User-authored daily targets (calorie / workouts / water). */
+export async function saveUserGoals(
+  userId: string,
+  goals: {
+    calorieGoal?: number;
+    workoutsTarget?: number;
+    waterGoalLiters?: number;
+  },
+): Promise<AnalyticsDailyDTO> {
+  await patchAnalyticsDaily(userId, {
+    ...(goals.calorieGoal !== undefined
+      ? { calorieGoal: goals.calorieGoal }
+      : {}),
+    ...(goals.workoutsTarget !== undefined
+      ? { workoutsTarget: goals.workoutsTarget }
+      : {}),
+    ...(goals.waterGoalLiters !== undefined
+      ? { waterGoalLiters: goals.waterGoalLiters }
+      : {}),
+  });
+  await invalidateAnalyticsCache(userId);
+  return getTodayNutritionSnapshot(userId);
 }
 
 /**

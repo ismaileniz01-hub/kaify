@@ -52,13 +52,22 @@ export async function completeOnboarding(
     throw new ApiError("INTERNAL_ERROR", "Onboarding tamamlanamadı.");
   }
 
-  return mapProfileRow(data);
+  const profile = mapProfileRow(data);
+
+  // Paid users who finish forms after checkout would otherwise stay
+  // FORMS_COMPLETED forever (apply_subscription only promotes when already
+  // past PAID). Promote immediately when a plan is already on the profile.
+  if (profile.tier) {
+    return (await tryActivateUser(profile)) ?? profile;
+  }
+
+  return profile;
 }
 
 /**
  * Activates the authenticated user.
  * Transitions onboarding_status FORMS_COMPLETED -> ACTIVE (idempotent).
- * Intended for first check-in (Faz 3) or explicit activation.
+ * Wired from first check-in and post-forms (when already subscribed).
  */
 export async function activateUser(): Promise<ProfileDTO> {
   const supabase = await createServerSupabaseClient();
@@ -73,4 +82,24 @@ export async function activateUser(): Promise<ProfileDTO> {
   }
 
   return mapProfileRow(data);
+}
+
+/**
+ * Best-effort activation — never fails the caller (check-in / onboarding).
+ * Returns the activated profile when successful, otherwise `fallback`.
+ */
+export async function tryActivateUser(
+  fallback?: ProfileDTO,
+): Promise<ProfileDTO | undefined> {
+  try {
+    return await activateUser();
+  } catch (error) {
+    if (error instanceof ApiError && error.code === "CONFLICT") {
+      return fallback;
+    }
+    logger.warn("[onboarding.service:tryActivate] skipped", {
+      error: error instanceof Error ? error.message : "unknown",
+    });
+    return fallback;
+  }
 }

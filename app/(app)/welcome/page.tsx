@@ -17,6 +17,9 @@ import { useLang, LANG_OPTIONS, hasStoredLangPreference } from "@/lib/lang-conte
 import { captureReferralFromUrl, getPendingReferral } from "@/lib/referral";
 import { InlineAlert } from "@/components/InlineAlert";
 import { AppHeader } from "@/components/navigation/AppHeader";
+import { TodaysJobCard } from "@/components/welcome/TodaysJobCard";
+import { FirstTaskChecklist } from "@/components/welcome/FirstTaskChecklist";
+import { GoalsEditor } from "@/components/goals/GoalsEditor";
 
 const ProfileModal = dynamic(
   () =>
@@ -45,8 +48,12 @@ const WelcomeExtras = dynamic(
   { ssr: false },
 );
 
+const FIRST_TASK_CHAT_KEY = "kaify-first-task-chat";
+
 function WelcomeContent() {
   const [profileOpen, setProfileOpen] = useState(false);
+  const [goalsOpen, setGoalsOpen] = useState(false);
+  const [chatDoneLocal, setChatDoneLocal] = useState(false);
   const [pendingReferral, setPendingReferral] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const { t, setLang, lang } = useLang();
@@ -69,7 +76,14 @@ function WelcomeContent() {
     if (searchParams?.get("profile") === "1") {
       setProfileOpen(true);
     }
+    if (searchParams?.get("goals") === "1") {
+      setGoalsOpen(true);
+    }
   }, [searchParams]);
+
+  useEffect(() => {
+    setChatDoneLocal(localStorage.getItem(FIRST_TASK_CHAT_KEY) === "1");
+  }, []);
 
   useEffect(() => {
     const code = captureReferralFromUrl(searchParams);
@@ -172,9 +186,46 @@ function WelcomeContent() {
 
         {isAuthenticated && <PendingGiftCard />}
 
+        {isAuthenticated && home && (
+          <section className="animate-in animate-in--3 mt-6 space-y-3 px-4">
+            {goalsOpen ? (
+              <GoalsEditor
+                initial={{
+                  primaryGoal: home.goals.primaryGoal,
+                  calorieGoal: home.goals.calorieGoal,
+                  workoutsTarget: home.goals.workoutsTarget,
+                  waterGoalLiters: home.goals.waterGoalLiters,
+                }}
+                onCancel={() => setGoalsOpen(false)}
+                onSaved={async () => {
+                  setGoalsOpen(false);
+                  await refreshHome(lang);
+                }}
+              />
+            ) : (
+              <TodaysJobCard
+                job={home.todayJob}
+                onGoalsClick={() => setGoalsOpen(true)}
+              />
+            )}
+            <FirstTaskChecklist
+              progress={{
+                checkInDone: home.firstTask.checkInDone,
+                goalsDone: home.firstTask.goalsDone,
+                chatDone: chatDoneLocal || home.firstTask.chatDone,
+              }}
+              onGoalsClick={() => setGoalsOpen(true)}
+              onChatMarked={() => {
+                localStorage.setItem(FIRST_TASK_CHAT_KEY, "1");
+                setChatDoneLocal(true);
+              }}
+            />
+          </section>
+        )}
+
         <section className="mt-6 px-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="animate-in animate-in--3">
+            <div className="animate-in animate-in--4">
               <WelcomeCard
                 href="/analytics"
                 title={t("welcome.analytics")}
@@ -183,7 +234,7 @@ function WelcomeContent() {
                 gradient="green"
               />
             </div>
-            <div className="animate-in animate-in--4">
+            <div className="animate-in animate-in--5">
               <WelcomeCard
                 href="/messages"
                 title={t("welcome.messages")}
@@ -192,7 +243,7 @@ function WelcomeContent() {
                 gradient="blue"
               />
             </div>
-            <div className="animate-in animate-in--5">
+            <div className="animate-in animate-in--6">
               <WelcomeCard
                 href="/streak"
                 title={t("welcome.streak")}
@@ -201,7 +252,7 @@ function WelcomeContent() {
                 gradient="orange"
               />
             </div>
-            <div className="animate-in animate-in--6">
+            <div className="animate-in animate-in--7">
               <WelcomeCard
                 href="/trophy-road"
                 title={t("welcome.market")}
@@ -214,7 +265,7 @@ function WelcomeContent() {
         </section>
 
         {/* Extra suggestions */}
-        <section className="animate-in animate-in--7 mt-6 space-y-3 px-4 pb-10">
+        <section className="animate-in animate-in--8 mt-6 space-y-3 px-4 pb-10">
           {isAuthenticated && (
             <StreakAtRiskBanner
               currentStreak={streak.currentStreak}
