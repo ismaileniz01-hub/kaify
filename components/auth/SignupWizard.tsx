@@ -31,6 +31,7 @@ import {
   TERMS_VERSION,
 } from "@/lib/legal/constants";
 import { apiPost } from "@/lib/api/client";
+import { COUNTRY_OPTIONS } from "@/lib/country-names";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import {
@@ -38,11 +39,19 @@ import {
   meetsMinimumAge,
 } from "@/lib/compliance/age";
 import {
+  ACTIVITY_LEVELS,
+  DIETARY_PREFERENCES,
   EXPERIENCE_LEVELS,
-  type Gender,
+  type ActivityLevel,
+  type DietaryPreference,
   type ExperienceLevel,
+  type Gender,
   type OnboardingInput,
 } from "@/lib/validations/onboarding.schema";
+import {
+  PRIMARY_GOALS,
+  type PrimaryGoal,
+} from "@/lib/validations/goals.schema";
 import { otpSendSchema } from "@/lib/validations/auth-otp.schema";
 import type { ProfileDTO } from "@/lib/types/domain.types";
 
@@ -52,8 +61,12 @@ type WizardStepId =
   | "gender"
   | "birth"
   | "body"
+  | "goal"
+  | "activity"
   | "experience"
   | "status"
+  | "lifestyle"
+  | "country"
   | "bio"
   | "verify";
 
@@ -63,8 +76,12 @@ const FULL_FLOW: WizardStepId[] = [
   "gender",
   "birth",
   "body",
+  "goal",
+  "activity",
   "experience",
   "status",
+  "lifestyle",
+  "country",
   "bio",
   "verify",
 ];
@@ -74,12 +91,17 @@ const AUTHED_FLOW: WizardStepId[] = [
   "gender",
   "birth",
   "body",
+  "goal",
+  "activity",
   "experience",
   "status",
+  "lifestyle",
+  "country",
   "bio",
 ];
 
 const SIGNUP_GENDERS = ["male", "female"] as const satisfies readonly Gender[];
+const TRAINING_DAY_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7] as const;
 
 type UnitSystem = "metric" | "imperial";
 
@@ -136,8 +158,18 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
   const [heightFt, setHeightFt] = useState("");
   const [heightIn, setHeightIn] = useState("");
   const [weightLbs, setWeightLbs] = useState("");
+  const [primaryGoal, setPrimaryGoal] = useState<PrimaryGoal>("build_muscle");
+  const [activityLevel, setActivityLevel] =
+    useState<ActivityLevel>("moderately_active");
+  const [trainingDaysPerWeek, setTrainingDaysPerWeek] = useState(3);
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>("beginner");
   const [isNatural, setIsNatural] = useState(true);
+  const [dietaryPreference, setDietaryPreference] =
+    useState<DietaryPreference>("omnivore");
+  const [allergies, setAllergies] = useState("");
+  const [dislikedFoods, setDislikedFoods] = useState("");
+  const [healthConditions, setHealthConditions] = useState("");
+  const [countryCode, setCountryCode] = useState(lang === "tr" ? "TR" : "");
   const [bio, setBio] = useState("");
   const captchaRef = useInvisibleRecaptchaRef();
 
@@ -191,16 +223,32 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
       isNatural,
       bio: bio.trim(),
       locale: lang,
+      primaryGoal,
+      activityLevel,
+      trainingDaysPerWeek,
+      dietaryPreference,
+      allergies: allergies.trim(),
+      dislikedFoods: dislikedFoods.trim(),
+      healthConditions: healthConditions.trim(),
+      countryCode,
     };
   }, [
+    activityLevel,
+    allergies,
     bio,
     birthDate,
+    countryCode,
+    dietaryPreference,
+    dislikedFoods,
     displayName,
     experienceLevel,
     gender,
+    healthConditions,
     heightNum,
     isNatural,
     lang,
+    primaryGoal,
+    trainingDaysPerWeek,
     weightNum,
   ]);
 
@@ -220,6 +268,12 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
       case "name":
         return displayName.trim().length >= 1;
       case "gender":
+      case "goal":
+      case "experience":
+      case "status":
+      case "lifestyle":
+      case "bio":
+      case "verify":
         return true;
       case "birth":
         return birthDate.length > 0 && meetsMinimumAge(birthDate);
@@ -232,21 +286,22 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
           weightNum >= 20 &&
           weightNum <= 500
         );
-      case "experience":
-      case "status":
-      case "bio":
-      case "verify":
-        return true;
+      case "activity":
+        return trainingDaysPerWeek >= 0 && trainingDaysPerWeek <= 7;
+      case "country":
+        return /^[A-Za-z]{2}$/.test(countryCode);
       default:
         return false;
     }
   }, [
     birthDate,
+    countryCode,
     currentStep,
     displayName,
     email,
     heightNum,
     legalAccepted,
+    trainingDaysPerWeek,
     weightNum,
   ]);
 
@@ -334,6 +389,12 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
   const genderLabel = (g: Gender) => t(`onboarding.gender.${g}` as "onboarding.gender.male");
   const experienceLabel = (level: ExperienceLevel) =>
     t(`onboarding.experience.${level}` as "onboarding.experience.beginner");
+  const goalLabel = (goal: PrimaryGoal) =>
+    t(`goals.primary.${goal}` as "goals.primary.build_muscle");
+  const activityLabel = (level: ActivityLevel) =>
+    t(`onboarding.activity.${level}` as "onboarding.activity.sedentary");
+  const dietLabel = (pref: DietaryPreference) =>
+    t(`onboarding.diet.${pref}` as "onboarding.diet.omnivore");
 
   const stepTitle = t(`signup.wizard.${currentStep}.title` as "signup.wizard.email.title");
   const stepSubtitle = t(`signup.wizard.${currentStep}.subtitle` as "signup.wizard.email.subtitle");
@@ -596,6 +657,66 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                   </div>
                 )}
 
+                {currentStep === "goal" && (
+                  <div className="flex flex-col gap-2">
+                    {PRIMARY_GOALS.map((goal) => (
+                      <button
+                        key={goal}
+                        type="button"
+                        onClick={() => setPrimaryGoal(goal)}
+                        className={`signup-wizard-option signup-wizard-option--row ${
+                          primaryGoal === goal ? "signup-wizard-option--active" : ""
+                        }`}
+                      >
+                        {goalLabel(goal)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {currentStep === "activity" && (
+                  <div className="flex flex-col gap-5">
+                    <div className="flex flex-col gap-2">
+                      {ACTIVITY_LEVELS.map((level) => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => setActivityLevel(level)}
+                          className={`signup-wizard-option signup-wizard-option--row ${
+                            activityLevel === level ? "signup-wizard-option--active" : ""
+                          }`}
+                        >
+                          {activityLabel(level)}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="signup-field-label text-center">
+                        {t("signup.wizard.training_days")}
+                      </label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {TRAINING_DAY_OPTIONS.map((days) => (
+                          <button
+                            key={days}
+                            type="button"
+                            onClick={() => setTrainingDaysPerWeek(days)}
+                            className={`signup-wizard-option ${
+                              trainingDaysPerWeek === days
+                                ? "signup-wizard-option--active"
+                                : ""
+                            }`}
+                          >
+                            {days}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-center text-[11px] text-zinc-500">
+                        {t("signup.wizard.training_days_hint")}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {currentStep === "experience" && (
                   <div className="flex flex-col gap-2">
                     {EXPERIENCE_LEVELS.map((level) => (
@@ -640,6 +761,87 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                       <span>{t("onboarding.enhanced")}</span>
                     </button>
                   </div>
+                )}
+
+                {currentStep === "lifestyle" && (
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <label className="signup-field-label">{t("onboarding.diet")}</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {DIETARY_PREFERENCES.map((pref) => (
+                          <button
+                            key={pref}
+                            type="button"
+                            onClick={() => setDietaryPreference(pref)}
+                            className={`signup-wizard-option ${
+                              dietaryPreference === pref
+                                ? "signup-wizard-option--active"
+                                : ""
+                            }`}
+                          >
+                            {dietLabel(pref)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="signup-field-label">
+                        {t("signup.wizard.allergies")}
+                      </label>
+                      <textarea
+                        value={allergies}
+                        onChange={(e) => setAllergies(e.target.value)}
+                        rows={2}
+                        maxLength={500}
+                        placeholder={t("signup.wizard.allergies_placeholder")}
+                        className="signup-wizard-field resize-none text-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="signup-field-label">
+                        {t("signup.wizard.disliked_foods")}
+                      </label>
+                      <textarea
+                        value={dislikedFoods}
+                        onChange={(e) => setDislikedFoods(e.target.value)}
+                        rows={2}
+                        maxLength={500}
+                        placeholder={t("signup.wizard.disliked_foods_placeholder")}
+                        className="signup-wizard-field resize-none text-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="signup-field-label">
+                        {t("signup.wizard.health_conditions")}
+                      </label>
+                      <textarea
+                        value={healthConditions}
+                        onChange={(e) => setHealthConditions(e.target.value)}
+                        rows={2}
+                        maxLength={500}
+                        placeholder={t("signup.wizard.health_conditions_placeholder")}
+                        className="signup-wizard-field resize-none text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {currentStep === "country" && (
+                  <select
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    autoFocus
+                    className="signup-wizard-field text-base"
+                  >
+                    <option value="" className="bg-zinc-900">
+                      {t("signup.wizard.country_placeholder")}
+                    </option>
+                    {COUNTRY_OPTIONS.map((country) => (
+                      <option key={country.code} value={country.code} className="bg-zinc-900">
+                        {country.name}
+                      </option>
+                    ))}
+                  </select>
                 )}
 
                 {currentStep === "bio" && (
@@ -693,6 +895,22 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                       : t("signup.wizard.continue")}
                   <ArrowRight className="h-4 w-4" />
                 </button>
+
+                {currentStep === "lifestyle" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAllergies("");
+                      setDislikedFoods("");
+                      setHealthConditions("");
+                      void goNext();
+                    }}
+                    disabled={busy}
+                    className="text-center text-sm text-zinc-500 transition hover:text-zinc-300"
+                  >
+                    {t("signup.wizard.skip_lifestyle")}
+                  </button>
+                )}
 
                 {currentStep === "bio" && (
                   <button

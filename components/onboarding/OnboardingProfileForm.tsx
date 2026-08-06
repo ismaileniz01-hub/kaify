@@ -3,18 +3,29 @@
 import { useMemo, useState } from "react";
 import { Leaf, Sparkles, ArrowRight } from "lucide-react";
 import { apiPost, ApiClientError } from "@/lib/api/client";
+import { COUNTRY_OPTIONS } from "@/lib/country-names";
 import { useLang } from "@/lib/lang-context";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import { InlineAlert } from "@/components/InlineAlert";
 import type { ProfileDTO } from "@/lib/types/domain.types";
 import type { OnboardingInput } from "@/lib/validations/onboarding.schema";
 import {
-  GENDERS,
+  ACTIVITY_LEVELS,
+  DIETARY_PREFERENCES,
   EXPERIENCE_LEVELS,
-  type Gender,
+  GENDERS,
+  type ActivityLevel,
+  type DietaryPreference,
   type ExperienceLevel,
+  type Gender,
 } from "@/lib/validations/onboarding.schema";
+import {
+  PRIMARY_GOALS,
+  type PrimaryGoal,
+} from "@/lib/validations/goals.schema";
 import { maximumBirthDateForMinimumAge } from "@/lib/compliance/age";
+
+const TRAINING_DAY_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7] as const;
 
 type Props = {
   initialDisplayName?: string;
@@ -39,9 +50,19 @@ export function OnboardingProfileForm({
   const [birthDate, setBirthDate] = useState("");
   const [heightCm, setHeightCm] = useState("");
   const [weightKg, setWeightKg] = useState("");
+  const [primaryGoal, setPrimaryGoal] = useState<PrimaryGoal>("build_muscle");
+  const [activityLevel, setActivityLevel] =
+    useState<ActivityLevel>("moderately_active");
+  const [trainingDaysPerWeek, setTrainingDaysPerWeek] = useState(3);
   const [experienceLevel, setExperienceLevel] =
     useState<ExperienceLevel>("beginner");
   const [isNatural, setIsNatural] = useState(true);
+  const [dietaryPreference, setDietaryPreference] =
+    useState<DietaryPreference>("omnivore");
+  const [allergies, setAllergies] = useState("");
+  const [dislikedFoods, setDislikedFoods] = useState("");
+  const [healthConditions, setHealthConditions] = useState("");
+  const [countryCode, setCountryCode] = useState(lang === "tr" ? "TR" : "");
   const [bio, setBio] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +70,12 @@ export function OnboardingProfileForm({
   const genderLabel = (g: Gender) => t(`onboarding.gender.${g}` as "onboarding.gender.male");
   const experienceLabel = (level: ExperienceLevel) =>
     t(`onboarding.experience.${level}` as "onboarding.experience.beginner");
+  const goalLabel = (goal: PrimaryGoal) =>
+    t(`goals.primary.${goal}` as "goals.primary.build_muscle");
+  const activityLabel = (level: ActivityLevel) =>
+    t(`onboarding.activity.${level}` as "onboarding.activity.sedentary");
+  const dietLabel = (pref: DietaryPreference) =>
+    t(`onboarding.diet.${pref}` as "onboarding.diet.omnivore");
 
   const heightNum = Number.parseInt(heightCm, 10);
   const weightNum = Number.parseFloat(weightKg);
@@ -62,9 +89,10 @@ export function OnboardingProfileForm({
       heightNum <= 280 &&
       Number.isFinite(weightNum) &&
       weightNum >= 20 &&
-      weightNum <= 500
+      weightNum <= 500 &&
+      /^[A-Za-z]{2}$/.test(countryCode)
     );
-  }, [displayName, birthDate, heightNum, weightNum]);
+  }, [displayName, birthDate, heightNum, weightNum, countryCode]);
 
   const handleSubmit = async () => {
     if (!valid || submitting) return;
@@ -81,6 +109,14 @@ export function OnboardingProfileForm({
       isNatural,
       bio: bio.trim(),
       locale: lang,
+      primaryGoal,
+      activityLevel,
+      trainingDaysPerWeek,
+      dietaryPreference,
+      allergies: allergies.trim(),
+      dislikedFoods: dislikedFoods.trim(),
+      healthConditions: healthConditions.trim(),
+      countryCode,
     };
 
     try {
@@ -172,6 +208,56 @@ export function OnboardingProfileForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
+        <label className="signup-field-label">{t("onboarding.primary_goal")}</label>
+        <select
+          value={primaryGoal}
+          onChange={(e) => setPrimaryGoal(e.target.value as PrimaryGoal)}
+          className="signup-field-input"
+        >
+          {PRIMARY_GOALS.map((goal) => (
+            <option key={goal} value={goal} className="bg-zinc-900">
+              {goalLabel(goal)}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="signup-field-label">{t("onboarding.activity")}</label>
+        <select
+          value={activityLevel}
+          onChange={(e) => setActivityLevel(e.target.value as ActivityLevel)}
+          className="signup-field-input"
+        >
+          {ACTIVITY_LEVELS.map((level) => (
+            <option key={level} value={level} className="bg-zinc-900">
+              {activityLabel(level)}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="signup-field-label">{t("onboarding.training_days")}</label>
+        <div className="grid grid-cols-4 gap-2">
+          {TRAINING_DAY_OPTIONS.map((days) => (
+            <button
+              key={days}
+              type="button"
+              onClick={() => setTrainingDaysPerWeek(days)}
+              className={`rounded-xl border py-2.5 text-xs font-medium transition ${
+                trainingDaysPerWeek === days
+                  ? "border-purple-500/50 bg-purple-500/15 text-purple-300"
+                  : "border-white/10 bg-white/5 text-zinc-400 hover:border-white/20"
+              }`}
+            >
+              {days}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
         <label className="signup-field-label">{t("onboarding.experience")}</label>
         <div className="grid grid-cols-3 gap-2">
           {EXPERIENCE_LEVELS.map((level) => (
@@ -219,6 +305,75 @@ export function OnboardingProfileForm({
             {t("onboarding.enhanced")}
           </button>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="signup-field-label">{t("onboarding.diet")}</label>
+        <select
+          value={dietaryPreference}
+          onChange={(e) => setDietaryPreference(e.target.value as DietaryPreference)}
+          className="signup-field-input"
+        >
+          {DIETARY_PREFERENCES.map((pref) => (
+            <option key={pref} value={pref} className="bg-zinc-900">
+              {dietLabel(pref)}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="signup-field-label">{t("onboarding.allergies")}</label>
+        <textarea
+          value={allergies}
+          onChange={(e) => setAllergies(e.target.value)}
+          rows={2}
+          maxLength={500}
+          className="signup-field-input resize-none"
+          placeholder={t("signup.wizard.allergies_placeholder")}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="signup-field-label">{t("onboarding.disliked_foods")}</label>
+        <textarea
+          value={dislikedFoods}
+          onChange={(e) => setDislikedFoods(e.target.value)}
+          rows={2}
+          maxLength={500}
+          className="signup-field-input resize-none"
+          placeholder={t("signup.wizard.disliked_foods_placeholder")}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="signup-field-label">{t("onboarding.health_conditions")}</label>
+        <textarea
+          value={healthConditions}
+          onChange={(e) => setHealthConditions(e.target.value)}
+          rows={2}
+          maxLength={500}
+          className="signup-field-input resize-none"
+          placeholder={t("signup.wizard.health_conditions_placeholder")}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="signup-field-label">{t("onboarding.country")}</label>
+        <select
+          value={countryCode}
+          onChange={(e) => setCountryCode(e.target.value)}
+          className="signup-field-input"
+        >
+          <option value="" className="bg-zinc-900">
+            {t("signup.wizard.country_placeholder")}
+          </option>
+          {COUNTRY_OPTIONS.map((country) => (
+            <option key={country.code} value={country.code} className="bg-zinc-900">
+              {country.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="flex flex-col gap-1.5">
