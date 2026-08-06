@@ -43,6 +43,14 @@ export async function completeOnboarding(
     p_bio: input.bio,
     p_locale: input.locale,
     p_birth_date: input.birthDate,
+    p_primary_goal: input.primaryGoal,
+    p_activity_level: input.activityLevel,
+    p_training_days_per_week: input.trainingDaysPerWeek,
+    p_dietary_preference: input.dietaryPreference,
+    p_allergies: input.allergies,
+    p_disliked_foods: input.dislikedFoods,
+    p_health_conditions: input.healthConditions,
+    p_country_code: input.countryCode,
   });
 
   if (error) {

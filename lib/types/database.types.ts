@@ -66,6 +66,13 @@ type ProfileRow = {
   experience_level: string | null;
   is_natural: boolean;
   bio: string | null;
+  birth_date: string | null;
+  activity_level: string | null;
+  training_days_per_week: number | null;
+  dietary_preference: string | null;
+  allergies: string | null;
+  disliked_foods: string | null;
+  health_conditions: string | null;
   country_code: string;
   city_name: string | null;
   locale: string;
@@ -97,6 +104,13 @@ type ProfileInsert = {
   experience_level?: string | null;
   is_natural?: boolean;
   bio?: string | null;
+  birth_date?: string | null;
+  activity_level?: string | null;
+  training_days_per_week?: number | null;
+  dietary_preference?: string | null;
+  allergies?: string | null;
+  disliked_foods?: string | null;
+  health_conditions?: string | null;
   country_code?: string;
   city_name?: string | null;
   locale?: string;
@@ -125,6 +139,13 @@ type ProfileUpdate = {
   experience_level?: string | null;
   is_natural?: boolean;
   bio?: string | null;
+  birth_date?: string | null;
+  activity_level?: string | null;
+  training_days_per_week?: number | null;
+  dietary_preference?: string | null;
+  allergies?: string | null;
+  disliked_foods?: string | null;
+  health_conditions?: string | null;
   country_code?: string;
   city_name?: string | null;
   locale?: string;
@@ -196,6 +217,15 @@ type CompleteOnboardingArgs = {
   p_is_natural: boolean;
   p_bio: string;
   p_locale: string;
+  p_birth_date?: string | null;
+  p_primary_goal?: string | null;
+  p_activity_level?: string | null;
+  p_training_days_per_week?: number | null;
+  p_dietary_preference?: string | null;
+  p_allergies?: string | null;
+  p_disliked_foods?: string | null;
+  p_health_conditions?: string | null;
+  p_country_code?: string | null;
 };
 
 export type CheckInResult = {
