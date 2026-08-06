@@ -1,12 +1,18 @@
+"use client";
+
+import { useLang } from "@/lib/lang-context";
+
 /** Layout-matched placeholders while session data loads. */
 export function WelcomeSkeleton() {
+  const { t } = useLang();
+
   return (
     <div
       className="phone-shell welcome-page relative flex flex-col overflow-hidden"
       aria-busy="true"
       role="status"
     >
-      <span className="sr-only">Loading</span>
+      <span className="sr-only">{t("common.loading")}</span>
       <div className="relative z-20 flex items-center justify-between px-4 pt-14">
         <div className="flex gap-2">
           <div className="premium-skeleton h-11 w-11 rounded-full" />

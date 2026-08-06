@@ -1,4 +1,4 @@
-import type { LangCode } from "@/lib/lang-context";
+import type { LangCode } from "@/lib/lang-context-types";
 
 export type LocaleTranslator = (
   key: string,

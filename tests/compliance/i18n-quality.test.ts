@@ -104,18 +104,82 @@ describe("EN/TR localization quality", () => {
     expect(untranslated).toEqual([]);
   });
 
-  it("exposes only human-reviewed locales", () => {
+  it("exposes Phase 3 reviewed locales in the picker", () => {
+    const reviewed = readFileSync(
+      join(process.cwd(), "lib", "i18n", "reviewed-locales.ts"),
+      "utf8",
+    );
+    for (const code of [
+      "tr",
+      "en",
+      "de",
+      "fr",
+      "es",
+      "pt",
+      "ar",
+      "ru",
+      "ja",
+      "zh-CN",
+    ]) {
+      expect(reviewed).toContain(`code: "${code}"`);
+    }
     const source = readFileSync(
       join(process.cwd(), "lib", "lang-context.tsx"),
       "utf8",
     );
-    const optionsBlock = source.match(
-      /export const LANG_OPTIONS:[\s\S]*?=\s*\[([\s\S]*?)\];/,
-    )?.[1];
-    const codes = [...(optionsBlock ?? "").matchAll(/code:\s*"([^"]+)"/g)].map(
-      (match) => match[1],
-    );
-    expect(codes).toEqual(["tr", "en"]);
+    expect(source).toContain("REVIEWED_LANG_OPTIONS");
+  });
+
+  it("keeps priority locales from being English clones on public surfaces", () => {
+    const criticalPrefixes = [
+      "landing.hero.",
+      "landing.about.",
+      "pricing.hero.",
+      "pricing.final.",
+      "a11y.",
+      "error.global.",
+    ];
+    const criticalExact = ["common.loading", "common.retry", "nav.home", "nav.settings"];
+    const allowExact = new Set([
+      "nav.market",
+      "landing.leaderboard.country.turkey",
+      "landing.hero.kai_alt",
+    ]);
+    const priority = [
+      "de",
+      "fr",
+      "es",
+      "pt",
+      "ar",
+      "ru",
+      "ja",
+      "zh-CN",
+      "it",
+      "nl",
+      "pl",
+      "ko",
+    ];
+    for (const code of priority) {
+      const dict = JSON.parse(
+        readFileSync(join(LANG_DIR, `${code}.json`), "utf8"),
+      ) as Record<string, string>;
+      const keys = Object.keys(en).filter(
+        (key) =>
+          criticalExact.includes(key) ||
+          criticalPrefixes.some((prefix) => key.startsWith(prefix)),
+      );
+      const identical = keys.filter((key) => {
+        if (allowExact.has(key)) return false;
+        const enVal = (en[key] ?? "").trim();
+        if (dict[key] !== en[key]) return false;
+        if (["K.AIFY", "Kai", "Market", "Freezie", "Paddle", "Coaching"].includes(enVal)) {
+          return false;
+        }
+        if (/^[A-Z0-9+._\-/]{1,12}$/.test(enVal)) return false;
+        return true;
+      });
+      expect(identical, `${code} still EN-identical`).toEqual([]);
+    }
   });
 
   it("ships complete Turkish legal documents", () => {

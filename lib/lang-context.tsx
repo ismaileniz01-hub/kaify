@@ -4,31 +4,18 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, t
 import enFallback from "@/lib/lang/en.json";
 import trFallback from "@/lib/lang/tr.json";
 import { apiPatch } from "@/lib/api/client";
+import {
+  REVIEWED_LANG_OPTIONS,
+  type ReviewedLangOption,
+} from "@/lib/i18n/reviewed-locales";
+import type { LangCode } from "@/lib/lang-context-types";
 
-// Sadece JSON dosyası olan diller
-export type LangCode =
-  | "tr" | "en"
-  | "de" | "fr" | "es" | "es-mx" | "es-ar" | "it" | "pt" | "nl"
-  | "ru" | "pl" | "ro" | "el" | "sv" | "cs" | "hu" | "uk"
-  | "da" | "no" | "fi" | "lt" | "lv" | "et" | "sk" | "sl"
-  | "hr" | "bg" | "sr" | "is" | "mt"
-  | "sq" | "bs" | "mk" | "be" | "lb"
-  | "kk" | "uz" | "az"
-  | "ar" | "he" | "fa" | "ur"
-  | "af" | "yo"
-  | "hi" | "zh-CN" | "ja" | "ko" | "vi" | "th" | "id" | "ms" | "bn";
+export type { LangCode } from "@/lib/lang-context-types";
 
-export interface LangOption {
-  code: LangCode;
-  label: string;
-}
+export type LangOption = ReviewedLangOption;
 
-// Yalnızca insan gözüyle doğrulanmış diller kullanıcıya açılır.
-// Diğer sözlükler Faz 3 kalite incelemesinden sonra kademeli açılacaktır.
-export const LANG_OPTIONS: LangOption[] = [
-  { code: "tr", label: "🇹🇷 Türkçe" },
-  { code: "en", label: "🇬🇧 English" },
-];
+// Faz 3: öncelikli market dilleri MT QA sonrası seçicide açık.
+export const LANG_OPTIONS: LangOption[] = REVIEWED_LANG_OPTIONS;
 
 export type UnitSystem = "metric" | "imperial";
 

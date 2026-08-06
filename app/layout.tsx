@@ -3,7 +3,10 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { cookies, headers } from "next/headers";
 import "./globals.css";
 import { ThemeProvider } from "@/lib/theme-context";
-import { LangProvider, type LangCode } from "@/lib/lang-context";
+import { LangProvider } from "@/lib/lang-context";
+import type { LangCode } from "@/lib/lang-context-types";
+import { REVIEWED_LANG_CODES } from "@/lib/i18n/reviewed-locales";
+import { translateKey } from "@/lib/i18n/dictionary";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 
 const geistSans = Geist({
@@ -17,8 +20,11 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const RTL_LANGS = new Set<LangCode>(["ar", "he", "fa", "ur"]);
+
 export async function generateMetadata(): Promise<Metadata> {
-  const isTurkish = (await cookies()).get("kaify-lang")?.value === "tr";
+  const lang = (await cookies()).get("kaify-lang")?.value;
+  const isTurkish = lang === "tr";
   return {
     title: isTurkish
       ? "K.AIFY — Kişisel Koç Ekibin"
@@ -50,13 +56,13 @@ export const viewport: Viewport = {
   themeColor: "#0a0a0a",
 };
 
-const SUPPORTED_LANGS: readonly LangCode[] = [
-  "tr",
-  "en",
-];
+const SUPPORTED_LANGS = REVIEWED_LANG_CODES as readonly LangCode[];
 const SUPPORTED_LANG_SET = new Set<string>(SUPPORTED_LANGS);
 
-function requestLang(cookieValue: string | undefined, acceptLanguage: string | null): LangCode {
+function requestLang(
+  cookieValue: string | undefined,
+  acceptLanguage: string | null,
+): LangCode {
   if (cookieValue && SUPPORTED_LANG_SET.has(cookieValue)) {
     return cookieValue as LangCode;
   }
@@ -67,7 +73,9 @@ function requestLang(cookieValue: string | undefined, acceptLanguage: string | n
     const exact = SUPPORTED_LANGS.find((code) => code.toLowerCase() === tag);
     if (exact) return exact;
     const base = tag.split("-")[0];
-    const baseMatch = SUPPORTED_LANGS.find((code) => code.toLowerCase() === base);
+    const baseMatch = SUPPORTED_LANGS.find(
+      (code) => code.toLowerCase() === base || code.toLowerCase().startsWith(`${base}-`),
+    );
     if (baseMatch) return baseMatch;
   }
   return "en";
@@ -83,17 +91,11 @@ export default async function RootLayout({
     cookieStore.get("kaify-lang")?.value,
     headerStore.get("accept-language"),
   );
-  const skipLabel =
-    initialLang === "tr"
-      ? "İçeriğe geç"
-      : "Skip to content";
+  const skipLabel = await translateKey(initialLang, "a11y.skip_to_content");
+  const dir = RTL_LANGS.has(initialLang) ? "rtl" : "ltr";
 
   return (
-    <html
-      lang={initialLang}
-      dir="ltr"
-      suppressHydrationWarning
-    >
+    <html lang={initialLang} dir={dir} suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
