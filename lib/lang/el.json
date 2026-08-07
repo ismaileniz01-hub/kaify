@@ -84,7 +84,6 @@
   "goals.primary.placeholder": "Choose one",
   "goals.primary.lose_weight": "Lose weight",
   "goals.primary.build_muscle": "Build muscle",
-  "goals.primary.lose_fat_build_muscle": "Lose fat, then build muscle",
   "goals.primary.stay_fit": "Stay fit",
   "goals.primary.endurance": "Build endurance",
   "goals.calories": "Daily calories",
@@ -1356,5 +1355,6 @@
   "analytics.avg": "Μέσος όρος",
   "analytics.vs_last_week": "▲ {percent}% έναντι της προηγούμενης εβδομάδας",
   "analytics.vs_last_month": "▲ {percent}% έναντι του προηγούμενου μήνα",
-  "analytics.vs_last_quarter": "▲ {percent}% έναντι του τελευταίου τριμήνου"
+  "analytics.vs_last_quarter": "▲ {percent}% έναντι του τελευταίου τριμήνου",
+  "goals.primary.recomposition": "Recomposition"
 }

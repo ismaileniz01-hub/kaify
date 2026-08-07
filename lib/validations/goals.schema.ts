@@ -3,7 +3,7 @@ import { z } from "zod";
 export const PRIMARY_GOALS = [
   "lose_weight",
   "build_muscle",
-  "lose_fat_build_muscle",
+  "recomposition",
   "stay_fit",
   "endurance",
 ] as const;

@@ -84,7 +84,6 @@
   "goals.primary.placeholder": "Choose one",
   "goals.primary.lose_weight": "Lose weight",
   "goals.primary.build_muscle": "Build muscle",
-  "goals.primary.lose_fat_build_muscle": "Lose fat, then build muscle",
   "goals.primary.stay_fit": "Stay fit",
   "goals.primary.endurance": "Build endurance",
   "goals.calories": "Daily calories",
@@ -1356,5 +1355,6 @@
   "analytics.avg": "平均",
   "analytics.vs_last_week": "▲ {percent}% 対前週",
   "analytics.vs_last_month": "▲ 先月比 {percent}%",
-  "analytics.vs_last_quarter": "▲ 前四半期比 {percent}%"
+  "analytics.vs_last_quarter": "▲ 前四半期比 {percent}%",
+  "goals.primary.recomposition": "Recomposition"
 }

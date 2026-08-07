@@ -84,7 +84,6 @@
   "goals.primary.placeholder": "Choose one",
   "goals.primary.lose_weight": "Lose weight",
   "goals.primary.build_muscle": "Build muscle",
-  "goals.primary.lose_fat_build_muscle": "Lose fat, then build muscle",
   "goals.primary.stay_fit": "Stay fit",
   "goals.primary.endurance": "Build endurance",
   "goals.calories": "Daily calories",
@@ -1356,5 +1355,6 @@
   "analytics.avg": "میانگین",
   "analytics.vs_last_week": "▲ {percent}% در مقایسه با هفته گذشته",
   "analytics.vs_last_month": "▲ {percent}% در مقایسه با ماه گذشته",
-  "analytics.vs_last_quarter": "▲ {percent}% در مقایسه با سه ماهه گذشته"
+  "analytics.vs_last_quarter": "▲ {percent}% در مقایسه با سه ماهه گذشته",
+  "goals.primary.recomposition": "Recomposition"
 }
