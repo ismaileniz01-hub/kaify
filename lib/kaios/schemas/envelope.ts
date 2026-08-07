@@ -142,7 +142,7 @@ export type ParseKaiosResult<T> =
   | { ok: false; error: z.ZodError };
 
 function wrapParse<T>(
-  result: z.SafeParseReturnType<unknown, T>,
+  result: { success: true; data: T } | { success: false; error: z.ZodError },
 ): ParseKaiosResult<T> {
   if (result.success) return { ok: true, data: result.data };
   return { ok: false, error: result.error };

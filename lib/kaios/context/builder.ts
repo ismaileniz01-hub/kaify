@@ -6,6 +6,7 @@ import {
 } from "@/lib/kaios/routing/intent";
 import {
   buildTokenBreakdown,
+  estimateCharsToTokens,
   estimateTextTokens,
 } from "@/lib/kaios/telemetry/tokens";
 import type {
@@ -132,8 +133,9 @@ export function buildRuntimeContext(
     : "";
 
   const breakdown = buildTokenBreakdown({
-    core: estimateTextTokens(120), // placeholder; compiler overwrites with real CORE
-    safety: estimateTextTokens(220),
+    // Placeholder until compiler measures real CORE/SAFETY strings.
+    core: estimateCharsToTokens(480),
+    safety: estimateCharsToTokens(880),
     capsules: estimateTextTokens(capsuleText),
     locale: estimateTextTokens(localeText),
     trusted: estimateTextTokens(trustedText),
