@@ -84,7 +84,6 @@
   "goals.primary.placeholder": "Choose one",
   "goals.primary.lose_weight": "Lose weight",
   "goals.primary.build_muscle": "Build muscle",
-  "goals.primary.lose_fat_build_muscle": "Lose fat, then build muscle",
   "goals.primary.stay_fit": "Stay fit",
   "goals.primary.endurance": "Build endurance",
   "goals.calories": "Daily calories",
@@ -1356,5 +1355,6 @@
   "analytics.avg": "Átl.",
   "analytics.vs_last_week": "▲ {percent}% a múlt héthez képest",
   "analytics.vs_last_month": "▲ {percent}% a múlt hónaphoz képest",
-  "analytics.vs_last_quarter": "▲ {percent}% az előző negyedévhez képest"
+  "analytics.vs_last_quarter": "▲ {percent}% az előző negyedévhez képest",
+  "goals.primary.recomposition": "Recomposition"
 }

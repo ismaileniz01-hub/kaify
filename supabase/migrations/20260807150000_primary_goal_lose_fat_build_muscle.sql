@@ -1,4 +1,4 @@
--- Allow body-recomp primary goal: lose fat, then build muscle.
+-- Allow recomposition primary goal (lose fat while building muscle).
 
 alter table public.user_settings
   drop constraint if exists user_settings_primary_goal_check;
@@ -10,11 +10,16 @@ alter table public.user_settings
     or primary_goal in (
       'lose_weight',
       'build_muscle',
-      'lose_fat_build_muscle',
+      'recomposition',
       'stay_fit',
       'endurance'
     )
   );
+
+-- Migrate any early values from the previous key name.
+update public.user_settings
+set primary_goal = 'recomposition'
+where primary_goal = 'lose_fat_build_muscle';
 
 create or replace function public.complete_onboarding(
   p_display_name           text,
@@ -67,7 +72,7 @@ begin
      and p_primary_goal not in (
        'lose_weight',
        'build_muscle',
-       'lose_fat_build_muscle',
+       'recomposition',
        'stay_fit',
        'endurance'
      ) then

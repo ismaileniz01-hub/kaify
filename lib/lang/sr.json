@@ -84,7 +84,6 @@
   "goals.primary.placeholder": "Choose one",
   "goals.primary.lose_weight": "Lose weight",
   "goals.primary.build_muscle": "Build muscle",
-  "goals.primary.lose_fat_build_muscle": "Lose fat, then build muscle",
   "goals.primary.stay_fit": "Stay fit",
   "goals.primary.endurance": "Build endurance",
   "goals.calories": "Daily calories",
@@ -1356,5 +1355,6 @@
   "analytics.avg": "Авг.",
   "analytics.vs_last_week": "▲ __ПХ0__% у односу на прошлу недељу",
   "analytics.vs_last_month": "▲ __ПХ0__% у односу на прошли месец",
-  "analytics.vs_last_quarter": "▲ __ПХ0__% у односу на последњи квартал"
+  "analytics.vs_last_quarter": "▲ __ПХ0__% у односу на последњи квартал",
+  "goals.primary.recomposition": "Recomposition"
 }

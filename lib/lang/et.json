@@ -84,7 +84,6 @@
   "goals.primary.placeholder": "Choose one",
   "goals.primary.lose_weight": "Lose weight",
   "goals.primary.build_muscle": "Build muscle",
-  "goals.primary.lose_fat_build_muscle": "Lose fat, then build muscle",
   "goals.primary.stay_fit": "Stay fit",
   "goals.primary.endurance": "Build endurance",
   "goals.calories": "Daily calories",
@@ -1356,5 +1355,6 @@
   "analytics.avg": "Avg.",
   "analytics.vs_last_week": "▲ {percent}% vs. last week",
   "analytics.vs_last_month": "▲ {percent}% vs. last month",
-  "analytics.vs_last_quarter": "▲ {percent}% vs. last quarter"
+  "analytics.vs_last_quarter": "▲ {percent}% vs. last quarter",
+  "goals.primary.recomposition": "Recomposition"
 }
