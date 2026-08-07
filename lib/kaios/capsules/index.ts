@@ -14,6 +14,7 @@ import { selectMayaCapsules } from "@/lib/kaios/capsules/maya";
 import { selectLeoCapsules } from "@/lib/kaios/capsules/leo";
 import { selectKaiCapsules } from "@/lib/kaios/capsules/kai";
 import { selectCouncilCapsules } from "@/lib/kaios/capsules/council";
+import type { CoachId, Intent } from "@/lib/kaios/routing/intent";
 
 export { CORE_CAPSULE } from "@/lib/kaios/capsules/core";
 export { SAFETY_CAPSULE } from "@/lib/kaios/capsules/safety";
@@ -57,6 +58,59 @@ export {
 } from "@/lib/kaios/capsules/council";
 
 export type KaiosCoach = "alex" | "maya" | "leo" | "kai" | "council";
+
+/** Map routing intents onto coach capsule task keys. */
+export function intentToCapsuleTask(intent: Intent): string {
+  switch (intent) {
+    case "exercise_form":
+      return "form";
+    case "meal_analysis":
+      return "food_analysis";
+    case "meal_plan":
+      return "meal_planning";
+    case "physique_analysis":
+      return "scoring";
+    case "council_turn":
+      return "turn";
+    case "council_decision":
+      return "decision";
+    case "nutrition_question":
+      return "meal_planning";
+    case "tool_action":
+      return "casual";
+    default:
+      return intent;
+  }
+}
+
+/**
+ * Active coach + task capsules only (CORE / SAFETY / locale applied in compiler).
+ */
+export function selectActiveCapsules(
+  coach: CoachId,
+  intent: Intent,
+): string[] {
+  const task = intentToCapsuleTask(intent);
+  switch (coach) {
+    case "alex":
+      return selectAlexCapsules(task);
+    case "maya":
+      return selectMayaCapsules(task);
+    case "leo":
+      return selectLeoCapsules(task);
+    case "kai":
+      return selectKaiCapsules(task);
+    case "council":
+      return selectCouncilCapsules(task);
+    default:
+      return [];
+  }
+}
+
+/** @deprecated Prefer selectActiveCapsules; kept for capsule unit tests. */
+export function coachCapsules(coach: CoachId): string[] {
+  return selectActiveCapsules(coach, "casual");
+}
 
 /**
  * Load shared core/safety/locale capsules plus coach-specific task capsules.
