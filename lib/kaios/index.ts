@@ -56,3 +56,34 @@ export {
   parseCasualCoachResponse,
   parseMealAnalysisResponse,
 } from "@/lib/kaios/schemas";
+
+export {
+  getNutritionProvider,
+  type NutritionDataProvider,
+  type FoodObservation,
+  type MacroResult,
+  type NutritionProvenance,
+} from "@/lib/kaios/nutrition";
+
+export {
+  selectRelevantMemories,
+  sanitizeMemories,
+  prepareMemoriesForContext,
+  parseStructuredFacts,
+  type StructuredMemoryItem,
+} from "@/lib/kaios/memory";
+
+export {
+  buildFoodObservationPrompt,
+  buildPhysiqueObservationPrompt,
+  buildImageQualityPrompt,
+  normalizeFoodObservation,
+  normalizePhysiqueObservation,
+} from "@/lib/kaios/vision";
+
+export {
+  getExerciseCatalog,
+  searchExercises,
+  assertExerciseIdsExist,
+  type CatalogExercise,
+} from "@/lib/kaios/exercises";
