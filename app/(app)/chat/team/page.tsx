@@ -24,9 +24,16 @@ type TeamMessage = {
   coachId: ContactId;
   text: string;
   time: string;
+  sender?: "user" | "coach";
 };
 
 type ChatMessageRow = Database["public"]["Tables"]["chat_messages"]["Row"];
+
+type TeamPostResult = {
+  messages: ChatMessageDTO[];
+  awaitUser?: boolean;
+  decisionComplete?: boolean;
+};
 
 function isMeetingThisWeek(messages: ChatMessageDTO[]): boolean {
   const weekStart = new Date();
@@ -35,6 +42,23 @@ function isMeetingThisWeek(messages: ChatMessageDTO[]): boolean {
     (m) =>
       m.messageType === "team_meeting" && new Date(m.createdAt) >= weekStart,
   );
+}
+
+function payloadAwaitsUser(payload: unknown): boolean {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return false;
+  }
+  const data = (payload as { data?: { await_user?: unknown } }).data;
+  return data?.await_user === true;
+}
+
+function historyAwaitUser(messages: ChatMessageDTO[]): boolean {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const m = messages[i]!;
+    if (m.sender === "coach" && payloadAwaitsUser(m.payload)) return true;
+    if (m.sender === "coach" && m.messageType === "team_meeting") return false;
+  }
+  return false;
 }
 
 function mapDtoToTeamMessage(m: ChatMessageDTO, lang: LangCode): TeamMessage {
@@ -46,6 +70,7 @@ function mapDtoToTeamMessage(m: ChatMessageDTO, lang: LangCode): TeamMessage {
       hour: "2-digit",
       minute: "2-digit",
     }),
+    sender: m.sender === "user" ? "user" : "coach",
   };
 }
 
@@ -59,6 +84,7 @@ function mapRowToTeamMessage(row: ChatMessageRow, lang: LangCode): TeamMessage |
       hour: "2-digit",
       minute: "2-digit",
     }),
+    sender: row.sender === "user" ? "user" : "coach",
   };
 }
 
@@ -72,6 +98,8 @@ export default function TeamChatPage() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [meetingDone, setMeetingDone] = useState(false);
+  const [awaitUser, setAwaitUser] = useState(false);
+  const [composerText, setComposerText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const unlocked =
@@ -98,6 +126,7 @@ export default function TeamChatPage() {
     apiGet<{ messages: ChatMessageDTO[] }>("/api/chat/team")
       .then((res) => {
         setMeetingDone(isMeetingThisWeek(res.messages));
+        setAwaitUser(historyAwaitUser(res.messages));
         setMessages(res.messages.map((message) => mapDtoToTeamMessage(message, lang)));
       })
       .catch(() => setError(t("team.error.load")))
@@ -144,21 +173,26 @@ export default function TeamChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const appendMessages = (incoming: ChatMessageDTO[]) => {
+    setMessages((prev) => {
+      const next = [...prev];
+      for (const m of incoming.map((message) => mapDtoToTeamMessage(message, lang))) {
+        if (!next.some((x) => x.id === m.id)) next.push(m);
+      }
+      return next;
+    });
+  };
+
   const startMeeting = async () => {
     if (!isAuthenticated || !unlocked || generating || meetingDone) return;
     setGenerating(true);
     setError(null);
     setInfo(null);
     try {
-      const res = await apiPost<{ messages: ChatMessageDTO[] }>("/api/chat/team");
+      const res = await apiPost<TeamPostResult>("/api/chat/team");
       setMeetingDone(true);
-      setMessages((prev) => {
-        const next = [...prev];
-        for (const m of res.messages.map((message) => mapDtoToTeamMessage(message, lang))) {
-          if (!next.some((x) => x.id === m.id)) next.push(m);
-        }
-        return next;
-      });
+      setAwaitUser(Boolean(res.awaitUser));
+      appendMessages(res.messages);
     } catch (e) {
       if (e instanceof ApiClientError && e.code === "CONFLICT") {
         setMeetingDone(true);
@@ -166,6 +200,27 @@ export default function TeamChatPage() {
       } else {
         setError(errorToMessage(e, t));
       }
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const sendReply = async () => {
+    const text = composerText.trim();
+    if (!text || !isAuthenticated || !unlocked || generating || !awaitUser) return;
+    setGenerating(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await apiPost<TeamPostResult>("/api/chat/team", { message: text });
+      setComposerText("");
+      setAwaitUser(Boolean(res.awaitUser));
+      if (res.decisionComplete) {
+        setAwaitUser(false);
+      }
+      appendMessages(res.messages);
+    } catch (e) {
+      setError(errorToMessage(e, t));
     } finally {
       setGenerating(false);
     }
@@ -229,6 +284,16 @@ export default function TeamChatPage() {
           />
         )}
         {messages.map((msg) => {
+          if (msg.sender === "user") {
+            return (
+              <div key={msg.id} className="flex justify-end">
+                <div className="max-w-[85%] rounded-2xl bg-white/10 px-3 py-2 text-sm text-white">
+                  <ChatMessageText text={msg.text} className="" />
+                  <p className="mt-1 text-[10px] text-zinc-600">{msg.time}</p>
+                </div>
+              </div>
+            );
+          }
           const c = CONTACTS[msg.coachId];
           const avatar = msg.coachId === "kai" ? kaiAvatar : c.avatar;
           return (
@@ -253,22 +318,51 @@ export default function TeamChatPage() {
 
       {unlocked && isAuthenticated && (
         <footer className="space-y-2 px-4 pb-8">
-          {meetingDone && (
+          {meetingDone && !awaitUser && (
             <p className="text-center text-[11px] text-zinc-500">{t("team.meeting_done_hint")}</p>
           )}
-          <button
-            type="button"
-            onClick={() => void startMeeting()}
-            disabled={generating || meetingDone}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-purple-500 py-3 text-sm font-semibold text-white disabled:opacity-50"
-          >
-            <Send className="h-4 w-4" />
-            {generating
-              ? t("team.generating")
-              : meetingDone
-                ? t("team.meeting_done_btn")
-                : t("team.start")}
-          </button>
+          {awaitUser ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={composerText}
+                onChange={(e) => setComposerText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void sendReply();
+                  }
+                }}
+                disabled={generating}
+                placeholder={t("chat.placeholder.team")}
+                className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-purple-500/50 disabled:opacity-50"
+                aria-label={t("chat.placeholder.team")}
+              />
+              <button
+                type="button"
+                onClick={() => void sendReply()}
+                disabled={generating || !composerText.trim()}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-purple-500 text-white disabled:opacity-50"
+                aria-label={t("chat.aria.send")}
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void startMeeting()}
+              disabled={generating || meetingDone}
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-purple-500 py-3 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              <Send className="h-4 w-4" />
+              {generating
+                ? t("team.generating")
+                : meetingDone
+                  ? t("team.meeting_done_btn")
+                  : t("team.start")}
+            </button>
+          )}
         </footer>
       )}
     </div>

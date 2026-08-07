@@ -2,7 +2,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
 import { canUseTeamChat } from "@/lib/billing/team-chat-access";
 import { ModelRouter } from "@/lib/ai/model-router";
-import { TOKEN_BUDGET } from "@/lib/ai/budget";
+import { AI_FEATURES, TOKEN_BUDGET } from "@/lib/ai/budget";
 import {
   checkQuotaGuard,
   refundQuota,
@@ -17,8 +17,10 @@ import { resolveLocale } from "@/lib/i18n/dictionary";
 import { getAnalyticsBundle } from "@/lib/services/analytics.service";
 import { getStreakStatus } from "@/lib/services/streak-status.service";
 import { teamMeetingWeekKey } from "@/lib/team/meeting-week";
+import { runCouncilTurn } from "@/lib/kaios/council/turns";
 
 export { teamMeetingWeekKey } from "@/lib/team/meeting-week";
+export { runCouncilTurn } from "@/lib/kaios/council/turns";
 
 const COACH_VOICES = [
   { id: "alex", name: "Alex", tone: "tough motivating fitness coach" },
@@ -88,6 +90,11 @@ export async function assertTeamChatUnlocked(userId: string): Promise<void> {
 export async function generateWeeklyTeamMeeting(
   userId: string,
 ): Promise<ChatMessageDTO[]> {
+  if (AI_FEATURES.kaiosRuntime) {
+    const result = await runCouncilTurn({ userId });
+    return result.messages;
+  }
+
   await assertTeamChatUnlocked(userId);
 
   const admin = createAdminSupabaseClient();

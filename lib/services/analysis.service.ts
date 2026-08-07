@@ -152,11 +152,15 @@ export async function analyzePhoto(
   }
 
   // 3) Persist (no raw image stored) + consume one credit.
+  // Maya confirmation flow stays below — analyze ≠ auto-save.
   const messageType = persona.kind === "food" ? "analysis" : "score";
   const payload = {
     analysis: result.analysis,
     drift: result.drift,
     quality: result.quality,
+    ...(result.nutritionProvenance
+      ? { provenance: result.nutritionProvenance }
+      : {}),
   } as unknown as Json;
 
   const { error: userPhotoError } = await admin.from("chat_messages").insert({

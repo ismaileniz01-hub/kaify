@@ -65,6 +65,7 @@ export const AI_FEATURES = {
   /**
    * Second model call that renders workout/meal/daily cards (~900 output tokens).
    * Set AI_STRUCTURED_CARDS=false to disable entirely (biggest optional save).
+   * On the KAIOS path this is ignored (cards come from the same inference).
    */
   structuredCards: envBool("AI_STRUCTURED_CARDS", true),
   /**
@@ -72,4 +73,11 @@ export const AI_FEATURES = {
    * Set AI_CHAT_ANALYTICS=false to skip.
    */
   chatAnalytics: envBool("AI_CHAT_ANALYTICS", true),
+  /**
+   * Temporary migration flag: when true, direct coach chat uses the KAIOS
+   * orchestrator (capsules + context compiler). Set KAIOS_RUNTIME=false to
+   * roll back to the legacy prompt path. Final production must lock this on
+   * and remove the legacy path.
+   */
+  kaiosRuntime: envBool("KAIOS_RUNTIME", true),
 } as const;

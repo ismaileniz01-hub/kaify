@@ -87,3 +87,9 @@ export {
   assertExerciseIdsExist,
   type CatalogExercise,
 } from "@/lib/kaios/exercises";
+
+export {
+  orchestrateCoachChat,
+  type OrchestrateChatInput,
+  type OrchestrateResultMeta,
+} from "@/lib/kaios/orchestrator";

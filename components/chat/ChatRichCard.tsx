@@ -54,16 +54,58 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
   // score card so a meal photo never renders an empty "Body Analysis Score".
   if (messageType === "analysis") {
     const analysis = (p.analysis ?? p) as Record<string, unknown>;
-    const food = analysis.food_analysis as
-      | { calories?: number; protein?: number; carb?: number; fat?: number }
+    const fromAnalysis = analysis.food_analysis as
+      | { calories?: number; protein?: number; carb?: number; carbohydrates?: number; fat?: number }
       | null
       | undefined;
+    const fromData =
+      p.data && typeof p.data === "object" && !Array.isArray(p.data)
+        ? (p.data as {
+            calories?: number;
+            protein?: number;
+            carb?: number;
+            carbohydrates?: number;
+            fat?: number;
+          })
+        : null;
+    const fromUi =
+      p.ui && typeof p.ui === "object" && !Array.isArray(p.ui)
+        ? (p.ui as {
+            calories?: number;
+            protein?: number;
+            carb?: number;
+            carbohydrates?: number;
+            fat?: number;
+            food_analysis?: {
+              calories?: number;
+              protein?: number;
+              carb?: number;
+              carbohydrates?: number;
+              fat?: number;
+            };
+          })
+        : null;
+    const food =
+      fromAnalysis ??
+      fromData ??
+      fromUi?.food_analysis ??
+      (fromUi &&
+      (typeof fromUi.calories === "number" ||
+        typeof fromUi.protein === "number")
+        ? fromUi
+        : null);
     if (!food) return null;
 
+    const carb =
+      typeof food.carb === "number"
+        ? food.carb
+        : typeof food.carbohydrates === "number"
+          ? food.carbohydrates
+          : 0;
     const cal = Math.round(food.calories ?? 0);
     const macros: { key: string; label: string; grams: number; color: string }[] = [
       { key: "protein", label: t("analysis.protein"), grams: Math.round(food.protein ?? 0), color: "#22c55e" },
-      { key: "carb", label: t("analysis.carb"), grams: Math.round(food.carb ?? 0), color: "#f59e0b" },
+      { key: "carb", label: t("analysis.carb"), grams: Math.round(carb), color: "#f59e0b" },
       { key: "fat", label: t("analysis.fat"), grams: Math.round(food.fat ?? 0), color: "#ef4444" },
     ];
     const totalG = macros.reduce((sum, m) => sum + m.grams, 0) || 1;
