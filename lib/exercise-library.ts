@@ -4,7 +4,9 @@ export type ExerciseGroupId =
   | "back"
   | "legs"
   | "arms"
-  | "core";
+  | "core"
+  | "traps"
+  | "forearms";
 
 export type ExerciseEntry = {
   /** i18n key under library.ex.* */
@@ -172,6 +174,26 @@ export const GYM_EXERCISE_GROUPS: ExerciseGroup[] = [
       { key: "library.ex.gym.plank_with_plate" },
     ],
   },
+  {
+    id: "traps",
+    exercises: [
+      { key: "library.ex.gym.barbell_shrug" },
+      { key: "library.ex.gym.dumbbell_shrug" },
+      { key: "library.ex.gym.cable_shrug" },
+      { key: "library.ex.gym.rack_pull" },
+      { key: "library.ex.gym.trap_bar_shrug" },
+    ],
+  },
+  {
+    id: "forearms",
+    exercises: [
+      { key: "library.ex.gym.wrist_curl" },
+      { key: "library.ex.gym.reverse_wrist_curl" },
+      { key: "library.ex.gym.reverse_curl" },
+      { key: "library.ex.gym.farmers_walk" },
+      { key: "library.ex.gym.plate_pinch" },
+    ],
+  },
 ];
 
 export const groupColors: Record<ExerciseGroupId, string> = {
@@ -181,6 +203,8 @@ export const groupColors: Record<ExerciseGroupId, string> = {
   arms: "border-orange-500/60",
   legs: "border-rose-500/60",
   core: "border-amber-500/60",
+  traps: "border-cyan-500/60",
+  forearms: "border-lime-500/60",
 };
 
 export const groupGradients: Record<ExerciseGroupId, string> = {
@@ -190,6 +214,8 @@ export const groupGradients: Record<ExerciseGroupId, string> = {
   arms: "from-orange-950/60 via-zinc-900 to-zinc-900",
   legs: "from-rose-950/60 via-zinc-900 to-zinc-900",
   core: "from-amber-950/60 via-zinc-900 to-zinc-900",
+  traps: "from-cyan-950/60 via-zinc-900 to-zinc-900",
+  forearms: "from-lime-950/60 via-zinc-900 to-zinc-900",
 };
 
 export const groupIcons: Record<ExerciseGroupId, string> = {
@@ -199,4 +225,6 @@ export const groupIcons: Record<ExerciseGroupId, string> = {
   arms: "💪",
   legs: "🦵",
   core: "🔥",
+  traps: "🏔️",
+  forearms: "✊",
 };
