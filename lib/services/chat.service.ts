@@ -269,7 +269,7 @@ async function* streamKaiosCoachReply(
   try {
     const coachId = asCoachId(params.coachId);
     if (!coachId) {
-      throw new ApiError("BAD_REQUEST", "Geçersiz koç.");
+      throw new ApiError("VALIDATION_ERROR", "Geçersiz koç.");
     }
     await getCoachOrThrow(params.coachId);
 
@@ -304,7 +304,9 @@ async function* streamKaiosCoachReply(
       coach: coachId,
       intent,
       limit: 5,
-    }).map((m) => m.text);
+    })
+      .map((m) => m.text)
+      .filter((text): text is string => typeof text === "string" && text.length > 0);
 
     const { error: userInsertError } = await admin.from("chat_messages").insert({
       user_id: params.userId,
