@@ -1,0 +1,241 @@
+{
+  "capturedAt": "2026-08-07T15:20:52.001Z",
+  "method": "static_kaios_capsule_construction",
+  "tokenEstimateRule": "ceil(chars / 4)",
+  "liveProviderCalls": false,
+  "kaiosRuntimeDefault": true,
+  "workflows": [
+    {
+      "workflow": "kai_casual",
+      "coach": "kai",
+      "userMessage": "Selam, nasılsın?",
+      "input": {
+        "chars": 3524,
+        "estimatedTokens": 881,
+        "systemChars": 2535,
+        "systemEstimatedTokens": 634
+      },
+      "outputBudget": {
+        "worstCaseOutputTokens": 80
+      },
+      "modelCallCount": 1,
+      "visionCallCount": 0,
+      "notes": [
+        "KAIOS: no analytics required for baseline compare of card path"
+      ]
+    },
+    {
+      "workflow": "kai_motivation",
+      "coach": "kai",
+      "userMessage": "Bugün salona gidesim yok.",
+      "input": {
+        "chars": 4025,
+        "estimatedTokens": 1007,
+        "systemChars": 3027,
+        "systemEstimatedTokens": 757
+      },
+      "outputBudget": {
+        "worstCaseOutputTokens": 140
+      },
+      "modelCallCount": 1,
+      "visionCallCount": 0,
+      "notes": []
+    },
+    {
+      "workflow": "alex_simple_training",
+      "coach": "alex",
+      "userMessage": "Bench'te dirseklerim nasıl olmalı?",
+      "input": {
+        "chars": 4029,
+        "estimatedTokens": 1008,
+        "systemChars": 3022,
+        "systemEstimatedTokens": 756
+      },
+      "outputBudget": {
+        "worstCaseOutputTokens": 220
+      },
+      "modelCallCount": 1,
+      "visionCallCount": 0,
+      "notes": []
+    },
+    {
+      "workflow": "alex_program_related",
+      "coach": "alex",
+      "userMessage": "Bana 3 günlük bir antrenman programı hazırla.",
+      "input": {
+        "chars": 4040,
+        "estimatedTokens": 1010,
+        "systemChars": 3022,
+        "systemEstimatedTokens": 756
+      },
+      "outputBudget": {
+        "worstCaseOutputTokens": 400
+      },
+      "modelCallCount": 1,
+      "visionCallCount": 0,
+      "notes": [
+        "Single structured inference — NO second card LLM call"
+      ]
+    },
+    {
+      "workflow": "maya_normal_nutrition",
+      "coach": "maya",
+      "userMessage": "Bu akşam ne yiyebilirim?",
+      "input": {
+        "chars": 3400,
+        "estimatedTokens": 850,
+        "systemChars": 2403,
+        "systemEstimatedTokens": 601
+      },
+      "outputBudget": {
+        "worstCaseOutputTokens": 220
+      },
+      "modelCallCount": 1,
+      "visionCallCount": 0,
+      "notes": []
+    },
+    {
+      "workflow": "maya_image_analysis",
+      "coach": "maya",
+      "userMessage": "[photo]",
+      "input": {
+        "chars": 3383,
+        "estimatedTokens": 846,
+        "systemChars": 2403,
+        "systemEstimatedTokens": 601
+      },
+      "outputBudget": {
+        "worstCaseOutputTokens": 650
+      },
+      "modelCallCount": 1,
+      "visionCallCount": 2,
+      "notes": [
+        "1 conversational + 2 vision; nutrition via NutritionDataProvider"
+      ]
+    },
+    {
+      "workflow": "leo_analysis",
+      "coach": "leo",
+      "userMessage": "[photo]",
+      "input": {
+        "chars": 3466,
+        "estimatedTokens": 867,
+        "systemChars": 2486,
+        "systemEstimatedTokens": 622
+      },
+      "outputBudget": {
+        "worstCaseOutputTokens": 650
+      },
+      "modelCallCount": 1,
+      "visionCallCount": 2,
+      "notes": []
+    },
+    {
+      "workflow": "team_council_oneshot",
+      "coach": "council",
+      "userMessage": "[opening]",
+      "input": {
+        "chars": 3116,
+        "estimatedTokens": 779,
+        "systemChars": 2707,
+        "systemEstimatedTokens": 677
+      },
+      "outputBudget": {
+        "worstCaseOutputTokens": 400
+      },
+      "modelCallCount": 1,
+      "visionCallCount": 0,
+      "notes": [
+        "Interactive opening turn; await_user expected"
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "workflow": "kai_casual",
+      "beforeInputEst": 1118,
+      "afterInputEst": 881,
+      "inputDelta": -237,
+      "beforeModelCalls": 2,
+      "afterModelCalls": 1,
+      "beforeWorstOut": 920,
+      "afterWorstOut": 80
+    },
+    {
+      "workflow": "kai_motivation",
+      "beforeInputEst": 1120,
+      "afterInputEst": 1007,
+      "inputDelta": -113,
+      "beforeModelCalls": 2,
+      "afterModelCalls": 1,
+      "beforeWorstOut": 920,
+      "afterWorstOut": 140
+    },
+    {
+      "workflow": "alex_simple_training",
+      "beforeInputEst": 968,
+      "afterInputEst": 1008,
+      "inputDelta": 40,
+      "beforeModelCalls": 2,
+      "afterModelCalls": 1,
+      "beforeWorstOut": 920,
+      "afterWorstOut": 220
+    },
+    {
+      "workflow": "alex_program_related",
+      "beforeInputEst": 971,
+      "afterInputEst": 1010,
+      "inputDelta": 39,
+      "beforeModelCalls": 3,
+      "afterModelCalls": 1,
+      "beforeWorstOut": 1820,
+      "afterWorstOut": 400
+    },
+    {
+      "workflow": "maya_normal_nutrition",
+      "beforeInputEst": 966,
+      "afterInputEst": 850,
+      "inputDelta": -116,
+      "beforeModelCalls": 2,
+      "afterModelCalls": 1,
+      "beforeWorstOut": 920,
+      "afterWorstOut": 220
+    },
+    {
+      "workflow": "maya_image_analysis",
+      "beforeInputEst": 398,
+      "afterInputEst": 846,
+      "inputDelta": 448,
+      "beforeModelCalls": 1,
+      "afterModelCalls": 1,
+      "beforeWorstOut": 700,
+      "afterWorstOut": 650
+    },
+    {
+      "workflow": "leo_analysis",
+      "beforeInputEst": 391,
+      "afterInputEst": 867,
+      "inputDelta": 476,
+      "beforeModelCalls": 1,
+      "afterModelCalls": 1,
+      "beforeWorstOut": 700,
+      "afterWorstOut": 650
+    },
+    {
+      "workflow": "team_council_oneshot",
+      "beforeInputEst": 90,
+      "afterInputEst": 779,
+      "inputDelta": 689,
+      "beforeModelCalls": 1,
+      "afterModelCalls": 1,
+      "beforeWorstOut": 700,
+      "afterWorstOut": 400
+    }
+  ],
+  "summary": {
+    "maxInputEstimatedTokens": 1010,
+    "maxModelCallCount": 1,
+    "maxWorstCaseOutputBudget": 650,
+    "avgInputDeltaVsPre": 153.25
+  }
+}
