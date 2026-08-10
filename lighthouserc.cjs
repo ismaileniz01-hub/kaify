@@ -21,6 +21,9 @@ module.exports = {
         },
         throttlingMethod: "simulate",
         chromePath: process.env.CHROME_PATH || undefined,
+        // Required on modern CI/AppArmor hosts where the Chromium sandbox cannot
+        // start (LHCI otherwise exits before collecting any budgets).
+        chromeFlags: ["--no-sandbox", "--disable-dev-shm-usage"],
         onlyCategories: ["performance", "accessibility", "best-practices"],
         skipAudits: ["uses-http2", "is-on-https"],
       },
