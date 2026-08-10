@@ -85,7 +85,7 @@ jobs:
           # GitHub-hosted runners (AppArmor) cannot start Chromium's sandbox; this
           # does not weaken product security checks — only the LH collector browser.
           npx --yes @lhci/cli@0.14.0 autorun --config=lighthouserc.cjs \
-            --collect.chromeFlags="--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage"
+            --collect.settings.chromeFlags="--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage"
         env:
           LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.sha }}
 
