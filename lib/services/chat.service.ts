@@ -520,6 +520,11 @@ export async function* streamCoachReply(
   }
 
   // --- LEGACY PATH (reachable only when KAIOS_RUNTIME=false) ---
+  logger.warn("kaios.runtime.rollback_active", {
+    path: "legacy_chat",
+    userId: params.userId,
+    coachId: params.coachId,
+  });
   const admin = createAdminSupabaseClient();
   let quotaSettled = false;
   let assistantText = "";

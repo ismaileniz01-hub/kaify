@@ -138,7 +138,9 @@ async function persistEventMemoryHints(
 }
 
 /**
- * Emit + apply a structured event. Fire-and-forget safe for product writes.
+ * Emit + apply a structured event. Prefer {@link emitKaiosEventBestEffort}
+ * after canonical product writes so event/memory failures never undo or
+ * misreport durable state.
  */
 export async function emitKaiosEvent(event: KaiosEvent): Promise<KaiosEventResult> {
   pushRecent(event);
@@ -151,6 +153,25 @@ export async function emitKaiosEvent(event: KaiosEvent): Promise<KaiosEventResul
   });
   void persistEventMemoryHints(event.userId, result.memoryHints);
   return result;
+}
+
+/**
+ * Post-write emission: never throws. Canonical DB state is the source of truth;
+ * the in-process buffer and memory hints are reliability/enhancement only.
+ */
+export async function emitKaiosEventBestEffort(
+  event: KaiosEvent,
+): Promise<KaiosEventResult | null> {
+  try {
+    return await emitKaiosEvent(event);
+  } catch (error) {
+    logger.warn("kaios.event.emit_best_effort_failed", {
+      userId: event.userId,
+      type: event.type,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+    return null;
+  }
 }
 
 /**

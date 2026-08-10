@@ -1,5 +1,6 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
+import { logger } from "@/lib/logger";
 import { canUseTeamChat } from "@/lib/billing/team-chat-access";
 import { ModelRouter } from "@/lib/ai/model-router";
 import { AI_FEATURES, TOKEN_BUDGET } from "@/lib/ai/budget";
@@ -94,6 +95,11 @@ export async function generateWeeklyTeamMeeting(
     const result = await runCouncilTurn({ userId });
     return result.messages;
   }
+
+  logger.warn("kaios.runtime.rollback_active", {
+    path: "legacy_team_meeting",
+    userId,
+  });
 
   await assertTeamChatUnlocked(userId);
 

@@ -28,7 +28,7 @@ import {
   patchAnalyticsDaily,
 } from "@/lib/services/analytics.service";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { emitKaiosEvent } from "@/lib/kaios/events";
+import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 
 function num(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
@@ -153,7 +153,8 @@ export async function executeTool(
           };
         }
         await patchAnalyticsDaily(userId, { waterLiters: liters });
-        await emitKaiosEvent({
+        // Canonical write already succeeded — event is best-effort only.
+        await emitKaiosEventBestEffort({
           category: "hydration",
           type: "hydration_recorded",
           userId,

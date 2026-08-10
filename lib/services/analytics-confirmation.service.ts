@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/api/errors";
 import { writeConfirmAnalyticsPending } from "@/lib/repositories/analytics-write.repository";
 import { invalidateHomeBundleCache } from "@/lib/cache/invalidate";
-import { emitKaiosEvent } from "@/lib/kaios/events";
+import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import type { Json } from "@/lib/types/database.types";
 
 /** Pending meal/analytics confirmations expire after 24h (application-enforced). */
@@ -116,7 +116,8 @@ export async function confirmPendingAnalytics(
 
   const payload = (row.payload ?? {}) as PendingAnalyticsPayload;
   if (payload.meal) {
-    await emitKaiosEvent({
+    // Meal is already durable via RPC — event/memory must not gate success.
+    await emitKaiosEventBestEffort({
       category: "nutrition",
       type: "meal_saved",
       userId,
@@ -156,7 +157,7 @@ export async function rejectPendingAnalytics(
     return { alreadyResolved: true };
   }
 
-  await emitKaiosEvent({
+  await emitKaiosEventBestEffort({
     category: "nutrition",
     type:
       reason === "expired"

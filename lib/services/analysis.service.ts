@@ -17,7 +17,7 @@ import {
   findPriorAnalysisForFingerprint,
   fingerprintVisionImage,
 } from "@/lib/kaios/vision/fingerprint";
-import { emitKaiosEvent } from "@/lib/kaios/events";
+import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import type {
   AnalysisMimeType,
   ImageQuality,
@@ -224,7 +224,7 @@ export async function analyzePhoto(
   }
 
   if (persona.kind === "body") {
-    await emitKaiosEvent({
+    await emitKaiosEventBestEffort({
       category: "physique",
       type: "physique_scored",
       userId: params.userId,

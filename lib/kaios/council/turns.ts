@@ -30,7 +30,7 @@ import {
   SCHEMA_VERSION,
   parseCouncilTurnResponse,
 } from "@/lib/kaios/schemas/envelope";
-import { emitKaiosEvent } from "@/lib/kaios/events";
+import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import type { Json } from "@/lib/types/database.types";
 
 export { teamMeetingWeekKey } from "@/lib/team/meeting-week";
@@ -373,7 +373,8 @@ export async function runCouncilTurn(params: {
   }
 
   if (decisionComplete && decision != null) {
-    await emitKaiosEvent({
+    // Team Decision already persisted on chat_messages payload.
+    await emitKaiosEventBestEffort({
       category: "council",
       type: "council_decision",
       userId: params.userId,
