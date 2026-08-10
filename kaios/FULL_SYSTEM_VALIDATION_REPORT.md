@@ -117,9 +117,12 @@ gh pr view / gh pr checks / gh run view (CI)
 | `typecheck` | pass |
 | `lint:strict` | pass |
 | `build` | pass (prior validation on branch) |
-| CI Lint·Typecheck·Test (before LH) | pass on last failing run |
-| CI Supply-chain (nanoid) | **fixed** this pass (`nanoid@3.3.18` override) |
-| CI Lighthouse | **fixed config** (`chromeFlags: --no-sandbox`) — awaiting fresh CI green |
+| CI Lint·Typecheck·Test | **pass** (fresh green) |
+| CI Supply-chain (nanoid) | **pass** (`nanoid@3.3.18`) |
+| CI Lighthouse | **pass** (`settings.chromeFlags` sandbox flags) |
+| CI Playwright smoke | **pass** (selector stabilizations) |
+
+Fresh PR status: **MERGEABLE / CLEAN**, required checks green, **0** unresolved review threads.
 
 ---
 
