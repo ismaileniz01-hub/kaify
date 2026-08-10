@@ -9,6 +9,10 @@ module.exports = {
         "http://127.0.0.1:3000/privacy",
         "http://127.0.0.1:3000/login",
       ],
+      // LHCI collect-level flags (settings.chromeFlags is ignored by ChromeLauncher).
+      chromePath: process.env.CHROME_PATH || undefined,
+      chromeFlags:
+        "--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage",
       settings: {
         // Mobile form factor — app shell + marketing share the same CI gate.
         formFactor: "mobile",
@@ -20,10 +24,6 @@ module.exports = {
           disabled: false,
         },
         throttlingMethod: "simulate",
-        chromePath: process.env.CHROME_PATH || undefined,
-        // Required on modern CI/AppArmor hosts where the Chromium sandbox cannot
-        // start (LHCI otherwise exits before collecting any budgets).
-        chromeFlags: ["--no-sandbox", "--disable-dev-shm-usage"],
         onlyCategories: ["performance", "accessibility", "best-practices"],
         skipAudits: ["uses-http2", "is-on-https"],
       },
