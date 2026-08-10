@@ -14,6 +14,7 @@ import {
   MAYA_HYDRATION,
   MAYA_SAFETY,
   LEO_CORE,
+  LEO_IMAGE_QUALITY,
   LEO_SCORING,
   LEO_TREND,
   LEO_POSTURE,
@@ -44,6 +45,7 @@ const ALL_CAPSULES: Array<[string, string]> = [
   ["MAYA_HYDRATION", MAYA_HYDRATION],
   ["MAYA_SAFETY", MAYA_SAFETY],
   ["LEO_CORE", LEO_CORE],
+  ["LEO_IMAGE_QUALITY", LEO_IMAGE_QUALITY],
   ["LEO_SCORING", LEO_SCORING],
   ["LEO_TREND", LEO_TREND],
   ["LEO_POSTURE", LEO_POSTURE],
@@ -96,6 +98,18 @@ describe("KAIOS capsules", () => {
 
     const council = loadCoachCapsules("council", "turn");
     expect(council).toContain(COUNCIL_CORE);
+  });
+
+  it("preserves critical coach rules from source-recommended runtime YAML", () => {
+    expect(ALEX_CORE).toContain("never_invent_exercise_ids");
+    expect(MAYA_CORE).toContain("never_claim_save_without_tool_success");
+    expect(MAYA_CORE).toContain("photo_vision_identifies_food_not_final_macros");
+    expect(LEO_CORE).toContain("validate_image_before_scoring");
+    expect(LEO_CORE).toContain("do_not_inflate_scores_for_motivation");
+    expect(KAI_CORE).toContain("do_not_invent_product_actions_or_dragon_features");
+    expect(COUNCIL_CORE).toContain("user_is_participant");
+    expect(COUNCIL_CORE).toContain("do_not_generate_past_user_turn");
+    expect(LOCALIZATION_CAPSULE).toContain("short_expressions_do_not_switch");
   });
 
   it("getLocalePack returns a short pack", () => {

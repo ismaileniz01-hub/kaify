@@ -35,10 +35,10 @@ describe("compilePrompt (casual kai)", () => {
 
     // Exactly one active coach identity (Kai), not the full roster.
     expect(blob).toContain(KAI_CORE);
-    expect(blob).toMatch(/kai\.core:/i);
-    expect(blob).not.toMatch(/alex\.core:/i);
-    expect(blob).not.toMatch(/maya\.core:/i);
-    expect(blob).not.toMatch(/leo\.core:/i);
+    expect(blob).toMatch(/^kai:\s*$/m);
+    expect(blob).not.toMatch(/^alex:\s*$/m);
+    expect(blob).not.toMatch(/^maya:\s*$/m);
+    expect(blob).not.toMatch(/^leo:\s*$/m);
 
     expect(compiled.breakdown.total).toBeLessThan(4000);
     expect(compiled.canary).toMatch(/^KFY-/);
@@ -48,15 +48,15 @@ describe("compilePrompt (casual kai)", () => {
     expect(compiled.messages[0]?.role).toBe("system");
     expect(compiled.messages[1]?.role).toBe("user");
 
-    // System prefix order: core → safety → coach capsules → locale…
+    // System prefix order: safety → core → coach capsules → locale…
     const sys = system!.content;
     const coreIdx = sys.indexOf(CORE_CAPSULE.slice(0, 20));
     const safetyIdx = sys.indexOf(SAFETY_CAPSULE.slice(0, 20));
-    const coachIdx = sys.indexOf("kai.core:");
+    const coachIdx = sys.indexOf("role: dragon_companion_team_connector");
     const localeIdx = sys.indexOf("kaios.localization:");
-    expect(coreIdx).toBeGreaterThanOrEqual(0);
-    expect(safetyIdx).toBeGreaterThan(coreIdx);
-    expect(coachIdx).toBeGreaterThan(safetyIdx);
+    expect(safetyIdx).toBeGreaterThanOrEqual(0);
+    expect(coreIdx).toBeGreaterThan(safetyIdx);
+    expect(coachIdx).toBeGreaterThan(coreIdx);
     expect(localeIdx).toBeGreaterThan(coachIdx);
 
     // Canary lives on the current user turn, not the cacheable system prefix.

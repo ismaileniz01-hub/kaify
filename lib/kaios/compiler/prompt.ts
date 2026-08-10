@@ -105,7 +105,7 @@ function guardHistory(turns: ChatTurn[] | undefined): ChatTurn[] {
 }
 
 /**
- * Order: core → safety → active coach/task capsules → locale → trusted
+ * Order: safety → core → active coach/task capsules → locale → trusted
  * user/product → knowledge → output hint → recent conversation → current message.
  *
  * Stable prefix (system) has no per-request canary; canary rides on the user turn.
@@ -120,8 +120,8 @@ export function compilePrompt(ctx: RuntimeContext): CompiledPrompt {
   const outputHint = buildOutputHint(ctx);
 
   const systemParts = [
-    CORE_CAPSULE,
     SAFETY_CAPSULE,
+    CORE_CAPSULE,
     capsuleBlock,
     localeBlock,
     trustedBlock,

@@ -40,6 +40,7 @@ export {
 } from "@/lib/kaios/capsules/maya";
 export {
   LEO_CORE,
+  LEO_IMAGE_QUALITY,
   LEO_SCORING,
   LEO_TREND,
   LEO_POSTURE,

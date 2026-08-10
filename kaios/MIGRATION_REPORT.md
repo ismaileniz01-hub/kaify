@@ -2,7 +2,7 @@
 
 ## Architecture Implemented
 
-- Design-time specs live under `kaios/source/` (not runtime prompts).
+- Design-time specs live under `kaios/source/` (**complete 01–17 canonical modules**, not runtime prompts).
 - Runtime capsules under `lib/kaios/capsules/` compiled by `lib/kaios/compiler/prompt.ts`.
 - Context Builder (`lib/kaios/context/builder.ts`) + deterministic intent routing (`lib/kaios/routing/intent.ts`).
 - Orchestrator (`lib/kaios/orchestrator/request.ts`) wired into `chat.service` when `AI_FEATURES.kaiosRuntime` (env `KAIOS_RUNTIME`, **default true**).
@@ -69,9 +69,9 @@ One active coach capsule set per normal chat. Full `kaios/source` never imported
 
 ## Remaining Issues
 
-1. Full 17 source `.md` files were not present in the cloud workspace Downloads path; `kaios/source/README.md` holds module index — check in full specs from local Downloads when available.
-2. Trusted nutrition catalog still missing — honest `model_estimate` fallback only.
-3. Legacy prompt path still exists behind `KAIOS_RUNTIME=false` (intentional rollback); delete after soak.
-4. Event Engine / tool writes beyond exercise search are stubs.
-5. Live provider token telemetry before/after not captured (no API keys in CI env).
-6. Leo radial redesign / Team Decision polish deferred (by plan).
+1. Trusted nutrition catalog still missing — honest `model_estimate` fallback only.
+2. Legacy prompt path still exists behind `KAIOS_RUNTIME=false` (intentional rollback); delete after soak.
+3. Event Engine / tool writes beyond exercise search are stubs.
+4. Live provider token telemetry before/after not captured (no API keys in CI env).
+5. Leo radial redesign / Team Decision polish deferred (by plan).
+6. Capsules densified from source-recommended runtime YAML; Team Decision persistence and typed envelope enforcement still iterate.

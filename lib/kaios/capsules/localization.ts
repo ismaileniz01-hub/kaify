@@ -1,18 +1,28 @@
 /**
  * Localization capsule + short per-locale packs.
+ * Derived from kaios/source/05_localization.md language resolution rules.
  * Packs are tiny style hints — not full translation dictionaries.
  */
 
 export const LOCALIZATION_CAPSULE = `
 kaios.localization:
-  primary: match language of user's latest message (native, not translated English)
-  fallback_app_locale: only when message has no clear language (emoji/numbers/empty)
+  resolve_language_priority:
+    1. explicit_current_user_instruction
+    2. meaningful_language_of_current_message
+    3. saved_app_language
+    4. device_or_system_locale
+    5. product_fallback_locale
+  short_expressions_do_not_switch:
+    - okay, yes, no, thanks, lol, bro, haha, wow
+    - emoji-only, brand names, exercise names, common borrowed words
+  temporary_conversational_switch: must_not_silently_overwrite_saved_preference
+  primary: generate natively in the resolved active locale (not translated English)
   style: casual texting like a real coach/friend from that culture
   avoid:
     - stiff translationese
     - mixing languages unless user does
-    - English filler when user wrote another language
-  packs: load only the active locale pack below when provided
+    - literal slang dictionary translation across cultures
+  packs: load only the ONE active locale pack
 `.trim();
 
 const LOCALE_PACKS: Record<string, string> = {
