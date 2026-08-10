@@ -145,7 +145,7 @@ Event-derived memory remains rebuildable/retryable from durable rows; buffer cle
 
 ## Test results
 
-This closeout pass: `npx vitest run tests/kaios` (see commit CI). Includes new `tool-authorization` + `soak-flag` suites. Typecheck, `lint:strict`, and build required green before merge.
+This closeout pass: `npx vitest run tests/kaios` → **86 passed** (15 files). Typecheck clean; `lint:strict` clean; build succeeded.
 
 ## Prompt / context audit findings
 
