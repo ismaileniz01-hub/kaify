@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-10T13:13:05.206Z",
+  "generatedAt": "2026-08-10T13:44:57.143Z",
   "note": "Synthetic fixtures only — no real user data or secrets.",
   "results": [
     {
@@ -35,22 +35,22 @@
     {
       "id": "alex_simple_question",
       "coach": "alex",
-      "intent": "programming",
-      "tier": 3,
-      "maxOutputTokens": 400,
+      "intent": "exercise_form",
+      "tier": 2,
+      "maxOutputTokens": 220,
       "messageCount": 2,
-      "estimatedInputTokens": 1089,
+      "estimatedInputTokens": 1059,
       "breakdown": {
         "core": 218,
         "safety": 199,
-        "capsules": 299,
+        "capsules": 269,
         "locale": 221,
         "trusted": 82,
         "knowledge": 0,
         "outputHint": 0,
         "history": 0,
         "userMessage": 70,
-        "total": 1089
+        "total": 1059
       },
       "checks": {
         "noFullSpecTitle": true,

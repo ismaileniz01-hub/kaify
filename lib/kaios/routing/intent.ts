@@ -76,7 +76,7 @@ const MOTIVATION_RE =
   /\b(motivat|tired|lazy|don't want|dont want|no energy|unmotivated|skip(?:ping)?\s*(?:gym|workout)?|gidesim yok|istemiyorum|üşen|usen|tembell|vazgeç|vazgec|can't today|cant today|salona)\b/i;
 
 const FORM_RE =
-  /\b(form|technique|cue|rom\b|range of motion|how (?:do|to) (?:i )?(?:squat|bench|deadlift|press|row)|doğru form|dogru form|teknik|nasıl yapılır|nasil yapilir)\b/i;
+  /\b(form|technique|cue|rom\b|range of motion|how (?:do|to|deep|far|wide) (?:should |can )?(?:i )?(?:squat|bench|deadlift|press|row)|(?:squat|bench|deadlift|press|row).{0,24}(?:form|depth|stance|cue|technique)|doğru form|dogru form|teknik|nasıl yapılır|nasil yapilir)\b/i;
 
 const PROGRAM_RE =
   /\b(program|split|mesocycle|periodiz|weekly plan|workout plan|antrenman program|set(?:s)?\s*(?:and|&|x)\s*rep|progression|deload)\b/i;
@@ -188,8 +188,11 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
   }
 
   // Coach-biased fallbacks when keywords are weak.
+  // Lift questions (with '?') are form/technique by default; program requests
+  // already matched PROGRAM_RE above.
   if (input.coach === "alex" && /\b(workout|lift|squat|bench|deadlift|gym|antrenman)\b/i.test(lower)) {
-    return FORM_RE.test(msg) ? "exercise_form" : "programming";
+    if (FORM_RE.test(msg) || /[?]/.test(msg)) return "exercise_form";
+    return "programming";
   }
   if (input.coach === "maya" && NUTRITION_Q_RE.test(msg)) {
     return "nutrition_question";

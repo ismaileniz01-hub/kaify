@@ -35,6 +35,12 @@ describe("resolveIntent", () => {
     expect(
       resolveIntent({
         coach: "alex",
+        message: "How deep should I squat?",
+      }),
+    ).toBe("exercise_form");
+    expect(
+      resolveIntent({
+        coach: "alex",
         message: "Can you build me a 4-day workout program?",
       }),
     ).toBe("programming");
