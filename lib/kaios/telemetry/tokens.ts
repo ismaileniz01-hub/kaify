@@ -1,6 +1,9 @@
 /**
- * Token estimate helpers for KAIOS prompt telemetry (chars/4 heuristic).
+ * Token estimate helpers + provider-usage telemetry for KAIOS.
+ * Estimates use chars/4; live provider fields are recorded when available.
  */
+
+import type { TokenUsage } from "@/lib/ai/types";
 
 export type TokenBreakdown = {
   core: number;
@@ -15,6 +18,16 @@ export type TokenBreakdown = {
   total: number;
 };
 
+/** Provider usage snapshot when the model returns usage accounting. */
+export type ProviderUsageTelemetry = {
+  inputTokens: number | null;
+  outputTokens: number | null;
+  totalTokens: number | null;
+  cacheHitTokens: number | null;
+  cacheMissTokens: number | null;
+  source: "provider" | "estimate" | "unavailable";
+};
+
 export type TokenTelemetryRecord = {
   coach: string;
   intent: string;
@@ -22,6 +35,10 @@ export type TokenTelemetryRecord = {
   estimatedInputTokens: number;
   maxOutputTokens: number;
   breakdown: TokenBreakdown;
+  providerUsage: ProviderUsageTelemetry;
+  modelCallCount: number;
+  visionCallCount: number;
+  latencyMs: number | null;
   at: string;
 };
 
@@ -51,12 +68,39 @@ export function buildTokenBreakdown(
   return { ...parts, total };
 }
 
+export function providerUsageFromTokenUsage(
+  usage: TokenUsage | null | undefined,
+): ProviderUsageTelemetry {
+  if (!usage) {
+    return {
+      inputTokens: null,
+      outputTokens: null,
+      totalTokens: null,
+      cacheHitTokens: null,
+      cacheMissTokens: null,
+      source: "unavailable",
+    };
+  }
+  return {
+    inputTokens: usage.prompt_tokens ?? null,
+    outputTokens: usage.completion_tokens ?? null,
+    totalTokens: usage.total_tokens ?? null,
+    cacheHitTokens: usage.prompt_cache_hit_tokens ?? null,
+    cacheMissTokens: usage.prompt_cache_miss_tokens ?? null,
+    source: "provider",
+  };
+}
+
 export function createTokenTelemetryRecord(input: {
   coach: string;
   intent: string;
   tier: number;
   breakdown: TokenBreakdown;
   maxOutputTokens: number;
+  providerUsage?: ProviderUsageTelemetry;
+  modelCallCount?: number;
+  visionCallCount?: number;
+  latencyMs?: number | null;
 }): TokenTelemetryRecord {
   return {
     coach: input.coach,
@@ -65,6 +109,40 @@ export function createTokenTelemetryRecord(input: {
     estimatedInputTokens: input.breakdown.total,
     maxOutputTokens: input.maxOutputTokens,
     breakdown: input.breakdown,
+    providerUsage:
+      input.providerUsage ??
+      ({
+        inputTokens: null,
+        outputTokens: null,
+        totalTokens: null,
+        cacheHitTokens: null,
+        cacheMissTokens: null,
+        source: "unavailable",
+      } satisfies ProviderUsageTelemetry),
+    modelCallCount: input.modelCallCount ?? 0,
+    visionCallCount: input.visionCallCount ?? 0,
+    latencyMs: input.latencyMs ?? null,
     at: new Date().toISOString(),
+  };
+}
+
+/**
+ * Attach live provider usage onto an existing telemetry record (mutates copy).
+ */
+export function withProviderUsage(
+  record: TokenTelemetryRecord,
+  usage: TokenUsage | null | undefined,
+  extras?: {
+    modelCallCount?: number;
+    visionCallCount?: number;
+    latencyMs?: number | null;
+  },
+): TokenTelemetryRecord {
+  return {
+    ...record,
+    providerUsage: providerUsageFromTokenUsage(usage),
+    modelCallCount: extras?.modelCallCount ?? record.modelCallCount,
+    visionCallCount: extras?.visionCallCount ?? record.visionCallCount,
+    latencyMs: extras?.latencyMs ?? record.latencyMs,
   };
 }

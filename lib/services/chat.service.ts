@@ -504,16 +504,12 @@ async function* streamKaiosCoachReply(
 }
 
 /**
- * Orchestrates a text chat turn end-to-end and yields SSE chunks:
- *   - { event: "delta", data: { content } }            (incremental tokens)
- *   - { event: "done",  data: { messageId, warning_trigger, usage } }
- *   - { event: "error", data: { code, message, details? } }
+ * When AI_FEATURES.kaiosRuntime is true (default), uses KAIOS orchestrator only.
+ * There is NO fallback into legacy personality / COACH_CHAT_VOICE / structured-chat
+ * when the KAIOS path errors — failures surface as SSE error events.
  *
- * Quota is reserved by the route; tokens are settled here AFTER the stream
- * completes, surfacing LIMIT_80 / LIMIT_100 in the terminal event.
- *
- * When AI_FEATURES.kaiosRuntime is true (default), uses KAIOS orchestrator.
- * Set KAIOS_RUNTIME=false to roll back to the legacy prompt path temporarily.
+ * Set KAIOS_RUNTIME=false only as an explicit temporary soak rollback.
+ * That is NOT the final architecture; see kaios/MIGRATION_REPORT.md.
  */
 export async function* streamCoachReply(
   params: StreamReplyParams,
@@ -523,6 +519,7 @@ export async function* streamCoachReply(
     return;
   }
 
+  // --- LEGACY PATH (reachable only when KAIOS_RUNTIME=false) ---
   const admin = createAdminSupabaseClient();
   let quotaSettled = false;
   let assistantText = "";

@@ -63,6 +63,11 @@ export type ImagePipelineParams = {
   image: ImageInput;
   /** Previous body scores for the consistency check (body persona only). */
   previousScores?: MuscleScores | null;
+  /**
+   * When set (same-image fingerprint hit), skip Gemini measurement and reuse
+   * the prior technical analysis for score stability.
+   */
+  reuseAnalysis?: TechnicalAnalysis | null;
   userNote?: string;
   signal?: AbortSignal;
 };
@@ -154,75 +159,83 @@ async function analyzeImagePipelineKaios(
     );
   }
 
-  const visionPrompt =
-    profile.kind === "food"
-      ? buildFoodObservationPrompt()
-      : buildPhysiqueObservationPrompt();
-
-  const raw = await generateGeminiJson({
-    prompt: visionPrompt,
-    image: params.image,
-    temperature: 0.2,
-    signal: params.signal,
-    usageContext: params.userId
-      ? { userId: params.userId, operation: "vision" }
-      : { operation: "vision" },
-  });
-
   let analysis: TechnicalAnalysis;
   let nutritionProvenance: NutritionProvenance | undefined;
 
-  if (profile.kind === "food") {
-    const obs = normalizeFoodObservation(raw);
-    const foodObs: FoodObservation = {
-      identity: obs.identity,
-      portion: obs.portion,
-      portionUnit: obs.portionUnit,
-      prep: obs.prep,
-      ingredients: obs.ingredients,
-      ambiguity: obs.ambiguity,
-      confidence: obs.confidence,
-      calories: obs.estimatedMacros?.calories,
-      protein: obs.estimatedMacros?.protein,
-      carbohydrates: obs.estimatedMacros?.carbohydrates,
-      fat: obs.estimatedMacros?.fat,
-    };
-    const resolved = await getNutritionProvider().resolveMacros(foodObs);
-    if (!resolved.ok) {
-      throw new AiError(
-        "AI_BAD_OUTPUT",
-        resolved.message ||
-          "Makrolar çözülemedi; katalog/veri olmadan besin tablosu uydurulmaz.",
-      );
+  if (params.reuseAnalysis) {
+    analysis = params.reuseAnalysis;
+    const food = analysis.food_analysis;
+    if (profile.kind === "food" && food) {
+      nutritionProvenance = "model_estimate";
     }
-    nutritionProvenance = resolved.macros.provenance;
-    analysis = {
-      visible_muscles: [],
-      scores: {},
-      overall_score: 0,
-      food_analysis: {
-        calories: resolved.macros.calories,
-        protein: resolved.macros.protein,
-        carb: resolved.macros.carbohydrates,
-        fat: resolved.macros.fat,
-      },
-    };
   } else {
-    const phys = normalizePhysiqueObservation(raw);
-    const scores = phys.scores ?? {};
-    analysis = {
-      visible_muscles: phys.visibleMuscles,
-      scores,
-      overall_score: phys.overallScore ?? averageScores(scores),
-      food_analysis: null,
-    };
+    const visionPrompt =
+      profile.kind === "food"
+        ? buildFoodObservationPrompt()
+        : buildPhysiqueObservationPrompt();
+
+    const raw = await generateGeminiJson({
+      prompt: visionPrompt,
+      image: params.image,
+      temperature: 0.2,
+      signal: params.signal,
+      usageContext: params.userId
+        ? { userId: params.userId, operation: "vision" }
+        : { operation: "vision" },
+    });
+
+    if (profile.kind === "food") {
+      const obs = normalizeFoodObservation(raw);
+      const foodObs: FoodObservation = {
+        identity: obs.identity,
+        portion: obs.portion,
+        portionUnit: obs.portionUnit,
+        prep: obs.prep,
+        ingredients: obs.ingredients,
+        ambiguity: obs.ambiguity,
+        confidence: obs.confidence,
+        calories: obs.estimatedMacros?.calories,
+        protein: obs.estimatedMacros?.protein,
+        carbohydrates: obs.estimatedMacros?.carbohydrates,
+        fat: obs.estimatedMacros?.fat,
+      };
+      const resolved = await getNutritionProvider().resolveMacros(foodObs);
+      if (!resolved.ok) {
+        throw new AiError(
+          "AI_BAD_OUTPUT",
+          resolved.message ||
+            "Makrolar çözülemedi; katalog/veri olmadan besin tablosu uydurulmaz.",
+        );
+      }
+      nutritionProvenance = resolved.macros.provenance;
+      analysis = {
+        visible_muscles: [],
+        scores: {},
+        overall_score: 0,
+        food_analysis: {
+          calories: resolved.macros.calories,
+          protein: resolved.macros.protein,
+          carb: resolved.macros.carbohydrates,
+          fat: resolved.macros.fat,
+        },
+      };
+    } else {
+      const phys = normalizePhysiqueObservation(raw);
+      const scores = phys.scores ?? {};
+      analysis = {
+        visible_muscles: phys.visibleMuscles,
+        scores,
+        overall_score: phys.overallScore ?? averageScores(scores),
+        food_analysis: null,
+      };
+    }
   }
 
   const parsed = technicalAnalysisSchema.safeParse(analysis);
   if (!parsed.success) {
     aiLogger.error("[model-router] kaios vision output failed schema", {
       kind: profile.kind,
-      raw: JSON.stringify(raw).slice(0, 600),
+      reused: Boolean(params.reuseAnalysis),
       issues: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
     });
     throw new AiError("AI_BAD_OUTPUT", "Analiz çıktısı doğrulanamadı.");

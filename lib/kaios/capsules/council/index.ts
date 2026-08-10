@@ -30,6 +30,7 @@ council:
 export type CouncilTask = "turn" | "decision" | "casual";
 
 /** Select council capsules for the routed task. */
-export function selectCouncilCapsules(_task?: string): string[] {
+export function selectCouncilCapsules(task?: string): string[] {
+  void task; // task currently shares COUNCIL_CORE; retained for API symmetry
   return [COUNCIL_CORE];
 }

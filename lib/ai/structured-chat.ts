@@ -54,6 +54,8 @@ export async function maybeGenerateStructuredCard(params: {
   coachReply: string;
   locale: string;
 }): Promise<StructuredChatResult> {
+  // Hard stop: KAIOS path never uses a second card LLM. No silent dual-path.
+  if (AI_FEATURES.kaiosRuntime) return null;
   if (!AI_FEATURES.structuredCards) return null;
   if (await isAiPressureMode()) return null;
 

@@ -14,7 +14,7 @@ import {
   containsCanary,
   scrubModelOutput,
 } from "@/lib/ai/prompt-safety";
-import type { ChatTurn } from "@/lib/ai/types";
+import type { ChatTurn, TokenUsage } from "@/lib/ai/types";
 import { buildRuntimeContext } from "@/lib/kaios/context/builder";
 import { compilePrompt } from "@/lib/kaios/compiler/prompt";
 import {
@@ -28,7 +28,10 @@ import {
   parseBaseEnvelope,
   type BaseEnvelope,
 } from "@/lib/kaios/schemas/envelope";
-import { createTokenTelemetryRecord } from "@/lib/kaios/telemetry/tokens";
+import {
+  createTokenTelemetryRecord,
+  withProviderUsage,
+} from "@/lib/kaios/telemetry/tokens";
 import { logger } from "@/lib/logger";
 import type { SseChunk } from "@/lib/api/sse";
 import type { MessageType } from "@/lib/types/database.types";
@@ -157,7 +160,8 @@ export async function* orchestrateCoachChat(
   });
 
   const compiled = compilePrompt(ctx);
-  const telemetry = createTokenTelemetryRecord({
+  const startedAt = Date.now();
+  let telemetry = createTokenTelemetryRecord({
     coach: input.coachId,
     intent,
     tier: ctx.tier,
@@ -168,6 +172,7 @@ export async function* orchestrateCoachChat(
   const temperature = input.coachId === "kai" ? 0.85 : 0.7;
   let modelCallCount = 0;
   let usageTokens = 0;
+  let providerUsage: TokenUsage | null = null;
   let assistantText = "";
   let envelope: BaseEnvelope;
   let awaitUser = false;
@@ -204,7 +209,10 @@ export async function* orchestrateCoachChat(
             payload: null,
             usageTokens: 0,
             modelCallCount,
-            telemetry,
+            telemetry: withProviderUsage(telemetry, null, {
+              modelCallCount,
+              latencyMs: Date.now() - startedAt,
+            }),
             assistantText: "",
           };
           return;
@@ -212,6 +220,7 @@ export async function* orchestrateCoachChat(
         assistantText = next;
         yield { event: "delta", data: { content: event.content } };
       } else if (event.type === "done") {
+        providerUsage = event.usage;
         usageTokens = event.usage?.total_tokens ?? 0;
       }
     }
@@ -236,6 +245,7 @@ export async function* orchestrateCoachChat(
         operation: "kaios_chat_structured",
       },
     });
+    providerUsage = usage;
     usageTokens = usage?.total_tokens ?? 0;
     const scrubbed = scrubModelOutput(content, compiled.canary);
     const parsed = tryParseJsonObject(scrubbed);
@@ -245,6 +255,7 @@ export async function* orchestrateCoachChat(
       envelope = envelopeResult.data;
       assistantText = envelope.message;
     } else {
+      // Schema failure recovery: never invent structured success — text-only.
       assistantText = scrubbed;
       envelope = casualEnvelope(input.coachId, assistantText, intent);
       logger.warn("kaios: structured parse failed; text fallback", {
@@ -274,6 +285,12 @@ export async function* orchestrateCoachChat(
     );
     usageTokens = Math.ceil((promptChars + assistantText.length) / 4);
   }
+
+  telemetry = withProviderUsage(telemetry, providerUsage, {
+    modelCallCount,
+    visionCallCount: 0,
+    latencyMs: Date.now() - startedAt,
+  });
 
   const messageType = messageTypeForIntent(intent, envelope);
   let payload: Record<string, unknown> | null =

@@ -17,8 +17,9 @@ import type {
 
 export class ModelEstimateProvider implements NutritionDataProvider {
   async lookupComposition(
-    _observation: FoodObservation,
+    observation: FoodObservation,
   ): Promise<FoodComposition | null> {
+    void observation;
     // No catalog configured — never invent composition rows.
     return null;
   }

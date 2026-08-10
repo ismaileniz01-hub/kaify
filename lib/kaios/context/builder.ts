@@ -133,7 +133,7 @@ export function buildRuntimeContext(
     : "";
 
   const breakdown = buildTokenBreakdown({
-    // Placeholder until compiler measures real CORE/SAFETY strings.
+    // Pre-compile heuristics; compilePrompt measures real CORE/SAFETY strings.
     core: estimateCharsToTokens(480),
     safety: estimateCharsToTokens(880),
     capsules: estimateTextTokens(capsuleText),

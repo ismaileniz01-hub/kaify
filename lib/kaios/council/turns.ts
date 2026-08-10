@@ -30,6 +30,7 @@ import {
   SCHEMA_VERSION,
   parseCouncilTurnResponse,
 } from "@/lib/kaios/schemas/envelope";
+import { emitKaiosEvent } from "@/lib/kaios/events";
 import type { Json } from "@/lib/types/database.types";
 
 export { teamMeetingWeekKey } from "@/lib/team/meeting-week";
@@ -332,25 +333,30 @@ export async function runCouncilTurn(params: {
     });
   }
 
-  const rows = speakers.map((s, i) => ({
-    user_id: params.userId,
-    coach_id: s.coachId,
-    thread_type: "team" as const,
-    sender: "coach" as const,
-    message_type: "team_meeting" as const,
-    content: sanitizeUserText(s.text, 800),
-    payload: {
-      schema_version: SCHEMA_VERSION,
-      coach: "council",
-      intent: "council_turn",
-      data: {
-        await_user: i === speakers.length - 1 ? awaitUser : false,
-        speaker: s.coachId,
-      },
-    } as unknown as Json,
-    tokens_used: i === 0 ? usageTokens : 0,
-    locale,
-  }));
+  const decision = parsed?.decision ?? null;
+  const rows = speakers.map((s, i) => {
+    const isLast = i === speakers.length - 1;
+    return {
+      user_id: params.userId,
+      coach_id: s.coachId,
+      thread_type: "team" as const,
+      sender: "coach" as const,
+      message_type: "team_meeting" as const,
+      content: sanitizeUserText(s.text, 800),
+      payload: {
+        schema_version: SCHEMA_VERSION,
+        coach: "council",
+        intent: decisionComplete ? "council_decision" : "council_turn",
+        data: {
+          await_user: isLast ? awaitUser : false,
+          speaker: s.coachId,
+          ...(isLast && decision != null ? { decision } : {}),
+        },
+      } as unknown as Json,
+      tokens_used: i === 0 ? usageTokens : 0,
+      locale,
+    };
+  });
 
   const { data: inserted, error } = await admin
     .from("chat_messages")
@@ -364,6 +370,16 @@ export async function runCouncilTurn(params: {
       amount: tokenReserve,
     });
     throw new ApiError("INTERNAL_ERROR", "Takım mesajları kaydedilemedi.");
+  }
+
+  if (decisionComplete && decision != null) {
+    await emitKaiosEvent({
+      category: "council",
+      type: "council_decision",
+      userId: params.userId,
+      payload: { decision, weekStart },
+      at: new Date().toISOString(),
+    });
   }
 
   const extra = usageTokens - tokenReserve;
