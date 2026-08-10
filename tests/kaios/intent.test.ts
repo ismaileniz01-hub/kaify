@@ -3,6 +3,8 @@ import {
   needsStructuredOutput,
   outputBudgetFor,
   resolveIntent,
+  type CoachId,
+  type Intent,
 } from "@/lib/kaios/routing/intent";
 
 describe("resolveIntent", () => {
@@ -83,6 +85,164 @@ describe("resolveIntent", () => {
       }),
     ).toBe("council_decision");
   });
+});
+
+describe("resolveIntent paraphrase corpus (beyond exact keywords)", () => {
+  const cases: Array<{
+    coach: CoachId;
+    message: string;
+    hasImage?: boolean;
+    expect: Intent;
+  }> = [
+    // exercise_form vs programming
+    {
+      coach: "alex",
+      message: "My knees cave in on squats — what should I fix?",
+      expect: "exercise_form",
+    },
+    {
+      coach: "alex",
+      message: "Should my elbows flare on bench?",
+      expect: "exercise_form",
+    },
+    {
+      coach: "alex",
+      message: "Am I supposed to touch my chest on bench press?",
+      expect: "exercise_form",
+    },
+    {
+      coach: "alex",
+      message: "Cue me through a deadlift setup",
+      expect: "exercise_form",
+    },
+    {
+      coach: "alex",
+      message: "What stance width for sumo deadlift?",
+      expect: "exercise_form",
+    },
+    {
+      coach: "alex",
+      message: "How far should I go down in the squat?",
+      expect: "exercise_form",
+    },
+    {
+      coach: "alex",
+      message: "Build me an upper/lower split for hypertrophy",
+      expect: "programming",
+    },
+    {
+      coach: "alex",
+      message: "I need a push pull legs schedule",
+      expect: "programming",
+    },
+    {
+      coach: "alex",
+      message: "How should I progress my bench over 8 weeks?",
+      expect: "programming",
+    },
+    {
+      coach: "alex",
+      message: "Give me sets and reps for incline press",
+      expect: "programming",
+    },
+    {
+      coach: "alex",
+      message: "Design my next mesocycle",
+      expect: "programming",
+    },
+    {
+      coach: "alex",
+      message: "I am tired, build me an easy workout",
+      expect: "programming",
+    },
+    // motivation vs training
+    {
+      coach: "kai",
+      message: "I keep skipping the gym, help",
+      expect: "motivation",
+    },
+    {
+      coach: "kai",
+      message: "Feeling drained and unmotivated lately",
+      expect: "motivation",
+    },
+    {
+      coach: "kai",
+      message: "I want to quit training forever",
+      expect: "motivation",
+    },
+    {
+      coach: "kai",
+      message: "Can you push me a bit today?",
+      expect: "motivation",
+    },
+    // nutrition chat vs meal analysis
+    {
+      coach: "maya",
+      message: "Is rice good after training?",
+      expect: "nutrition_question",
+    },
+    {
+      coach: "maya",
+      message: "Describe this meal",
+      expect: "nutrition_question",
+    },
+    {
+      coach: "maya",
+      message: "I ate chicken and rice, how many calories roughly?",
+      expect: "nutrition_question",
+    },
+    {
+      coach: "maya",
+      message: "Estimate macros for this plate",
+      hasImage: true,
+      expect: "meal_analysis",
+    },
+    {
+      coach: "maya",
+      message: "What did I eat in this photo?",
+      hasImage: true,
+      expect: "meal_analysis",
+    },
+    {
+      coach: "maya",
+      message: "Plan my dinners for the week",
+      expect: "meal_plan",
+    },
+    // casual Kai vs specialist routing
+    {
+      coach: "kai",
+      message: "Good morning!",
+      expect: "casual",
+    },
+    {
+      coach: "kai",
+      message: "How much protein do I need?",
+      expect: "nutrition_question",
+    },
+    {
+      coach: "kai",
+      message: "How do I squat properly?",
+      expect: "exercise_form",
+    },
+    {
+      coach: "alex",
+      message: "hey",
+      expect: "casual",
+    },
+    {
+      coach: "maya",
+      message: "hi maya",
+      expect: "casual",
+    },
+  ];
+
+  it.each(cases)(
+    "$coach ← $message → $expect",
+    ({ coach, message, hasImage, expect: expected }) => {
+      expect(resolveIntent({ coach, message, hasImage })).toBe(expected);
+    },
+  );
 });
 
 describe("needsStructuredOutput / outputBudgetFor", () => {

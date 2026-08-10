@@ -1,0 +1,16 @@
+{
+  "capturedAt": "2026-08-10T14:40:55.393Z",
+  "status": "BLOCKED",
+  "reason": "No DeepSeek/Gemini/Supabase dual-user credentials in this environment. Live sections remain NOT TESTED.",
+  "probe": {
+    "capturedAt": "2026-08-10T14:40:55.393Z",
+    "deepseek": false,
+    "gemini": false,
+    "supabase": false,
+    "supabaseServiceRole": false,
+    "stagingUrl": false,
+    "e2eAuth": false,
+    "dualUser": false,
+    "councilEntitledUser": false
+  }
+}

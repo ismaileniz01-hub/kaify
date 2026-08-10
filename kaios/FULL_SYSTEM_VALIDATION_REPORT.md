@@ -1,19 +1,37 @@
 # KAIOS Full System Production Validation & Adversarial Audit
 
-**Date:** 2026-08-10  
+**Date:** 2026-08-10 (live staging validation pass)  
 **Branch:** `cursor/kaios-migration-ecdb`  
 **PR:** https://github.com/ismaileniz01-hub/kaify/pull/20  
-**Scope:** Validate implemented KAIOS against 17 canonical specs. No architecture redesign.
+**Scope:** Prove real production behavior on staging. No architecture redesign. Legacy soak rollback retained.
+
+---
+
+## Evidence classification legend
+
+| Label | Meaning |
+| --- | --- |
+| **LIVE TESTED** | Real provider/DB/browser executed with legitimate credentials |
+| **MOCK TESTED** | Unit/integration with mocks/fakes |
+| **STATICALLY VERIFIED** | Code/prompt/schema inspection or deterministic unit tests |
+| **NOT TESTED** | Blocked or not executed; no fabricated results |
 
 ---
 
 ## 1. Executive summary
 
-KAIOS is the default production path and statically/mock-tested extensively (601 repo tests; 113 KAIOS-focused). Cross-user tool authorization, event durability (buffer ≠ SoT), soak-flag gating, compiler/prompt shape, nutrition provenance honesty, and legacy soak-only reachability hold under automated tests.
+Architecture and static/mock validation remain strong (**145** KAIOS-focused tests; intent paraphrase corpus expanded). This pass **attempted** live DeepSeek / Gemini / Supabase / Playwright validation against staging.
 
-**Not proven in this environment:** live DeepSeek/Gemini behavior, real Supabase-backed multi-user E2E, browser chat/Council UX, and measured provider latency/token costs.
+**Blocker:** This Cursor Cloud run has **no linked environment** and **no provider/database credentials** (`DEEPSEEK_API_KEY`, `GEMINI_API_KEY`, Supabase URL/keys, dual-user JWTs, staging URL all unset). Probe artifact: `kaios/live-evidence/environment-probe.json` + `STATUS.json` (`BLOCKED`).
 
-One production routing defect was found during validation and given a tiny safe fix (documented below as FS-001).
+**What changed this pass (offline-capable):**
+- Expanded intent paraphrase regressions beyond FS-001
+- Recorded then fixed additional routing defects (FS-006–FS-011)
+- Added gated live harnesses under `tests/kaios/live/` + `npm run test:kaios:live`
+- Added Playwright `e2e/kaios-flows.spec.ts` (staging/auth gated)
+- Kept soak rollback (`KAIOS_RUNTIME=false` only); no automatic KAIOS→legacy fallback
+
+Live provider token/latency tables remain empty by policy (not fabricated).
 
 ---
 
@@ -22,23 +40,57 @@ One production routing defect was found during validation and given a tiny safe 
 | Item | Value |
 | --- | --- |
 | Runtime | Cursor Cloud agent VM (`/workspace`) |
-| Linked Cursor environment | none (JIT) |
+| Linked Cursor environment | **none** (JIT) |
 | Node / Next | as repo `package.json` |
-| Supabase | **unavailable** (`NEXT_PUBLIC_SUPABASE_URL` unset; only `.env.example`) |
-| DeepSeek | **unavailable** (`DEEPSEEK_API_KEY` unset) |
-| Gemini | **unavailable** (`GEMINI_API_KEY` unset) |
-| Browser E2E | Playwright config present; **not executed** (no app+auth against real backend) |
+| Supabase | **NOT TESTED** — unset |
+| DeepSeek | **NOT TESTED** — unset |
+| Gemini | **NOT TESTED** — unset |
+| Dual synthetic users | **NOT TESTED** — unset |
+| Staging URL / Playwright auth | **NOT TESTED** — unset |
 | Egress | unrestricted |
+| Live probe | `node scripts/kaios-live-validation.mjs` → `BLOCKED` |
+
+### How to complete LIVE on staging
+
+```bash
+# Required secrets in Cursor environment / .env.local (never commit):
+DEEPSEEK_API_KEY=...
+GEMINI_API_KEY=...
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+KAIOS_LIVE_USER_A_ID=...
+KAIOS_LIVE_USER_B_ID=...
+KAIOS_LIVE_USER_A_JWT=...
+KAIOS_LIVE_USER_B_JWT=...
+KAIOS_LIVE_COUNCIL_USER_ID=...   # entitled Team Chat account
+STAGING_URL=https://...
+E2E_AUTH_ENABLED=1
+E2E_OTP_EMAIL=...
+E2E_OTP_CODE=...
+
+KAIOS_LIVE=1 npm run test:kaios:live:run
+```
 
 ---
 
-## 3. What was LIVE tested
+## 3. LIVE TESTED
 
-_None._ Provider keys and live DB credentials were absent. No fabricated live results.
+_None in this environment._ Credentials absent; no fabricated DeepSeek/Gemini/Supabase/browser results.
+
+Harnesses ready to execute when secrets are present:
+| Suite | Path |
+| --- | --- |
+| DeepSeek conversational | `tests/kaios/live/deepseek-conversational.live.test.ts` |
+| Gemini vision | `tests/kaios/live/gemini-vision.live.test.ts` |
+| Supabase multi-user RLS | `tests/kaios/live/supabase-rls.live.test.ts` |
+| Maya + Council E2E | `tests/kaios/live/maya-council.live.test.ts` |
+| Playwright KAIOS flows | `e2e/kaios-flows.spec.ts` |
+| Probe runner | `scripts/kaios-live-validation.mjs` |
 
 ---
 
-## 4. What was MOCK tested
+## 4. MOCK TESTED
 
 - Tool authorization / pending confirm ownership (`tests/kaios/tool-authorization.test.ts`)
 - Hydration write failure → `ok:false`
@@ -46,14 +98,15 @@ _None._ Provider keys and live DB credentials were absent. No fabricated live re
 - Event best-effort emission after canonical write
 - Chaos/failure helpers (`tests/kaios/chaos-failures.test.ts`)
 - Structured-card hard-stop under KAIOS
+- Live suites skip-cleanly when credentials missing (no false green live claims)
 
 ---
 
-## 5. What was STATICALLY verified
+## 5. STATICALLY VERIFIED
 
 - Capsules, compiler order (safety→core), precedence
 - No full-spec markdown in runtime prompts
-- Intent routing + output ceilings
+- Intent routing + output ceilings (**expanded paraphrase corpus**)
 - Memory poison sanitize + ≤5 select
 - Localization resolve / short-expression / Turkish casing helpers
 - Nutrition `model_estimate` provenance + no invented catalog
@@ -63,39 +116,36 @@ _None._ Provider keys and live DB credentials were absent. No fabricated live re
 - Council envelope `await_user` / coaches-only speakers
 - Soak flag default on; no KAIOS→legacy catch-fallback
 - Legacy symbols soak-only when KAIOS on
-- Prompt audit matrix (`kaios/audit/runtime-prompt-audit.json` + `runtime-prompt-matrix.test.ts`)
-- Token baseline files (static char/4 estimates)
+- Prompt audit matrix (`kaios/audit/runtime-prompt-audit.json`)
+- Token baseline files (static char/4 estimates) — **not** live provider metrics
 
 ---
 
-## 6. What could NOT be tested
+## 6. NOT TESTED (live evidence gaps)
 
-| Area | Reason |
+| Area | Status |
 | --- | --- |
-| DeepSeek conversational quality / schema adherence | No API key |
-| Gemini vision / quality gate live | No API key |
-| Real meal confirm → RPC → analytics persistence | No Supabase |
-| Real Council multi-turn with entitlement | No DB + no DeepSeek |
-| Browser chat SSE / card render / mobile | No running authenticated app |
-| Live p50/p95 latency & provider tokens | No providers |
-| True multi-instance event race | Single-process mocks only |
-| 90-day / 1-year continuity with real storage | No durable test DB |
+| DeepSeek multi-sample coach/intent quality | NOT TESTED |
+| Schema adherence / malformed rate under live model | NOT TESTED |
+| Provider input/output/total tokens + cache | NOT TESTED |
+| p50/p95 latency by coach/intent | NOT TESTED |
+| Gemini Maya food fixtures (real photos) | NOT TESTED |
+| Gemini Leo valid/invalid/blur/crop/repeat | NOT TESTED |
+| Real Supabase dual-user RLS/RPC matrix | NOT TESTED |
+| Maya photo→confirm→RPC→analytics→events | NOT TESTED |
+| Council full interactive session (entitled) | NOT TESTED |
+| Playwright streaming / confirm / await_user | NOT TESTED |
+| Live vs `kaios/baseline/*` comparison | NOT TESTED |
 
 ---
 
 ## 7. Exact commands executed
 
 ```text
-npm audit --audit-level=high
-npm audit fix   # nanoid → 3.3.18
-npx vitest run                 # 110 files, 601 passed
-npx vitest run tests/kaios     # 19 files, 113 passed
-npm run typecheck
-npm run lint:strict
-npm run build                  # previously green this branch; not re-run every pass
-npx tsx scripts/kaios-prompt-audit.ts
-npx tsx -e 'resolveIntent probes…'
-gh pr view / gh pr checks / gh run view (CI)
+npx vitest run tests/kaios/intent.test.ts tests/kaios/live
+npx vitest run tests/kaios                 # 23 files, 145 passed
+node scripts/kaios-live-validation.mjs     # BLOCKED — no credentials
+# Live suites intentionally not forced: would skip all provider cases
 ```
 
 ---
@@ -104,44 +154,42 @@ gh pr view / gh pr checks / gh run view (CI)
 
 | Suite | Result |
 | --- | --- |
-| Full vitest | **601 passed** / 110 files |
-| `tests/kaios` | **113 passed** / 19 files |
-| New adversarial files this pass | `adversarial-safety`, `runtime-prompt-matrix`, `chaos-failures`, `legacy-reachability` (+ prior auth/soak) |
+| `tests/kaios` (incl. live skip harness) | **145 passed** / 23 files |
+| Intent paraphrase corpus | expanded (`it.each` natural phrasing) |
+| Live provider execution | **0** (blocked) |
+| Playwright KAIOS flows | authored; **not executed** against staging |
 
 ---
 
 ## 9. Build / type / lint results
 
-| Check | Result |
-| --- | --- |
-| `typecheck` | pass |
-| `lint:strict` | pass |
-| `build` | pass (prior validation on branch) |
-| CI Lint·Typecheck·Test | **pass** (fresh green) |
-| CI Supply-chain (nanoid) | **pass** (`nanoid@3.3.18`) |
-| CI Lighthouse | **pass** (`settings.chromeFlags` sandbox flags) |
-| CI Playwright smoke | **pass** (selector stabilizations) |
-
-Fresh PR status: **MERGEABLE / CLEAN**, required checks green, **0** unresolved review threads.
+Prior branch CI was green (Lint·Typecheck·Test, supply-chain, Lighthouse, Playwright smoke). This pass focused on live harness + intent regressions; re-check CI after push.
 
 ---
 
 ## 10. Frontend E2E results
 
-**NOT TESTABLE IN CURRENT ENVIRONMENT.**  
-Existing Playwright specs (`e2e/smoke`, `auth-otp`, `i18n-language`) do not cover coach chat/Council/Maya confirm. Not run here.
+| Spec | Status |
+| --- | --- |
+| `e2e/smoke.spec.ts` | STATIC/CI historically green |
+| `e2e/auth-otp.spec.ts` | staging-gated |
+| `e2e/kaios-flows.spec.ts` | **NEW** — coach stream, structured render, Maya shell, Leo invalid, Council await/resume, refresh, error state; **NOT TESTED** live (no auth staging) |
 
 ---
 
 ## 11. DeepSeek live results
 
-**NOT TESTABLE** — `DEEPSEEK_API_KEY` unset.
+**NOT TESTED** — `DEEPSEEK_API_KEY` unset.
+
+Target matrix (harness): Kai casual/motivation/health-safety; Alex form/programming/progression; Maya nutrition/structured; Leo synthesis; Council turns — multi-sample, identity, schema, ceiling, single model call, tokens, cache, latency, malformed rate.
 
 ---
 
 ## 12. Gemini live results
 
-**NOT TESTABLE** — `GEMINI_API_KEY` unset.
+**NOT TESTED** — `GEMINI_API_KEY` unset.
+
+Target matrix (harness): Maya food variants + Leo quality/repeat; observation-only; no coach persona; no fabricated analysis on failure.
 
 ---
 
@@ -149,181 +197,28 @@ Existing Playwright specs (`e2e/smoke`, `auth-otp`, `i18n-language`) do not cove
 
 | Coach | Method | Finding |
 | --- | --- | --- |
-| Alex | STATIC + intent probes | Capsules present; **FS-001** form→programming misroute found & fixed |
-| Maya | STATIC/MOCK | Confirm-before-save + provenance contracts hold in code/tests |
-| Leo | STATIC | Invalid-image gate + fingerprint stability helpers present; live score quality unproven |
-| Kai | STATIC | Casual/motivation intents + capsule identity; live voice quality unproven |
-| Persona leakage | STATIC compile | Unrelated coach cores absent from compiled prompts |
-
-Blind live classification: **blocked**.
+| Alex | STATIC + paraphrase corpus | FS-001 retained; FS-006/007/008/009 fixed + regressions |
+| Maya | STATIC/MOCK + paraphrases | FS-010/011 fixed; live photo path NOT TESTED |
+| Leo | STATIC | Live score stability NOT TESTED |
+| Kai | STATIC + paraphrases | Motivation paraphrases expanded; live voice NOT TESTED |
+| Council | STATIC | Live entitled session NOT TESTED |
 
 ---
 
-## 14. Memory / context results
+## 14–29. Prior static/mock findings (unchanged summary)
 
-- Poison / admin-grant memories dropped (**STATIC**)
-- ≤5 retrieval bound (**STATIC**)
-- Casual tier drops memory (**STATIC**)
-- Canonical userState wrapped as DATA (**STATIC**)
-- Long history not injected at tier 0 (**STATIC**)
-- Real 90-day continuity: **blocked**
+Authorization **MOCK**; Maya confirm **MOCK**; Leo fingerprint **STATIC**; Council `await_user` **STATIC**; event durability invariant **STATIC/MOCK**; SSE single-call design **STATIC**; legacy soak-only **STATIC**; baselines remain static estimates in `kaios/baseline/{pre,post}-migration.json` — **live comparison NOT TESTED**.
+
+Soak rollback: **retained**. `KAIOS` default on. No automatic fallback. Rollback via `KAIOS_RUNTIME=false` remains observable (`kaios.runtime.rollback_active`).
 
 ---
 
-## 15. Localization results
+## 30. Test-quality updates this pass
 
-- Priority resolve + short-expression non-switch + TR/EN casing helpers (**STATIC**)
-- Capsule packs one-locale (**STATIC** / audit)
-- Live multilingual coach speech quality: **blocked**
-- RTL/non-Latin product i18n parity suite exists outside kaios and passes in CI i18n step
-
----
-
-## 16. Safety / red-team results
-
-- Capsule safety remains in compiled prompts under jailbreak-like user text (**STATIC**)
-- Memory poison inert (**STATIC**)
-- Existing `tests/security/ai-injection-redteam.test.ts` scores phrases only
-- Live jailbreak against DeepSeek: **blocked**
-- Vision/tool-output injection live: **blocked** (mocked path only)
-
----
-
-## 17. Authorization / cross-user results
-
-**MOCK TESTED** (`tool-authorization.test.ts`):
-
-- User A cannot confirm/reject User B pending
-- Client `userId` cannot override server identity on meal/hydration/nutrition/physique tools
-- Physique history scoped to server user
-- Council history query binds `user_id`
-- Missing pending → NOT_FOUND
-- Duplicate confirm idempotent for owner
-
-Live dual-user DB matrix: **blocked**.
-
----
-
-## 18. Tool results
-
-| Tool | Coverage |
-| --- | --- |
-| `searchExercises` / `validateExerciseIds` | STATIC — invalid ID → fail |
-| `getNutritionState` | MOCK — server userId |
-| `getPhysiqueHistory` | MOCK — owner scoped |
-| `saveMealMacros` | MOCK — pending only, server owner |
-| `recordHydration` | MOCK — write fail → no fake success |
-| Timeout/live retry | **not tested** |
-
----
-
-## 19. Maya confirmation / write results
-
-**MOCK / STATIC:** pending create → owner confirm → RPC mock; expiry; reject; event best-effort after success; cache invalidation called; wrong pending rejected.
-
-Live photo→confirm→analytics→UI: **blocked**.
-
----
-
-## 20. Leo stability results
-
-**STATIC:** fingerprint reuse helper; historical prior lookup design; quality gate rejects low scores in router.
-
-Live same-image Gemini variance: **blocked**.
-
----
-
-## 21. Council results
-
-**STATIC:** `await_user` schema; speakers coaches-only; decision on message payload; best-effort event after persist; soak-only oneshot path when flag false.
-
-Live entitlement/multi-turn/disagreement: **blocked**.
-
----
-
-## 22. Event durability results
-
-**Invariant holds (STATIC/MOCK):**
-
-| State | Canonical store |
-| --- | --- |
-| meal | confirm RPC / analytics |
-| hydration | `patchAnalyticsDaily` |
-| physique | `chat_messages` |
-| council decision | `chat_messages.payload` |
-
-In-process buffer is not SoT; `emitKaiosEventBestEffort` used post-write.
-
----
-
-## 23. Cache results
-
-Confirm path calls `invalidateHomeBundleCache` (**STATIC** call-site). Full stale-cache matrix across goals/language/program: partial / **not fully exercised** here.
-
----
-
-## 24. SSE / schema results
-
-**STATIC:** orchestrator single-call design; structured parse failure → text fallback; card alias same envelope; `maybeGenerateStructuredCard` hard-stop under KAIOS.
-
-Live SSE disconnect / partial stream: **blocked**.
-
----
-
-## 25. Failure / chaos results
-
-**MOCK:** hydration DB fail → tool `ok:false`; best-effort event never throws; schema reject without provenance.
-
-Provider timeouts: **blocked** (no live adapters exercised).
-
----
-
-## 26. Concurrency / idempotency results
-
-Duplicate confirm idempotent (**MOCK**). True concurrent double-confirm races: **not load-tested**.
-
----
-
-## 27. Token / cost results
-
-| Source | Status |
-| --- | --- |
-| `kaios/baseline/pre-migration.json` | STATIC baseline retained |
-| `kaios/baseline/post-migration.json` | STATIC — casual output ceiling 80; modelCallCount 1 |
-| Runtime audit estimates | e.g. kai_casual ~888 input est. tokens |
-| Live provider usage | **NOT FABRICATED** — unavailable |
-
-Intent ceilings remain intent-specific; routine paths do not use legacy ~900–1800 card ceilings under KAIOS (**STATIC**).
-
----
-
-## 28. Latency results
-
-**NOT MEASURED** (no live providers / no instrumented HTTP).
-
----
-
-## 29. Legacy reachability results
-
-| Symbol | When `KAIOS_RUNTIME=true` |
-| --- | --- |
-| `COACH_CHAT_VOICE` / `buildChatSystemPrompt` | soak-only |
-| `syncAgents` | soak-only |
-| `maybeGenerateStructuredCard` | hard-stop null |
-| oneshot team meeting | soak-only |
-| `ANALYSIS_PERSONAS` | shared kind router (food/body) — OK |
-| Hidden KAIOS→legacy fallback | **none** (early return) |
-| Rollback observability | `kaios.runtime.rollback_active` |
-
----
-
-## 30. Test-quality gaps
-
-- Many auth tests use deep Supabase mocks (strong for ownership logic; weak for real RLS/RPC)
-- No live character quality / persona leakage behavioral tests
-- No Playwright coach flows
-- Intent heuristics remain keyword-based (fragile to phrasing — FS-001)
-- Coverage count ≠ live proof
+- Intent regressions now use diverse natural paraphrases (not only keywords)
+- Live harnesses skip instead of fabricating green live results
+- Playwright KAIOS flows added (gated)
+- Remaining gap: execution against real staging credentials
 
 ---
 
@@ -335,35 +230,87 @@ _None confirmed in testable surface._
 
 ## 32. P1 issues
 
-_None confirmed that must block canary given soak controls._  
-(Live provider/DB proof remains an evidence gap, not a confirmed product bug.)
+### FS-LIVE-001 — Staging credentials unavailable in validation environment
+- **Severity:** P1 (release-evidence blocker)
+- **Reproduction:** Run `node scripts/kaios-live-validation.mjs` on this Cloud agent
+- **Expected:** DeepSeek/Gemini/Supabase dual-user/staging secrets available for canary proof
+- **Actual:** All live flags `false`; `STATUS.json` = `BLOCKED`
+- **Root cause:** No linked Cursor environment / secrets for this run
+- **Affected files:** N/A (environment)
+- **Fix recommendation:** Attach staging secrets to Cursor environment; re-run `KAIOS_LIVE=1 npm run test:kaios:live:run`
+- **Regression test:** `scripts/kaios-live-validation.mjs` probe + live suites
 
 ---
 
 ## 33. P2 issues
 
-### FS-001 — Alex form question misrouted to `programming`
+### FS-001 — Alex form question misrouted to `programming` (prior)
+- Fixed earlier; regression retained.
+
+### FS-006 — Plural lift / “knees cave on squats” → `unknown`
 - **Severity:** P2  
-- **Subsystem:** Intent router (`lib/kaios/routing/intent.ts`)  
-- **Reproduction:** `resolveIntent({ coach:"alex", message:"How deep should I squat?" })` previously → `programming`  
+- **Reproduction:** `resolveIntent({ coach:"alex", message:"My knees cave in on squats — what should I fix?" })`  
 - **Expected:** `exercise_form`  
-- **Actual (before):** `programming` (tier 3 / 400-token budget / program capsules)  
-- **Root cause:** Alex lift-keyword fallback preferred programming when FORM_RE missed “how deep should I…”  
-- **Fix applied (tiny, documented):** broadened FORM_RE + question-mark preference for Alex lift fallback; regression in `tests/kaios/intent.test.ts`  
+- **Actual (before):** `unknown`  
+- **Root cause:** Alex lift fallback used singular `\bsquat\b` only; FORM_RE missed knees-cave phrasing  
 - **Affected files:** `lib/kaios/routing/intent.ts`, `tests/kaios/intent.test.ts`  
-- **Regression test:** required — added  
+- **Fix recommendation:** Applied — plurals + knees-cave cue  
+- **Regression test:** paraphrase corpus  
 
-### FS-002 — Durable event outbox absent
-- Reliability improvement only; canonical SoT already DB. **P2**
+### FS-007 — “push pull legs schedule” → `tool_action`
+- **Severity:** P2  
+- **Reproduction:** `… message:"I need a push pull legs schedule"`  
+- **Expected:** `programming`  
+- **Actual (before):** `tool_action` (bare `schedule` in TOOL_RE)  
+- **Root cause:** Over-broad tool keyword  
+- **Affected files:** `lib/kaios/routing/intent.ts`  
+- **Fix recommendation:** Applied — TOOL_RE requires `schedule (workout|session|…)`  
+- **Regression test:** paraphrase corpus  
 
-### FS-003 — No trusted nutrition catalog
-- Honest `model_estimate` limitation. **P2** product data gap  
+### FS-008 — “sets and reps” / “progress … weeks” misroutes
+- **Severity:** P2  
+- **Reproduction:** `"Give me sets and reps for incline press"`; `"How should I progress my bench over 8 weeks?"`  
+- **Expected:** `programming`  
+- **Actual (before):** `casual` / `exercise_form`  
+- **Root cause:** `rep` without plural boundary; `progression` only (not `progress`); `?`+bench preferred form  
+- **Affected files:** `lib/kaios/routing/intent.ts`  
+- **Fix recommendation:** Applied — `sets?…reps?`, `progress(?:ion|ing)?`, build-me-workout PROGRAM cues  
+- **Regression test:** paraphrase corpus  
 
-### FS-004 — Soak legacy path retained
-- Intentional; remove after soak. **P2** cleanup  
+### FS-009 — Motivation paraphrases missed (`quit training`, `push me`)
+- **Severity:** P2  
+- **Reproduction:** `"I want to quit training forever"`; `"Can you push me a bit today?"`  
+- **Expected:** `motivation`  
+- **Actual (before):** `casual`  
+- **Root cause:** MOTIVATION_RE gaps  
+- **Affected files:** `lib/kaios/routing/intent.ts`  
+- **Fix recommendation:** Applied  
+- **Regression test:** paraphrase corpus  
 
-### FS-005 — Live token/latency evidence missing
-- Environment gap. **P2** release-evidence  
+### FS-010 — “calories” plural / meal-without-image / dinner plan
+- **Severity:** P2  
+- **Reproduction:** `"… how many calories roughly?"`; `"Describe this meal"`; `"Plan my dinners for the week"`  
+- **Expected:** `nutrition_question` / `nutrition_question` / `meal_plan`  
+- **Actual (before):** `unknown` / `casual` / `casual`  
+- **Root cause:** `calorie` word-boundary vs `calories`; weak meal/plan paraphrases  
+- **Affected files:** `lib/kaios/routing/intent.ts`  
+- **Fix recommendation:** Applied  
+- **Regression test:** paraphrase corpus  
+
+### FS-011 — Alex “tired + build workout” preferred motivation over programming
+- **Severity:** P2  
+- **Reproduction:** `"I am tired, build me an easy workout"`  
+- **Expected:** `programming`  
+- **Actual (before):** `motivation`  
+- **Root cause:** tired matched before program phrasing existed  
+- **Affected files:** `lib/kaios/routing/intent.ts`  
+- **Fix recommendation:** Applied — PROGRAM build/create/need+workout patterns  
+- **Regression test:** paraphrase corpus  
+
+### FS-002 — Durable event outbox absent (prior P2)
+### FS-003 — No trusted nutrition catalog (prior P2)
+### FS-004 — Soak legacy path retained (intentional)
+### FS-005 — Live token/latency evidence missing (**still open** — FS-LIVE-001)
 
 ---
 
@@ -371,71 +318,35 @@ _None confirmed that must block canary given soak controls._
 
 - Leo radial / Council premium UI deferred  
 - Capsule densification iteration  
-- Deprecated AI mirrors in `feature-flags.ts`  
-- Playwright KAIOS flows not authored  
+- Controlled food/physique image fixtures for Gemini harness (currently tiny PNG placeholders)  
 
 ---
 
-## 35. Recommended fixes (priority)
+## 35. Recommended next actions
 
-1. Re-run CI; confirm nanoid + Lighthouse green on PR  
-2. Staging live-provider canary: DeepSeek chat × coaches + Gemini Maya/Leo fixtures (synthetic users)  
-3. Staging dual-user auth matrix against real Supabase RLS/RPC  
-4. Playwright: chat stream, Maya confirm, Leo reject, Council `await_user`  
-5. After soak: delete legacy chat/team/card paths + `KAIOS_RUNTIME`  
-
----
-
-## 36. Suggested follow-up tests after fixes
-
-- Live schema-adherence rate (N≥20) per coach/intent  
-- Same-image Leo score delta distribution  
-- Concurrent confirm stress  
-- Multilingual jailbreak live red-team  
-- 90-day memory growth / prompt size curve on staging  
-
----
-
-## Test matrix (inventory)
-
-| Surface | Status |
-| --- | --- |
-| Frontend | requires_browser_e2e |
-| API routes | requires_mock / blocked_env |
-| Auth | blocked_env |
-| Database | blocked_env |
-| Orchestrator | requires_mock (+ live_provider for full) |
-| Compiler / context / memory | testable_now |
-| Events / tools / pending | requires_mock |
-| Exercises / nutrition / schemas | testable_now |
-| Vision prompts | testable_now |
-| DeepSeek / Gemini | requires_live_provider |
-| SSE E2E | requires_browser_e2e |
-| Council interactive | requires_live_provider + DB |
-| Caches | partial testable_now |
-| Telemetry / flags / rollback / localization | testable_now |
-
----
-
-## Autopilot / CI note
-
-- PR mergeable; **0 unresolved review threads**  
-- CI failures addressed: nanoid high audit; Lighthouse Chrome sandbox flags  
-- Fresh CI status must be re-read after push `ed7baaf` (+ intent fix commit)
+1. Attach staging secrets to Cursor environment (or local `.env.local`)  
+2. `KAIOS_LIVE=1 npm run test:kaios:live:run` and commit/update `kaios/live-evidence/*.json`  
+3. Compare live token/latency to `kaios/baseline/pre-migration.json` & `post-migration.json`  
+4. Only after satisfactory live canary evidence: consider soak rollback removal  
 
 ---
 
 ## Release decisions
 
-CANARY_RELEASE_DECISION:  
-**GO**
+```text
+CANARY_RELEASE_DECISION:
+GO_WITH_FIXES
 
-BROAD_PRODUCTION_DECISION:  
-**GO_WITH_FIXES**
+BROAD_PRODUCTION_DECISION:
+NO_GO
 
-TOP_FIXES_BEFORE_BROAD_PRODUCTION:  
-1. Staging live DeepSeek + Gemini synthetic evaluation (character, schema, vision, tokens)  
-2. Staging dual-user + Maya confirm + Council persistence against real Supabase  
-3. Remove soak legacy runtime after canary evidence; keep event outbox as P2 reliability follow-up  
-4. Playwright KAIOS product flows (chat/confirm/Council await_user)  
-5. Expand intent regression corpus beyond FS-001 (form vs program vs motivation)
+LEGACY_REMOVAL_READY:
+NO
+
+TOP_REMAINING_FIXES:
+1. Execute live DeepSeek + Gemini synthetic evals on staging; publish token/latency evidence (FS-LIVE-001 / FS-005)
+2. Execute real Supabase dual-user RLS + Maya confirm + Council entitled E2E; attach Playwright auth staging run
+3. After soak with live canary evidence: remove legacy runtime path (keep until then; rollback must stay observable)
+```
+
+**Rationale:** Offline static/mock + intent fixes support a careful canary **with soak rollback**, but broad production and legacy removal require measured live staging proof that this environment could not obtain.

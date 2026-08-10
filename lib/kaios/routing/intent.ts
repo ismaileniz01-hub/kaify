@@ -73,25 +73,26 @@ function looksCasual(message: string): boolean {
 }
 
 const MOTIVATION_RE =
-  /\b(motivat|tired|lazy|don't want|dont want|no energy|unmotivated|skip(?:ping)?\s*(?:gym|workout)?|gidesim yok|istemiyorum|üşen|usen|tembell|vazgeç|vazgec|can't today|cant today|salona)\b/i;
+  /\b(motivat|tired|lazy|don't want|dont want|no energy|unmotivated|skip(?:ping)?\s*(?:gym|workout)?|gidesim yok|istemiyorum|üşen|usen|tembell|vazgeç|vazgec|can't today|cant today|salona|quit(?:ting)?(?:\s+training|\s+the\s+gym)?|give up|push me)\b/i;
 
 const FORM_RE =
-  /\b(form|technique|cue|rom\b|range of motion|how (?:do|to|deep|far|wide) (?:should |can )?(?:i )?(?:squat|bench|deadlift|press|row)|(?:squat|bench|deadlift|press|row).{0,24}(?:form|depth|stance|cue|technique)|doğru form|dogru form|teknik|nasıl yapılır|nasil yapilir)\b/i;
+  /\b(form|technique|cue|rom\b|range of motion|knees?\s+cave|how (?:do|to|deep|far|wide) (?:should |can )?(?:i )?(?:squats?|bench(?:es)?|deadlifts?|press(?:es)?|rows?)|(?:squats?|bench(?:es)?|deadlifts?|press(?:es)?|rows?).{0,24}(?:form|depth|stance|cue|technique|fix)|doğru form|dogru form|teknik|nasıl yapılır|nasil yapilir)\b/i;
 
 const PROGRAM_RE =
-  /\b(program|split|mesocycle|periodiz|weekly plan|workout plan|antrenman program|set(?:s)?\s*(?:and|&|x)\s*rep|progression|deload)\b/i;
+  /\b(program|split|mesocycle|periodiz|weekly plan|workout plan|antrenman program|sets?\s*(?:and|&|x)\s*reps?|progress(?:ion|ing)?|deload|push[\s-]?pull[\s-]?legs|\bppl\b|(?:build|create|design|give me|need).{0,48}\b(?:workout|program|split|mesocycle))\b/i;
 
 const NUTRITION_Q_RE =
-  /\b(protein|carb|calorie|macro|kalori|besin|nutrition|diet|diyet|kilo|bulk|cut|surplus|deficit|ne yesem|kaç kalori|kac kalori)\b/i;
+  /\b(protein|carbs?|calories?|macro|kalori|besin|nutrition|diet|diyet|kilo|bulk|cut|surplus|deficit|ne yesem|kaç kalori|kac kalori)\b/i;
 
 const MEAL_PLAN_RE =
-  /\b(meal\s*plan|yemek plan|öğün plan|ogun plan|weekly meals|menu for|hazırla.*plan|hazirla.*plan)\b/i;
+  /\b(meal\s*plan|yemek plan|öğün plan|ogun plan|weekly meals|dinners?\s+for\s+the\s+week|weekly\s+dinners?|menu for|hazırla.*plan|hazirla.*plan|plan my (?:dinners?|meals?|lunches?))\b/i;
 
 const HYDRATION_RE =
   /\b(hydrat|water intake|drink water|su iç|su ic|susuz|dehydrat)\b/i;
 
+/** Avoid bare "schedule" — it false-positives programming phrases like "PPL schedule". */
 const TOOL_RE =
-  /\b(log (?:my )?(?:workout|meal|weight)|set reminder|schedule|kaydet|hatırlat|hatirlat|update (?:my )?(?:goal|weight))\b/i;
+  /\b(log (?:my )?(?:workout|meal|weight)|set reminder|schedule (?:a |my )?(?:workout|session|reminder|meeting)|kaydet|hatırlat|hatirlat|update (?:my )?(?:goal|weight))\b/i;
 
 const COUNCIL_DECISION_RE =
   /\b(decide|decision|final plan|council decision|karar ver|sonuç|sonuc|oybirliği|oybirligi)\b/i;
@@ -160,6 +161,8 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
     return "meal_plan";
   }
 
+  // Programming before form/motivation so progression + timeframe and
+  // "tired but build me a workout" prefer programming for Alex.
   if (PROGRAM_RE.test(msg) || /\bprogramming\b/.test(hints)) {
     return "programming";
   }
@@ -178,7 +181,9 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
 
   if (
     input.coach === "maya" &&
-    (NUTRITION_Q_RE.test(msg) || /\bnutrition\b/.test(hints))
+    (NUTRITION_Q_RE.test(msg) ||
+      /\bnutrition\b/.test(hints) ||
+      /\b(meal|plate|yemek|öğün|ogun)\b/i.test(msg))
   ) {
     return "nutrition_question";
   }
@@ -189,8 +194,11 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
 
   // Coach-biased fallbacks when keywords are weak.
   // Lift questions (with '?') are form/technique by default; program requests
-  // already matched PROGRAM_RE above.
-  if (input.coach === "alex" && /\b(workout|lift|squat|bench|deadlift|gym|antrenman)\b/i.test(lower)) {
+  // already matched PROGRAM_RE above. Plurals: squats/benches/deadlifts.
+  if (
+    input.coach === "alex" &&
+    /\b(workout|lift|squats?|benchs?|benches|deadlifts?|gym|antrenman)\b/i.test(lower)
+  ) {
     if (FORM_RE.test(msg) || /[?]/.test(msg)) return "exercise_form";
     return "programming";
   }
