@@ -1,3 +1,26 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+function loadDotEnvLocal(): void {
+  const path = join(process.cwd(), ".env.local");
+  if (!existsSync(path)) return;
+  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+    if (!line || line.startsWith("#")) continue;
+    const i = line.indexOf("=");
+    if (i < 0) continue;
+    const key = line.slice(0, i).trim();
+    let val = line.slice(i + 1).trim();
+    if (
+      (val.startsWith('"') && val.endsWith('"')) ||
+      (val.startsWith("'") && val.endsWith("'"))
+    ) {
+      val = val.slice(1, -1);
+    }
+    if (!process.env[key]) process.env[key] = val;
+  }
+}
+loadDotEnvLocal();
+
 /**
  * Live staging credential gates for KAIOS validation.
  * Tests MUST skip (not fail) when credentials are absent.

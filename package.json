@@ -24,6 +24,7 @@
     "test:e2e:install": "playwright install chromium",
     "test:kaios:live": "node scripts/kaios-live-validation.mjs",
     "test:kaios:live:run": "KAIOS_LIVE=1 node scripts/kaios-live-validation.mjs",
+    "test:kaios:bootstrap": "node scripts/kaios-staging-bootstrap.mjs",
     "test:smoke": "node scripts/backend-smoke-test.mjs",
     "load-test:smoke": "node scripts/load-test/smoke.mjs",
     "load-test:k6": "k6 run scripts/load-test/k6-smoke.js",

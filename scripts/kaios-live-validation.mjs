@@ -25,6 +25,27 @@ function present(value) {
   );
 }
 
+function loadDotEnvLocal() {
+  const path = join(process.cwd(), ".env.local");
+  if (!existsSync(path)) return;
+  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+    if (!line || line.startsWith("#")) continue;
+    const i = line.indexOf("=");
+    if (i < 0) continue;
+    const key = line.slice(0, i).trim();
+    let val = line.slice(i + 1).trim();
+    if (
+      (val.startsWith('"') && val.endsWith('"')) ||
+      (val.startsWith("'") && val.endsWith("'"))
+    ) {
+      val = val.slice(1, -1);
+    }
+    if (!process.env[key]) process.env[key] = val;
+  }
+}
+
+loadDotEnvLocal();
+
 const probe = {
   capturedAt: new Date().toISOString(),
   deepseek: present(process.env.DEEPSEEK_API_KEY),
@@ -65,10 +86,11 @@ if (!readyForPartial) {
     reason:
       "No DeepSeek/Gemini/Supabase dual-user credentials in this environment. Live sections remain NOT TESTED.",
     probe,
+    productionNote:
+      "Known production Supabase ref urnetodzvszmddzdazdj must not receive synthetic live users without an explicit staging project.",
   };
   writeFileSync(join(dir, "STATUS.json"), JSON.stringify(blocked, null, 2));
   console.error("\nLIVE VALIDATION BLOCKED — credentials missing.");
-  process.exitCode = 0; // do not fail CI; evidence is the blocker report
   process.exit(0);
 }
 
@@ -79,22 +101,24 @@ if (process.env.KAIOS_LIVE !== "1") {
       {
         capturedAt: probe.capturedAt,
         status: "READY_BUT_NOT_EXECUTED",
-        reason: "Credentials detected but KAIOS_LIVE=1 not set. Re-run with KAIOS_LIVE=1.",
+        reason:
+          "Credentials detected but KAIOS_LIVE=1 not set. Re-run with KAIOS_LIVE=1.",
         probe,
       },
       null,
       2,
     ),
   );
-  console.log("\nCredentials present. Set KAIOS_LIVE=1 to execute live suites.");
+  console.log(
+    "\nCredentials present. Set KAIOS_LIVE=1 to execute live suites.",
+  );
   process.exit(0);
 }
 
-const liveTests = spawnSync(
-  "npx",
-  ["vitest", "run", "tests/kaios/live"],
-  { stdio: "inherit", env: process.env },
-);
+const liveTests = spawnSync("npx", ["vitest", "run", "tests/kaios/live"], {
+  stdio: "inherit",
+  env: process.env,
+});
 
 if (probe.e2eAuth && probe.stagingUrl) {
   spawnSync("npx", ["playwright", "test", "e2e/kaios-flows.spec.ts"], {
