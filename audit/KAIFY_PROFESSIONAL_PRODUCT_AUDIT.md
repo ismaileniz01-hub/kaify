@@ -23,11 +23,15 @@ Three findings define the launch decision:
 
 3. **The product ships six languages in its picker that are approximately 82% untranslated English.** I diffed all 54 locale corpora against English across the 829 substantive user-facing strings. Turkish is 96% translated and German, French, Spanish, Italian, and Arabic are around 74%. But Portuguese, Dutch, Polish, Russian, Korean, and Simplified Chinese — all exposed in `REVIEWED_LANG_OPTIONS`, under a comment stating they passed "Phase 3 MT QA" — sit at roughly 18%. A Russian user selecting Русский gets an English landing page, English coach previews, and an English offline banner. The `i18n-quality` test that should catch this passes, because it only checks six key prefixes out of the whole corpus.
 
+4. **The migration chain cannot build a database from scratch, which is why the test gap exists.** `20260703180000_schema_bridge_profiles.sql` backfills from five legacy `profiles` columns — `full_name`, `subscription_tier`, `height`, `weight`, `experience` — that no migration in the repository ever creates. Because the reference sits in a top-level `UPDATE`, Postgres rejects it at parse time, so `supabase db reset` fails partway through the chain. It only works against the pre-existing production database. This reframes the testing finding below: the absence of database-backed authorization tests is not a discipline problem, it is a blocked dependency. It also means recovery from migrations alone has never been possible.
+
 None of these are catastrophic security holes. I found **no P0**. The authorization model looks sound, secrets are not committed, and the abuse surfaces are mostly guarded. But shipping in the current state means charging users for a product with a dead retention system, a badly stale home screen, and six advertised languages that are not actually translated — while lacking the test infrastructure to notice any of it.
 
-**The fix list is short and mostly cheap.** Eight of the thirteen P1 issues are XS or S. The notification cron is a one-line schedule change. The npm vulnerability is `npm audit fix`. The environment-validation bug is moving four lines. The realistic path to launch is roughly one focused week, and the highest-value investment is not any single fix but adding a real database-backed integration test layer so the next regression of this class is caught by machines rather than by an audit.
+A second concern is subtler and runs through the UX findings: **there are four places where the interface reports success, or stays silent, when the underlying operation failed.** A failed chat message stays on screen looking delivered; a leaderboard fetch error renders as an empty leaderboard; the analytics confirmation card swallows errors with no `catch`; and the logged-out photo flow plays a scan animation and fires a success toast without ever contacting the backend. For a coaching product whose value rests on the user trusting that what they logged was recorded, this class of defect costs more than its individual severity suggests.
 
-> **OVERALL SCORE: 73/100**
+**The fix list is longer than it first appeared, but still mostly cheap.** Ten of the sixteen P1 issues are XS or S. The notification cron is a one-line schedule change. The npm vulnerability is `npm audit fix`. The environment-validation bug is moving four lines. The realistic path to launch is one to two focused weeks, and the highest-value investment is not any single fix but repairing the migration chain and then building the database-backed integration layer it unblocks, so the next regression of this class is caught by machines rather than by an audit.
+
+> **OVERALL SCORE: 71/100**
 >
 > **RELEASE RECOMMENDATION: READY_WITH_FIXES**
 >
@@ -43,19 +47,19 @@ None of these are catastrophic security holes. I found **no P0**. The authorizat
 |---|---:|---:|---|---|---|
 | Security & Privacy | 81 | 20% | HIGH | STATIC + TESTED | Fix 3 items, then clear |
 | Performance & Efficiency | 68 | 15% | MEDIUM-HIGH | TESTED (build) + STATIC | One stale-cache defect blocks |
-| Reliability & Data Integrity | 72 | 12% | MEDIUM-HIGH | STATIC + reproduced | Two defects block |
-| UX / Product Quality | 70 | 12% | MEDIUM | STATIC + measured corpus | Locale gap blocks |
-| Accessibility | 63 | 8% | MEDIUM | STATIC + computed contrast | Chat live region blocks |
-| Architecture / Maintainability | 84 | 8% | HIGH | STATIC | Clear |
-| AI / KAIOS Quality | 74 | 8% | MEDIUM | STATIC + reproduced | Fix during week 1 |
+| Reliability & Data Integrity | 70 | 12% | MEDIUM-HIGH | STATIC + reproduced | Three defects block |
+| UX / Product Quality | 66 | 12% | MEDIUM | STATIC + measured corpus | Locale gap and false-success states block |
+| Accessibility | 58 | 8% | MEDIUM | STATIC + computed contrast | Chat live region and form labels block |
+| Architecture / Maintainability | 80 | 8% | HIGH | STATIC | Migration chain blocks remediation |
+| AI / KAIOS Quality | 71 | 8% | MEDIUM | STATIC + reproduced | Fix during week 1 |
 | Testing / QA | 52 | 6% | HIGH | TESTED (measured scope) | Blocks confidence in all else |
-| Frontend Quality | 75 | 4% | MEDIUM | STATIC | Clear with one fix |
+| Frontend Quality | 72 | 4% | MEDIUM | STATIC | Two fixes needed |
 | Backend / API Quality | 83 | 3% | HIGH | STATIC | Clear |
 | Observability / Operations | 72 | 2% | MEDIUM | STATIC | Fix one bug |
 | SEO / Web Quality | 55 | 1% | HIGH | STATIC | Fix during week 1 |
-| Developer Experience | 86 | 1% | HIGH | STATIC + TESTED | Clear |
+| Developer Experience | 82 | 1% | HIGH | STATIC + TESTED | Clear once DB reset works |
 
-**Weighted total:** (81×.20) + (68×.15) + (72×.12) + (70×.12) + (63×.08) + (84×.08) + (74×.08) + (52×.06) + (75×.04) + (83×.03) + (72×.02) + (55×.01) + (86×.01) = **72.6 → 73/100**
+**Weighted total:** (81×.20) + (68×.15) + (70×.12) + (66×.12) + (58×.08) + (80×.08) + (71×.08) + (52×.06) + (72×.04) + (83×.03) + (72×.02) + (55×.01) + (82×.01) = **70.7 → 71/100**
 
 I used the suggested weights unchanged. They correctly place security, performance, reliability, and UX at 59% of the decision, which matches where the real launch risk sits for this product.
 
@@ -72,7 +76,7 @@ The security model is centralized rather than scattered, which is the single mos
 Database posture is the strongest area. My static scan across 69 migrations found:
 
 - **44 of 44 tables have `ENABLE ROW LEVEL SECURITY`.** No table was missed.
-- **43 of 43 `SECURITY DEFINER` functions set `search_path`.** This is the classic Supabase privilege-escalation footgun and it is closed everywhere.
+- **43 of 43 `SECURITY DEFINER` functions set `search_path`.** This is the classic Supabase privilege-escalation footgun and it is addressed everywhere. One qualification: `trg_unlock_team_chat_on_streak` sets `search_path = public` rather than `''` (`20260630190000_phase8_analytics_market_team.sql:171`). Exploitability is low because `20260702220000_security_hardening.sql:27` revokes `EXECUTE` from `public`, `anon`, and `authenticated`, and the function is only reachable as a trigger — but it is the one function that does not follow the empty-search-path convention the rest of the codebase applies. *(SEC-011)*
 - **8 tables have RLS enabled with zero policies** — `idempotency_keys`, `ai_usage_ledger`, `cost_alerts`, `cron_job_runs`, `domain_events`, `retention_purge_runs`, `leaderboard_snapshots`, `backup_verification_runs`. This is deny-all to `anon` and `authenticated`, reachable only via service role. That is the correct pattern for internal tables, and it was clearly deliberate.
 
 Web security headers are complete and set in two places (`next.config.ts` and `vercel.json`): HSTS with `preload`, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, a restrictive `Permissions-Policy`, COOP, and CORP. CSP is nonce-based per request via middleware.
@@ -263,6 +267,15 @@ The failure is systematic rather than random: newer key namespaces (`landing.*`,
 
 **The error-code map is too coarse to be helpful.** Nine codes cover the entire application, so every validation failure anywhere renders the same generic sentence. The photo-analysis path bypassed the map precisely because the generic string was useless there — which is a signal that the map needs per-context keys rather than that the bypass was right. *(UX-004)*
 
+**Four states tell the user something succeeded, or nothing failed, when neither is true.** The audit brief specifically asked where a user might "believe an action succeeded when it did not," and there are four concrete instances:
+
+- **A failed chat send leaves the user's message on screen.** `LiveChatPanel.tsx:220-231` removes the coach placeholder on error but keeps the user bubble, so a message that never reached the server looks delivered. There is no failed-state marker and no retry. *(UX-005)*
+- **A leaderboard fetch failure renders the empty state.** `leaderboard/page.tsx:226-228` catches the error and only sets `loading = false`, leaving `data` null — which the render path interprets as "no entries" rather than "we could not load this." Users conclude the leaderboard is empty. *(UX-006)*
+- **The analytics confirmation card fails silently.** `AnalyticsConfirmationCard.tsx:23-35` has a `try`/`finally` with no `catch`, so a failed confirm re-enables the buttons with no message and no state change. The user cannot tell whether their calories were recorded. *(UX-007)*
+- **The guest photo flow fakes an analysis.** `chat/[id]/page.tsx:248-260` runs a scan animation, emits a success toast, and appends a "photo sent" bubble with no upload and no backend call. A logged-out visitor evaluating the product is shown a fabricated result. *(UX-008)*
+
+Related: `FirstTaskChecklist` marks the "chat with a coach" task complete when the user clicks the link, not when a message is sent, so the onboarding checklist can report progress that did not happen. And `ChatRichCard.tsx:281-304` hardcodes Turkish section headers such as `ANTRENMAN` directly into the daily-summary card, which appear untranslated in all 54 locales. Logout in `settings/page.tsx:240-246` executes immediately with no confirmation, while account deletion — correctly — requires typing `DELETE` plus a step-up challenge.
+
 ### Recommendations
 
 Either run `npm run i18n:retranslate:priority` to completion and re-verify with a corpus diff, or reduce `REVIEWED_LANG_OPTIONS` to the locales that are genuinely translated (tr, en, de, fr, es, es-mx, es-ar, it, ar) and re-add the rest as they land. Shipping fewer honest languages is strictly better than shipping sixteen where six are English. Replace the hardcoded string in `lib/api/sse.ts` with an error code the client localizes. Introduce specific error codes for the photo-analysis failures so the panel can drop its raw-message bypass. Render a neutral skeleton instead of demo data on `/welcome`.
@@ -298,6 +311,16 @@ Beyond that: there is a skip link, `#main-content` is asserted in E2E, the toast
 **Background content stays reachable behind modals.** `MotionDialog` traps Tab but does not apply `inert` or `aria-hidden` to the rest of the page, so a screen reader's browse mode can still wander outside the dialog. *(A11Y-004)*
 
 **RTL layout will mirror incorrectly in Arabic.** Spacing is largely RTL-safe — only 15 physical `ml-`/`mr-`/`pl-`/`pr-` usages remain. But there are roughly 59 physical `left-`/`right-` positional utilities, concentrated in settings, the notification center, image picker, offline banner, and chat, which will not flip under `dir="rtl"`. *(A11Y-005)*
+
+**Form labels are visual, not programmatic, across the auth and onboarding surfaces.** `OnboardingProfileForm.tsx:147-155` is representative: a `<label>` sits next to an `<input>` with no `htmlFor`/`id` pairing, and the pattern repeats for every field in the form. The same applies to `ProfileModal` edit mode, `SignupWizard` step inputs, `EmailOtpLogin`'s email field, and `StepUpChallenge`. Errors are rendered nearby but not linked via `aria-describedby`, and no field sets `aria-invalid`. A screen reader user filling in onboarding hears unlabeled edit fields. This is WCAG 1.3.1 and 3.3.2, and it covers the mandatory first-run flow. *(A11Y-006)*
+
+**The OTP screen renders two inputs for the same code.** `EmailOtpLogin.tsx:267-288` mounts `OtpDigitInput` — a well-built six-cell component with arrow-key, backspace, and paste handling — and then, immediately below it, a second full-width `<input>` bound to the same `code` state. Keyboard users tab through the code twice and screen readers announce it twice. `OtpDigitInput` on its own is good work; the duplicate appears to be a leftover fallback. *(A11Y-007)*
+
+**Three high-traffic pages have no `<h1>` and two have no `<main>`.** Chat (`app/(app)/chat/[id]/page.tsx`) has neither; settings and leaderboard have `<main>` but start their outline at `<h2>`. `AppHeader` renders the page title into a plain `<div>` (`AppHeader.tsx:48`), so titles never enter the document outline and heading-based navigation does not work. *(A11Y-008)*
+
+**Several interactive controls fall below the 44px target minimum,** despite a `.touch-44` utility existing and being used correctly elsewhere. The streak "Claim Lv.X" button is `text-[10px]` with `py-1`, and the notification panel close button is 36px square. *(A11Y-009)*
+
+Settings toggles expose `aria-pressed` but no `aria-label`, so their state is announced without saying which setting it belongs to; the language picker is a custom popover with no `aria-expanded`/`aria-haspopup` and a backdrop dismissable only by pointer.
 
 ### Recommendations
 
@@ -343,7 +366,17 @@ The prompt-safety work in `lib/ai/prompt-safety.ts` is layered rather than relyi
 
 **JSON extraction from model output is brittle.** `lib/ai/structured-chat.ts` uses a greedy `/\{[\s\S]*\}/` to find JSON in the response. Any prose containing braces before or after the payload breaks the match, and greedy matching across multiple objects captures the wrong span. *(AI-004)*
 
-The per-instance circuit breaker (REL-004) applies here too, and the `coaching_memory` table grows one row per twenty messages with no retention purge.
+The per-instance circuit breaker (REL-004) applies here too. (`coaching_memory` grows one row per twenty messages, but it *is* covered by the 24-month retention purge, so it is bounded.)
+
+**Client disconnect does not abort the upstream provider call.** `streamCoachReply` never forwards an abort signal to `ModelRouter.streamText`, so when the SSE stream is cancelled the DeepSeek request continues generating until its 60-second timeout. The quota refund path works, but the tokens are still spent with the provider and no one receives the output. Every abandoned chat is billable waste. *(AI-005)*
+
+**The team-chat path is materially less defended than direct chat.** `team-chat.service.ts` omits `buildSecurityPreamble`, the canary token, `detectInjectionSignals`, and output scrubbing, all of which the main chat path applies. It also omits `requireTermsConsent` from its route guards, which `/api/chat/[coachId]` declares. On JSON parse failure it inserts hardcoded English fallback copy into the database regardless of the user's locale. *(AI-006)*
+
+**Coach turns re-enter the prompt unsanitized.** In `chat.service.ts:265-271` only `role === "user"` history entries get stable delimiter wrapping; assistant content is passed through raw. Text the model was induced to emit on one turn can therefore carry instructions back into the next turn's context. *(AI-007)*
+
+**A malformed image-quality score defaults to a passing value.** `analysis.schema.ts:101-104` falls back to 7 when the quality response cannot be parsed, above the rejection threshold of 3. The intent is to avoid false rejections, but it means a garbled quality response silently authorizes the expensive vision and synthesis calls. *(AI-008)*
+
+**On the KAIOS specifications:** the audit brief asked for a review against 17 canonical KAIOS specs. A repository-wide search returns **zero matches for "KAIOS"** in code, comments, or documentation. The closest artifacts are generic coaching/AI sections in `docs/architecture/bounded-contexts.md`. The AI subsystem was therefore evaluated on its own merits rather than against those specs. If the specs exist outside this repository, this section should be re-reviewed against them.
 
 There is no AI behavioural evaluation suite — nothing measures whether the coaches actually give coherent, on-persona, safe advice across a fixed prompt set. That is a meaningful gap for a product whose core value is AI output quality, though it is a common one at this stage.
 
@@ -435,9 +468,32 @@ In priority order: stand up `supabase start` in CI and write cross-user authoriz
 
 *(My initial scan flagged ten tables as missing a `user_id` index; on inspection all ten are covered by primary keys leading with `user_id`. Discarded as a false positive.)*
 
-**Weaknesses.** `analytics_daily` is the exception to the constraint discipline and it is the table most exposed to AI-generated values (REL-005). No `FORCE ROW LEVEL SECURITY` anywhere (SEC-007). No runtime verification of any of it (TEST-002).
+**Weaknesses.**
 
-**Growth outlook.** At 100 and 1,000 users nothing here strains. At 10,000, the whole-user-base crons hit the 10-second ceiling (REL-003) and the `ai_usage_ledger` scan on every AI request becomes a visible latency cost (PERF-005). At 100,000, `chat_messages` and `coaching_memory` grow without retention purging, the daily leaderboard snapshot becomes a heavy aggregate, and the export path is unusable for long-lived accounts (PRIV-002). None of these are architectural dead ends — they are all addressable with cursors, aggregates, and retention windows — but they are cliffs rather than gradients, and they arrive together.
+**The migration chain cannot build a database from scratch.** `20260703140000_schema_bridge_profiles.sql` runs a top-level `UPDATE public.profiles` that reads five legacy columns — `full_name`, `subscription_tier`, `height`, `weight`, `experience` — and **none of them is created by any migration in the repository**:
+
+```21:32:supabase/migrations/20260703140000_schema_bridge_profiles.sql
+update public.profiles
+set
+  display_name = coalesce(
+    nullif(trim(display_name), ''),
+    nullif(trim(full_name), ''),
+    'User'
+  ),
+  tier = coalesce(tier, subscription_tier, 'essential'::public.subscription_tier),
+  height_cm = coalesce(height_cm, height::smallint),
+  weight_kg = coalesce(weight_kg, weight::numeric),
+  experience_level = coalesce(experience_level, experience),
+  country_code = coalesce(country_code, 'TR'::char(2));
+```
+
+PostgreSQL validates column references in a top-level `UPDATE` at parse time, so this fails immediately on any database that does not already carry those legacy columns. The file's own header explains why — it was written as a one-off bridge against the existing production database — but it now sits permanently in the ordered chain. Two later RPCs (`schema_bridge_profiles.sql:76` and `leaderboard_privacy_and_cron_monitor.sql:89`) also read `p.full_name`.
+
+The consequences go well beyond tidiness. **`supabase db reset` fails, so no developer or CI job can provision a clean database from this repository.** That is almost certainly the real reason there are no database-backed tests — TEST-002 is not a matter of discipline but a blocked dependency. It also means disaster recovery cannot be performed from migrations alone, which undercuts the `backup-verification` cron and the disaster-recovery test suite: both verify a restore path whose reproducibility from source has never been exercised. *(DB-001)*
+
+`analytics_daily` is the exception to the constraint discipline and it is the table most exposed to AI-generated values (REL-005). No `FORCE ROW LEVEL SECURITY` anywhere (SEC-007). Two pairs of migrations share identical timestamps (`20260705140000` and `20260704180000`), so ordering depends on filename tiebreak and would silently change if either were renamed. `notifications` declares `UNIQUE (user_id, dedup_key)`, but SQL treats NULLs as distinct, so any notification created without a `dedup_key` bypasses deduplication entirely. The `avatars_public_read` storage policy was dropped in `20260702220000_security_hardening.sql:38` and never recreated — cross-user avatar display now depends solely on the bucket being marked public. And `gem_ledger`, `usage_events`, `domain_events`, `referral_events`, and `billing_events` have no retention rule at all, while every other high-volume table does.
+
+**Growth outlook.** At 100 and 1,000 users nothing here strains. At 10,000, the whole-user-base crons hit the 10-second ceiling (REL-003) and the `ai_usage_ledger` scan on every AI request becomes a visible latency cost (PERF-005). At 100,000, three more bite: `get_global_leaderboard` computes `rank()` over every qualifying row before applying `LIMIT`, so the cost is O(active streaks) regardless of page size (the snapshot cron mitigates reads but not the refresh itself); gem balance is derived by `SUM(amount)` over the full `gem_ledger` on **every** earn, spend, and check-in, against a table with no retention rule; and the export path is unusable for long-lived accounts (PRIV-002). None of these are architectural dead ends — they are addressable with pre-ranked snapshots, a materialized balance column, cursors, and retention windows — but they are cliffs rather than gradients, and they arrive together. *(DB-002, DB-003)*
 
 ---
 
@@ -681,7 +737,47 @@ Severity P1 · Operations · Confidence HIGH · Evidence STATIC
 
 ---
 
-## P2 — Medium (27)
+**DB-001 · Migration chain cannot build a database from scratch**
+Severity P1 · Database / Reliability / DX · Confidence HIGH · Evidence TESTED (static verification)
+**Affected user:** every developer; disaster recovery; all CI database testing
+**Affected files:** `supabase/migrations/20260703140000_schema_bridge_profiles.sql`, `20260704190000_leaderboard_privacy_and_cron_monitor.sql`
+**Reproduction:** `20260703140000` line 21 runs a top-level `UPDATE public.profiles` referencing `full_name`, `subscription_tier`, `height`, `weight`, and `experience`. Searching all 69 migrations confirms none of the five columns is ever created. PostgreSQL validates a top-level `UPDATE` at parse time, so the statement errors on a clean database.
+**Expected:** `supabase db reset` provisions a working schema from source.
+**Actual:** Migration 33 of 69 fails. The chain only succeeds against the pre-existing production database that already carries the legacy columns.
+**Risk:** No clean local or CI database can be provisioned, which blocks the database-backed authorization testing this audit identifies as the single most important gap (TEST-002). Disaster recovery from migrations alone is not possible, which weakens the guarantee the `backup-verification` cron and disaster-recovery tests appear to provide.
+**Root cause:** A one-off production bridge script was committed into the ordered migration chain rather than run out-of-band.
+**Fix:** Guard the backfill behind `information_schema.columns` existence checks (or a `DO` block), and add the legacy columns as nullable no-ops so the chain is reproducible. Then verify with `supabase db reset` in CI.
+**Effort:** M · **Regression test:** A CI job that runs `supabase db reset` against a clean Postgres and fails on error. · **Blocks release: YES** — not for end users, but it blocks the remediation plan and disaster recovery.
+
+---
+
+**A11Y-006 · Form labels not programmatically associated across auth and onboarding**
+Severity P1 · Accessibility · Confidence HIGH · Evidence STATIC
+**Affected user:** all screen reader users, during mandatory onboarding
+**Affected files:** `components/onboarding/OnboardingProfileForm.tsx`, `components/ProfileModal.tsx`, `components/auth/SignupWizard.tsx`, `components/auth/EmailOtpLogin.tsx`, `components/auth/StepUpChallenge.tsx`
+**Reproduction:** `OnboardingProfileForm.tsx:147-155` — `<label>` with no `htmlFor`, `<input>` with no `id`. Pattern repeats across every field in the form and the other four files.
+**Expected:** Each input has a programmatic accessible name; errors are linked via `aria-describedby` and flagged with `aria-invalid`.
+**Actual:** Screen readers announce unlabeled edit fields; validation errors are not associated with the field that failed.
+**Risk:** WCAG 1.3.1 and 3.3.2 failures on the sign-up and onboarding path, which is not skippable. A blind user cannot reliably complete registration.
+**Fix:** Add `id`/`htmlFor` pairs, wire `aria-describedby` to error nodes, set `aria-invalid` on failure.
+**Effort:** M · **Regression test:** axe-core assertions on the onboarding and signup routes. · **Blocks release: YES**
+
+---
+
+**UX-005 · Failed chat send leaves the user's message on screen as if delivered**
+Severity P1 · UX / Trust · Confidence HIGH · Evidence STATIC
+**Affected user:** any user on an unreliable network
+**Affected files:** `components/chat/LiveChatPanel.tsx` (lines 220–231)
+**Reproduction:** On send error the handler filters out the coach placeholder but leaves the user bubble in `messages`.
+**Expected:** The message is marked failed with a retry affordance, or removed.
+**Actual:** It renders identically to a delivered message. The inline error is dismissible and easily missed on mobile.
+**Risk:** Users believe they have told their coach something they have not — for a product built on coaching continuity, this directly erodes trust. It also drives duplicate sends.
+**Fix:** Add a `failed` state to the message model, render it distinctly, and offer retry.
+**Effort:** S · **Regression test:** Component test asserting a failed send renders the failed marker and retains no delivered styling. · **Blocks release: YES**
+
+---
+
+## P2 — Medium (46)
 
 | ID | Title | Category | Files | Effort | Blocks |
 |---|---|---|---|---|---|
@@ -713,6 +809,29 @@ Severity P1 · Operations · Confidence HIGH · Evidence STATIC
 | SEO-001 | No `robots.txt`, no `sitemap.xml` | SEO | `app/` | XS | NO |
 | SEO-002 | No OpenGraph/Twitter metadata; referral shares render bare | SEO/Growth | `app/layout.tsx` | S | NO |
 | ARCH-001 | Protected pages gate on the client with no server-side redirect | Architecture/UX | `app/(app)/layout.tsx` | S | NO |
+| SEC-011 | `trg_unlock_team_chat_on_streak` sets `search_path = public`, not `''` | Security | `20260630190000_phase8_analytics_market_team.sql:171` | XS | NO |
+| SEC-012 | `avatars_public_read` storage policy dropped and never recreated; cross-user avatars rely on bucket-public flag alone | Security | `20260702220000_security_hardening.sql:38` | S | NO |
+| AI-005 | Client disconnect does not abort the upstream provider call; tokens burn until the 60s timeout | AI/Cost | `lib/services/chat.service.ts:318-322` | S | NO |
+| AI-006 | Team chat omits security preamble, canary, injection detection, output scrub, and `requireTermsConsent` | AI/Security | `lib/services/team-chat.service.ts`, `app/api/chat/team/route.ts` | M | NO |
+| AI-007 | Coach history turns re-enter the prompt unsanitized and unwrapped | AI/Security | `lib/services/chat.service.ts:265-271` | S | NO |
+| AI-008 | Malformed image-quality score defaults to 7, above the rejection threshold | AI/Cost | `lib/validations/analysis.schema.ts:101-104` | XS | NO |
+| AI-009 | Daily AI token cap reads a ledger written asynchronously after the call — concurrent requests can overshoot | AI/Cost | `lib/ai/daily-cost-cap.ts`, `lib/ai/usage-ledger.ts` | M | NO |
+| AI-010 | Team chat inserts hardcoded English fallback copy on JSON parse failure, ignoring locale | AI/i18n | `lib/services/team-chat.service.ts:172-175` | XS | NO |
+| DB-002 | `get_global_leaderboard` computes `rank()` over all qualifying rows before `LIMIT` | Database/Scale | `20260704190000_leaderboard_privacy_and_cron_monitor.sql:84-100` | M | NO |
+| DB-003 | Gem balance derived by `SUM(gem_ledger)` on every earn/spend/check-in; ledger has no retention | Database/Scale | `20260630140000_gamification_core.sql:273-274` | M | NO |
+| DB-004 | `gem_ledger`, `usage_events`, `domain_events`, `referral_events`, `billing_events` have no retention rule | Database/Privacy | `lib/compliance/retention-config.ts` | M | NO |
+| DB-005 | Two pairs of migrations share identical timestamps; ordering depends on filename tiebreak | Database/Hygiene | `20260705140000_*`, `20260704180000_*` | S | NO |
+| DB-006 | `notifications` UNIQUE `(user_id, dedup_key)` does not dedupe when `dedup_key` is NULL | Database | `20260702190000_notifications.sql:43` | XS | NO |
+| UX-006 | Leaderboard fetch failure renders the empty state instead of an error | UX | `app/(app)/leaderboard/page.tsx:226-228` | XS | NO |
+| UX-007 | Analytics confirmation card has no `catch`; failures are silent | UX | `components/chat/AnalyticsConfirmationCard.tsx:23-35` | XS | NO |
+| UX-008 | Guest photo flow simulates analysis with a success toast and no backend call | UX/Trust | `app/(app)/chat/[id]/page.tsx:248-260` | S | NO |
+| UX-009 | `FirstTaskChecklist` marks the chat task complete on link click, not on message sent | UX | `app/(app)/welcome/page.tsx:217-221` | XS | NO |
+| UX-010 | Hardcoded Turkish section headers in the daily-summary rich card | UX/i18n | `components/chat/ChatRichCard.tsx:281-304` | S | NO |
+| UX-011 | Logout executes immediately with no confirmation | UX | `app/(app)/settings/page.tsx:240-246` | XS | NO |
+| A11Y-007 | Duplicate OTP inputs bound to the same state; double tab stop and double announcement | Accessibility | `components/auth/EmailOtpLogin.tsx:267-288` | XS | NO |
+| A11Y-008 | Chat has no `<main>`/`<h1>`; settings and leaderboard have no `<h1>`; `AppHeader` title is a `<div>` | Accessibility | `app/(app)/chat/[id]/page.tsx`, `components/navigation/AppHeader.tsx:48` | S | NO |
+| A11Y-009 | Touch targets below 44px on streak claim and notification close, despite a `.touch-44` utility existing | Accessibility | `components/StreakRoad.tsx:278-284`, `components/notifications/NotificationCenter.tsx:187-194` | S | NO |
+| A11Y-010 | Settings toggles have `aria-pressed` but no `aria-label`; language picker lacks `aria-expanded`/`aria-haspopup` | Accessibility | `app/(app)/settings/page.tsx:447-490` | S | NO |
 
 ## P3 — Low (8)
 
@@ -726,8 +845,12 @@ Severity P1 · Operations · Confidence HIGH · Evidence STATIC
 | OPS-002 | `DAILY_CHEST_LIMIT_ENABLED=false` production guard never surfaced (same root cause as OPS-001) | Operations | XS |
 | SEO-003 | No canonical or `hreflang` alternates across 54 locales | SEO | S |
 | SEO-004 | Stray `public/index.html` Capacitor fallback in the web root | Hygiene | XS |
+| A11Y-011 | Leaderboard `podiumRise` and inline streak animations bypass the global reduced-motion block | Accessibility | S |
+| A11Y-012 | Rich cards and score bars are `<div>`-only data visualizations with no text alternative | Accessibility | M |
 
-**Totals: P0 = 0 · P1 = 13 · P2 = 27 · P3 = 8 · 48 issues**
+**Totals: P0 = 0 · P1 = 16 · P2 = 46 · P3 = 10 · 72 issues**
+
+*Issues DB-001 through DB-006, AI-005 through AI-010, UX-005 through UX-011, A11Y-006 through A11Y-012, SEC-011 and SEC-012 were added after dedicated deep-dive passes on the database, AI, and accessibility/UX subsystems completed. They also corrected two claims in the original draft: the `search_path` statement now carries its exception, and `coaching_memory` is in fact covered by the 24-month retention purge.*
 
 ---
 
@@ -746,23 +869,28 @@ Ordered by risk, with the cheap high-impact items first so they land immediately
 7. **REL-001** — Send and reuse an `Idempotency-Key` across client retries. *(S)*
 8. **A11Y-001** — Add the chat live region and label the typing indicator. *(S)*
 9. **SEC-003** — Add a per-address OTP send limit. *(S)*
-10. **UX-001** — Complete the priority-locale translations, or narrow the picker. *(M — narrowing is XS if translation slips)*
-11. **REL-003** — Raise cron `maxDuration` and add resume cursors. *(M)*
-12. **TEST-002** — Stand up database-backed authorization tests. *(L — the one large item, and the one that prevents recurrence)*
+10. **A11Y-007** — Delete the duplicate OTP input. *(XS)*
+11. **UX-005** — Mark failed chat sends as failed and offer retry. *(S)*
+12. **UX-006 / UX-007 / UX-008** — Distinguish fetch errors from empty states, add the missing `catch`, and stop faking guest photo analysis. *(S combined — same class of trust defect)*
+13. **UX-001** — Complete the priority-locale translations, or narrow the picker. *(M — narrowing is XS if translation slips)*
+14. **REL-003** — Raise cron `maxDuration` and add resume cursors. *(M)*
+15. **A11Y-006** — Associate labels with inputs across auth and onboarding. *(M)*
+16. **DB-001** — Repair the migration chain so `supabase db reset` works. *(M — do this before TEST-002, which depends on it)*
+17. **TEST-002** — Stand up database-backed authorization tests. *(L — the one large item, and the one that prevents recurrence)*
 
 **TEST-001** is a release *decision* gate rather than a code change: expand the coverage scope so the number stops being misleading, and accept the honest baseline before signing off.
 
 ## FIX DURING FIRST WEEK
 
-SEC-004 (IP redaction), SEC-006 (billing PII retention), SEC-009 (leaderboard UUIDs), UX-002 (Turkish strings), UX-003 (demo data), AI-001 (phone regex), AI-002 (analytics validation), REL-005 (analytics constraints), PERF-006 and PERF-007 (cheap cache fixes), SEO-001 and SEO-002 (robots, sitemap, OpenGraph), TEST-004 (widen the i18n assertion), ARCH-001 (server-side route protection).
+SEC-004 (IP redaction), SEC-006 (billing PII retention), SEC-009 (leaderboard UUIDs), UX-002 and UX-010 (Turkish strings), UX-003 (demo data), UX-009 (checklist false completion), AI-001 (phone regex), AI-002 (analytics validation), AI-005 (abort upstream on disconnect), AI-006 (team-chat security parity), AI-008 (quality-score default), REL-005 (analytics constraints), PERF-006 and PERF-007 (cheap cache fixes), SEO-001 and SEO-002 (robots, sitemap, OpenGraph), TEST-004 (widen the i18n assertion), ARCH-001 (server-side route protection), A11Y-008 (landmarks and headings), DB-006 (NULL dedup key).
 
 ## FIX DURING FIRST MONTH
 
-PERF-004 (static marketing rendering), PERF-005 (AI budget aggregate), PERF-003 (app-open round trips), REL-004 (shared circuit breaker), REL-006 (Paddle event ordering), AI-003 (meter secondary calls), PRIV-002 (streamed export), A11Y-002 (contrast sweep), A11Y-003 (authenticated a11y gate), A11Y-004 (inert backgrounds), TEST-003 (authenticated E2E), SEC-005 and SEC-007 (RLS hardening).
+PERF-004 (static marketing rendering), PERF-005 (AI budget aggregate), PERF-003 (app-open round trips), REL-004 (shared circuit breaker), REL-006 (Paddle event ordering), AI-003 (meter secondary calls), AI-007 (sanitize coach history), AI-009 (token cap race), PRIV-002 (streamed export), A11Y-002 (contrast sweep), A11Y-003 (authenticated a11y gate), A11Y-004 (inert backgrounds), A11Y-009 and A11Y-010 (touch targets, toggle labels), TEST-003 (authenticated E2E), SEC-005 and SEC-007 (RLS hardening), SEC-011 and SEC-012 (search_path, avatar policy), DB-004 (retention for the five uncovered tables), DB-005 (migration timestamp collisions), UX-011 (logout confirmation).
 
 ## BACKLOG / POLISH
 
-PERF-001 (bundle reduction — a real project, not a fix), UX-004 (error taxonomy), A11Y-005 (RTL logical properties), SEC-008 (CSP reporting), SEC-010 (reCAPTCHA depth), AI-004 (JSON parsing), SEO-003 (canonicals), SEO-004 (stray file), AI behavioural evaluation suite, `coaching_memory` retention.
+PERF-001 (bundle reduction — a real project, not a fix), UX-004 (error taxonomy), A11Y-005 (RTL logical properties), A11Y-011 and A11Y-012 (reduced motion, chart alternatives), SEC-008 (CSP reporting), SEC-010 (reCAPTCHA depth), AI-004 (JSON parsing), AI-010 (team-chat fallback locale), SEO-003 (canonicals), SEO-004 (stray file), DB-002 and DB-003 (leaderboard ranking and gem balance materialization — schedule against growth, not calendar), AI behavioural evaluation suite.
 
 ---
 
@@ -776,14 +904,16 @@ Maximum product quality per engineering hour.
 | 2 | `npm audit fix` | SEC-002 | XS | Turns the supply-chain gate green so it stays trustworthy |
 | 3 | Reorder `validate-env.ts` | OPS-001 | XS | Makes a missing production secret loud instead of silent |
 | 4 | Validate SW notification origin | SEC-001 | XS | Closes the most dangerous confirmed finding |
-| 5 | Invalidate `avatarSigned` on upload | PERF-007 | XS | Removes a visible 30-minute "my change didn't save" bug |
-| 6 | Stop double-writing in `cachedWithStale` | PERF-006 | XS | Halves Redis writes on every cache miss |
-| 7 | Add `app/robots.ts` and `app/sitemap.ts` | SEO-001 | XS | Basic crawlability plus `Disallow` on authenticated routes |
-| 8 | Fix home-bundle cache invalidation | PERF-002 | S | Repairs the core feedback loop of a habit-tracking product |
-| 9 | Add chat `role="log"` + `aria-live` | A11Y-001 | S | Makes the primary feature usable with a screen reader |
-| 10 | Add OpenGraph metadata to the root layout | SEO-002 | S | Every referral share stops rendering as a bare URL |
+| 5 | Delete the duplicate OTP input | A11Y-007 | XS | Removes a double tab stop and double announcement from the login path |
+| 6 | Add the missing `catch` in `AnalyticsConfirmationCard` | UX-007 | XS | Stops a silent failure on the primary data-entry confirmation |
+| 7 | Invalidate `avatarSigned` on upload | PERF-007 | XS | Removes a visible 30-minute "my change didn't save" bug |
+| 8 | Distinguish leaderboard fetch error from empty | UX-006 | XS | Stops presenting an outage as "nobody is on the leaderboard" |
+| 9 | Fix home-bundle cache invalidation | PERF-002 | S | Repairs the core feedback loop of a habit-tracking product |
+| 10 | Add chat `role="log"` + `aria-live` | A11Y-001 | S | Makes the primary feature usable with a screen reader |
 
-Items 1 through 7 total well under a day and remove three P1s.
+Also XS and worth taking in the same pass: `npm audit fix` aside, stop double-writing in `cachedWithStale` (PERF-006), add `app/robots.ts` and `app/sitemap.ts` (SEO-001), add OpenGraph metadata to the root layout (SEO-002), and raise the image-quality parse fallback below the rejection threshold (AI-008).
+
+Items 1 through 8 total well under a day and remove four P1s.
 
 ---
 
@@ -793,14 +923,16 @@ Items 1 through 7 total well under a day and remove three P1s.
 
 - **P0 count:** 0
 - **P1 count:** 3 (SEC-001, SEC-002, SEC-003)
-- **P2 count:** 6 (SEC-004, SEC-005, SEC-006, SEC-007, SEC-009, PRIV-002)
+- **P2 count:** 8 (SEC-004, SEC-005, SEC-006, SEC-007, SEC-009, SEC-011, SEC-012, PRIV-002)
 - **P3 count:** 2 (SEC-008, SEC-010)
+
+Adjacent AI-security findings are tracked under AI-006 (team chat omits the security preamble, canary, injection detection, output scrubbing, and terms-consent guard that the main chat path applies) and AI-007 (assistant history re-enters the prompt unsanitized).
 
 **Most dangerous plausible attack:** Push-notification phishing via the service worker. An attacker who can influence a notification payload — through a compromised admin broadcast path, an injected value in a notification-generating flow, or a leaked push endpoint — delivers a notification that looks native to the app and navigates to an attacker-controlled credential page on click. Because the notification carries the app's icon and name, the usual phishing cues are absent. The attack requires no code execution in the app and no CSP bypass.
 
 **Most exposed surface:** The AI chat endpoint. It accepts free-form user text, forwards it to third-party providers, stores derived state in memory and analytics, and drives database writes through the confirmation flow. Prompt-safety mitigations are layered and thoughtful, but the surface is inherently the widest in the product and the validation gap at the end of the pipeline (AI-002) means model output reaches persistent storage with insufficient checking.
 
-**Strongest protection:** The database authorization layer. RLS enabled on 44 of 44 tables, `search_path` pinned on 43 of 43 `SECURITY DEFINER` functions, deny-all-by-default on internal tables, and a single centralized route wrapper that makes forgetting authentication require deliberate effort. The design is right; only the runtime verification is missing.
+**Strongest protection:** The database authorization layer. RLS enabled on 44 of 44 tables, `search_path` set on 43 of 43 `SECURITY DEFINER` functions (one to `public` rather than `''`, and revoked from client roles — SEC-011), deny-all-by-default on internal tables, and a single centralized route wrapper that makes forgetting authentication require deliberate effort. The design is right; only the runtime verification is missing — and DB-001 explains why it is missing, since no clean database can currently be provisioned to test against.
 
 **Top three fixes:** (1) Validate the service-worker notification origin. (2) Clear the `nanoid` advisory so the supply-chain gate is meaningful again. (3) Stand up database-backed cross-user authorization tests so the strongest part of the system is actually proven rather than assumed.
 
@@ -818,7 +950,7 @@ Items 1 through 7 total well under a day and remove three P1s.
 
 **Largest database risk:** The 10-second function ceiling on jobs that iterate the entire user base. This will begin failing silently in the low thousands of users, and a truncated retention purge is a compliance problem rather than merely an operational one.
 
-**Largest scalability risk:** Several cliffs arrive together around 10,000 users — cron truncation, ledger scan cost, unbounded `chat_messages` and `coaching_memory` growth, and export timeouts. None is architecturally fatal, but they compound.
+**Largest scalability risk:** Several cliffs arrive together around 10,000 users — cron truncation, ledger scan cost, full-table `rank()` on the leaderboard, `SUM(gem_ledger)` on every gem operation against a table with no retention, and export timeouts. None is architecturally fatal, but they compound.
 
 **Quickest performance win:** Fix home-bundle cache invalidation (PERF-002). It is a small change that repairs a correctness bug users will actually notice, and it makes the existing cache do the job it was built for.
 
@@ -828,13 +960,15 @@ Items 1 through 7 total well under a day and remove three P1s.
 
 # UX SUMMARY
 
-**UX SCORE: 70/100**
+**UX SCORE: 66/100**
 
 **Top friction:** Selecting a supported language and receiving an English app. Six of sixteen picker options are approximately 82% untranslated.
 
 **Most confusing workflow:** First app open. The welcome screen renders demo profile data and default gem values while the session resolves, so a new or slow-connection user sees plausible but fabricated numbers with no indication they are placeholders — and no way to distinguish them from real data once it loads.
 
-**Weakest error state:** Mid-stream chat failure. The user sees a hardcoded Turkish sentence regardless of their locale, with no retry affordance and no explanation of whether their message was saved.
+**Weakest error state:** Mid-stream chat failure. The user sees a hardcoded Turkish sentence regardless of their locale, with no retry affordance, no explanation of whether their message was saved — and the message itself stays on screen looking delivered (UX-005).
+
+**Where a user can believe something worked when it did not:** Four confirmed instances — failed chat send (UX-005), leaderboard error rendered as empty (UX-006), silent analytics-confirmation failure (UX-007), and the fabricated guest photo analysis (UX-008). Treat these as one workstream; they share a root cause in error handling that resolves loading state without distinguishing failure from emptiness.
 
 **Best user journey:** Photo-analysis consent. The gate intercepts the upload, explains what will happen, stores the pending file, and resumes automatically on acceptance rather than making the user re-pick the image. It is a genuinely well-designed consent flow — most products make this hostile.
 
@@ -844,13 +978,13 @@ Items 1 through 7 total well under a day and remove three P1s.
 
 # ACCESSIBILITY SUMMARY
 
-**ACCESSIBILITY SCORE: 63/100**
+**ACCESSIBILITY SCORE: 58/100**
 
-**Critical blockers:** The chat message list has no live region, so streaming AI replies are entirely unannounced to screen readers. This is the product's primary interaction and it is inaccessible.
+**Critical blockers:** Two. The chat message list has no live region, so streaming AI replies are entirely unannounced to screen readers — the product's primary interaction is inaccessible. And form inputs across signup, onboarding, profile editing, and the OTP flow have visual labels with no programmatic association (A11Y-006), so the mandatory registration path presents a series of unlabeled edit fields.
 
-**Keyboard issues:** Focus management inside dialogs is genuinely good — a real trap with Tab cycling, Escape handling that respects dialog stacking, and focus restoration on close. Outside dialogs, the chat composer and message list have no keyboard-reachable path to older messages beyond the render window, and background content remains in the tab order's reach for browse-mode navigation.
+**Keyboard issues:** Focus management inside dialogs is genuinely good — a real trap with Tab cycling, Escape handling that respects dialog stacking, and focus restoration on close. Outside dialogs, the chat composer and message list have no keyboard-reachable path to older messages beyond the render window, background content remains in the tab order's reach for browse-mode navigation, and the OTP screen contains two inputs for the same code (A11Y-007), so keyboard users traverse it twice.
 
-**Screen-reader issues:** No live region on the chat (A11Y-001). Typing indicator is three unlabeled spans. Messages lack list semantics and author attribution, so a screen reader cannot distinguish who said what. Only four files in the entire codebase use `aria-live`.
+**Screen-reader issues:** No live region on the chat (A11Y-001). Typing indicator is three unlabeled spans. Messages lack list semantics and author attribution, so a screen reader cannot distinguish who said what. Only four files in the entire codebase use `aria-live`. Chat has no `<main>` or `<h1>`, and `AppHeader` renders every page title into a `<div>`, so heading navigation does not work anywhere (A11Y-008).
 
 **Contrast issues:** Measured against `#0a0a0a` — `text-zinc-500` at 4.10:1 across 130 usages fails AA for normal text, and `text-zinc-600` at 2.56:1 across 38 usages fails AA for both normal and large text. `text-zinc-400` (168 usages, 7.72:1) and opacity-based timestamps (7.30:1) pass.
 
@@ -860,11 +994,11 @@ Items 1 through 7 total well under a day and remove three P1s.
 
 # ARCHITECTURE SUMMARY
 
-**ARCHITECTURE SCORE: 84/100**
+**ARCHITECTURE SCORE: 80/100**
 
 **Strongest architectural choice:** Centralizing every cross-cutting security concern in `lib/api/route-handler.ts`. Authentication, MFA step-up, rate limiting, CSRF, consent, and AI budget are declared per route as configuration rather than reimplemented per handler. This is why the security review found so few gaps across 99 routes — the wrapper makes the secure path the default path, and it is the decision most responsible for the product's overall security score.
 
-**Largest technical debt:** The verification layer. The implementation is consistently more sophisticated than the tests that confirm it — 44 RLS-protected tables verified by regex, 99 route handlers with zero coverage measurement, and a coverage number that describes 5.2% of the code. The debt is not messy code; it is unproven code.
+**Largest technical debt:** The verification layer. The implementation is consistently more sophisticated than the tests that confirm it — 44 RLS-protected tables verified by regex, 99 route handlers with zero coverage measurement, and a coverage number that describes 5.2% of the code. The debt is not messy code; it is unproven code. DB-001 is the keystone: because the migration chain cannot build a clean database, the integration layer that would prove any of it cannot be built either. Repairing the chain is the unlock for the entire verification effort.
 
 **Largest scaling concern:** The convergence of the 10-second function budget with jobs that iterate the full user base. It is invisible today and arrives suddenly, and the retention purge failing partway is a compliance event rather than a performance one.
 
@@ -881,13 +1015,13 @@ P0_OPEN:
 0
 
 P1_OPEN:
-13
+16
 
 P2_OPEN:
-27
+46
 
 P3_OPEN:
-8
+10
 
 SECURITY_SCORE:
 82/100
@@ -896,19 +1030,19 @@ PERFORMANCE_SCORE:
 68/100
 
 ACCESSIBILITY_SCORE:
-63/100
+58/100
 
 UX_SCORE:
-70/100
+66/100
 
 RELIABILITY_SCORE:
-72/100
+70/100
 
 AI_KAIOS_SCORE:
-74/100
+71/100
 
 OVERALL_SCORE:
-73/100
+71/100
 
 RELEASE_RECOMMENDATION:
 READY_WITH_FIXES
@@ -918,7 +1052,11 @@ TOP_5_BEFORE_LAUNCH:
 2. UX-001 — Complete translations for pt/nl/pl/ru/ko/zh-CN or remove them from the picker; six shipped languages are ~82% English. (M, or XS to narrow)
 3. PERF-002 + PRIV-001 — Fix home-bundle cache invalidation and purge Redis on account deletion; one breaks the core feedback loop, the other is an erasure-compliance defect. (S each)
 4. SEC-001 + SEC-002 + SEC-003 — Validate the service-worker notification origin, clear the nanoid advisory so the supply-chain gate is green, and add per-address OTP throttling. (XS/XS/S)
-5. TEST-002 — Stand up database-backed cross-user authorization tests; 44 RLS tables and 43 SECURITY DEFINER functions are currently verified only by regex over migration text. (L)
+5. DB-001 then TEST-002 — Repair the migration chain so `supabase db reset` works, then stand up database-backed cross-user authorization tests. 44 RLS tables and 43 SECURITY DEFINER functions are currently verified only by regex over migration text, and the missing test layer is blocked on the broken chain. (M then L)
+
+ALSO_BEFORE_LAUNCH:
+- UX-005/006/007/008 — Four states report success or silence on failure; fix as one workstream. (S combined)
+- A11Y-006 + A11Y-007 — Associate form labels across auth and onboarding; delete the duplicate OTP input. (M + XS)
 ```
 
 ---
@@ -934,10 +1072,14 @@ Stated plainly so that "not tested" is never mistaken for "pass."
 **Not tested (explicit gaps that should be closed before final sign-off):**
 - **No live authenticated environment.** Real LCP, INP, CLS, and TTFB on the app shell were not measured. Lighthouse in CI covers only four public pages.
 - **No live database.** RLS enforcement, RPC behaviour, index effectiveness, and query plans were not verified at runtime. Every database conclusion in this report is inferred from migration source.
-- **No real device testing.** Responsive behaviour on small phones, tablets, landscape, keyboard-open states, and safe-area handling was assessed from source only. Touch target sizes were not measured.
+- **No real device testing.** Responsive behaviour on small phones, tablets, landscape, keyboard-open states, and safe-area handling was assessed from source only. Touch target sizes were read from Tailwind classes rather than measured in a browser.
 - **No screen-reader session.** Accessibility findings are from code inspection and computed contrast, not from VoiceOver or NVDA.
+- **No `supabase db reset` execution.** DB-001 is established from static analysis — the five legacy columns appear in no `CREATE TABLE` or `ADD COLUMN` across all 69 migrations, and the reference sits in a top-level `UPDATE` that Postgres validates at parse time. The conclusion is high-confidence but was not confirmed by running the reset against a clean Postgres. That run should be the first step of the DB-001 fix.
+- **The 17 canonical KAIOS specifications were not available.** A repository-wide search returns zero matches for "KAIOS." The AI subsystem was assessed on general principles for production AI systems rather than against those specs, so the AI/KAIOS score should be treated as provisional if the specs exist elsewhere.
 - **No AI behavioural evaluation.** Coach response quality, persona consistency, and safety across a fixed prompt set were not assessed.
 - **No load testing at scale.** The k6 smoke in CI runs 5 VUs for 10 seconds; scalability conclusions are analytical.
 - **Git history was not scanned for historical secrets** beyond confirming Gitleaks is correctly configured in CI.
 
 Confidence ratings throughout reflect these boundaries. Where evidence was thin I lowered confidence rather than inferring a result.
+
+**Revision note.** After the initial draft, dedicated deep-dive passes over the database schema, the AI subsystem, and the accessibility/UX surface added 24 issues and corrected two claims: the `SECURITY DEFINER` `search_path` statement now carries its one exception (SEC-011), and `coaching_memory` was incorrectly described as having no retention purge when it is in fact covered at 24 months. The overall score moved from 73 to 71 as a result. The release recommendation did not change.
