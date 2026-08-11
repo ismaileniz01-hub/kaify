@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { purgeUserCaches } from "@/lib/cache/invalidate";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
@@ -163,6 +164,16 @@ export async function deleteUserAccount(userId: string): Promise<void> {
       error: error.message,
     });
     throw new ApiError("INTERNAL_ERROR", "Hesap silinemedi.");
+  }
+
+  // Erasure requires active cache purge — do not rely on TTL alone.
+  try {
+    await purgeUserCaches(userId);
+  } catch (cacheError) {
+    logger.warn("account.delete cache purge failed", {
+      userId,
+      error: cacheError instanceof Error ? cacheError.message : "unknown",
+    });
   }
 
   logger.info("account.delete completed", { userId });

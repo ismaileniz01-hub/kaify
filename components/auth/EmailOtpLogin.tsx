@@ -3,16 +3,14 @@
 import { ArrowLeft, ArrowRight, CheckCircle2, Mail, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { OtpDigitInput } from "@/components/auth/OtpDigitInput";
 import { LegalConsentCheckbox } from "@/components/auth/AuthModeToggle";
 import {
   sendEmailLoginCode,
   verifyEmailLoginCode,
-  normalizeOtpInput,
   isCompleteOtp,
 } from "@/lib/auth/email-otp";
-import { OTP_LENGTH } from "@/lib/auth/otp";
 import { maskEmail } from "@/lib/auth/mask-email";
 import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
 import type { AuthMode } from "@/lib/auth/safe-redirect";
@@ -67,6 +65,9 @@ export function EmailOtpLogin({
   const { lang, t } = useLang();
   const router = useRouter();
   const { isAuthenticated, isLoading, profile, refreshSession } = useSession();
+  const idPrefix = useId();
+  const emailId = `${idPrefix}-email`;
+  const errorId = `${idPrefix}-error`;
 
   const safeRedirect = sanitizeAuthRedirect(redirectTo);
   const isSignup = mode === "signup";
@@ -261,7 +262,10 @@ export function EmailOtpLogin({
         </div>
 
         <div className="login-otp-code-block flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/25 p-4">
-          <p className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
+          <p
+            id={`${idPrefix}-code-label`}
+            className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400"
+          >
             {t("login.otp.code_label")}
           </p>
           <OtpDigitInput
@@ -270,21 +274,6 @@ export function EmailOtpLogin({
             onComplete={(value) => void verifyCode(value)}
             disabled={loading}
             autoFocus
-          />
-          <input
-            type="text"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={OTP_LENGTH}
-            value={code}
-            onChange={(e) => {
-              const next = normalizeOtpInput(e.target.value);
-              setCode(next);
-              if (isCompleteOtp(next)) void verifyCode(next);
-            }}
-            placeholder={t("login.otp.code_placeholder")}
-            aria-label={t("login.otp.code_placeholder")}
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-center text-lg font-semibold tracking-[0.35em] text-white placeholder:tracking-normal placeholder:text-zinc-500 focus:border-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
           />
         </div>
 
@@ -320,7 +309,11 @@ export function EmailOtpLogin({
         </div>
 
         {error && (
-          <p className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-center text-xs text-red-200">
+          <p
+            id={errorId}
+            role="alert"
+            className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-center text-xs text-red-200"
+          >
             {error}
           </p>
         )}
@@ -331,19 +324,27 @@ export function EmailOtpLogin({
 
   return (
     <div className="login-otp-panel flex w-full flex-col gap-4">
-      <div className="flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-4 py-3.5 shadow-inner shadow-black/20 backdrop-blur-sm">
-        <Mail className="h-4 w-4 shrink-0 text-purple-300/80" />
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && canSendCode) void sendCode();
-          }}
-          placeholder={t("login.email_placeholder")}
-          autoComplete="email"
-          className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none"
-        />
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor={emailId} className="sr-only">
+          {t("login.email_placeholder")}
+        </label>
+        <div className="flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-4 py-3.5 shadow-inner shadow-black/20 backdrop-blur-sm">
+          <Mail className="h-4 w-4 shrink-0 text-purple-300/80" aria-hidden />
+          <input
+            id={emailId}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && canSendCode) void sendCode();
+            }}
+            placeholder={t("login.email_placeholder")}
+            autoComplete="email"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? errorId : undefined}
+            className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+          />
+        </div>
       </div>
 
       {isSignup && (
@@ -378,7 +379,11 @@ export function EmailOtpLogin({
       </button>
 
       {error && (
-        <p className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-center text-xs text-red-200">
+        <p
+          id={errorId}
+          role="alert"
+          className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-center text-xs text-red-200"
+        >
           {error}
         </p>
       )}

@@ -86,3 +86,34 @@ export async function enforcePublicRateLimit(
     );
   }
 }
+
+/**
+ * Per-target OTP send limit (email-hash bucket).
+ * Complements IP limiting so rotating IPs cannot linearly bomb one address.
+ * Never log or key on plaintext email — callers must pass a pre-hashed bucket.
+ */
+export const OTP_TARGET_RATE_LIMIT = {
+  requests: 5,
+  windowMs: 15 * 60 * 1000,
+} as const;
+
+export async function enforceOtpTargetRateLimit(
+  emailHash: string,
+): Promise<void> {
+  const result = await checkRateLimit(
+    `pub:otp_send:target:${emailHash}`,
+    OTP_TARGET_RATE_LIMIT,
+    { failClosedInProduction: true },
+  );
+
+  if (!result.allowed) {
+    logger.warn("otp target rate limit exceeded", {
+      emailHashPrefix: emailHash.slice(0, 8),
+    });
+    throw new ApiError(
+      "RATE_LIMITED",
+      "Çok hızlı istek gönderiyorsun. Lütfen birkaç saniye bekle.",
+      { retryAfterMs: result.resetMs },
+    );
+  }
+}

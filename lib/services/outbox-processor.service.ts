@@ -48,7 +48,13 @@ async function handleOutboxEvent(row: OutboxRow): Promise<void> {
       await invalidateUserReadCaches(userId);
       break;
     }
-    case "account.deleted":
+    case "account.deleted": {
+      if (userId) {
+        const { purgeUserCaches } = await import("@/lib/cache/invalidate");
+        await purgeUserCaches(userId);
+      }
+      break;
+    }
     case "account.exported":
     case "billing.webhook.received":
     case "consent.granted":

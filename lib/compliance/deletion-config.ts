@@ -78,6 +78,12 @@ export const EXPLICIT_CLEANUP: readonly DeletionTableSpec[] = [
     notes: "Supabase Storage bucket — not covered by FK cascade",
   },
   {
+    table: "cache:user",
+    column: "user_id",
+    behavior: "explicit_cleanup",
+    notes: "Upstash/Redis user-derived keys via purgeUserCaches()",
+  },
+  {
     table: "auth.users",
     column: "id",
     behavior: "explicit_cleanup",

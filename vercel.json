@@ -52,6 +52,12 @@
     "app/api/chat/**/route.ts": {
       "maxDuration": 60
     },
+    "app/api/cron/**/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/profile/export/route.ts": {
+      "maxDuration": 60
+    },
     "app/api/**/route.ts": {
       "maxDuration": 10
     }

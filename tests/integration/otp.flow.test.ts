@@ -4,7 +4,9 @@ import type { NextRequest } from "next/server";
 vi.mock("@/lib/api/rate-guard", () => ({
   enforcePublicRateLimit: vi.fn().mockResolvedValue(undefined),
   enforceUserRateLimit: vi.fn().mockResolvedValue(undefined),
+  enforceOtpTargetRateLimit: vi.fn().mockResolvedValue(undefined),
   AI_RATE_LIMITS: {},
+  OTP_TARGET_RATE_LIMIT: { requests: 5, windowMs: 15 * 60 * 1000 },
 }));
 
 vi.mock("@/lib/observability/tracing", () => ({

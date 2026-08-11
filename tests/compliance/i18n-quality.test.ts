@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { TERMS_DOCUMENT_TR } from "@/lib/legal/documents/terms-tr";
 import { COOKIES_DOCUMENT_TR } from "@/lib/legal/documents/cookies-tr";
+import {
+  REVIEWED_LANG_CODES,
+  REVIEWED_LANG_OPTIONS,
+  REVIEWED_LOCALE_MIN_TRANSLATED_RATIO,
+  PRIORITY_QUALITY_LOCALES,
+} from "@/lib/i18n/reviewed-locales";
 
 const LANG_DIR = join(process.cwd(), "lib", "lang");
 
@@ -10,14 +16,36 @@ function readRaw(code: "en" | "tr"): string {
   return readFileSync(join(LANG_DIR, `${code}.json`), "utf8");
 }
 
-function readLocale(code: "en" | "tr"): Record<string, string> {
-  return JSON.parse(readRaw(code));
+function readLocale(code: string): Record<string, string> {
+  return JSON.parse(readFileSync(join(LANG_DIR, `${code}.json`), "utf8"));
 }
 
 function placeholders(value: string): string[] {
   return [...value.matchAll(/\{([a-zA-Z0-9_]+)\}/g)]
     .map((match) => match[1])
     .toSorted();
+}
+
+function translationRatio(en: Record<string, string>, locale: Record<string, string>): number {
+  const keys = Object.keys(en).filter((k) => !k.startsWith("admin."));
+  let translated = 0;
+  for (const key of keys) {
+    const enVal = (en[key] ?? "").trim();
+    const locVal = (locale[key] ?? "").trim();
+    if (!enVal) continue;
+    if (locVal && locVal !== enVal) {
+      translated += 1;
+      continue;
+    }
+    // Brand / short tokens may legitimately match English.
+    if (
+      ["K.AIFY", "Kai", "Market", "Freezie", "Paddle", "Coaching"].includes(enVal) ||
+      /^[A-Z0-9+._\-/]{1,12}$/.test(enVal)
+    ) {
+      translated += 1;
+    }
+  }
+  return translated / keys.length;
 }
 
 describe("EN/TR localization quality", () => {
@@ -95,33 +123,27 @@ describe("EN/TR localization quality", () => {
         key.startsWith("pricing.hero.") ||
         key.startsWith("pricing.final."),
     );
-    const allowedSame = new Set([
-      "landing.leaderboard.country.turkey",
-    ]);
+    const allowedSame = new Set(["landing.leaderboard.country.turkey"]);
     const untranslated = keys.filter(
       (key) => !allowedSame.has(key) && tr[key] === en[key],
     );
     expect(untranslated).toEqual([]);
   });
 
-  it("exposes Phase 3 reviewed locales in the picker", () => {
-    const reviewed = readFileSync(
-      join(process.cwd(), "lib", "i18n", "reviewed-locales.ts"),
-      "utf8",
-    );
-    for (const code of [
+  it("exposes only production-ready reviewed locales in the picker", () => {
+    expect(REVIEWED_LANG_CODES).toEqual([
       "tr",
       "en",
       "de",
       "fr",
       "es",
-      "pt",
+      "es-mx",
+      "es-ar",
+      "it",
       "ar",
-      "ru",
-      "ja",
-      "zh-CN",
-    ]) {
-      expect(reviewed).toContain(`code: "${code}"`);
+    ]);
+    for (const incomplete of ["pt", "nl", "pl", "ru", "ko", "zh-CN", "ja"]) {
+      expect(REVIEWED_LANG_CODES).not.toContain(incomplete);
     }
     const source = readFileSync(
       join(process.cwd(), "lib", "lang-context.tsx"),
@@ -130,7 +152,19 @@ describe("EN/TR localization quality", () => {
     expect(source).toContain("REVIEWED_LANG_OPTIONS");
   });
 
-  it("keeps priority locales from being English clones on public surfaces", () => {
+  it("requires every reviewed non-English locale to pass corpus completeness", () => {
+    for (const code of REVIEWED_LANG_CODES) {
+      if (code === "en") continue;
+      const dict = readLocale(code);
+      const ratio = translationRatio(en, dict);
+      expect(
+        ratio,
+        `${code} translated ratio ${ratio.toFixed(3)} below ${REVIEWED_LOCALE_MIN_TRANSLATED_RATIO}`,
+      ).toBeGreaterThanOrEqual(REVIEWED_LOCALE_MIN_TRANSLATED_RATIO);
+    }
+  });
+
+  it("keeps priority reviewed locales from being English clones on public surfaces", () => {
     const criticalPrefixes = [
       "landing.hero.",
       "landing.about.",
@@ -138,55 +172,54 @@ describe("EN/TR localization quality", () => {
       "pricing.final.",
       "a11y.",
       "error.global.",
+      "nav.",
+      "common.",
+      "offline.",
     ];
-    const criticalExact = ["common.loading", "common.retry", "nav.home", "nav.settings"];
     const allowExact = new Set([
       "nav.market",
+      "nav.messages",
       "landing.leaderboard.country.turkey",
       "landing.hero.kai_alt",
+      "common.relative.minutes",
+      "common.relative.hours",
+      "common.relative.days",
     ]);
-    const priority = [
-      "de",
-      "fr",
-      "es",
-      "pt",
-      "ar",
-      "ru",
-      "ja",
-      "zh-CN",
-      "it",
-      "nl",
-      "pl",
-      "ko",
-    ];
-    for (const code of priority) {
-      const dict = JSON.parse(
-        readFileSync(join(LANG_DIR, `${code}.json`), "utf8"),
-      ) as Record<string, string>;
-      const keys = Object.keys(en).filter(
-        (key) =>
-          criticalExact.includes(key) ||
-          criticalPrefixes.some((prefix) => key.startsWith(prefix)),
+    for (const code of PRIORITY_QUALITY_LOCALES) {
+      expect(REVIEWED_LANG_CODES).toContain(code);
+      const dict = readLocale(code);
+      const keys = Object.keys(en).filter((key) =>
+        criticalPrefixes.some((prefix) => key.startsWith(prefix)),
       );
       const identical = keys.filter((key) => {
         if (allowExact.has(key)) return false;
         const enVal = (en[key] ?? "").trim();
         if (dict[key] !== en[key]) return false;
-        if (["K.AIFY", "Kai", "Market", "Freezie", "Paddle", "Coaching"].includes(enVal)) {
+        if (
+          ["K.AIFY", "Kai", "Market", "Freezie", "Paddle", "Coaching"].includes(
+            enVal,
+          )
+        ) {
           return false;
         }
         if (/^[A-Z0-9+._\-/]{1,12}$/.test(enVal)) return false;
         return true;
       });
-      expect(identical, `${code} still EN-identical`).toEqual([]);
+      expect(identical, `${code} still EN-identical on product surfaces`).toEqual(
+        [],
+      );
     }
   });
 
   it("ships complete Turkish legal documents", () => {
     expect(TERMS_DOCUMENT_TR.sections).toHaveLength(13);
     expect(COOKIES_DOCUMENT_TR.sections).toHaveLength(5);
-    expect(TERMS_DOCUMENT_TR.sections.every((section) => section.blocks.length > 0)).toBe(true);
-    expect(COOKIES_DOCUMENT_TR.sections.every((section) => section.blocks.length > 0)).toBe(true);
+    expect(
+      TERMS_DOCUMENT_TR.sections.every((section) => section.blocks.length > 0),
+    ).toBe(true);
+    expect(
+      COOKIES_DOCUMENT_TR.sections.every((section) => section.blocks.length > 0),
+    ).toBe(true);
   });
 
   it("branches auth emails by request language", () => {
@@ -207,5 +240,13 @@ describe("EN/TR localization quality", () => {
       "utf8",
     );
     expect(runbook).toContain("npm run auth:otp-template");
+  });
+
+  it("keeps REVIEWED_LANG_OPTIONS labels aligned with codes", () => {
+    expect(REVIEWED_LANG_OPTIONS.map((o) => o.code)).toEqual(REVIEWED_LANG_CODES);
+    const files = readdirSync(LANG_DIR).filter((f) => f.endsWith(".json"));
+    for (const code of REVIEWED_LANG_CODES) {
+      expect(files).toContain(`${code}.json`);
+    }
   });
 });

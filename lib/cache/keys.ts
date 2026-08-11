@@ -36,8 +36,13 @@ export const CacheKeys = {
   analyticsToday: (userId: string) => `analytics:today:v1:${userId}`,
   /** @deprecated use analyticsBundle — kept for invalidation compat */
   analyticsUser: (userId: string) => `analytics:bundle:v1:${userId}`,
-  homeBundle: (userId: string, day = utcDayKey(), locale = "default") =>
-    `home:bundle:v2:${userId}:${day}:${locale}`,
+  /**
+   * Home screen core bundle — locale-free (v3).
+   * Localized strings (motivation / tip / insight) are applied after cache read.
+   * Day segment bounds freshness to the UTC calendar day.
+   */
+  homeBundle: (userId: string, day = utcDayKey()) =>
+    `home:bundle:v3:${userId}:${day}`,
   sessionGems: (userId: string) => `session:gems:v1:${userId}`,
   sessionStreak: (userId: string) => `session:streak:v1:${userId}`,
   sessionKai: (userId: string) => `session:kai:v1:${userId}`,
@@ -52,6 +57,19 @@ export const CacheKeys = {
   avatarSigned: (storagePath: string) => `avatar:signed:v1:${storagePath}`,
 } as const;
 
+/** SCAN patterns for user-scoped cache purge / broad invalidation. */
+export const CachePatterns = {
+  /** Current + legacy home keys (v2 locale variants and v3) for a user. */
+  homeBundleAll: (userId: string) => `home:bundle:*:${userId}:*`,
+  analyticsUser: (userId: string) => `analytics:*:${userId}`,
+  sessionSlices: (userId: string) => `session:*:${userId}`,
+  leaderboardRank: (userId: string) => `lb:rank:v1:${userId}`,
+  /** Signed avatar URLs live under the user's storage prefix. */
+  avatarSigned: (userId: string) => `avatar:signed:v1:${userId}*`,
+  /** Catch-all user-derived keys that embed the UUID. */
+  userScoped: (userId: string) => `*:${userId}*`,
+} as const;
+
 /** Invalidate after analytics writes. */
 export const CacheInvalidation = {
   marketCatalog: [CacheKeys.marketItems()],
@@ -60,6 +78,7 @@ export const CacheInvalidation = {
     CacheKeys.analyticsToday(userId),
     CacheKeys.homeBundle(userId),
   ],
+  /** Exact keys for the current UTC day + their stale companions. */
   homeBundle: (userId: string) => [CacheKeys.homeBundle(userId)],
   leaderboardRank: (userId: string) => [CacheKeys.leaderboardRank(userId)],
   sessionSlices: (userId: string) => [

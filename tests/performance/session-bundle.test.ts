@@ -20,7 +20,29 @@ vi.mock("@/lib/services/kai-state.service", () => ({
   }),
 }));
 vi.mock("@/lib/services/home.service", () => ({
-  getHomeData: vi.fn().mockResolvedValue({
+  getHomeCoreData: vi.fn().mockResolvedValue({
+    displayName: "Test",
+    stats: { steps: null, streak: 3, goalPercent: null },
+    kaiLevel: 2,
+    todayJob: {
+      kind: "chat_kai",
+      href: "/chat/kai",
+      titleKey: "home.today_job.chat.title",
+      bodyKey: "home.today_job.chat.body",
+      ctaKey: "home.today_job.chat.cta",
+    },
+    firstTask: { checkInDone: true, goalsDone: true, chatDone: false },
+    goals: {
+      configured: true,
+      primaryGoal: "stay_fit",
+      calorieGoal: 2100,
+      workoutsTarget: 5,
+      waterGoalLiters: 2.5,
+    },
+    nutrition: null,
+    profileLocale: "en",
+  }),
+  localizeHomeData: vi.fn().mockResolvedValue({
     displayName: "Test",
     motivation: "Go",
     dailyTip: "Tip",
@@ -43,6 +65,7 @@ vi.mock("@/lib/services/home.service", () => ({
       waterGoalLiters: 2.5,
     },
   }),
+  getHomeData: vi.fn(),
 }));
 vi.mock("@/lib/cache", () => ({
   cached: vi.fn((_key, _ttl, producer) => producer()),

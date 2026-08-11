@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useId } from "react";
 import { Leaf, Sparkles, ArrowRight } from "lucide-react";
 import { apiPost, ApiClientError } from "@/lib/api/client";
 import { COUNTRY_OPTIONS } from "@/lib/country-names";
@@ -44,6 +44,10 @@ export function OnboardingProfileForm({
   onSuccess,
 }: Props) {
   const { lang, t } = useLang();
+  const idPrefix = useId();
+  const errorId = `${idPrefix}-error`;
+  const hintId = `${idPrefix}-hint`;
+  const birthHintId = `${idPrefix}-birth-hint`;
 
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [gender, setGender] = useState<Gender>("prefer_not_to_say");
@@ -66,6 +70,7 @@ export function OnboardingProfileForm({
   const [bio, setBio] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attempted, setAttempted] = useState(false);
 
   const genderLabel = (g: Gender) => t(`onboarding.gender.${g}` as "onboarding.gender.male");
   const experienceLabel = (level: ExperienceLevel) =>
@@ -80,21 +85,35 @@ export function OnboardingProfileForm({
   const heightNum = Number.parseInt(heightCm, 10);
   const weightNum = Number.parseFloat(weightKg);
 
+  const fieldInvalid = {
+    displayName: displayName.trim().length < 1,
+    birthDate: birthDate.length === 0,
+    heightCm: !(Number.isFinite(heightNum) && heightNum >= 50 && heightNum <= 280),
+    weightKg: !(Number.isFinite(weightNum) && weightNum >= 20 && weightNum <= 500),
+    countryCode: !/^[A-Za-z]{2}$/.test(countryCode),
+  };
+
   const valid = useMemo(() => {
     return (
-      displayName.trim().length >= 1 &&
-      birthDate.length > 0 &&
-      Number.isFinite(heightNum) &&
-      heightNum >= 50 &&
-      heightNum <= 280 &&
-      Number.isFinite(weightNum) &&
-      weightNum >= 20 &&
-      weightNum <= 500 &&
-      /^[A-Za-z]{2}$/.test(countryCode)
+      !fieldInvalid.displayName &&
+      !fieldInvalid.birthDate &&
+      !fieldInvalid.heightCm &&
+      !fieldInvalid.weightKg &&
+      !fieldInvalid.countryCode
     );
-  }, [displayName, birthDate, heightNum, weightNum, countryCode]);
+  }, [
+    fieldInvalid.displayName,
+    fieldInvalid.birthDate,
+    fieldInvalid.heightCm,
+    fieldInvalid.weightKg,
+    fieldInvalid.countryCode,
+  ]);
+
+  const describe = (...ids: Array<string | false | null | undefined>) =>
+    ids.filter(Boolean).join(" ") || undefined;
 
   const handleSubmit = async () => {
+    setAttempted(true);
     if (!valid || submitting) return;
     setSubmitting(true);
     setError(null);
@@ -141,26 +160,40 @@ export function OnboardingProfileForm({
     }
   };
 
+  const fid = (name: string) => `${idPrefix}-${name}`;
+
   return (
     <div className={`flex flex-col gap-4 ${className}`}>
       <div className="flex flex-col gap-1.5">
-        <label className="signup-field-label">{t("onboarding.name")}</label>
+        <label htmlFor={fid("name")} className="signup-field-label">
+          {t("onboarding.name")}
+        </label>
         <input
+          id={fid("name")}
           type="text"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
           maxLength={80}
           className="signup-field-input"
           placeholder={t("onboarding.name_placeholder")}
+          aria-invalid={attempted && fieldInvalid.displayName ? true : undefined}
+          aria-describedby={describe(
+            attempted && fieldInvalid.displayName && hintId,
+            error && errorId,
+          )}
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="signup-field-label">{t("onboarding.gender")}</label>
+        <label htmlFor={fid("gender")} className="signup-field-label">
+          {t("onboarding.gender")}
+        </label>
         <select
+          id={fid("gender")}
           value={gender}
           onChange={(e) => setGender(e.target.value as Gender)}
           className="signup-field-input"
+          aria-describedby={describe(error && errorId)}
         >
           {GENDERS.map((g) => (
             <option key={g} value={g} className="bg-zinc-900">
@@ -171,45 +204,75 @@ export function OnboardingProfileForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="signup-field-label">{t("onboarding.birth_date")}</label>
+        <label htmlFor={fid("birth")} className="signup-field-label">
+          {t("onboarding.birth_date")}
+        </label>
         <input
+          id={fid("birth")}
           type="date"
           value={birthDate}
           max={maximumBirthDateForMinimumAge()}
           onChange={(e) => setBirthDate(e.target.value)}
           className="signup-field-input"
+          aria-invalid={attempted && fieldInvalid.birthDate ? true : undefined}
+          aria-describedby={describe(
+            birthHintId,
+            attempted && fieldInvalid.birthDate && hintId,
+            error && errorId,
+          )}
         />
-        <p className="text-[10px] text-zinc-500">{t("onboarding.birth_date_hint")}</p>
+        <p id={birthHintId} className="text-[10px] text-zinc-500">
+          {t("onboarding.birth_date_hint")}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
-          <label className="signup-field-label">{t("onboarding.height")}</label>
+          <label htmlFor={fid("height")} className="signup-field-label">
+            {t("onboarding.height")}
+          </label>
           <input
+            id={fid("height")}
             type="number"
             inputMode="numeric"
             value={heightCm}
             onChange={(e) => setHeightCm(e.target.value)}
             className="signup-field-input"
             placeholder={t("onboarding.height_placeholder")}
+            aria-invalid={attempted && fieldInvalid.heightCm ? true : undefined}
+            aria-describedby={describe(
+              attempted && fieldInvalid.heightCm && hintId,
+              error && errorId,
+            )}
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="signup-field-label">{t("onboarding.weight")}</label>
+          <label htmlFor={fid("weight")} className="signup-field-label">
+            {t("onboarding.weight")}
+          </label>
           <input
+            id={fid("weight")}
             type="number"
             inputMode="decimal"
             value={weightKg}
             onChange={(e) => setWeightKg(e.target.value)}
             className="signup-field-input"
             placeholder={t("onboarding.weight_placeholder")}
+            aria-invalid={attempted && fieldInvalid.weightKg ? true : undefined}
+            aria-describedby={describe(
+              attempted && fieldInvalid.weightKg && hintId,
+              error && errorId,
+            )}
           />
         </div>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="signup-field-label">{t("onboarding.primary_goal")}</label>
+        <label htmlFor={fid("goal")} className="signup-field-label">
+          {t("onboarding.primary_goal")}
+        </label>
         <select
+          id={fid("goal")}
           value={primaryGoal}
           onChange={(e) => setPrimaryGoal(e.target.value as PrimaryGoal)}
           className="signup-field-input"
@@ -223,8 +286,11 @@ export function OnboardingProfileForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="signup-field-label">{t("onboarding.activity")}</label>
+        <label htmlFor={fid("activity")} className="signup-field-label">
+          {t("onboarding.activity")}
+        </label>
         <select
+          id={fid("activity")}
           value={activityLevel}
           onChange={(e) => setActivityLevel(e.target.value as ActivityLevel)}
           className="signup-field-input"
@@ -238,13 +304,20 @@ export function OnboardingProfileForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="signup-field-label">{t("onboarding.training_days")}</label>
-        <div className="grid grid-cols-4 gap-2">
+        <label id={fid("training-label")} className="signup-field-label">
+          {t("onboarding.training_days")}
+        </label>
+        <div
+          className="grid grid-cols-4 gap-2"
+          role="group"
+          aria-labelledby={fid("training-label")}
+        >
           {TRAINING_DAY_OPTIONS.map((days) => (
             <button
               key={days}
               type="button"
               onClick={() => setTrainingDaysPerWeek(days)}
+              aria-pressed={trainingDaysPerWeek === days}
               className={`rounded-xl border py-2.5 text-xs font-medium transition ${
                 trainingDaysPerWeek === days
                   ? "border-purple-500/50 bg-purple-500/15 text-purple-300"
@@ -258,13 +331,20 @@ export function OnboardingProfileForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="signup-field-label">{t("onboarding.experience")}</label>
-        <div className="grid grid-cols-3 gap-2">
+        <label id={fid("experience-label")} className="signup-field-label">
+          {t("onboarding.experience")}
+        </label>
+        <div
+          className="grid grid-cols-3 gap-2"
+          role="group"
+          aria-labelledby={fid("experience-label")}
+        >
           {EXPERIENCE_LEVELS.map((level) => (
             <button
               key={level}
               type="button"
               onClick={() => setExperienceLevel(level)}
+              aria-pressed={experienceLevel === level}
               className={`rounded-xl border py-2.5 text-xs font-medium transition ${
                 experienceLevel === level
                   ? "border-purple-500/50 bg-purple-500/15 text-purple-300"
@@ -278,11 +358,14 @@ export function OnboardingProfileForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="signup-field-label">{t("onboarding.status")}</label>
-        <div className="flex gap-2">
+        <label id={fid("status-label")} className="signup-field-label">
+          {t("onboarding.status")}
+        </label>
+        <div className="flex gap-2" role="group" aria-labelledby={fid("status-label")}>
           <button
             type="button"
             onClick={() => setIsNatural(true)}
+            aria-pressed={isNatural}
             className={`flex flex-1 items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium transition ${
               isNatural
                 ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400"
@@ -295,6 +378,7 @@ export function OnboardingProfileForm({
           <button
             type="button"
             onClick={() => setIsNatural(false)}
+            aria-pressed={!isNatural}
             className={`flex flex-1 items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium transition ${
               !isNatural
                 ? "border-amber-500/50 bg-amber-500/15 text-amber-400"
@@ -308,8 +392,11 @@ export function OnboardingProfileForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="signup-field-label">{t("onboarding.diet")}</label>
+        <label htmlFor={fid("diet")} className="signup-field-label">
+          {t("onboarding.diet")}
+        </label>
         <select
+          id={fid("diet")}
           value={dietaryPreference}
           onChange={(e) => setDietaryPreference(e.target.value as DietaryPreference)}
           className="signup-field-input"
@@ -323,8 +410,11 @@ export function OnboardingProfileForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="signup-field-label">{t("onboarding.allergies")}</label>
+        <label htmlFor={fid("allergies")} className="signup-field-label">
+          {t("onboarding.allergies")}
+        </label>
         <textarea
+          id={fid("allergies")}
           value={allergies}
           onChange={(e) => setAllergies(e.target.value)}
           rows={2}
@@ -335,8 +425,11 @@ export function OnboardingProfileForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="signup-field-label">{t("onboarding.disliked_foods")}</label>
+        <label htmlFor={fid("disliked")} className="signup-field-label">
+          {t("onboarding.disliked_foods")}
+        </label>
         <textarea
+          id={fid("disliked")}
           value={dislikedFoods}
           onChange={(e) => setDislikedFoods(e.target.value)}
           rows={2}
@@ -347,8 +440,11 @@ export function OnboardingProfileForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="signup-field-label">{t("onboarding.health_conditions")}</label>
+        <label htmlFor={fid("health")} className="signup-field-label">
+          {t("onboarding.health_conditions")}
+        </label>
         <textarea
+          id={fid("health")}
           value={healthConditions}
           onChange={(e) => setHealthConditions(e.target.value)}
           rows={2}
@@ -359,11 +455,19 @@ export function OnboardingProfileForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="signup-field-label">{t("onboarding.country")}</label>
+        <label htmlFor={fid("country")} className="signup-field-label">
+          {t("onboarding.country")}
+        </label>
         <select
+          id={fid("country")}
           value={countryCode}
           onChange={(e) => setCountryCode(e.target.value)}
           className="signup-field-input"
+          aria-invalid={attempted && fieldInvalid.countryCode ? true : undefined}
+          aria-describedby={describe(
+            attempted && fieldInvalid.countryCode && hintId,
+            error && errorId,
+          )}
         >
           <option value="" className="bg-zinc-900">
             {t("signup.wizard.country_placeholder")}
@@ -377,8 +481,11 @@ export function OnboardingProfileForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="signup-field-label">{t("onboarding.bio")}</label>
+        <label htmlFor={fid("bio")} className="signup-field-label">
+          {t("onboarding.bio")}
+        </label>
         <textarea
+          id={fid("bio")}
           value={bio}
           onChange={(e) => setBio(e.target.value)}
           rows={2}
@@ -389,17 +496,19 @@ export function OnboardingProfileForm({
       </div>
 
       {!valid && !submitting && (
-        <p className="text-center text-[11px] text-zinc-500">
+        <p id={hintId} className="text-center text-[11px] text-zinc-500">
           {t("onboarding.validation.hint")}
         </p>
       )}
 
       {error && (
-        <InlineAlert
-          message={error}
-          dismissLabel={t("common.dismiss")}
-          onDismiss={() => setError(null)}
-        />
+        <div id={errorId}>
+          <InlineAlert
+            message={error}
+            dismissLabel={t("common.dismiss")}
+            onDismiss={() => setError(null)}
+          />
+        </div>
       )}
 
       <button

@@ -79,6 +79,46 @@ export async function cacheDelete(key: string): Promise<void> {
   }
 }
 
+/** Stale companion key written by `cachedWithStale`. */
+export function staleCompanionKey(key: string): string {
+  return `${key}:stale`;
+}
+
+/**
+ * Deletes every key matching a Redis MATCH pattern (SCAN + DEL).
+ * Used for user-scoped purge and home-bundle invalidation across legacy variants.
+ */
+export async function cacheDeleteByPattern(pattern: string): Promise<number> {
+  if (!isConfigured()) return 0;
+  let cursor = "0";
+  let deleted = 0;
+  try {
+    do {
+      const result = await redisCommand<[string, string[]]>([
+        "SCAN",
+        cursor,
+        "MATCH",
+        pattern,
+        "COUNT",
+        100,
+      ]);
+      if (!result) break;
+      const [nextCursor, keys] = result;
+      cursor = String(nextCursor);
+      if (keys.length > 0) {
+        const count = await redisCommand<number>(["DEL", ...keys]);
+        deleted += Number(count ?? keys.length);
+      }
+    } while (cursor !== "0");
+  } catch (error) {
+    logger.warn("cache pattern delete failed", {
+      pattern,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+  }
+  return deleted;
+}
+
 /**
  * Read-through helper: returns the cached value when present, otherwise runs
  * `producer`, caches the result, and returns it. Errors thrown by `producer`
@@ -128,7 +168,7 @@ export async function cachedWithStale<T>(
   staleTtlSeconds: number,
   producer: () => Promise<T>,
 ): Promise<T> {
-  const staleKey = `${key}:stale`;
+  const staleKey = staleCompanionKey(key);
 
   try {
     const fresh = await cached(key, ttlSeconds, producer);

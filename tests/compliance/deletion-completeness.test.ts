@@ -23,9 +23,10 @@ describe("deletion completeness", () => {
     expect(billing?.behavior).toBe("set_null");
   });
 
-  it("documents explicit storage and auth cleanup", () => {
+  it("documents explicit storage, cache, and auth cleanup", () => {
     const targets = EXPLICIT_CLEANUP.map((t) => t.table);
     expect(targets).toContain("storage:avatars");
+    expect(targets).toContain("cache:user");
     expect(targets).toContain("auth.users");
   });
 

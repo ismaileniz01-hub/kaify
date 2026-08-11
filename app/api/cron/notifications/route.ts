@@ -6,6 +6,12 @@ import {
   createNotificationsBatch,
   type CreateNotificationInput,
 } from "@/lib/services/notifications.service";
+import {
+  PRAISE_HOUR,
+  STREAK_RISK_HOURS,
+  WATER_HOURS,
+  WEEKLY_HOURS,
+} from "./constants";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -50,17 +56,13 @@ function isoWeek(date: Date): string {
   return `${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
-// Local-hour windows (inclusive). Hourly cron catches these; dedup dedupes.
-const STREAK_RISK_HOURS = new Set([19, 20, 21]);
-// Water: every 2 hours from 08:00 to 22:00 local time.
-const WATER_HOURS = new Set([8, 10, 12, 14, 16, 18, 20, 22]);
-const WEEKLY_HOURS = new Set([18, 19]);
-const PRAISE_HOUR = 12;
-
 /**
  * GET /api/cron/notifications — timezone-aware engagement notifications.
  * Intended to run hourly. Each notification uses a dedup key so repeated runs
  * within a window never create duplicates.
+ *
+ * Production hourly cadence is provided by pg_cron (Hobby-safe);
+ * the Vercel daily entry is a backup only. See ./constants.ts for hour windows.
  */
 export const GET = defineCronRoute("/api/cron/notifications", async () => {
   try {
