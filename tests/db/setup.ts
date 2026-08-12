@@ -220,57 +220,74 @@ export function assertDenied(ctx: Omit<AccessAssertionCtx, "expected" | "actual"
 }
 
 /**
- * Run SQL against the local DB via `supabase db query` (JSON) or `psql`.
+ * Run SQL against the local DB via `supabase db query`, docker exec psql, or host psql.
  * Used for information_schema / pg_proc inventory — not for app traffic.
  */
 export function runSqlJson<T = Record<string, unknown>>(sql: string): T[] {
   const env = loadDbEnv();
+  const wrapped = `select coalesce(json_agg(q), '[]'::json) from (${sql.replace(/;\s*$/, "")}) q`;
 
-  const queryAttempt = spawnSync(
-    "npx",
-    ["supabase", "db", "query", "--output", "json", sql],
-    { encoding: "utf8", shell: true, timeout: 60_000 },
-  );
-  if (queryAttempt.status === 0 && queryAttempt.stdout?.trim()) {
-    try {
-      const parsed = JSON.parse(queryAttempt.stdout.trim());
-      if (Array.isArray(parsed)) return parsed as T[];
-      if (parsed && Array.isArray(parsed.rows)) return parsed.rows as T[];
-      if (parsed && Array.isArray(parsed.result)) return parsed.result as T[];
-    } catch {
-      // fall through
-    }
-  }
+  const attempts: Array<{ cmd: string; args: string[] }> = [
+    { cmd: "npx", args: ["supabase", "db", "query", "--output", "json", wrapped] },
+    {
+      cmd: "docker",
+      args: [
+        "exec",
+        "-i",
+        "supabase_db_kaify-local",
+        "psql",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-t",
+        "-A",
+        "-c",
+        wrapped,
+      ],
+    },
+  ];
 
-  if (!env.dbUrl) {
-    throw new Error(
-      `SQL query failed and DATABASE_URL unavailable.\nstdout: ${queryAttempt.stdout}\nstderr: ${queryAttempt.stderr}`,
-    );
-  }
-
-  const psql = spawnSync(
-    "psql",
-    [env.dbUrl, "-v", "ON_ERROR_STOP=1", "-t", "-A", "-F", "\t", "-c", sql],
-    { encoding: "utf8", shell: true, timeout: 60_000 },
-  );
-  if (psql.status !== 0) {
-    throw new Error(
-      `psql failed (code ${psql.status}): ${psql.stderr || psql.stdout || queryAttempt.stderr}`,
-    );
-  }
-
-  // For SELECT ... AS json_agg / row_to_json callers should wrap themselves.
-  const lines = (psql.stdout || "").trim();
-  if (!lines) return [];
-  try {
-    const parsed = JSON.parse(lines);
-    return (Array.isArray(parsed) ? parsed : [parsed]) as T[];
-  } catch {
-    return lines.split(/\r?\n/).map((line) => {
-      const [a, b] = line.split("\t");
-      return { name: a, value: b } as T;
+  if (env.dbUrl) {
+    attempts.push({
+      cmd: "psql",
+      args: [env.dbUrl, "-v", "ON_ERROR_STOP=1", "-t", "-A", "-c", wrapped],
     });
   }
+
+  const errors: string[] = [];
+  for (const attempt of attempts) {
+    const result = spawnSync(attempt.cmd, attempt.args, {
+      encoding: "utf8",
+      shell: true,
+      timeout: 60_000,
+    });
+    const out = (result.stdout || "").trim();
+    if (result.status === 0 && out) {
+      try {
+        // supabase db query may wrap JSON; take last JSON array/object in output.
+        const jsonMatch = out.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
+        const parsed = JSON.parse(jsonMatch ? jsonMatch[0]! : out);
+        if (Array.isArray(parsed)) return parsed as T[];
+        if (parsed && Array.isArray(parsed.rows)) return parsed.rows as T[];
+        if (parsed && Array.isArray(parsed.result)) return parsed.result as T[];
+        // json_agg scalar as single value
+        if (parsed && typeof parsed === "object") return [parsed as T];
+      } catch (e) {
+        errors.push(
+          `${attempt.cmd}: parse failed (${(e as Error).message}) out=${out.slice(0, 200)}`,
+        );
+        continue;
+      }
+    }
+    errors.push(
+      `${attempt.cmd}: exit=${result.status} stderr=${(result.stderr || "").slice(0, 300)}`,
+    );
+  }
+
+  throw new Error(`SQL inventory failed:\n${errors.join("\n")}`);
 }
 
 /** List public base tables via information_schema. */

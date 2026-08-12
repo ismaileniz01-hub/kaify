@@ -96,7 +96,7 @@ Guards execute backfill **only when** legacy columns exist. Clean DB skips backf
 ## TEST-002
 
 ### Status
-**BLOCKED_RUNTIME_ENVIRONMENT** on the local agent (no Docker/WSL). Suite is complete and gated behind `KAIFY_DB_TESTS=1` / `vitest.db.config.ts`. Final VERIFIED requires CI `database` job green.
+**IN_PROGRESS (CI)** — full local Supabase stack + double reset + key export now succeed on Actions. Live `npm run test:db` ran and failed once (run cancelled by concurrency before durable diagnostics landed). Next CI run captures `/tmp/supabase-test-db.log` into redacted diagnostics.
 
 ### Suite layout
 | File | Role |
