@@ -129,28 +129,34 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          # Pin for reproducible CI (avoid latest drift).
-          version: 2.20.12
+          version: 2.113.0
 
       - name: Start local Supabase
         run: |
           set -euo pipefail
-          # Exclude heavy/unused services for faster, less flaky CI starts.
-          # Auth + DB + API + Storage remain (required for JWT RLS tests).
-          for attempt in 1 2 3; do
-            echo "supabase start attempt ${attempt}"
-            if supabase start \
-              --exclude studio,edge-runtime,logflare,vector,imgproxy; then
-              supabase status
-              exit 0
-            fi
-            echo "supabase start failed (attempt ${attempt})"
+          supabase --version
+          # Auth + DB + API required for JWT RLS tests. Exclude flaky/unused services.
+          set +e
+          supabase start \
+            --exclude studio,edge-runtime,logflare,vector \
+            --debug 2>&1 | tee /tmp/supabase-start.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            echo "==== supabase start failed (exit $status) ===="
+            tail -n 200 /tmp/supabase-start.log || true
             docker ps -a || true
-            supabase stop --no-backup || true
-            sleep 5
-          done
-          echo "supabase start failed after retries"
-          exit 1
+            exit "$status"
+          fi
+          supabase status
+
+      - name: Upload supabase start log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-start-log
+          path: /tmp/supabase-start.log
+          if-no-files-found: ignore
 
       # Deterministic reproducibility: reset → migrate → reset → migrate again.
       - name: Reset database from migrations (pass 1)
@@ -168,7 +174,6 @@ jobs:
           echo "DATABASE_URL=${DB_URL}" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SUPABASE_URL=${API_URL}" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}" >> "$GITHUB_ENV"
-          # Prove we are on the local stack before destructive/auth tests.
           case "${API_URL}" in
             http://127.0.0.1:*|http://localhost:*) ;;
             *) echo "Refusing non-local API_URL=${API_URL}"; exit 1 ;;
@@ -188,7 +193,7 @@ jobs:
 
       - name: Stop local Supabase
         if: always()
-        run: supabase stop --no-backup || true
+        run: supabase stop --no-backup || supabase stop || true
 
   audit:
     name: Supply-chain audit
