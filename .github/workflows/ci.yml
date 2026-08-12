@@ -248,13 +248,17 @@ jobs:
       - name: Run database authorization suite
         run: |
           set -euo pipefail
-          # NO_COLOR so failure annotations / check-run text stay readable.
+          set +e
           NO_COLOR=1 npm run test:db 2>&1 | tee /tmp/supabase-test-db.log
-          # Surface the first actionable failure in the Actions UI without opening logs.
-          if grep -E "FAIL|Error: seed |SQL inventory failed|AssertionError" /tmp/supabase-test-db.log >/tmp/supabase-test-db-fail-lines.txt; then
-            head -n 20 /tmp/supabase-test-db-fail-lines.txt | while IFS= read -r line; do
-              echo "::error::${line}"
-            done
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            grep -E "FAIL|Error: seed |SQL inventory failed|AssertionError" /tmp/supabase-test-db.log \
+              | head -n 20 \
+              | while IFS= read -r line; do
+                  echo "::error::${line}"
+                done || true
+            exit "$status"
           fi
         env:
           KAIFY_DB_TESTS: "1"
