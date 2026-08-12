@@ -188,6 +188,55 @@ jobs:
           fi
           supabase status
 
+      - name: Export local Supabase keys
+        run: |
+          set -euo pipefail
+          supabase status -o json | tee /tmp/supabase-status.json >/dev/null
+          node <<'NODE'
+          const fs = require("fs");
+          const raw = fs.readFileSync("/tmp/supabase-status.json", "utf8");
+          const status = JSON.parse(raw);
+          const pick = (...keys) => {
+            for (const k of keys) {
+              const v = status[k] ?? status[k.toLowerCase()] ?? status[k.toUpperCase()];
+              if (typeof v === "string" && v.length > 0) return v;
+            }
+            return "";
+          };
+          const apiUrl = pick("API_URL", "api_url", "SUPABASE_URL", "restUrl", "project_url");
+          const anon = pick("ANON_KEY", "anon_key", "SUPABASE_ANON_KEY");
+          const service = pick(
+            "SERVICE_ROLE_KEY",
+            "service_role_key",
+            "SUPABASE_SERVICE_ROLE_KEY",
+          );
+          const dbUrl = pick("DB_URL", "db_url", "DATABASE_URL", "DB_URL_POSTGRES");
+          if (!apiUrl || !anon || !service) {
+            console.error("Missing keys from supabase status JSON:");
+            console.error(Object.keys(status));
+            process.exit(1);
+          }
+          if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:|\/|$)/i.test(apiUrl)) {
+            console.error("Refusing non-local API URL:", apiUrl);
+            process.exit(1);
+          }
+          const lines = [
+            `SUPABASE_URL=${apiUrl}`,
+            `SUPABASE_ANON_KEY=${anon}`,
+            `SUPABASE_SERVICE_ROLE_KEY=${service}`,
+            `NEXT_PUBLIC_SUPABASE_URL=${apiUrl}`,
+            `NEXT_PUBLIC_SUPABASE_ANON_KEY=${anon}`,
+          ];
+          if (dbUrl) lines.push(`DATABASE_URL=${dbUrl}`);
+          fs.appendFileSync(process.env.GITHUB_ENV, lines.join("\n") + "\n");
+          console.log("Exported local Supabase env (URL=", apiUrl, ")");
+          NODE
+
+      - name: Run database authorization suite
+        run: npm run test:db
+        env:
+          KAIFY_DB_TESTS: "1"
+
       - name: Commit failure diagnostics to branch
         if: failure()
         run: |
@@ -201,11 +250,11 @@ jobs:
             echo
             docker version || true
             echo
-            for f in /tmp/supabase-db-start.log /tmp/supabase-db-reset-1.log /tmp/supabase-db-reset-2.log /tmp/supabase-start.log; do
+            for f in /tmp/supabase-db-start.log /tmp/supabase-db-reset-1.log /tmp/supabase-db-reset-2.log /tmp/supabase-start.log /tmp/supabase-status.json; do
               if [ -f "$f" ]; then
                 echo "## $(basename "$f")"
                 echo '```'
-                tail -n 400 "$f"
+                tail -n 800 "$f"
                 echo '```'
                 echo
               fi
@@ -214,31 +263,16 @@ jobs:
             echo '```'
             docker ps -a || true
             echo '```'
+            echo "## supabase status"
+            echo '```'
+            supabase status || true
+            echo '```'
           } > audit/remediation/_CI_DB_FAILURE_LOG.md
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add audit/remediation/_CI_DB_FAILURE_LOG.md
           git commit -m "ci: capture Wave 2 DB failure diagnostics [skip ci]" || exit 0
           git push origin "HEAD:${GITHUB_REF_NAME}" || true
-
-      - name: Export local Supabase keys
-        run: |
-          eval "$(supabase status -o env)"
-          echo "SUPABASE_URL=${API_URL}" >> "$GITHUB_ENV"
-          echo "SUPABASE_ANON_KEY=${ANON_KEY}" >> "$GITHUB_ENV"
-          echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}" >> "$GITHUB_ENV"
-          echo "DATABASE_URL=${DB_URL}" >> "$GITHUB_ENV"
-          echo "NEXT_PUBLIC_SUPABASE_URL=${API_URL}" >> "$GITHUB_ENV"
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}" >> "$GITHUB_ENV"
-          case "${API_URL}" in
-            http://127.0.0.1:*|http://localhost:*) ;;
-            *) echo "Refusing non-local API_URL=${API_URL}"; exit 1 ;;
-          esac
-
-      - name: Run database authorization suite
-        run: npm run test:db
-        env:
-          KAIFY_DB_TESTS: "1"
 
       - name: Upload supabase logs
         if: failure()
@@ -250,6 +284,7 @@ jobs:
             /tmp/supabase-db-reset-1.log
             /tmp/supabase-db-reset-2.log
             /tmp/supabase-start.log
+            /tmp/supabase-status.json
           if-no-files-found: ignore
 
       - name: Dump Supabase diagnostics on failure
