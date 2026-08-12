@@ -62,12 +62,12 @@ describe.skipIf(!enabled)("rpc-authorization (live)", () => {
     );
     const count = live.length;
     console.log(
-      `SECURITY DEFINER count: live=${count} audit_baseline=${AUDIT_SECURITY_DEFINER_COUNT} delta=${count - AUDIT_SECURITY_DEFINER_COUNT}`,
+      `SECURITY DEFINER count: live=${count} audit_baseline=${AUDIT_SECURITY_DEFINER_COUNT} delta=${count - AUDIT_SECURITY_DEFINER_COUNT} registry=${RPC_REGISTRY.length}`,
     );
     expect(count).toBeGreaterThan(0);
-    expect(RPC_REGISTRY.length).toBe(count);
-    // Soft signal: large unexplained drift fails.
+    // Completeness test already enforces name parity; keep a soft drift band vs audit.
     expect(Math.abs(count - AUDIT_SECURITY_DEFINER_COUNT)).toBeLessThanOrEqual(10);
+    expect(RPC_REGISTRY.length).toBe(count);
   });
 
   describe("service_only RPCs", () => {

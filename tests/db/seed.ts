@@ -27,6 +27,15 @@ export async function seedUserOwnedRows(
     const uid = u.user.id;
     const label = u.label;
 
+    // settings (not created by handle_new_user)
+    await must(
+      admin.from("user_settings").upsert({
+        user_id: uid,
+        sound_effects: true,
+      }),
+      `user_settings ${label}`,
+    );
+
     // usage
     await must(
       admin.from("user_usage_counters").upsert({ user_id: uid }),
