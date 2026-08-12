@@ -107,6 +107,10 @@ jobs:
     name: Supabase DB · RLS · RPC
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
+      checks: write
+      actions: read
 
     env:
       NEXT_TELEMETRY_DISABLED: "1"
@@ -131,12 +135,27 @@ jobs:
         with:
           version: 2.113.0
 
+      - name: Docker preflight
+        run: |
+          set -euo pipefail
+          docker version
+          docker info
+          df -h
+          free -h || true
+
       # Postgres-only first — proves migration reproducibility without Studio/GoTrue health flakiness.
       - name: Start local Postgres (db only)
         run: |
           set -euo pipefail
           supabase --version
+          set +e
           supabase db start --debug 2>&1 | tee /tmp/supabase-db-start.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            echo "db start failed with $status"
+            exit "$status"
+          fi
           supabase status || true
 
       # Deterministic reproducibility: reset → migrate → reset → migrate again.
@@ -169,37 +188,38 @@ jobs:
           fi
           supabase status
 
-      - name: Publish diagnostics to check run
+      - name: Commit failure diagnostics to branch
         if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const parts = [];
-            for (const p of [
-              '/tmp/supabase-db-start.log',
-              '/tmp/supabase-db-reset-1.log',
-              '/tmp/supabase-db-reset-2.log',
-              '/tmp/supabase-start.log',
-            ]) {
-              if (fs.existsSync(p)) {
-                parts.push('## ' + p + '\n```\n' + fs.readFileSync(p, 'utf8').slice(-12000) + '\n```');
-              }
-            }
-            const text = parts.join('\n\n').slice(0, 60000) || 'No log files captured.';
-            await github.rest.checks.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: 'wave2-db-diagnostics',
-              head_sha: context.sha,
-              status: 'completed',
-              conclusion: 'failure',
-              output: {
-                title: 'Wave 2 database CI diagnostics',
-                summary: 'Captured supabase db/start logs (truncated).',
-                text,
-              },
-            });
+        run: |
+          set -euo pipefail
+          mkdir -p audit/remediation
+          {
+            echo "# CI DB failure ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+            echo
+            echo "sha: ${GITHUB_SHA}"
+            echo "run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo
+            docker version || true
+            echo
+            for f in /tmp/supabase-db-start.log /tmp/supabase-db-reset-1.log /tmp/supabase-db-reset-2.log /tmp/supabase-start.log; do
+              if [ -f "$f" ]; then
+                echo "## $(basename "$f")"
+                echo '```'
+                tail -n 400 "$f"
+                echo '```'
+                echo
+              fi
+            done
+            echo "## docker ps -a"
+            echo '```'
+            docker ps -a || true
+            echo '```'
+          } > audit/remediation/_CI_DB_FAILURE_LOG.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit/remediation/_CI_DB_FAILURE_LOG.md
+          git commit -m "ci: capture Wave 2 DB failure diagnostics [skip ci]" || exit 0
+          git push origin "HEAD:${GITHUB_REF_NAME}" || true
 
       - name: Export local Supabase keys
         run: |
