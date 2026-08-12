@@ -8,9 +8,16 @@ returns void
 language plpgsql
 as $$
 begin
-  if to_regprocedure(('public.' || p_identity)::cstring) is not null then
-    execute format('alter function public.%s set search_path = %L', p_identity, '');
-  end if;
+  execute format('alter function public.%s set search_path = %L', p_identity, '');
+exception
+  when undefined_function then
+    null;
+  when others then
+    if sqlstate = '42883' then
+      null; -- function does not exist
+    else
+      raise;
+    end if;
 end;
 $$;
 
@@ -22,13 +29,20 @@ returns void
 language plpgsql
 as $$
 begin
-  if to_regprocedure(('public.' || p_identity)::cstring) is not null then
-    execute format(
-      'revoke execute on function public.%s from %s',
-      p_identity,
-      p_roles
-    );
-  end if;
+  execute format(
+    'revoke execute on function public.%s from %s',
+    p_identity,
+    p_roles
+  );
+exception
+  when undefined_function then
+    null;
+  when others then
+    if sqlstate = '42883' then
+      null;
+    else
+      raise;
+    end if;
 end;
 $$;
 
