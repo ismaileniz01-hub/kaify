@@ -245,6 +245,12 @@ jobs:
           })().catch((e) => { console.error(e); process.exit(1); });
           NODE
 
+      - name: Run database authorization suite
+        run: |
+          set -euo pipefail
+          npm run test:db 2>&1 | tee /tmp/supabase-test-db.log
+        env:
+          KAIFY_DB_TESTS: "1"
 
       - name: Publish test:db failure to check run
         if: failure()
