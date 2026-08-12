@@ -216,7 +216,9 @@ jobs:
           NODE
 
       - name: Run database authorization suite
-        run: npm run test:db
+        run: |
+          set -euo pipefail
+          npm run test:db 2>&1 | tee /tmp/supabase-test-db.log
         env:
           KAIFY_DB_TESTS: "1"
 
@@ -229,7 +231,7 @@ jobs:
             echo "# CI DB failure ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
             echo "sha: ${GITHUB_SHA}"
             echo "run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-            for f in /tmp/supabase-start.log /tmp/supabase-db-reset-1.log /tmp/supabase-db-reset-2.log /tmp/supabase-status.env /tmp/supabase-status.json /tmp/docker-ps.txt; do
+            for f in /tmp/supabase-start.log /tmp/supabase-db-reset-1.log /tmp/supabase-db-reset-2.log /tmp/supabase-status.env /tmp/supabase-status.json /tmp/docker-ps.txt /tmp/supabase-test-db.log; do
               if [ -f "$f" ]; then
                 echo "## $(basename "$f")"
                 echo '```'
@@ -266,6 +268,7 @@ jobs:
             /tmp/supabase-db-reset-2.log
             /tmp/supabase-status.env
             /tmp/supabase-status.json
+            /tmp/supabase-test-db.log
           if-no-files-found: ignore
 
       - name: Stop local Supabase
