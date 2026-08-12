@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 export default defineConfig({
   test: {
     environment: "node",
+    // Live RLS/RPC suites skip unless KAIFY_DB_TESTS=1 (see vitest.db.config.ts).
+    // Static migration-reproducibility checks in tests/db always run.
     include: ["tests/**/*.test.ts"],
     globals: true,
     coverage: {

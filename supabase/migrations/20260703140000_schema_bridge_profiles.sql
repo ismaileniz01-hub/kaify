@@ -1,7 +1,10 @@
 -- ============================================================================
 -- Schema bridge: align legacy production profiles with codebase expectations
 -- Adds display_name, tier, country_code, avatar_url, height_cm, etc.
--- Backfills from legacy columns (full_name, subscription_tier, height, weight).
+-- Backfills from legacy columns (full_name, subscription_tier, height, weight,
+-- experience) WHEN those columns exist (production bridge). On a clean database
+-- built only from this repo's migrations those legacy columns are absent, so
+-- the backfill is skipped via information_schema guards.
 -- Also creates missing leaderboard RPCs.
 -- ============================================================================
 
@@ -17,19 +20,85 @@ alter table public.profiles add column if not exists tier_started_at timestamptz
 alter table public.profiles add column if not exists tier_expires_at timestamptz;
 alter table public.profiles add column if not exists referred_by_code text;
 
--- 2. Backfill from legacy column names
-update public.profiles
-set
-  display_name = coalesce(
-    nullif(trim(display_name), ''),
-    nullif(trim(full_name), ''),
-    'User'
-  ),
-  tier = coalesce(tier, subscription_tier, 'essential'::public.subscription_tier),
-  height_cm = coalesce(height_cm, height::smallint),
-  weight_kg = coalesce(weight_kg, weight::numeric),
-  experience_level = coalesce(experience_level, experience),
-  country_code = coalesce(country_code, 'TR'::char(2));
+-- 2. Backfill from legacy column names (production-only columns)
+-- PostgreSQL validates top-level UPDATE column refs at parse time, so this
+-- must be dynamic SQL behind information_schema checks.
+do $$
+declare
+  has_full_name boolean;
+  has_subscription_tier boolean;
+  has_height boolean;
+  has_weight boolean;
+  has_experience boolean;
+  set_parts text[] := array[]::text[];
+  sql text;
+begin
+  select exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profiles' and column_name = 'full_name'
+  ) into has_full_name;
+  select exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profiles' and column_name = 'subscription_tier'
+  ) into has_subscription_tier;
+  select exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profiles' and column_name = 'height'
+  ) into has_height;
+  select exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profiles' and column_name = 'weight'
+  ) into has_weight;
+  select exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profiles' and column_name = 'experience'
+  ) into has_experience;
+
+  if has_full_name then
+    set_parts := array_append(
+      set_parts,
+      $s$display_name = coalesce(nullif(trim(display_name), ''), nullif(trim(full_name), ''), 'User')$s$
+    );
+  else
+    set_parts := array_append(
+      set_parts,
+      $s$display_name = coalesce(nullif(trim(display_name), ''), 'User')$s$
+    );
+  end if;
+
+  if has_subscription_tier then
+    set_parts := array_append(
+      set_parts,
+      $s$tier = coalesce(tier, subscription_tier, 'essential'::public.subscription_tier)$s$
+    );
+  else
+    set_parts := array_append(
+      set_parts,
+      $s$tier = coalesce(tier, 'essential'::public.subscription_tier)$s$
+    );
+  end if;
+
+  if has_height then
+    set_parts := array_append(set_parts, $s$height_cm = coalesce(height_cm, height::smallint)$s$);
+  end if;
+  if has_weight then
+    set_parts := array_append(set_parts, $s$weight_kg = coalesce(weight_kg, weight::numeric)$s$);
+  end if;
+  if has_experience then
+    set_parts := array_append(
+      set_parts,
+      $s$experience_level = coalesce(experience_level, experience)$s$
+    );
+  end if;
+
+  set_parts := array_append(
+    set_parts,
+    $s$country_code = coalesce(country_code, 'TR'::char(2))$s$
+  );
+
+  sql := 'update public.profiles set ' || array_to_string(set_parts, ', ');
+  execute sql;
+end $$;
 
 -- 3. Enforce defaults / NOT NULL where safe
 update public.profiles set display_name = '' where display_name is null;
@@ -40,16 +109,38 @@ update public.profiles set country_code = 'TR' where country_code is null;
 alter table public.profiles alter column country_code set default 'TR';
 alter table public.profiles alter column country_code set not null;
 
-update public.profiles
-set tier = coalesce(tier, subscription_tier, 'essential'::public.subscription_tier)
-where tier is null;
+do $$
+declare
+  has_subscription_tier boolean;
+begin
+  select exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profiles' and column_name = 'subscription_tier'
+  ) into has_subscription_tier;
+
+  if has_subscription_tier then
+    execute $s$
+      update public.profiles
+      set tier = coalesce(tier, subscription_tier, 'essential'::public.subscription_tier)
+      where tier is null
+    $s$;
+  else
+    update public.profiles
+    set tier = coalesce(tier, 'essential'::public.subscription_tier)
+    where tier is null;
+  end if;
+end $$;
+
 alter table public.profiles alter column tier set default 'essential';
 alter table public.profiles alter column tier set not null;
 
 create index if not exists idx_profiles_country on public.profiles (country_code);
 create index if not exists idx_profiles_tier on public.profiles (tier);
 
--- 4. Leaderboard RPCs (use coalesce for display_name safety)
+-- 4. Leaderboard RPCs
+-- display_name is canonical; legacy full_name is only used during the guarded
+-- backfill above (when present). Referencing p.full_name here would fail on a
+-- clean database where that column was never created.
 create or replace function public.get_global_leaderboard(
   p_limit  integer default 50,
   p_offset integer default 0
@@ -73,7 +164,7 @@ as $$
       order by s.current_streak desc, s.longest_streak desc, p.created_at asc
     ) as rank,
     p.id,
-    coalesce(nullif(trim(p.display_name), ''), nullif(trim(p.full_name), ''), 'User'),
+    coalesce(nullif(trim(p.display_name), ''), 'User'),
     p.avatar_url,
     p.country_code::text,
     s.current_streak,

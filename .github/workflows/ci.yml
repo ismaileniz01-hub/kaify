@@ -102,6 +102,57 @@ jobs:
           K6_VUS: "5"
           K6_DURATION: "10s"
 
+  database:
+    name: Supabase DB · RLS · RPC
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Never target a linked remote / production project from this job.
+      SUPABASE_INTERNAL_NO_LINKED: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase
+        run: supabase start
+
+      - name: Reset database from migrations
+        run: supabase db reset --yes
+
+      - name: Export local Supabase keys
+        run: |
+          eval "$(supabase status -o env)"
+          echo "SUPABASE_URL=${API_URL}" >> "$GITHUB_ENV"
+          echo "SUPABASE_ANON_KEY=${ANON_KEY}" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}" >> "$GITHUB_ENV"
+          echo "DATABASE_URL=${DB_URL}" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_URL=${API_URL}" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}" >> "$GITHUB_ENV"
+
+      - name: Run database authorization suite
+        run: npm run test:db
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop
+
   audit:
     name: Supply-chain audit
     runs-on: ubuntu-latest

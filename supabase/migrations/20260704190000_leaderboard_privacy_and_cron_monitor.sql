@@ -86,7 +86,7 @@ as $$
       order by s.current_streak desc, s.longest_streak desc, p.created_at asc
     ) as rank,
     p.id,
-    coalesce(nullif(trim(p.display_name), ''), nullif(trim(p.full_name), ''), 'User'),
+    coalesce(nullif(trim(p.display_name), ''), 'User'),
     p.avatar_url,
     p.country_code::text,
     s.current_streak,
