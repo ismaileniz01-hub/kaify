@@ -40,7 +40,9 @@ describe.skipIf(!enabled)("rpc-authorization (live)", () => {
   }, 60_000);
 
   it("registry covers every SECURITY DEFINER function (completeness)", () => {
-    const live = listSecurityDefinerFunctions().sort();
+    const live = listSecurityDefinerFunctions()
+      .filter((n) => !n.startsWith("__kaify_"))
+      .sort();
     const registered = rpcNames();
     const missing = live.filter((n) => !registered.includes(n));
     const extra = registered.filter((n) => !live.includes(n));
@@ -55,7 +57,9 @@ describe.skipIf(!enabled)("rpc-authorization (live)", () => {
   });
 
   it(`re-measures SECURITY DEFINER count vs audit baseline (${AUDIT_SECURITY_DEFINER_COUNT})`, () => {
-    const live = listSecurityDefinerFunctions();
+    const live = listSecurityDefinerFunctions().filter(
+      (n) => !n.startsWith("__kaify_"),
+    );
     const count = live.length;
     console.log(
       `SECURITY DEFINER count: live=${count} audit_baseline=${AUDIT_SECURITY_DEFINER_COUNT} delta=${count - AUDIT_SECURITY_DEFINER_COUNT}`,

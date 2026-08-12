@@ -15,7 +15,11 @@ for (const f of readdirSync(dir).filter((x) => x.endsWith(".sql")).sort()) {
   const re =
     /create(?: or replace)? function (?:public\.)?([a-z0-9_]+)\s*\([^)]*\)[\s\S]*?security definer/gi;
   let m;
-  while ((m = re.exec(t))) funcs.add(m[1]);
+  while ((m = re.exec(t))) {
+    // Ignore ephemeral migration helpers (created then dropped in the same file).
+    if (m[1].startsWith("__kaify_")) continue;
+    funcs.add(m[1]);
+  }
 }
 
 const schemaReg = readFileSync("tests/db/schema-registry.ts", "utf8");
