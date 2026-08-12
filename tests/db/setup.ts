@@ -3,6 +3,9 @@
  * Skip when KAIFY_DB_TESTS !== "1" (handled by individual suites).
  */
 import { spawnSync } from "node:child_process";
+import { unlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 
 export type DbEnv = {
@@ -220,74 +223,125 @@ export function assertDenied(ctx: Omit<AccessAssertionCtx, "expected" | "actual"
 }
 
 /**
- * Run SQL against the local DB via `supabase db query`, docker exec psql, or host psql.
+ * Run SQL against the local DB via docker exec psql, host psql, or supabase CLI.
  * Used for information_schema / pg_proc inventory — not for app traffic.
  */
 export function runSqlJson<T = Record<string, unknown>>(sql: string): T[] {
   const env = loadDbEnv();
   const wrapped = `select coalesce(json_agg(q), '[]'::json) from (${sql.replace(/;\s*$/, "")}) q`;
 
-  const attempts: Array<{ cmd: string; args: string[] }> = [
-    { cmd: "npx", args: ["supabase", "db", "query", "--output", "json", wrapped] },
-    {
-      cmd: "docker",
-      args: [
-        "exec",
-        "-i",
-        "supabase_db_kaify-local",
-        "psql",
-        "-U",
-        "postgres",
-        "-d",
-        "postgres",
-        "-v",
-        "ON_ERROR_STOP=1",
-        "-t",
-        "-A",
-        "-c",
-        wrapped,
-      ],
-    },
-  ];
-
-  if (env.dbUrl) {
-    attempts.push({
-      cmd: "psql",
-      args: [env.dbUrl, "-v", "ON_ERROR_STOP=1", "-t", "-A", "-c", wrapped],
-    });
-  }
+  // shell:false is required — with shell:true, "(" in SQL is a /bin/sh syntax error.
+  // Prefer a temp SQL file + psql -f so argv never carries parentheses.
+  const tmpSql = join(tmpdir(), `kaify-db-inv-${process.pid}-${Date.now()}.sql`);
+  writeFileSync(tmpSql, `${wrapped};\n`, "utf8");
 
   const errors: string[] = [];
-  for (const attempt of attempts) {
-    const result = spawnSync(attempt.cmd, attempt.args, {
-      encoding: "utf8",
-      shell: true,
-      timeout: 60_000,
-    });
-    const out = (result.stdout || "").trim();
-    if (result.status === 0 && out) {
-      try {
-        // supabase db query may wrap JSON; take last JSON array/object in output.
-        const jsonMatch = out.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
-        const parsed = JSON.parse(jsonMatch ? jsonMatch[0]! : out);
-        if (Array.isArray(parsed)) return parsed as T[];
-        if (parsed && Array.isArray(parsed.rows)) return parsed.rows as T[];
-        if (parsed && Array.isArray(parsed.result)) return parsed.result as T[];
-        // json_agg scalar as single value
-        if (parsed && typeof parsed === "object") return [parsed as T];
-      } catch (e) {
-        errors.push(
-          `${attempt.cmd}: parse failed (${(e as Error).message}) out=${out.slice(0, 200)}`,
+  try {
+    // Path A: docker cp + psql -f (most reliable on CI after supabase start)
+    {
+      const cp = spawnSync("docker", ["cp", tmpSql, "supabase_db_kaify-local:/tmp/kaify-inv.sql"], {
+        encoding: "utf8",
+        shell: false,
+        timeout: 30_000,
+      });
+      if (cp.status === 0) {
+        const q = spawnSync(
+          "docker",
+          [
+            "exec",
+            "supabase_db_kaify-local",
+            "psql",
+            "-U",
+            "postgres",
+            "-d",
+            "postgres",
+            "-v",
+            "ON_ERROR_STOP=1",
+            "-t",
+            "-A",
+            "-f",
+            "/tmp/kaify-inv.sql",
+          ],
+          { encoding: "utf8", shell: false, timeout: 60_000 },
         );
-        continue;
+        const out = (q.stdout || "").trim();
+        if (q.status === 0 && out) {
+          const parsed = parseJsonInventory(out);
+          if (parsed) return parsed as T[];
+          errors.push(`docker-psql: parse failed out=${out.slice(0, 200)}`);
+        } else {
+          errors.push(`docker-psql: exit=${q.status} stderr=${(q.stderr || "").slice(0, 300)}`);
+        }
+      } else {
+        errors.push(`docker-cp: exit=${cp.status} stderr=${(cp.stderr || "").slice(0, 300)}`);
       }
     }
-    errors.push(
-      `${attempt.cmd}: exit=${result.status} stderr=${(result.stderr || "").slice(0, 300)}`,
-    );
+
+    // Path B: host psql -f
+    if (env.dbUrl) {
+      const q = spawnSync(
+        "psql",
+        [env.dbUrl, "-v", "ON_ERROR_STOP=1", "-t", "-A", "-f", tmpSql],
+        { encoding: "utf8", shell: false, timeout: 60_000 },
+      );
+      const out = (q.stdout || "").trim();
+      if (q.status === 0 && out) {
+        const parsed = parseJsonInventory(out);
+        if (parsed) return parsed as T[];
+        errors.push(`psql: parse failed out=${out.slice(0, 200)}`);
+      } else {
+        errors.push(`psql: exit=${q.status} stderr=${(q.stderr || "").slice(0, 300)}`);
+      }
+    }
+
+    // Path C: supabase CLI with argv (no shell) — last resort
+    {
+      const npx = process.platform === "win32" ? "npx.cmd" : "npx";
+      const q = spawnSync(npx, ["supabase", "db", "query", "--output", "json", wrapped], {
+        encoding: "utf8",
+        shell: false,
+        timeout: 60_000,
+      });
+      const out = (q.stdout || "").trim();
+      if (q.status === 0 && out) {
+        const parsed = parseJsonInventory(out);
+        if (parsed) return parsed as T[];
+        errors.push(`npx: parse failed out=${out.slice(0, 200)}`);
+      } else {
+        errors.push(`npx: exit=${q.status} stderr=${(q.stderr || "").slice(0, 300)}`);
+      }
+    }
+  } finally {
+    try {
+      unlinkSync(tmpSql);
+    } catch {
+      /* ignore */
+    }
   }
 
   throw new Error(`SQL inventory failed:\n${errors.join("\n")}`);
+}
+
+function parseJsonInventory(out: string): unknown[] | null {
+  const trimmed = out.trim();
+  // psql -t -A often prints a bare JSON array from json_agg
+  try {
+    const bare = JSON.parse(trimmed);
+    if (Array.isArray(bare)) return bare;
+  } catch {
+    /* fallthrough */
+  }
+  const jsonMatch = trimmed.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
+  if (!jsonMatch) return null;
+  try {
+    const parsed = JSON.parse(jsonMatch[0]!);
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && Array.isArray(parsed.rows)) return parsed.rows;
+    if (parsed && Array.isArray(parsed.result)) return parsed.result;
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /** List public base tables via information_schema. */

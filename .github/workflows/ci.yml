@@ -248,9 +248,18 @@ jobs:
       - name: Run database authorization suite
         run: |
           set -euo pipefail
-          npm run test:db 2>&1 | tee /tmp/supabase-test-db.log
+          # NO_COLOR so failure annotations / check-run text stay readable.
+          NO_COLOR=1 npm run test:db 2>&1 | tee /tmp/supabase-test-db.log
+          # Surface the first actionable failure in the Actions UI without opening logs.
+          if grep -E "FAIL|Error: seed |SQL inventory failed|AssertionError" /tmp/supabase-test-db.log >/tmp/supabase-test-db-fail-lines.txt; then
+            head -n 20 /tmp/supabase-test-db-fail-lines.txt | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
+          fi
         env:
           KAIFY_DB_TESTS: "1"
+          NO_COLOR: "1"
+          FORCE_COLOR: "0"
 
       - name: Publish test:db failure to check run
         if: failure()
@@ -261,13 +270,13 @@ jobs:
             const path = '/tmp/supabase-test-db.log';
             let body = '(no /tmp/supabase-test-db.log)';
             if (fs.existsSync(path)) {
-              body = fs.readFileSync(path, 'utf8');
-              // Redact JWTs / connection strings before publishing.
-              body = body
+              body = fs.readFileSync(path, 'utf8')
+                .replace(/\u001b\[[0-9;]*m/g, '')
                 .replace(/postgresql:\/\/[^@\s]+@/g, 'postgresql://***:***@')
                 .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '***JWT***');
               if (body.length > 60000) body = body.slice(-60000);
             }
+            const failHint = (body.match(/Error: seed [^\n]+|SQL inventory failed:[^\n]+|FAIL[^\n]+/) || ['(see text)'])[0];
             await github.rest.checks.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -276,7 +285,7 @@ jobs:
               status: 'completed',
               conclusion: 'failure',
               output: {
-                title: 'npm run test:db failure log',
+                title: failHint.slice(0, 80),
                 summary: 'Sanitized Vitest DB suite output (truncated).',
                 text: '```\n' + body + '\n```',
               },

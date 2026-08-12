@@ -320,7 +320,12 @@ type SbResult = { error: { message: string } | null; data?: unknown };
 
 async function must(resultPromise: PromiseLike<SbResult>, label: string): Promise<void> {
   const { error } = await resultPromise;
-  if (error) throw new Error(`seed ${label}: ${error.message}`);
+  if (error) {
+    const detail = [error.message, (error as { details?: string }).details, (error as { hint?: string }).hint, (error as { code?: string }).code]
+      .filter(Boolean)
+      .join(" | ");
+    throw new Error(`seed ${label}: ${detail}`);
+  }
 }
 
 async function mustData<T extends Record<string, unknown>>(
