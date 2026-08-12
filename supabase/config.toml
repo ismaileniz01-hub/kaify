@@ -1,6 +1,6 @@
 # Kaify local / CI Supabase stack.
 # Never point db reset at a linked remote project from automation.
-# Defaults match upstream `supabase init` ports + JWT placeholder.
+# Slimmed for CI reliability: auth + db + api + storage only.
 
 project_id = "kaify-local"
 
@@ -19,13 +19,20 @@ major_version = 15
 [db.pooler]
 enabled = false
 
-[realtime]
+[db.migrations]
 enabled = true
+schema_paths = []
+
+[db.seed]
+enabled = false
+
+[realtime]
+# Not required for RLS/RPC authorization tests.
+enabled = false
 
 [studio]
-enabled = true
-port = 54323
-api_url = "http://127.0.0.1"
+# Disable Studio in CI to avoid flaky health checks / image pulls.
+enabled = false
 
 [inbucket]
 enabled = true
@@ -54,7 +61,8 @@ double_confirm_changes = true
 enable_signup = false
 
 [edge_runtime]
-enabled = true
+# No edge functions under test in Wave 2.
+enabled = false
 
 [analytics]
 enabled = false

@@ -129,10 +129,28 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pin for reproducible CI (avoid latest drift).
+          version: 2.20.12
 
       - name: Start local Supabase
-        run: supabase start
+        run: |
+          set -euo pipefail
+          # Exclude heavy/unused services for faster, less flaky CI starts.
+          # Auth + DB + API + Storage remain (required for JWT RLS tests).
+          for attempt in 1 2 3; do
+            echo "supabase start attempt ${attempt}"
+            if supabase start \
+              --exclude studio,edge-runtime,logflare,vector,imgproxy; then
+              supabase status
+              exit 0
+            fi
+            echo "supabase start failed (attempt ${attempt})"
+            docker ps -a || true
+            supabase stop --no-backup || true
+            sleep 5
+          done
+          echo "supabase start failed after retries"
+          exit 1
 
       # Deterministic reproducibility: reset → migrate → reset → migrate again.
       - name: Reset database from migrations (pass 1)
@@ -161,9 +179,16 @@ jobs:
         env:
           KAIFY_DB_TESTS: "1"
 
+      - name: Dump Supabase diagnostics on failure
+        if: failure()
+        run: |
+          supabase status || true
+          docker ps -a || true
+          docker logs supabase_db_kaify-local 2>&1 | tail -n 200 || true
+
       - name: Stop local Supabase
         if: always()
-        run: supabase stop
+        run: supabase stop --no-backup || true
 
   audit:
     name: Supply-chain audit
