@@ -1,7 +1,7 @@
-# CI DB failure (2026-08-12T14:14:49Z)
+# CI DB failure (2026-08-12T14:34:17Z)
 
-sha: 4254c3fa92f0e89e06efef14cafa003a8702adc8
-run: https://github.com/ismaileniz01-hub/kaify/actions/runs/31605487846
+sha: d6aa3f950a1ec940ff5705cf9f64b80a9e324ee5
+run: https://github.com/ismaileniz01-hub/kaify/actions/runs/31607251342
 
 Client: Docker Engine - Community
  Version:           28.0.4
@@ -22,100 +22,116 @@ Server: Docker Engine - Community
   OS/Arch:          linux/amd64
   Experimental:     false
  containerd:
-  Version:          v2.2.6
-  GitCommit:        11ce9d5f3c68c941867e82890e93e815c1304f1b
+  Version:          v2.3.3
+  GitCommit:        aad11006b869517fcd3009450b6f82da282e1a9b
  runc:
-  Version:          1.3.6
-  GitCommit:        v1.3.6-0-g491b69ba
+  Version:          1.4.3
+  GitCommit:        v1.4.3-0-gbb14dab
  docker-init:
   Version:          0.19.0
   GitCommit:        de40ad0
 
 ## supabase-db-start.log
 ```
+NotFound: FileSystem.readFile (/home/runner/.supabase/profile)
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Starting database...
+15.8.1.085: Pulling from supabase/postgres
+13b7e930469f: Pulling fs layer
+fff1a581b40e: Pulling fs layer
+b87ddba4145f: Pulling fs layer
+14c7c40f264e: Pulling fs layer
+7e1afeac9515: Pulling fs layer
+7dd51689e5de: Pulling fs layer
+4f4fb700ef54: Pulling fs layer
+daa7c753cf32: Pulling fs layer
+c61d94d80b8d: Pulling fs layer
 73d5273f17e0: Pulling fs layer
 5d4d12d40ee2: Pulling fs layer
 bec4cd2d8288: Pulling fs layer
 95553dc9aee4: Pulling fs layer
 cef3e4219e2d: Pulling fs layer
-14c7c40f264e: Waiting
-daa7c753cf32: Waiting
-7e1afeac9515: Waiting
-7dd51689e5de: Waiting
-c61d94d80b8d: Waiting
-73d5273f17e0: Waiting
-4f4fb700ef54: Waiting
-5d4d12d40ee2: Waiting
-95553dc9aee4: Waiting
 83a5975346e8: Pulling fs layer
 848b1c5912e5: Pulling fs layer
 f2c897740b67: Pulling fs layer
 0f819c04149e: Pulling fs layer
 4e5b5a409361: Pulling fs layer
 addf9dc09fca: Pulling fs layer
-cef3e4219e2d: Waiting
-0f819c04149e: Waiting
-83a5975346e8: Waiting
-f2c897740b67: Waiting
-848b1c5912e5: Waiting
-4e5b5a409361: Waiting
-addf9dc09fca: Waiting
 1e3ae6415742: Pulling fs layer
 2d3eb0cf3634: Pulling fs layer
 cb6a11cda9f8: Pulling fs layer
 5904fe0a8541: Pulling fs layer
 484e22708485: Pulling fs layer
 5bd4dd8b80e3: Pulling fs layer
-1e3ae6415742: Waiting
-5904fe0a8541: Waiting
-484e22708485: Waiting
 a00ab32c0cad: Pulling fs layer
 7df60113bd5f: Pulling fs layer
 1f87a4556ee4: Pulling fs layer
 586e7e55dc38: Pulling fs layer
 58c2f4245eec: Pulling fs layer
 826b8d755762: Pulling fs layer
+848b1c5912e5: Waiting
 18e11daf70d2: Pulling fs layer
 9ace01da70a3: Pulling fs layer
-2d3eb0cf3634: Waiting
-5bd4dd8b80e3: Waiting
-cb6a11cda9f8: Waiting
-a00ab32c0cad: Waiting
-1f87a4556ee4: Waiting
-7df60113bd5f: Waiting
-586e7e55dc38: Waiting
-826b8d755762: Waiting
 1f04457496a9: Pulling fs layer
+f2c897740b67: Waiting
 2a75afedac1e: Pulling fs layer
 f54c636bbcd3: Pulling fs layer
+0f819c04149e: Waiting
 ab6d1e52f2bb: Pulling fs layer
 e12ac39a69ef: Pulling fs layer
 04364d336696: Pulling fs layer
+4e5b5a409361: Waiting
 e68f98342a0d: Pulling fs layer
-18e11daf70d2: Waiting
-9ace01da70a3: Waiting
-1f04457496a9: Waiting
-2a75afedac1e: Waiting
 669f792103a4: Pulling fs layer
+addf9dc09fca: Waiting
 f80d99bfabdb: Pulling fs layer
-ab6d1e52f2bb: Waiting
+1e3ae6415742: Waiting
 d0ebd75bb4ef: Pulling fs layer
-e12ac39a69ef: Waiting
+14c7c40f264e: Waiting
+2d3eb0cf3634: Waiting
 a1028bd6f848: Pulling fs layer
 44bd6c2c1e25: Pulling fs layer
+7e1afeac9515: Waiting
+5d4d12d40ee2: Waiting
+cb6a11cda9f8: Waiting
+7dd51689e5de: Waiting
+bec4cd2d8288: Waiting
+5904fe0a8541: Waiting
+4f4fb700ef54: Waiting
+95553dc9aee4: Waiting
+484e22708485: Waiting
+daa7c753cf32: Waiting
+cef3e4219e2d: Waiting
+83a5975346e8: Waiting
+c61d94d80b8d: Waiting
+73d5273f17e0: Waiting
+5bd4dd8b80e3: Waiting
+ab6d1e52f2bb: Waiting
+826b8d755762: Waiting
+a00ab32c0cad: Waiting
+e12ac39a69ef: Waiting
+18e11daf70d2: Waiting
+7df60113bd5f: Waiting
 04364d336696: Waiting
+9ace01da70a3: Waiting
+1f87a4556ee4: Waiting
+1f04457496a9: Waiting
 e68f98342a0d: Waiting
-669f792103a4: Waiting
-f80d99bfabdb: Waiting
+586e7e55dc38: Waiting
+2a75afedac1e: Waiting
 f54c636bbcd3: Waiting
-d0ebd75bb4ef: Waiting
-44bd6c2c1e25: Waiting
+669f792103a4: Waiting
 58c2f4245eec: Waiting
+f80d99bfabdb: Waiting
+44bd6c2c1e25: Waiting
+d0ebd75bb4ef: Waiting
+a1028bd6f848: Waiting
 b87ddba4145f: Download complete
 14c7c40f264e: Verifying Checksum
 14c7c40f264e: Download complete
 13b7e930469f: Verifying Checksum
 13b7e930469f: Download complete
+7dd51689e5de: Verifying Checksum
 7dd51689e5de: Download complete
 4f4fb700ef54: Verifying Checksum
 4f4fb700ef54: Download complete
@@ -133,13 +149,13 @@ bec4cd2d8288: Download complete
 5d4d12d40ee2: Download complete
 95553dc9aee4: Verifying Checksum
 95553dc9aee4: Download complete
+83a5975346e8: Download complete
 cef3e4219e2d: Verifying Checksum
 cef3e4219e2d: Download complete
-83a5975346e8: Verifying Checksum
-83a5975346e8: Download complete
-f2c897740b67: Download complete
 848b1c5912e5: Verifying Checksum
 848b1c5912e5: Download complete
+f2c897740b67: Verifying Checksum
+f2c897740b67: Download complete
 0f819c04149e: Verifying Checksum
 0f819c04149e: Download complete
 4e5b5a409361: Verifying Checksum
@@ -154,50 +170,48 @@ cb6a11cda9f8: Download complete
 5904fe0a8541: Download complete
 1e3ae6415742: Verifying Checksum
 1e3ae6415742: Download complete
+484e22708485: Verifying Checksum
 484e22708485: Download complete
+5bd4dd8b80e3: Verifying Checksum
+5bd4dd8b80e3: Download complete
 a00ab32c0cad: Verifying Checksum
 a00ab32c0cad: Download complete
-5bd4dd8b80e3: Download complete
-1f87a4556ee4: Verifying Checksum
-1f87a4556ee4: Download complete
-7df60113bd5f: Verifying Checksum
-7df60113bd5f: Download complete
-58c2f4245eec: Verifying Checksum
-58c2f4245eec: Download complete
-586e7e55dc38: Verifying Checksum
-586e7e55dc38: Download complete
-826b8d755762: Verifying Checksum
-826b8d755762: Download complete
-18e11daf70d2: Verifying Checksum
-18e11daf70d2: Download complete
 daa7c753cf32: Verifying Checksum
 daa7c753cf32: Download complete
-9ace01da70a3: Download complete
+13b7e930469f: Pull complete
+7df60113bd5f: Verifying Checksum
+7df60113bd5f: Download complete
+586e7e55dc38: Verifying Checksum
+586e7e55dc38: Download complete
+1f87a4556ee4: Verifying Checksum
+1f87a4556ee4: Download complete
+58c2f4245eec: Download complete
+18e11daf70d2: Verifying Checksum
+18e11daf70d2: Download complete
+826b8d755762: Verifying Checksum
+826b8d755762: Download complete
+2a75afedac1e: Download complete
+f54c636bbcd3: Verifying Checksum
 1f04457496a9: Verifying Checksum
 1f04457496a9: Download complete
-13b7e930469f: Pull complete
-f54c636bbcd3: Verifying Checksum
 f54c636bbcd3: Download complete
-2a75afedac1e: Verifying Checksum
-2a75afedac1e: Download complete
-ab6d1e52f2bb: Verifying Checksum
+9ace01da70a3: Download complete
 ab6d1e52f2bb: Download complete
 04364d336696: Verifying Checksum
 04364d336696: Download complete
-e12ac39a69ef: Verifying Checksum
-e12ac39a69ef: Download complete
-f80d99bfabdb: Verifying Checksum
-f80d99bfabdb: Download complete
-669f792103a4: Verifying Checksum
-669f792103a4: Download complete
 e68f98342a0d: Verifying Checksum
 e68f98342a0d: Download complete
+669f792103a4: Verifying Checksum
+669f792103a4: Download complete
+f80d99bfabdb: Download complete
+e12ac39a69ef: Verifying Checksum
+e12ac39a69ef: Download complete
 44bd6c2c1e25: Verifying Checksum
 44bd6c2c1e25: Download complete
-a1028bd6f848: Verifying Checksum
-a1028bd6f848: Download complete
 d0ebd75bb4ef: Verifying Checksum
 d0ebd75bb4ef: Download complete
+a1028bd6f848: Verifying Checksum
+a1028bd6f848: Download complete
 fff1a581b40e: Pull complete
 b87ddba4145f: Pull complete
 14c7c40f264e: Pull complete
@@ -262,17 +276,17 @@ f4e2bfbd8bcd: Pulling fs layer
 601df250e23a: Pulling fs layer
 e1511382296b: Pulling fs layer
 ebf0f77af059: Pulling fs layer
-25e9c8801257: Waiting
-331c4f30549c: Waiting
+521c5280947c: Waiting
+3f609ae12598: Waiting
 294ed970ec07: Waiting
+35d5e54f513a: Waiting
 0cd3238360a9: Waiting
 601df250e23a: Waiting
 e1511382296b: Waiting
 ebf0f77af059: Waiting
-3f609ae12598: Waiting
 f4e2bfbd8bcd: Waiting
-521c5280947c: Waiting
-35d5e54f513a: Waiting
+331c4f30549c: Waiting
+25e9c8801257: Waiting
 dbd229483e61: Verifying Checksum
 dbd229483e61: Download complete
 e6f31ffc071e: Verifying Checksum
@@ -281,23 +295,22 @@ f4e2bfbd8bcd: Verifying Checksum
 f4e2bfbd8bcd: Download complete
 3f609ae12598: Verifying Checksum
 3f609ae12598: Download complete
-35d5e54f513a: Verifying Checksum
-35d5e54f513a: Download complete
+e6f31ffc071e: Pull complete
 5f05fbb94ac9: Verifying Checksum
 5f05fbb94ac9: Download complete
+35d5e54f513a: Download complete
 25e9c8801257: Verifying Checksum
 25e9c8801257: Download complete
-e6f31ffc071e: Pull complete
-294ed970ec07: Verifying Checksum
-294ed970ec07: Download complete
 331c4f30549c: Verifying Checksum
 331c4f30549c: Download complete
+294ed970ec07: Verifying Checksum
+294ed970ec07: Download complete
 601df250e23a: Verifying Checksum
 601df250e23a: Download complete
 521c5280947c: Verifying Checksum
 521c5280947c: Download complete
+e1511382296b: Verifying Checksum
 e1511382296b: Download complete
-ebf0f77af059: Verifying Checksum
 ebf0f77af059: Download complete
 0cd3238360a9: Verifying Checksum
 0cd3238360a9: Download complete
@@ -327,13 +340,13 @@ ad8aa6f5f9a9: Pulling fs layer
 fd855b1da301: Waiting
 ad8aa6f5f9a9: Waiting
 565df2d910df: Verifying Checksum
-dc286a8aa197: Verifying Checksum
-dc286a8aa197: Download complete
+565df2d910df: Download complete
 565df2d910df: Pull complete
-ad8aa6f5f9a9: Verifying Checksum
-ad8aa6f5f9a9: Download complete
 fd855b1da301: Verifying Checksum
 fd855b1da301: Download complete
+dc286a8aa197: Download complete
+ad8aa6f5f9a9: Verifying Checksum
+ad8aa6f5f9a9: Download complete
 3b1d86731cf1: Verifying Checksum
 3b1d86731cf1: Download complete
 dc286a8aa197: Pull complete
@@ -391,51 +404,235 @@ Applying migration 20260706180000_pending_admin_gifts.sql...
 Applying migration 20260706190000_pending_gifts_prod_fix.sql...
 Applying migration 20260706200000_claim_gift_credit_enum_fix.sql...
 Applying migration 20260707180000_platform_fixes_batch.sql...
-Stopping containers...
-Pruned containers: [e7a42d4f8e878d9aa0f74ad2b6fe50e79e819ba8f2543542e35d1a04e7797c9f]
-Pruned volumes: [supabase_db_kaify-local]
-Pruned network: [supabase_network_kaify-local]
-[31mERROR: column gl.transaction_type does not exist (SQLSTATE 42703)
-At statement: 0
--- Platform fixes: streak RPC hardening, country leaderboard points, support chat, analytics confirmations.
+Applying migration 20260707190000_check_in_gem_ledger_drift.sql...
+Applying migration 20260707200000_check_in_enum_fix.sql...
+Applying migration 20260707210000_paddle_billing.sql...
+Applying migration 20260710130000_fix_handle_new_user_signup.sql...
+Applying migration 20260710141000_fix_handle_new_user_gem_ledger.sql...
+Applying migration 20260710160000_no_auto_tier_until_purchase.sql...
+Applying migration 20260710161000_clear_auto_essential_tier.sql...
+Applying migration 20260711120000_paddle_customers_subscriptions.sql...
+Applying migration 20260711130000_new_user_bootstrap_fixes.sql...
+Applying migration 20260714130000_null_tier_quota_deny.sql...
+Applying migration 20260714140000_daily_chest_reel_state.sql...
+Applying migration 20260803120000_claim_pending_streak_rewards.sql...
+Applying migration 20260803140000_scale_faz3_cost_outbox.sql...
+Applying migration 20260803180000_faz1_integrity.sql...
+Applying migration 20260804120000_faz5_chat_realtime.sql...
+Applying migration 20260804160000_faz0_rpc_privilege_lockdown.sql...
+Applying migration 20260804170000_faz1_service_table_grants.sql...
+Applying migration 20260804171000_faz1_pg_cron_vault_schedules.sql...
+Applying migration 20260804180000_faz3_rls_initplan_fk_indexes.sql...
+Applying migration 20260805140000_faz1_goals_settings.sql...
+Applying migration 20260806120000_onboarding_lifestyle_fields.sql...
+Applying migration 20260807150000_primary_goal_lose_fat_build_muscle.sql...
+WARN: no files matched pattern: supabase/seed.sql
+```
 
--- ---------------------------------------------------------------------------
--- 1. Country leaderboard — +1 point per completed daily check-in (not sum of current streak)
--- ---------------------------------------------------------------------------
-create or replace function public.get_country_leaderboard(
-  p_limit integer default 100
-)
-returns table (
-  rank         bigint,
-  country_code text,
-  total_streak bigint,
-  user_count   bigint,
-  avg_streak   numeric
-)
-language sql
-security definer
-set search_path = ''
-stable
-as $$
-  with checkins as (
-    select
-      p.country_code::text as country_code,
-      count(*)::bigint as total_points,
-      count(distinct gl.user_id)::bigint as active_users
-    from public.gem_ledger gl
-    join public.profiles p on p.id = gl.user_id
-    where coalesce(p.leaderboard_opt_out, false) = false
-      and p.country_code is not null
-      and (
-        case
-          when exists (
-            select 1 from information_schema.columns
-            where table_schema = 'public' and table_name = 'gem_ledger' and column_name = 'transaction_type'
-          ) then gl.transaction_type::text = 'daily_check_in'
-               ^[39m
+## supabase-db-reset-1.log
+```
+NotFound: FileSystem.readFile (/home/runner/.supabase/profile)
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260630120000_init_core.sql...
+Applying migration 20260630130000_onboarding_rpcs.sql...
+Applying migration 20260630140000_gamification_core.sql...
+Applying migration 20260630150000_usage_limits.sql...
+Applying migration 20260630160000_chat_ai_schema.sql...
+Applying migration 20260630170000_phase6_memory_admin_referral.sql...
+Applying migration 20260630180000_leaderboard.sql...
+Applying migration 20260630190000_phase8_analytics_market_team.sql...
+Applying migration 20260702120000_backend_hardening.sql...
+Applying migration 20260702140000_team_chat_backfill.sql...
+Applying migration 20260702160000_security_quota_refund.sql...
+Applying migration 20260702170000_profile_timezone.sql...
+Applying migration 20260702180000_idempotency_and_audit.sql...
+Applying migration 20260702190000_notifications.sql...
+Applying migration 20260702200000_push_subscriptions.sql...
+Applying migration 20260702210000_native_push_tokens.sql...
+Applying migration 20260702220000_security_hardening.sql...
+Applying migration 20260702230000_perf_rls_indexes.sql...
+Applying migration 20260703090000_referral_abuse_guard.sql...
+Applying migration 20260703091000_inbox_previews_rpc.sql...
+Applying migration 20260703120000_ai_cost_observability.sql...
+Applying migration 20260703140000_schema_bridge_profiles.sql...
+Applying migration 20260703230000_gems_backfill_and_country_lb.sql...
+Applying migration 20260704120000_security_hardening.sql...
+Applying migration 20260704140000_daily_chest.sql...
+Applying migration 20260704150000_earn_gems_schema_drift.sql...
+Applying migration 20260704160000_market_purchase_enum.sql...
+Applying migration 20260704170000_active_aura_persistence.sql...
+Applying migration 20260704180000_backend_hardening_phase2.sql...
+Applying migration 20260704180100_kai_accountability_personality.sql...
+Applying migration 20260704190000_leaderboard_privacy_and_cron_monitor.sql...
+Applying migration 20260704220000_premium_market_auras.sql...
+Applying migration 20260705120000_faz1_security_hardening.sql...
+Applying migration 20260705140000_faz2_security_hardening.sql...
+Applying migration 20260705140100_architecture_faz3.sql...
+Applying migration 20260705160000_faz3_security_hardening.sql...
+Applying migration 20260705180000_compliance_faz1_consent_records.sql...
+Applying migration 20260705190000_compliance_faz2.sql...
+Applying migration 20260705200000_compliance_faz3.sql...
+Applying migration 20260705300000_scalability_faz1.sql...
+Applying migration 20260705310000_scalability_faz3.sql...
+Applying migration 20260706120000_backup_verification_runs.sql...
+Applying migration 20260706150000_bootstrap_first_admin.sql...
+Applying migration 20260706180000_pending_admin_gifts.sql...
+Applying migration 20260706190000_pending_gifts_prod_fix.sql...
+Applying migration 20260706200000_claim_gift_credit_enum_fix.sql...
+Applying migration 20260707180000_platform_fixes_batch.sql...
+Applying migration 20260707190000_check_in_gem_ledger_drift.sql...
+Applying migration 20260707200000_check_in_enum_fix.sql...
+Applying migration 20260707210000_paddle_billing.sql...
+Applying migration 20260710130000_fix_handle_new_user_signup.sql...
+Applying migration 20260710141000_fix_handle_new_user_gem_ledger.sql...
+Applying migration 20260710160000_no_auto_tier_until_purchase.sql...
+Applying migration 20260710161000_clear_auto_essential_tier.sql...
+Applying migration 20260711120000_paddle_customers_subscriptions.sql...
+Applying migration 20260711130000_new_user_bootstrap_fixes.sql...
+Applying migration 20260714130000_null_tier_quota_deny.sql...
+Applying migration 20260714140000_daily_chest_reel_state.sql...
+Applying migration 20260803120000_claim_pending_streak_rewards.sql...
+Applying migration 20260803140000_scale_faz3_cost_outbox.sql...
+Applying migration 20260803180000_faz1_integrity.sql...
+Applying migration 20260804120000_faz5_chat_realtime.sql...
+Applying migration 20260804160000_faz0_rpc_privilege_lockdown.sql...
+Applying migration 20260804170000_faz1_service_table_grants.sql...
+Applying migration 20260804171000_faz1_pg_cron_vault_schedules.sql...
+Applying migration 20260804180000_faz3_rls_initplan_fk_indexes.sql...
+Applying migration 20260805140000_faz1_goals_settings.sql...
+Applying migration 20260806120000_onboarding_lifestyle_fields.sql...
+Applying migration 20260807150000_primary_goal_lose_fat_build_muscle.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch cursor/signup-onboarding-lifestyle-fields.
+```
+
+## supabase-db-reset-2.log
+```
+NotFound: FileSystem.readFile (/home/runner/.supabase/profile)
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260630120000_init_core.sql...
+Applying migration 20260630130000_onboarding_rpcs.sql...
+Applying migration 20260630140000_gamification_core.sql...
+Applying migration 20260630150000_usage_limits.sql...
+Applying migration 20260630160000_chat_ai_schema.sql...
+Applying migration 20260630170000_phase6_memory_admin_referral.sql...
+Applying migration 20260630180000_leaderboard.sql...
+Applying migration 20260630190000_phase8_analytics_market_team.sql...
+Applying migration 20260702120000_backend_hardening.sql...
+Applying migration 20260702140000_team_chat_backfill.sql...
+Applying migration 20260702160000_security_quota_refund.sql...
+Applying migration 20260702170000_profile_timezone.sql...
+Applying migration 20260702180000_idempotency_and_audit.sql...
+Applying migration 20260702190000_notifications.sql...
+Applying migration 20260702200000_push_subscriptions.sql...
+Applying migration 20260702210000_native_push_tokens.sql...
+Applying migration 20260702220000_security_hardening.sql...
+Applying migration 20260702230000_perf_rls_indexes.sql...
+Applying migration 20260703090000_referral_abuse_guard.sql...
+Applying migration 20260703091000_inbox_previews_rpc.sql...
+Applying migration 20260703120000_ai_cost_observability.sql...
+Applying migration 20260703140000_schema_bridge_profiles.sql...
+Applying migration 20260703230000_gems_backfill_and_country_lb.sql...
+Applying migration 20260704120000_security_hardening.sql...
+Applying migration 20260704140000_daily_chest.sql...
+Applying migration 20260704150000_earn_gems_schema_drift.sql...
+Applying migration 20260704160000_market_purchase_enum.sql...
+Applying migration 20260704170000_active_aura_persistence.sql...
+Applying migration 20260704180000_backend_hardening_phase2.sql...
+Applying migration 20260704180100_kai_accountability_personality.sql...
+Applying migration 20260704190000_leaderboard_privacy_and_cron_monitor.sql...
+Applying migration 20260704220000_premium_market_auras.sql...
+Applying migration 20260705120000_faz1_security_hardening.sql...
+Applying migration 20260705140000_faz2_security_hardening.sql...
+Applying migration 20260705140100_architecture_faz3.sql...
+Applying migration 20260705160000_faz3_security_hardening.sql...
+Applying migration 20260705180000_compliance_faz1_consent_records.sql...
+Applying migration 20260705190000_compliance_faz2.sql...
+Applying migration 20260705200000_compliance_faz3.sql...
+Applying migration 20260705300000_scalability_faz1.sql...
+Applying migration 20260705310000_scalability_faz3.sql...
+Applying migration 20260706120000_backup_verification_runs.sql...
+Applying migration 20260706150000_bootstrap_first_admin.sql...
+Applying migration 20260706180000_pending_admin_gifts.sql...
+Applying migration 20260706190000_pending_gifts_prod_fix.sql...
+Applying migration 20260706200000_claim_gift_credit_enum_fix.sql...
+Applying migration 20260707180000_platform_fixes_batch.sql...
+Applying migration 20260707190000_check_in_gem_ledger_drift.sql...
+Applying migration 20260707200000_check_in_enum_fix.sql...
+Applying migration 20260707210000_paddle_billing.sql...
+Applying migration 20260710130000_fix_handle_new_user_signup.sql...
+Applying migration 20260710141000_fix_handle_new_user_gem_ledger.sql...
+Applying migration 20260710160000_no_auto_tier_until_purchase.sql...
+Applying migration 20260710161000_clear_auto_essential_tier.sql...
+Applying migration 20260711120000_paddle_customers_subscriptions.sql...
+Applying migration 20260711130000_new_user_bootstrap_fixes.sql...
+Applying migration 20260714130000_null_tier_quota_deny.sql...
+Applying migration 20260714140000_daily_chest_reel_state.sql...
+Applying migration 20260803120000_claim_pending_streak_rewards.sql...
+Applying migration 20260803140000_scale_faz3_cost_outbox.sql...
+Applying migration 20260803180000_faz1_integrity.sql...
+Applying migration 20260804120000_faz5_chat_realtime.sql...
+Applying migration 20260804160000_faz0_rpc_privilege_lockdown.sql...
+Applying migration 20260804170000_faz1_service_table_grants.sql...
+Applying migration 20260804171000_faz1_pg_cron_vault_schedules.sql...
+Applying migration 20260804180000_faz3_rls_initplan_fk_indexes.sql...
+Applying migration 20260805140000_faz1_goals_settings.sql...
+Applying migration 20260806120000_onboarding_lifestyle_fields.sql...
+Applying migration 20260807150000_primary_goal_lose_fat_build_muscle.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch cursor/signup-onboarding-lifestyle-fields.
+```
+
+## supabase-start.log
+```
+NotFound: FileSystem.readFile (/home/runner/.supabase/profile)
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+supabase start is already running.
+Stopped services: [supabase_kong_kaify-local supabase_auth_kaify-local supabase_inbucket_kaify-local supabase_realtime_kaify-local supabase_rest_kaify-local supabase_storage_kaify-local supabase_imgproxy_kaify-local supabase_pg_meta_kaify-local supabase_studio_kaify-local supabase_edge_runtime_kaify-local supabase_analytics_kaify-local supabase_vector_kaify-local supabase_pooler_kaify-local]
+supabase local development setup is running.
+
+
+
+╭───────────────────────────────────────────────────────────────╮
+│ ⛁ Database                                                    │
+├─────┬─────────────────────────────────────────────────────────┤
+│ URL │ postgresql://postgres:postgres@127.0.0.1:54322/postgres │
+╰─────┴─────────────────────────────────────────────────────────╯
+
+
+```
+
+## supabase-status.json
+```
+{
+  "DB_URL": "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+}
 ```
 
 ## docker ps -a
 ```
-CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+CONTAINER ID   IMAGE                                  COMMAND                   CREATED          STATUS                    PORTS                                           NAMES
+a2db9932f8af   ghcr.io/supabase/postgres:15.8.1.085   "sh -c '\ncat <<'EOF'…"   17 seconds ago   Up 16 seconds (healthy)   0.0.0.0:54322->5432/tcp, [::]:54322->5432/tcp   supabase_db_kaify-local
+```
+## supabase status
+```
+
+
+╭───────────────────────────────────────────────────────────────╮
+│ ⛁ Database                                                    │
+├─────┬─────────────────────────────────────────────────────────┤
+│ URL │ postgresql://postgres:postgres@127.0.0.1:54322/postgres │
+╰─────┴─────────────────────────────────────────────────────────╯
+
+
 ```
