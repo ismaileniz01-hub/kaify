@@ -75,12 +75,24 @@ export const RPC_REGISTRY: readonly RpcRegistryEntry[] = [
   // ---- trigger_only ----
   { name: "handle_new_user", mode: "trigger_only" },
   { name: "trg_unlock_team_chat_on_streak", mode: "trigger_only" },
+  { name: "set_updated_at", mode: "trigger_only" },
+  { name: "protect_profile_columns", mode: "trigger_only" },
 
   // ---- internal helpers (DEFINER but not PostgREST entrypoints) ----
   {
     name: "generate_referral_code",
     mode: "internal",
     note: "Called from handle_new_user; not a client RPC",
+  },
+  {
+    name: "is_valid_timezone",
+    mode: "internal",
+    note: "Helper used by profile timezone constraints / RPCs",
+  },
+  {
+    name: "build_usage_node",
+    mode: "internal",
+    note: "Helper used by usage status RPCs",
   },
 ] as const;
 
