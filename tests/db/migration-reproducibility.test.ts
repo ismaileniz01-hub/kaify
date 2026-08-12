@@ -65,6 +65,14 @@ describe("migration-reproducibility (static)", () => {
     expect(sql).not.toMatch(/p\.full_name/i);
     expect(readdirSync(MIGRATIONS_DIR)).toContain(LEADERBOARD);
   });
+
+  it("pg_cron vault schedules do not hard-fail clean databases", () => {
+    const sql = readMigration("20260804171000_faz1_pg_cron_vault_schedules.sql");
+    expect(sql).not.toMatch(
+      /raise exception 'vault secret kaify_cron_secret missing/i,
+    );
+    expect(sql).toMatch(/skipping pg_cron HTTP schedules/i);
+  });
 });
 
 describe.skipIf(!dbTestsEnabled())("migration-reproducibility (live after reset)", () => {
