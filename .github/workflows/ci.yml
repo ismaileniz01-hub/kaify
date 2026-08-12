@@ -114,7 +114,6 @@ jobs:
 
     env:
       NEXT_TELEMETRY_DISABLED: "1"
-      # Never target a linked remote / production project from this job.
       SUPABASE_INTERNAL_NO_LINKED: "1"
 
     steps:
@@ -140,82 +139,66 @@ jobs:
           set -euo pipefail
           docker version
           docker info
-          df -h
-          free -h || true
 
-      # Postgres-only first — proves migration reproducibility without Studio/GoTrue health flakiness.
-      - name: Start local Postgres (db only)
+      # Full local stack first (Auth + API + DB). Migrations now apply cleanly.
+      - name: Start local Supabase
         run: |
           set -euo pipefail
           supabase --version
-          set +e
-          supabase db start --debug 2>&1 | tee /tmp/supabase-db-start.log
-          status=${PIPESTATUS[0]}
-          set -e
-          if [ "$status" -ne 0 ]; then
-            echo "db start failed with $status"
-            exit "$status"
-          fi
-          supabase status || true
-
-      # Deterministic reproducibility: reset → migrate → reset → migrate again.
-      - name: Reset database from migrations (pass 1)
-        run: |
-          set -euo pipefail
-          supabase db reset --local --yes --debug 2>&1 | tee /tmp/supabase-db-reset-1.log
-
-      - name: Reset database from migrations (pass 2)
-        run: |
-          set -euo pipefail
-          supabase db reset --local --yes --debug 2>&1 | tee /tmp/supabase-db-reset-2.log
-
-      # Full local stack for JWT auth (GoTrue + API). Ignore peripheral health if needed.
-      - name: Start Auth/API stack
-        run: |
-          set -euo pipefail
-          set +e
           supabase start \
             --exclude studio,edge-runtime,logflare,vector \
-            --ignore-health-check \
-            --debug 2>&1 | tee /tmp/supabase-start.log
-          status=${PIPESTATUS[0]}
-          set -e
-          if [ "$status" -ne 0 ]; then
-            echo "==== supabase start failed (exit $status) ===="
-            tail -n 200 /tmp/supabase-start.log || true
-            docker ps -a || true
-            exit "$status"
-          fi
-          supabase status
+            2>&1 | tee /tmp/supabase-start.log
+          supabase status | tee /tmp/supabase-status-pretty.txt
+          docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | tee /tmp/docker-ps.txt
+          # Require Kong/API — DB-only status is not enough for JWT RLS tests.
+          curl -sf "http://127.0.0.1:54321/auth/v1/health" || curl -sf "http://127.0.0.1:54321/" || {
+            echo "API gateway not reachable on :54321"
+            exit 1
+          }
+
+      - name: Reset database from migrations (pass 1)
+        run: supabase db reset --local --yes 2>&1 | tee /tmp/supabase-db-reset-1.log
+
+      - name: Reset database from migrations (pass 2)
+        run: supabase db reset --local --yes 2>&1 | tee /tmp/supabase-db-reset-2.log
 
       - name: Export local Supabase keys
         run: |
           set -euo pipefail
+          supabase status -o env | tee /tmp/supabase-status.env
           supabase status -o json | tee /tmp/supabase-status.json >/dev/null
+          # Parse KEY=value lines without eval (JWTs can break shell eval).
           node <<'NODE'
           const fs = require("fs");
-          const raw = fs.readFileSync("/tmp/supabase-status.json", "utf8");
-          const status = JSON.parse(raw);
+          const envText = fs.readFileSync("/tmp/supabase-status.env", "utf8");
+          const fromEnv = {};
+          for (const line of envText.split(/\r?\n/)) {
+            const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+            if (!m) continue;
+            let v = m[2];
+            if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+              v = v.slice(1, -1);
+            }
+            fromEnv[m[1]] = v;
+          }
+          let status = {};
+          try { status = JSON.parse(fs.readFileSync("/tmp/supabase-status.json", "utf8")); } catch {}
           const pick = (...keys) => {
             for (const k of keys) {
-              const v = status[k] ?? status[k.toLowerCase()] ?? status[k.toUpperCase()];
+              const v = fromEnv[k] || status[k];
               if (typeof v === "string" && v.length > 0) return v;
             }
             return "";
           };
-          const apiUrl = pick("API_URL", "api_url", "SUPABASE_URL", "restUrl", "project_url");
-          const anon = pick("ANON_KEY", "anon_key", "SUPABASE_ANON_KEY");
-          const service = pick(
-            "SERVICE_ROLE_KEY",
-            "service_role_key",
-            "SUPABASE_SERVICE_ROLE_KEY",
-          );
-          const dbUrl = pick("DB_URL", "db_url", "DATABASE_URL", "DB_URL_POSTGRES");
-          if (!apiUrl || !anon || !service) {
-            console.error("Missing keys from supabase status JSON:");
-            console.error(Object.keys(status));
-            process.exit(1);
-          }
+          // Official local demo JWTs (supabase start defaults) as last resort when API is up.
+          const DEMO_ANON =
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
+          const DEMO_SERVICE =
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
+          const apiUrl = pick("API_URL", "SUPABASE_URL") || "http://127.0.0.1:54321";
+          const anon = pick("ANON_KEY", "SUPABASE_ANON_KEY") || DEMO_ANON;
+          const service = pick("SERVICE_ROLE_KEY", "SUPABASE_SERVICE_ROLE_KEY") || DEMO_SERVICE;
+          const dbUrl = pick("DB_URL", "DATABASE_URL");
           if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:|\/|$)/i.test(apiUrl)) {
             console.error("Refusing non-local API URL:", apiUrl);
             process.exit(1);
@@ -229,7 +212,7 @@ jobs:
           ];
           if (dbUrl) lines.push(`DATABASE_URL=${dbUrl}`);
           fs.appendFileSync(process.env.GITHUB_ENV, lines.join("\n") + "\n");
-          console.log("Exported local Supabase env (URL=", apiUrl, ")");
+          console.log("Exported", { apiUrl, hasAnon: !!anon, hasService: !!service, hasDb: !!dbUrl });
           NODE
 
       - name: Run database authorization suite
@@ -244,29 +227,18 @@ jobs:
           mkdir -p audit/remediation
           {
             echo "# CI DB failure ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
-            echo
             echo "sha: ${GITHUB_SHA}"
             echo "run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-            echo
-            docker version || true
-            echo
-            for f in /tmp/supabase-db-start.log /tmp/supabase-db-reset-1.log /tmp/supabase-db-reset-2.log /tmp/supabase-start.log /tmp/supabase-status.json; do
+            for f in /tmp/supabase-start.log /tmp/supabase-db-reset-1.log /tmp/supabase-db-reset-2.log /tmp/supabase-status.env /tmp/supabase-status.json /tmp/docker-ps.txt; do
               if [ -f "$f" ]; then
                 echo "## $(basename "$f")"
                 echo '```'
                 tail -n 800 "$f"
                 echo '```'
-                echo
               fi
             done
-            echo "## docker ps -a"
-            echo '```'
-            docker ps -a || true
-            echo '```'
-            echo "## supabase status"
-            echo '```'
-            supabase status || true
-            echo '```'
+            echo "## docker ps -a"; echo '```'; docker ps -a || true; echo '```'
+            echo "## supabase status"; echo '```'; supabase status || true; echo '```'
           } > audit/remediation/_CI_DB_FAILURE_LOG.md
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -280,19 +252,12 @@ jobs:
         with:
           name: supabase-db-logs
           path: |
-            /tmp/supabase-db-start.log
+            /tmp/supabase-start.log
             /tmp/supabase-db-reset-1.log
             /tmp/supabase-db-reset-2.log
-            /tmp/supabase-start.log
+            /tmp/supabase-status.env
             /tmp/supabase-status.json
           if-no-files-found: ignore
-
-      - name: Dump Supabase diagnostics on failure
-        if: failure()
-        run: |
-          supabase status || true
-          docker ps -a || true
-          docker logs supabase_db_kaify-local 2>&1 | tail -n 200 || true
 
       - name: Stop local Supabase
         if: always()
