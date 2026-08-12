@@ -233,12 +233,21 @@ jobs:
               if [ -f "$f" ]; then
                 echo "## $(basename "$f")"
                 echo '```'
-                tail -n 800 "$f"
+                # Redact local demo credentials / JWTs before committing (gitleaks).
+                tail -n 800 "$f" \
+                  | sed -E 's#postgresql://[^@[:space:]]+@#postgresql://***:***@#g' \
+                  | sed -E 's#(ANON_KEY|SERVICE_ROLE_KEY|SUPABASE_ANON_KEY|SUPABASE_SERVICE_ROLE_KEY)=.*#\1=***REDACTED***#g' \
+                  | sed -E 's#eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+#***JWT***#g'
                 echo '```'
               fi
             done
             echo "## docker ps -a"; echo '```'; docker ps -a || true; echo '```'
-            echo "## supabase status"; echo '```'; supabase status || true; echo '```'
+            echo "## supabase status (redacted)"; echo '```'
+            supabase status 2>&1 \
+              | sed -E 's#postgresql://[^@[:space:]]+@#postgresql://***:***@#g' \
+              | sed -E 's#eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+#***JWT***#g' \
+              || true
+            echo '```'
           } > audit/remediation/_CI_DB_FAILURE_LOG.md
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

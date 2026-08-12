@@ -1,0 +1,8 @@
+# Gitleaks config for Kaify CI
+title = "kaify"
+
+[allowlist]
+description = "Wave 2 CI diagnostics may reference local Supabase demo URLs (redacted in new writes)"
+paths = [
+  '''audit/remediation/_CI_DB_FAILURE_LOG\.md''',
+]

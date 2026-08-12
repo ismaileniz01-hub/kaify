@@ -58,7 +58,7 @@ Wave 1 assumptions unchanged for Wave 2 targets (account deletion, cache, notifi
 ## DB-001
 
 ### Status
-**PENDING_CI** at report draft time — static guards + verify script + CI job are in place. Local agent cannot run `supabase db reset` (no Docker/WSL). Final status set from CI `database` job (double reset).
+**VERIFIED** (CI evidence) — double `supabase db reset --local --yes` completed successfully on GitHub Actions after migration chain repairs. Local agent still cannot run Docker.
 
 ### Before
 `20260703140000_schema_bridge_profiles.sql` ran a top-level `UPDATE public.profiles` referencing `full_name`, `subscription_tier`, `height`, `weight`, `experience`. None of those columns are created by earlier migrations. `20260704190000_leaderboard_privacy_and_cron_monitor.sql` selected `p.full_name`.
@@ -70,13 +70,19 @@ Production bridge SQL was committed into the ordered migration chain without cle
 1. **Bridge migration** — wrap legacy backfill in `DO $$` + `information_schema.columns` checks + dynamic SQL (parse-safe when columns absent). Canonical columns (`display_name`, `tier`, `height_cm`, …) still `ADD COLUMN IF NOT EXISTS`. Leaderboard helper uses `display_name` only.
 2. **Leaderboard privacy migration** — remove `p.full_name`; use `display_name`.
 3. **Later migrations** (`20260710160000`, `20260710161000`) — already guarded for legacy `subscription_tier`; inventory confirms no remaining unguarded top-level legacy profile column updates.
-4. **Static tests** — `tests/db/migration-reproducibility.test.ts`.
-5. **Ops** — `scripts/ops/inventory-legacy-profile-cols.mjs`, `scripts/ops/verify-clean-db-reset.mjs` (refuses production project refs / non-localhost).
-6. **CI** — job `database`: `supabase start` → `db:reset:verify` ×2 → `test:db`.
+4. **Additional clean-DB blockers found via CI and fixed:**
+   - vault cron schedules hard-fail without `kaify_cron_secret` → NOTICE-and-skip
+   - optional `purchase_market_item(uuid,text)` ALTER/REVOKE → exception guards
+   - RLS policy recreate missing English `DROP` names
+   - `gem_ledger.transaction_type` vs `type` drift in backfill / country leaderboard
+   - duplicate migration timestamps `20260704180000` / `20260705140000` uniquified
+5. **Static tests** — `tests/db/migration-reproducibility.test.ts`.
+6. **Ops** — `scripts/ops/inventory-legacy-profile-cols.mjs`, `scripts/ops/verify-clean-db-reset.mjs` (refuses production project refs / non-localhost).
+7. **CI** — job `database`: full `supabase start` → double `db reset` → `test:db`.
 
 ### Clean-DB evidence
 - Static: bridge has no unguarded top-level legacy UPDATE; leaderboard has no `p.full_name`.
-- Runtime: CI double `supabase db reset --yes` (local stack only).
+- Runtime: CI `Reset database from migrations (pass 1)` + `(pass 2)` = **success** (e.g. run on sha `3ce31a0` / subsequent).
 
 ### Production-compatibility reasoning
 Guards execute backfill **only when** legacy columns exist. Clean DB skips backfill and uses canonical columns. Production-like DBs with legacy columns still migrate values into `display_name` / `tier` / `height_cm` / `weight_kg` / `experience_level`. No permanent fake legacy columns added. Historical bridge semantics preserved.
@@ -174,10 +180,10 @@ Frontend component/page coverage deferred (later UX wave), by design.
 
 | Gate | Result |
 |---|---|
-| CLEAN_RESET | **BLOCKED** locally (no Docker); evidence = CI `database` job |
-| RLS_RUNTIME | **BLOCKED** locally; evidence = CI `npm run test:db` |
-| RPC_AUTHORIZATION | **BLOCKED** locally; evidence = CI `npm run test:db` |
-| CI_DATABASE_GATE | Configured (job `database` on push to `main` and `cursor/**`) — await run |
+| CLEAN_RESET | **PASS** (CI double reset) |
+| RLS_RUNTIME | **BLOCKED** until live `test:db` green on full Auth/API stack |
+| RPC_AUTHORIZATION | **BLOCKED** until live `test:db` green |
+| CI_DATABASE_GATE | Configured; Auth/API start + export keys were the remaining failure mode (fixed in `6e08fe4`+) |
 
 ---
 
@@ -207,7 +213,7 @@ Re-ran security, compliance, architecture, idempotency, OTP throttle, home-servi
 COMPLETE_WITH_EXTERNAL_BLOCKER
 
 ## DB_001
-BLOCKED
+VERIFIED
 
 ## TEST_002
 BLOCKED
@@ -219,13 +225,13 @@ VERIFIED
 0
 
 ## P1_OPEN
-2
+1
 
 ## TOTAL_TESTS
 549 (546 passed + 3 skipped in default Vitest; live DB suite additional in CI)
 
 ## DATABASE_TESTS
-0 executed on local agent (BLOCKED_RUNTIME_ENVIRONMENT). Designed matrix ≈ 70+ live cases once CI/Docker available. Static migration reproducibility tests included in the 546.
+0 executed on local agent. Clean reset proven in CI. Live RLS/RPC suite pending green Auth/API + `test:db`.
 
 ## COVERAGE_SCOPE_LOC_PERCENT
 55.62%
@@ -246,7 +252,7 @@ PASS
 PASS
 
 ## EXTERNAL_ACTION_REQUIRED
-CI `database` job must run green on GitHub Actions (Docker + `supabase start` + double `db reset` + `npm run test:db`), OR install Docker/WSL locally and run the same. Until then DB-001 and TEST-002 remain BLOCKED and P1_OPEN = 2.
+CI `database` job must finish green on full stack (`supabase start` with Kong/Auth on :54321 + `npm run test:db`). Local Docker/WSL optional. Until then TEST-002 remains BLOCKED and P1_OPEN = 1.
 
 ---
 
