@@ -1,7 +1,7 @@
-# CI DB failure (2026-08-12T13:49:18Z)
+# CI DB failure (2026-08-12T13:57:22Z)
 
-sha: e0605055ae85ffaac3d09cf7ee7c6bac25e8e16f
-run: https://github.com/ismaileniz01-hub/kaify/actions/runs/31603195726
+sha: 002e3384f6e05eef9f105d2fbb037a4e2b32381f
+run: https://github.com/ismaileniz01-hub/kaify/actions/runs/31603951108
 
 Client: Docker Engine - Community
  Version:           28.0.4
@@ -64,119 +64,114 @@ cb6a11cda9f8: Pulling fs layer
 484e22708485: Pulling fs layer
 5bd4dd8b80e3: Pulling fs layer
 a00ab32c0cad: Pulling fs layer
+14c7c40f264e: Waiting
 7df60113bd5f: Pulling fs layer
 1f87a4556ee4: Pulling fs layer
+7e1afeac9515: Waiting
 586e7e55dc38: Pulling fs layer
 58c2f4245eec: Pulling fs layer
 826b8d755762: Pulling fs layer
+7dd51689e5de: Waiting
+cef3e4219e2d: Waiting
+4f4fb700ef54: Waiting
 18e11daf70d2: Pulling fs layer
-14c7c40f264e: Waiting
 9ace01da70a3: Pulling fs layer
 1f04457496a9: Pulling fs layer
-2a75afedac1e: Pulling fs layer
-7e1afeac9515: Waiting
-f54c636bbcd3: Pulling fs layer
-ab6d1e52f2bb: Pulling fs layer
-7dd51689e5de: Waiting
-e12ac39a69ef: Pulling fs layer
-04364d336696: Pulling fs layer
-4f4fb700ef54: Waiting
-e68f98342a0d: Pulling fs layer
-669f792103a4: Pulling fs layer
 daa7c753cf32: Waiting
-f80d99bfabdb: Pulling fs layer
-d0ebd75bb4ef: Pulling fs layer
+83a5975346e8: Waiting
+2a75afedac1e: Pulling fs layer
+f54c636bbcd3: Pulling fs layer
 c61d94d80b8d: Waiting
+848b1c5912e5: Waiting
+ab6d1e52f2bb: Pulling fs layer
+e12ac39a69ef: Pulling fs layer
+f2c897740b67: Waiting
+73d5273f17e0: Waiting
+04364d336696: Pulling fs layer
+0f819c04149e: Waiting
+e68f98342a0d: Pulling fs layer
+5d4d12d40ee2: Waiting
+669f792103a4: Pulling fs layer
+bec4cd2d8288: Waiting
+f80d99bfabdb: Pulling fs layer
+4e5b5a409361: Waiting
+d0ebd75bb4ef: Pulling fs layer
+95553dc9aee4: Waiting
 a1028bd6f848: Pulling fs layer
 44bd6c2c1e25: Pulling fs layer
-73d5273f17e0: Waiting
-f2c897740b67: Waiting
-5d4d12d40ee2: Waiting
-0f819c04149e: Waiting
-bec4cd2d8288: Waiting
-4e5b5a409361: Waiting
-95553dc9aee4: Waiting
-18e11daf70d2: Waiting
-cef3e4219e2d: Waiting
-9ace01da70a3: Waiting
 addf9dc09fca: Waiting
-83a5975346e8: Waiting
-1f04457496a9: Waiting
 1e3ae6415742: Waiting
-2a75afedac1e: Waiting
-2d3eb0cf3634: Waiting
-848b1c5912e5: Waiting
 cb6a11cda9f8: Waiting
-f54c636bbcd3: Waiting
-f80d99bfabdb: Waiting
+2d3eb0cf3634: Waiting
 5904fe0a8541: Waiting
-ab6d1e52f2bb: Waiting
-d0ebd75bb4ef: Waiting
+2a75afedac1e: Waiting
+669f792103a4: Waiting
 484e22708485: Waiting
+f80d99bfabdb: Waiting
+f54c636bbcd3: Waiting
+d0ebd75bb4ef: Waiting
+5bd4dd8b80e3: Waiting
+ab6d1e52f2bb: Waiting
 a1028bd6f848: Waiting
+a00ab32c0cad: Waiting
 e12ac39a69ef: Waiting
 44bd6c2c1e25: Waiting
-5bd4dd8b80e3: Waiting
-04364d336696: Waiting
-a00ab32c0cad: Waiting
-669f792103a4: Waiting
-e68f98342a0d: Waiting
 7df60113bd5f: Waiting
+04364d336696: Waiting
+18e11daf70d2: Waiting
 1f87a4556ee4: Waiting
+e68f98342a0d: Waiting
+9ace01da70a3: Waiting
+1f04457496a9: Waiting
 586e7e55dc38: Waiting
-58c2f4245eec: Waiting
-b87ddba4145f: Verifying Checksum
 b87ddba4145f: Download complete
+13b7e930469f: Verifying Checksum
+13b7e930469f: Download complete
 14c7c40f264e: Verifying Checksum
 14c7c40f264e: Download complete
-13b7e930469f: Download complete
-fff1a581b40e: Verifying Checksum
-fff1a581b40e: Download complete
 7dd51689e5de: Verifying Checksum
 7dd51689e5de: Download complete
+4f4fb700ef54: Download complete
+13b7e930469f: Pull complete
+fff1a581b40e: Verifying Checksum
+fff1a581b40e: Download complete
 7e1afeac9515: Verifying Checksum
 7e1afeac9515: Download complete
-4f4fb700ef54: Verifying Checksum
-4f4fb700ef54: Download complete
-73d5273f17e0: Verifying Checksum
 73d5273f17e0: Download complete
 c61d94d80b8d: Verifying Checksum
 c61d94d80b8d: Download complete
-bec4cd2d8288: Verifying Checksum
 bec4cd2d8288: Download complete
-5d4d12d40ee2: Verifying Checksum
-5d4d12d40ee2: Download complete
 95553dc9aee4: Verifying Checksum
 95553dc9aee4: Download complete
+5d4d12d40ee2: Verifying Checksum
+5d4d12d40ee2: Download complete
 cef3e4219e2d: Verifying Checksum
 cef3e4219e2d: Download complete
 83a5975346e8: Verifying Checksum
 83a5975346e8: Download complete
 848b1c5912e5: Verifying Checksum
 848b1c5912e5: Download complete
+f2c897740b67: Verifying Checksum
 f2c897740b67: Download complete
 0f819c04149e: Verifying Checksum
 0f819c04149e: Download complete
-13b7e930469f: Pull complete
+addf9dc09fca: Download complete
 4e5b5a409361: Verifying Checksum
 4e5b5a409361: Download complete
-addf9dc09fca: Verifying Checksum
-addf9dc09fca: Download complete
 2d3eb0cf3634: Verifying Checksum
 2d3eb0cf3634: Download complete
-daa7c753cf32: Verifying Checksum
-daa7c753cf32: Download complete
+cb6a11cda9f8: Verifying Checksum
 cb6a11cda9f8: Download complete
 5904fe0a8541: Verifying Checksum
 5904fe0a8541: Download complete
-1e3ae6415742: Verifying Checksum
-1e3ae6415742: Download complete
 484e22708485: Verifying Checksum
 484e22708485: Download complete
 5bd4dd8b80e3: Verifying Checksum
 5bd4dd8b80e3: Download complete
 a00ab32c0cad: Verifying Checksum
 a00ab32c0cad: Download complete
+1e3ae6415742: Verifying Checksum
+1e3ae6415742: Download complete
 7df60113bd5f: Verifying Checksum
 7df60113bd5f: Download complete
 1f87a4556ee4: Verifying Checksum
@@ -184,7 +179,6 @@ a00ab32c0cad: Download complete
 586e7e55dc38: Download complete
 58c2f4245eec: Verifying Checksum
 58c2f4245eec: Download complete
-826b8d755762: Verifying Checksum
 826b8d755762: Download complete
 18e11daf70d2: Verifying Checksum
 18e11daf70d2: Download complete
@@ -194,29 +188,32 @@ a00ab32c0cad: Download complete
 1f04457496a9: Download complete
 2a75afedac1e: Verifying Checksum
 2a75afedac1e: Download complete
+f54c636bbcd3: Download complete
 ab6d1e52f2bb: Verifying Checksum
 ab6d1e52f2bb: Download complete
-f54c636bbcd3: Verifying Checksum
-f54c636bbcd3: Download complete
+e12ac39a69ef: Verifying Checksum
 e12ac39a69ef: Download complete
 04364d336696: Verifying Checksum
 04364d336696: Download complete
 e68f98342a0d: Verifying Checksum
 e68f98342a0d: Download complete
+669f792103a4: Verifying Checksum
 669f792103a4: Download complete
-f80d99bfabdb: Verifying Checksum
 f80d99bfabdb: Download complete
-a1028bd6f848: Verifying Checksum
-a1028bd6f848: Download complete
-44bd6c2c1e25: Download complete
 d0ebd75bb4ef: Verifying Checksum
 d0ebd75bb4ef: Download complete
+a1028bd6f848: Verifying Checksum
+a1028bd6f848: Download complete
+44bd6c2c1e25: Verifying Checksum
+44bd6c2c1e25: Download complete
 fff1a581b40e: Pull complete
 b87ddba4145f: Pull complete
 14c7c40f264e: Pull complete
 7e1afeac9515: Pull complete
 7dd51689e5de: Pull complete
 4f4fb700ef54: Pull complete
+daa7c753cf32: Verifying Checksum
+daa7c753cf32: Download complete
 daa7c753cf32: Pull complete
 c61d94d80b8d: Pull complete
 73d5273f17e0: Pull complete
@@ -275,8 +272,6 @@ f4e2bfbd8bcd: Pulling fs layer
 601df250e23a: Pulling fs layer
 e1511382296b: Pulling fs layer
 ebf0f77af059: Pulling fs layer
-3f609ae12598: Waiting
-35d5e54f513a: Waiting
 25e9c8801257: Waiting
 331c4f30549c: Waiting
 294ed970ec07: Waiting
@@ -286,35 +281,36 @@ e1511382296b: Waiting
 ebf0f77af059: Waiting
 521c5280947c: Waiting
 f4e2bfbd8bcd: Waiting
+3f609ae12598: Waiting
+35d5e54f513a: Waiting
 dbd229483e61: Verifying Checksum
 dbd229483e61: Download complete
 e6f31ffc071e: Verifying Checksum
 e6f31ffc071e: Download complete
+e6f31ffc071e: Pull complete
 f4e2bfbd8bcd: Verifying Checksum
 f4e2bfbd8bcd: Download complete
 5f05fbb94ac9: Verifying Checksum
 5f05fbb94ac9: Download complete
-e6f31ffc071e: Pull complete
 3f609ae12598: Verifying Checksum
 3f609ae12598: Download complete
 35d5e54f513a: Verifying Checksum
 35d5e54f513a: Download complete
 25e9c8801257: Verifying Checksum
 25e9c8801257: Download complete
+521c5280947c: Download complete
 294ed970ec07: Verifying Checksum
 294ed970ec07: Download complete
 331c4f30549c: Verifying Checksum
 331c4f30549c: Download complete
-521c5280947c: Verifying Checksum
-521c5280947c: Download complete
 e1511382296b: Verifying Checksum
 e1511382296b: Download complete
 601df250e23a: Verifying Checksum
 601df250e23a: Download complete
-ebf0f77af059: Verifying Checksum
-ebf0f77af059: Download complete
 0cd3238360a9: Verifying Checksum
 0cd3238360a9: Download complete
+ebf0f77af059: Verifying Checksum
+ebf0f77af059: Download complete
 5f05fbb94ac9: Pull complete
 dbd229483e61: Pull complete
 f4e2bfbd8bcd: Pull complete
@@ -340,15 +336,14 @@ fd855b1da301: Pulling fs layer
 ad8aa6f5f9a9: Pulling fs layer
 fd855b1da301: Waiting
 ad8aa6f5f9a9: Waiting
-565df2d910df: Verifying Checksum
+565df2d910df: Download complete
 dc286a8aa197: Verifying Checksum
 dc286a8aa197: Download complete
 565df2d910df: Pull complete
 3b1d86731cf1: Verifying Checksum
 3b1d86731cf1: Download complete
-dc286a8aa197: Pull complete
-fd855b1da301: Verifying Checksum
 fd855b1da301: Download complete
+dc286a8aa197: Pull complete
 ad8aa6f5f9a9: Verifying Checksum
 ad8aa6f5f9a9: Download complete
 3b1d86731cf1: Pull complete
@@ -376,15 +371,22 @@ Applying migration 20260702200000_push_subscriptions.sql...
 Applying migration 20260702210000_native_push_tokens.sql...
 Applying migration 20260702220000_security_hardening.sql...
 Applying migration 20260702230000_perf_rls_indexes.sql...
+Applying migration 20260703090000_referral_abuse_guard.sql...
+Applying migration 20260703091000_inbox_previews_rpc.sql...
+Applying migration 20260703120000_ai_cost_observability.sql...
+Applying migration 20260703140000_schema_bridge_profiles.sql...
+Applying migration 20260703230000_gems_backfill_and_country_lb.sql...
 Stopping containers...
-Pruned containers: [8c2269f5d246032955b2c0c124078d3d92e0602b85bf0c2eb70a9ad6de9c14cf]
+Pruned containers: [52445932564d0aa0f88b9679d1c8bd0755f6b91a75ad1c055e8a99b26cc31f66]
 Pruned volumes: [supabase_db_kaify-local]
 Pruned network: [supabase_network_kaify-local]
-[31mERROR: policy "gem_ledger_select_own" for table "gem_ledger" already exists (SQLSTATE 42710)
-At statement: 9
-create policy "gem_ledger_select_own" on public.gem_ledger
-  for select to authenticated
-  using ((select auth.uid()) = user_id)[39m
+[31mERROR: column "transaction_type" of relation "gem_ledger" does not exist (SQLSTATE 42703)
+At statement: 1
+-- ---------------------------------------------------------------------------
+-- 1b. Backfill missing welcome bonus (+300) — run AFTER 1a in a NEW query
+-- ---------------------------------------------------------------------------
+insert into public.gem_ledger (user_id, amount, transaction_type, description, idempotency_key)
+                                              ^[39m
 ```
 
 ## docker ps -a
