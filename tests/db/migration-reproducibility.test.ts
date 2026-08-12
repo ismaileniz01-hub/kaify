@@ -73,6 +73,17 @@ describe("migration-reproducibility (static)", () => {
     );
     expect(sql).toMatch(/skipping pg_cron HTTP schedules/i);
   });
+
+  it("security_hardening alters optional purchase_market_item signatures safely", () => {
+    const sql = readMigration("20260702220000_security_hardening.sql");
+    expect(sql).toMatch(/__kaify_alter_search_path_if_exists/i);
+    expect(sql).toMatch(/purchase_market_item\(uuid, text\)/);
+    // Must not bare-ALTER the legacy 2-arg signature (absent on clean DBs).
+    const top = topLevelOutsideDoBlocks(sql);
+    expect(top).not.toMatch(
+      /^\s*alter function public\.purchase_market_item\(uuid, text\)\s+set search_path/im,
+    );
+  });
 });
 
 describe.skipIf(!dbTestsEnabled())("migration-reproducibility (live after reset)", () => {
