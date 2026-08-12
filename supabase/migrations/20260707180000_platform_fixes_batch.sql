@@ -2,6 +2,7 @@
 
 -- ---------------------------------------------------------------------------
 -- 1. Country leaderboard — +1 point per completed daily check-in (not sum of current streak)
+-- Production gem_ledger may use `transaction_type`; clean migrations use `type`.
 -- ---------------------------------------------------------------------------
 create or replace function public.get_country_leaderboard(
   p_limit integer default 100
@@ -13,43 +14,54 @@ returns table (
   user_count   bigint,
   avg_streak   numeric
 )
-language sql
+language plpgsql
 security definer
 set search_path = ''
 stable
 as $$
-  with checkins as (
-    select
-      p.country_code::text as country_code,
-      count(*)::bigint as total_points,
-      count(distinct gl.user_id)::bigint as active_users
-    from public.gem_ledger gl
-    join public.profiles p on p.id = gl.user_id
-    where coalesce(p.leaderboard_opt_out, false) = false
-      and p.country_code is not null
-      and (
-        case
-          when exists (
-            select 1 from information_schema.columns
-            where table_schema = 'public' and table_name = 'gem_ledger' and column_name = 'transaction_type'
-          ) then gl.transaction_type::text = 'daily_check_in'
-          else gl.type::text = 'daily_check_in'
-        end
+declare
+  type_col text;
+begin
+  select case
+    when exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'gem_ledger'
+        and column_name = 'transaction_type'
+    ) then 'transaction_type'
+    else 'type'
+  end into type_col;
+
+  return query execute format(
+    $q$
+      with checkins as (
+        select
+          p.country_code::text as country_code,
+          count(*)::bigint as total_points,
+          count(distinct gl.user_id)::bigint as active_users
+        from public.gem_ledger gl
+        join public.profiles p on p.id = gl.user_id
+        where coalesce(p.leaderboard_opt_out, false) = false
+          and p.country_code is not null
+          and gl.%I::text = 'daily_check_in'
+        group by p.country_code
       )
-    group by p.country_code
-  )
-  select
-    rank() over (order by c.total_points desc, c.active_users desc) as rank,
-    c.country_code,
-    c.total_points as total_streak,
-    c.active_users as user_count,
-    round(
-      case when c.active_users > 0 then c.total_points::numeric / c.active_users else 0 end,
-      1
-    ) as avg_streak
-  from checkins c
-  order by total_streak desc, user_count desc
-  limit greatest(coalesce(p_limit, 100), 0);
+      select
+        rank() over (order by c.total_points desc, c.active_users desc) as rank,
+        c.country_code,
+        c.total_points as total_streak,
+        c.active_users as user_count,
+        round(
+          case when c.active_users > 0 then c.total_points::numeric / c.active_users else 0 end,
+          1
+        ) as avg_streak
+      from checkins c
+      order by total_streak desc, user_count desc
+      limit greatest(coalesce($1, 100), 0)
+    $q$,
+    type_col
+  ) using p_limit;
+end;
 $$;
 
 revoke all on function public.get_country_leaderboard(integer) from public;
