@@ -131,14 +131,33 @@ jobs:
         with:
           version: 2.113.0
 
-      - name: Start local Supabase
+      # Postgres-only first — proves migration reproducibility without Studio/GoTrue health flakiness.
+      - name: Start local Postgres (db only)
         run: |
           set -euo pipefail
           supabase --version
-          # Auth + DB + API required for JWT RLS tests. Exclude flaky/unused services.
+          supabase db start --debug 2>&1 | tee /tmp/supabase-db-start.log
+          supabase status || true
+
+      # Deterministic reproducibility: reset → migrate → reset → migrate again.
+      - name: Reset database from migrations (pass 1)
+        run: |
+          set -euo pipefail
+          supabase db reset --local --yes --debug 2>&1 | tee /tmp/supabase-db-reset-1.log
+
+      - name: Reset database from migrations (pass 2)
+        run: |
+          set -euo pipefail
+          supabase db reset --local --yes --debug 2>&1 | tee /tmp/supabase-db-reset-2.log
+
+      # Full local stack for JWT auth (GoTrue + API). Ignore peripheral health if needed.
+      - name: Start Auth/API stack
+        run: |
+          set -euo pipefail
           set +e
           supabase start \
             --exclude studio,edge-runtime,logflare,vector \
+            --ignore-health-check \
             --debug 2>&1 | tee /tmp/supabase-start.log
           status=${PIPESTATUS[0]}
           set -e
@@ -150,20 +169,37 @@ jobs:
           fi
           supabase status
 
-      - name: Upload supabase start log
+      - name: Publish diagnostics to check run
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/github-script@v7
         with:
-          name: supabase-start-log
-          path: /tmp/supabase-start.log
-          if-no-files-found: ignore
-
-      # Deterministic reproducibility: reset → migrate → reset → migrate again.
-      - name: Reset database from migrations (pass 1)
-        run: npm run db:reset:verify
-
-      - name: Reset database from migrations (pass 2)
-        run: npm run db:reset:verify
+          script: |
+            const fs = require('fs');
+            const parts = [];
+            for (const p of [
+              '/tmp/supabase-db-start.log',
+              '/tmp/supabase-db-reset-1.log',
+              '/tmp/supabase-db-reset-2.log',
+              '/tmp/supabase-start.log',
+            ]) {
+              if (fs.existsSync(p)) {
+                parts.push('## ' + p + '\n```\n' + fs.readFileSync(p, 'utf8').slice(-12000) + '\n```');
+              }
+            }
+            const text = parts.join('\n\n').slice(0, 60000) || 'No log files captured.';
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'wave2-db-diagnostics',
+              head_sha: context.sha,
+              status: 'completed',
+              conclusion: 'failure',
+              output: {
+                title: 'Wave 2 database CI diagnostics',
+                summary: 'Captured supabase db/start logs (truncated).',
+                text,
+              },
+            });
 
       - name: Export local Supabase keys
         run: |
@@ -183,6 +219,18 @@ jobs:
         run: npm run test:db
         env:
           KAIFY_DB_TESTS: "1"
+
+      - name: Upload supabase logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-db-logs
+          path: |
+            /tmp/supabase-db-start.log
+            /tmp/supabase-db-reset-1.log
+            /tmp/supabase-db-reset-2.log
+            /tmp/supabase-start.log
+          if-no-files-found: ignore
 
       - name: Dump Supabase diagnostics on failure
         if: failure()
