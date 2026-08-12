@@ -259,7 +259,8 @@ grant execute on function public.perform_daily_check_in(text, uuid) to service_r
 
 notify pgrst, 'reload schema';
 
--- Country leaderboard: count check-ins by idempotency key when enum label differs.
+-- Country leaderboard: count check-ins by idempotency key (schema-stable).
+-- Avoid referencing gem_ledger.transaction_type (production-only column name).
 create or replace function public.get_country_leaderboard(
   p_limit integer default 100
 )
@@ -286,10 +287,7 @@ as $$
       and p.country_code is not null
       and (
         gl.idempotency_key like 'daily_check_in:%'
-        or (
-          gl.transaction_type::text in ('daily_check_in', 'credit')
-          and coalesce(gl.description, '') ilike '%check-in%'
-        )
+        or coalesce(gl.description, '') ilike '%check-in%'
       )
     group by p.country_code
   )
