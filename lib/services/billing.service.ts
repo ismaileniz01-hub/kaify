@@ -351,7 +351,7 @@ async function claimBillingEvent(
     user_id: userId,
     payload: minimizeBillingPayload(payload),
     subscription_id: extras?.subscriptionId ?? null,
-    customer_email: extras?.customerEmail ?? null,
+    customer_email: null,
     processed_at: null,
   });
 

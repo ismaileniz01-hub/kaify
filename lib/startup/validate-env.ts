@@ -66,6 +66,9 @@ export function validateEnvAtBoot(): void {
   if (isProd && (!process.env.CSRF_SECRET || process.env.CSRF_SECRET.includes("your_"))) {
     problems.push("CSRF_SECRET missing or placeholder in production/preview");
   }
+  if (isProd && !process.env.ADMIN_EMAIL?.trim()) {
+    problems.push("ADMIN_EMAIL missing in production/preview (hub allowlist fail-closed)");
+  }
   if (isProd && !process.env.ADMIN_HUB_PASSWORD?.trim()) {
     problems.push("ADMIN_HUB_PASSWORD missing in production/preview");
   }

@@ -158,7 +158,7 @@ export default function SecuritySettingsPage() {
         setError(signOutError.message);
         return;
       }
-      setMessage("Diğer cihazlardaki oturumlar sonlandırıldı.");
+      setMessage(t("settings.security.sessions.revoke_others_success"));
     } finally {
       setLoading(false);
     }

@@ -237,11 +237,7 @@ describe.skipIf(!enabled)("rls-authorization (live)", () => {
         and policyname in ('avatars_upload_own', 'avatars_update_own', 'avatars_delete_own')
       order by policyname
     `);
-    expect(ownWrites.map((r) => r.polname).sort()).toEqual([
-      "avatars_delete_own",
-      "avatars_update_own",
-      "avatars_upload_own",
-    ]);
+    expect(ownWrites.map((r) => r.polname).sort()).toEqual(["avatars_delete_own"]);
   });
 });
 

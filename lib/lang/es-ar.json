@@ -848,6 +848,7 @@
   "settings.security.sessions.desc": "Cierra sesión en otros dispositivos si perdiste un dispositivo o sospechas de un acceso no autorizado.",
   "settings.security.sessions.revoke_others": "Cerrar sesión en otros dispositivos",
   "settings.security.sessions.revoke_all": "Cerrar sesión en todas partes (cerrar sesión)",
+  "settings.security.sessions.revoke_others_success": "Se cerraron las sesiones en otros dispositivos.",
   "settings.export.title": "Exportación de datos",
   "settings.export.desc": "Descargue todos los datos de su cuenta como JSON (GDPR/KVKK).",
   "settings.export.action": "Descargar JSON",

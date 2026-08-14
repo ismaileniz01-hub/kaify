@@ -848,6 +848,7 @@
   "settings.security.sessions.desc": "デバイスを紛失した場合、または不正アクセスが疑われる場合は、他のデバイスからサインアウトします。",
   "settings.security.sessions.revoke_others": "他のデバイスからサインアウトする",
   "settings.security.sessions.revoke_all": "どこでもサインアウト (ログアウト)",
+  "settings.security.sessions.revoke_others_success": "Sessions on other devices have been signed out.",
   "settings.export.title": "データのエクスポート",
   "settings.export.desc": "すべてのアカウント データを JSON (GDPR/KVKK) としてダウンロードします。",
   "settings.export.action": "JSONをダウンロード",

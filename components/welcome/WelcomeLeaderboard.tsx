@@ -34,6 +34,7 @@ export function WelcomeLeaderboard() {
   const { isAuthenticated } = useSession();
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
@@ -41,32 +42,60 @@ export function WelcomeLeaderboard() {
       ? "/api/leaderboard/global?limit=10"
       : "/api/leaderboard";
 
+    setLoadError(false);
     fetch(resolveApiPath(path), { credentials: "include" })
       .then(async (res) => {
-        const json = await res.json();
-        if (isAuthenticated && json.success) {
-          const lb = json.data as {
+        const json = (await res.json()) as Record<string, unknown>;
+        if (!res.ok || json.success === false) {
+          setData(null);
+          setLoadError(true);
+          setLoading(false);
+          return;
+        }
+        if (isAuthenticated) {
+          const payload = json.data as {
             leaderboard: LeaderboardEntryDTO[];
             myRank: number | null;
             totalRanked: number;
-          };
+          } | undefined;
+          if (!payload?.leaderboard) {
+            setData(null);
+            setLoadError(true);
+            setLoading(false);
+            return;
+          }
           setData({
-            leaderboard: lb.leaderboard.map((e) => ({
+            leaderboard: payload.leaderboard.map((e) => ({
               userId: e.userId,
               name: e.name,
               flagCode: e.flagCode,
               streak: e.streak,
               avatar: e.avatar || "/kaify-logo.png",
             })),
-            userRank: lb.myRank,
-            totalUsers: lb.totalRanked,
+            userRank: payload.myRank,
+            totalUsers: payload.totalRanked,
           });
         } else {
-          setData(json);
+          const guest = json as Partial<LeaderboardData>;
+          if (!Array.isArray(guest.leaderboard)) {
+            setData(null);
+            setLoadError(true);
+            setLoading(false);
+            return;
+          }
+          setData({
+            leaderboard: guest.leaderboard,
+            userRank: guest.userRank ?? null,
+            totalUsers: guest.totalUsers ?? guest.leaderboard.length,
+          });
         }
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setData(null);
+        setLoadError(true);
+        setLoading(false);
+      });
   }, [isAuthenticated]);
 
   if (loading) {
@@ -77,7 +106,13 @@ export function WelcomeLeaderboard() {
     );
   }
 
-  if (!data) return null;
+  if (loadError || !data) {
+    return (
+      <div className="mx-4 mt-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 text-sm text-zinc-400">
+        {t("leaderboard.error.load")}
+      </div>
+    );
+  }
 
   const top3 = data.leaderboard.slice(0, 3);
   const rest = data.leaderboard.slice(3, 7);

@@ -848,6 +848,7 @@
   "settings.security.sessions.desc": "Kayıp cihaz veya şüpheli erişim durumunda diğer oturumları kapatın.",
   "settings.security.sessions.revoke_others": "Diğer cihazlardaki oturumları kapat",
   "settings.security.sessions.revoke_all": "Tüm oturumları kapat (çıkış yap)",
+  "settings.security.sessions.revoke_others_success": "Diğer cihazlardaki oturumlar sonlandırıldı.",
   "settings.export.title": "Veri dışa aktarma",
   "settings.export.desc": "KVKK/GDPR kapsamında hesabınızdaki tüm verileri JSON olarak indirin.",
   "settings.export.action": "JSON indir",

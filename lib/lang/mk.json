@@ -848,6 +848,7 @@
   "settings.security.sessions.desc": "Sign out other devices if you lost a device or suspect unauthorized access.",
   "settings.security.sessions.revoke_others": "Sign out other devices",
   "settings.security.sessions.revoke_all": "Sign out everywhere (log out)",
+  "settings.security.sessions.revoke_others_success": "Sessions on other devices have been signed out.",
   "settings.export.title": "Data export",
   "settings.export.desc": "Download all your account data as JSON (GDPR/KVKK).",
   "settings.export.action": "Download JSON",

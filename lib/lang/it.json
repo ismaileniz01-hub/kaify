@@ -848,6 +848,7 @@
   "settings.security.sessions.desc": "Disconnetti altri dispositivi se hai perso un dispositivo o sospetti un accesso non autorizzato.",
   "settings.security.sessions.revoke_others": "Disconnettersi dagli altri dispositivi",
   "settings.security.sessions.revoke_all": "Esci ovunque (disconnetti)",
+  "settings.security.sessions.revoke_others_success": "Le sessioni sugli altri dispositivi sono state chiuse.",
   "settings.export.title": "Esportazione dei dati",
   "settings.export.desc": "Scarica tutti i dati del tuo account come JSON (GDPR/KVKK).",
   "settings.export.action": "Scarica JSON",

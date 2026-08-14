@@ -36,6 +36,11 @@ export const USER_EXPORT_TABLES: readonly ExportTableSpec[] = [
   { table: "paddle_customers", column: "user_id", description: "Linked Paddle customer billing identity" },
   { table: "paddle_subscriptions", column: "user_id", description: "Mirrored Paddle subscription status" },
   { table: "data_export_logs", column: "user_id", description: "History of your data export requests" },
+  { table: "pending_gifts", column: "user_id", description: "Unclaimed admin or referral gifts" },
+  { table: "support_tickets", column: "user_id", description: "Support tickets you opened" },
+  { table: "analytics_pending_confirmations", column: "user_id", description: "Pending fitness log confirmations" },
+  { table: "team_meeting_weeks", column: "user_id", description: "Weekly Coach Council lock records" },
+  { table: "referrals", column: "referrer_id", description: "Referral codes and edges you created" },
 ] as const;
 
 export const EXPORT_SCHEMA_VERSION = "2026-08-14";

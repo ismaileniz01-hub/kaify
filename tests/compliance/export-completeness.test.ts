@@ -22,12 +22,17 @@ const REQUIRED_EXPORT_TABLES = [
   "notifications",
   "push_subscriptions",
   "native_push_tokens",
-  "daily_chest_claims",
-  "idempotency_keys",
-  "ai_usage_ledger",
-  "ai_daily_usage",
-  "billing_events",
-  "data_export_logs",
+    "daily_chest_claims",
+    "idempotency_keys",
+    "ai_usage_ledger",
+    "ai_daily_usage",
+    "billing_events",
+    "data_export_logs",
+    "pending_gifts",
+    "support_tickets",
+    "analytics_pending_confirmations",
+    "team_meeting_weeks",
+    "referrals",
 ] as const;
 
 describe("export completeness", () => {

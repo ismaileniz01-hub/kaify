@@ -20,6 +20,7 @@ import { validateEnvAtBoot } from "@/lib/startup/validate-env";
 const CRITICAL_KEYS = [
   "CRON_SECRET",
   "CSRF_SECRET",
+  "ADMIN_EMAIL",
   "ADMIN_HUB_PASSWORD",
   "ADMIN_HUB_SECRET",
   "PADDLE_NOTIFICATION_WEBHOOK_SECRET",
@@ -51,7 +52,7 @@ describe("validateEnvAtBoot (OPS-001 / OPS-002)", () => {
   it("reports each missing production secret as a critical error", () => {
     for (const key of CRITICAL_KEYS) {
       error.mockClear();
-      process.env[key] = key === "ADMIN_HUB_PASSWORD" ? "" : "your_placeholder";
+      process.env[key] = key === "ADMIN_HUB_PASSWORD" || key === "ADMIN_EMAIL" ? "" : "your_placeholder";
       validateEnvAtBoot();
       expect(error).toHaveBeenCalled();
       const problems = error.mock.calls[0][1].problems as string[];

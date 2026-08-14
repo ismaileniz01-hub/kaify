@@ -470,24 +470,6 @@ async function* streamKaiosCoachReply(
         },
       };
     }
-
-    after(async () => {
-      try {
-        await applyCoachAnalyticsFromChat({
-          userId: params.userId,
-          coachId: params.coachId,
-          userMessage: cleanMessage,
-          coachReply: assistantText,
-        });
-      } catch (analyticsError) {
-        logger.error("[chat.service] analytics extract error", {
-          error:
-            analyticsError instanceof Error
-              ? analyticsError.message
-              : "unknown",
-        });
-      }
-    });
   } catch (error) {
     if (!quotaSettled && (params.tokensReserved ?? 0) > 0 && !assistantText) {
       try {
@@ -496,6 +478,7 @@ async function* streamKaiosCoachReply(
           resource: "text_tokens",
           amount: params.tokensReserved ?? 0,
         });
+        quotaSettled = true;
       } catch (refundError) {
         logger.error("[chat.service] kaios quota refund error", {
           error:
