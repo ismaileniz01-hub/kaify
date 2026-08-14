@@ -44,7 +44,7 @@ Live `information_schema` table/function counts were **not** re-measured (no Doc
 | Lockfile install | Existing `node_modules` from lockfile; `npm ci` not forced (would wipe). No stale-cache-only compile observed. |
 | typecheck | **PASS** |
 | lint:strict | **PASS** (0 warnings) |
-| Vitest | **PASS** 865 / 13 skipped |
+| Vitest | **PASS** 869 / 13 skipped |
 | coverage | statements **34.78%**, branches **33.07%**, functions **40.72%**, lines **35.50%** over `lib/**` + `app/api/**` (exclusions: types, lang, native, supabase glue) |
 | production build | **PASS** |
 | bundle budget | **PASS** largest **124** / core-shared **333** / middleware **116** / landing first-load **238** KB gzip (caps 135/350/125/250) |
@@ -53,8 +53,8 @@ Live `information_schema` table/function counts were **not** re-measured (no Doc
 | migration-order | **PASS** static uniqueness (`tests/db/migration-reproducibility.test.ts`) |
 | clean Supabase reset ×2 | **NOT_AVAILABLE** (`docker: command not found`) |
 | DB RLS/RPC live | **NOT_AVAILABLE** |
-| Playwright | **MIXED** 26 passed, 16 skipped (auth OTP), **12 failed** (timeouts: `/pricing`, cookie banner, some login/i18n/SEO). Not treated as source P0; owner re-run on staging. |
-| Lighthouse | **NOT_REMEASURED** this environment (same start path as failing Playwright). Bundle budgets used for performance evidence. |
+| PLAYWRIGHT | **PASS** on `https://kaifyai.org` — 38 passed, 16 skipped (OTP). Preview RC URL is behind Vercel Deployment Protection (HTML wall). Local 12 timeouts = ENVIRONMENT_LIMITATION / TEST_FLAKE (**W8-017 CLOSED**). |
+| Lighthouse | **PASS** a11y+SEO on production public routes; performance **warn-band** (repo gate is warn &lt; 0.65, not error). |
 | KAIOS unit | **PASS** (included in Vitest) |
 
 ---
@@ -216,7 +216,7 @@ No production secrets printed. Gitleaks unavailable.
 | W8-003 | Privacy | P1 | **FIXED** | export/deletion registries | none | No |
 | W8-004 | Security | P2 | **FIXED** | drop avatar INSERT/UPDATE policies | Apply same migration | No |
 | W8-005 | Privacy | P2 | **FIXED** | stop persisting billing email | none | No |
-| W8-006 | Security | P2 | **FIXED** | ADMIN_EMAIL fail-closed in prod | Set `ADMIN_EMAIL` in Vercel | Ops |
+| W8-006 | Security | P2 | **FIXED** | ADMIN_EMAIL fail-closed in prod | Present on Vercel preview+production (value not printed) | No |
 | W8-007 | UX | P2 | **FIXED** | WelcomeLeaderboard fail-hidden | none | No |
 | W8-008 | i18n | P2 | **FIXED** | TR-only session revoke string | none | No |
 | W8-009 | SEO | P2 | **FIXED** | 404 inherited indexable metadata | none | No |
@@ -227,14 +227,14 @@ No production secrets printed. Gitleaks unavailable.
 | W8-014 | A11y | P3 | OPEN | RTL physical CSS residuals | polish | No |
 | W8-015 | i18n | P3 | OPEN | legal copy TR/EN; OTP lang coerce | later locales | No |
 | W8-016 | KAIOS | P3 | OPEN | tools not dispatched on chat path | post-canary | No |
-| W8-017 | Test | P2 | OPEN | local Playwright 12 timeouts | staging re-run | No (env) |
+| W8-017 | Test | P2 | **CLOSED** | 12 local timeouts | **PASS_ON_STABLE_ENV** `https://kaifyai.org` 38 passed / 16 skipped OTP | No |
 | W8-018 | Ops | P2 | OPEN | live DB reset + RLS not re-run (no Docker) | owner CI/hosted | Evidence |
 | W8-019 | Ops | P3 | OPEN | Gitleaks not installed | optional CI | No |
 | W8-020 | Ops | — | OPEN | notification pg_cron Vault | OWNER_VERIFY | Evidence |
 
 **P0_OPEN: 0**  
 **P1_OPEN: 0** (implementation; hosted migration must be applied)  
-**P2_OPEN: 4** (W8-011, 012, 017, 018)  
+**P2_OPEN: 3** (W8-011, 012, 018)  
 **P3_OPEN: 5** (W8-013–016, 019)
 
 ---
@@ -268,7 +268,7 @@ No production secrets printed. Gitleaks unavailable.
 **OVERALL_SCORE: 93/100** (release-critical floor ~93; not a fake 95).  
 **OVERALL_CONFIDENCE: MEDIUM** — implementation HIGH-ish, live DB/AI/a11y LOW.
 
-A = release-critical. Below 95 with documented reason: Backend/Reliability (billing concurrency, not launch-corrupt), A11y (manual SR), AI (live canary), Performance (Lighthouse not remeasured; budgets OK).
+A = release-critical. Below 95 with documented reason: Backend/Reliability (billing concurrency, not launch-corrupt), A11y (manual SR), AI (live canary), Performance (LH mobile warn-band; budgets OK).
 
 ---
 
@@ -301,10 +301,39 @@ Re-gates: typecheck, lint, Vitest 865, i18n check, build, bundle, npm audit high
 | MANUAL_PRODUCTION_CANARY | GAP | — | **Yes** | — |
 | LIVE_DB_RESET_RLS | GAP (no Docker here) | **Yes** on CI/hosted | — | — |
 | GITLEAKS | GAP | Optional | — | CI |
-| LIGHTHOUSE_REMEASURE | GAP this env | Optional | — | Yes |
-| PLAYWRIGHT_STAGING | local timeouts | Staging public smoke | — | — |
+| LIGHTHOUSE_REMEASURE | **DONE** 2026-08-14 mobile simulated vs `kaifyai.org` | — | — | Perf warn-band |
+| PLAYWRIGHT_STABLE | **PASS** 38/16 skip OTP on `kaifyai.org` | — | — | Preview protected |
 
 Do not mix these with source P0.
+
+---
+
+## PRE-CANARY CLOSURE (2026-08-14, HEAD `9c2f16e`)
+
+Not a Wave 9. Approved provider/model **not changed**.
+
+TEXT_PROVIDER_CONFIG: **deepseek** (`getDeepSeekConfig`)  
+TEXT_MODEL_CONFIG: **deepseek-chat**  
+VISION_PROVIDER_CONFIG: **gemini** (`getGeminiConfig`)  
+VISION_MODEL_CONFIG: **gemini-3.5-flash-lite** + `thinkingLevel=medium`  
+MODEL_CONFIG_DRIFT: **NONE** (runtime adapters use env helpers; i18n/quote scripts are TEST_ONLY hardcoded IDs)  
+MODEL_CONFIG_CONTRACT: **PASS**
+
+DB_MIGRATION_STATE: **OWNER_ACTION_REQUIRED** (`20260814180000_wave8_admin_aal2_avatar_writes.sql` — hosted not inspectable here)  
+RLS_RPC_AFTER_MIGRATION: **NOT_EXECUTABLE_HERE**  
+ADMIN_EMAIL_CONTRACT: **PASS** (fail-closed in prod/preview)  
+ADMIN_EMAIL_CONFIGURED: **YES** (Vercel preview+production; value not printed)  
+NOTIFICATION_HOURLY_CRON: **OWNER_VERIFY** (code: pg_cron `kaify-notifications-hourly` `0 * * * *` → `/api/cron/notifications`; Vercel `0 6 * * *` backup)  
+PUBLIC_PLAYWRIGHT: **PASS**  
+UNEXPLAINED_PUBLIC_E2E_FAILURES: **0**  
+LIGHTHOUSE: **PASS** (SEO 1.0 all six; a11y ≥0.93; perf warn-band 0.53–0.66 simulated mobile)  
+KAIOS_CONTRACT: **PASS** (Vitest 869; no auto legacy fallback)  
+ROLLBACK_READY: **PASS**  
+AUTOMATIC_FALLBACK: **NONE**
+
+Lighthouse mobile simulated (`kaifyai.org`): `/` 0.60/0.97/1.00 · `/pricing` 0.53/0.93/1.00 · `/privacy` 0.66/1.00/1.00 · `/terms` 0.59/1.00/1.00 · `/cookies` 0.61/1.00/1.00 · `/kvkk` 0.55/0.96/1.00 (perf/a11y/seo). Bundle budgets still PASS. No architecture change.
+
+PRE_CANARY_CLOSURE: **PASS_WITH_EXTERNAL_ACTIONS**
 
 ---
 
@@ -317,10 +346,10 @@ LEGACY_REMOVAL_READY: **NO**
 P0_OPEN: **0**  
 P1_OPEN: **0**  
 RELEASE_CRITICAL_IMPLEMENTATION_DEFECTS: **0**  
-EXTERNAL_EVIDENCE_GAPS: **8**  
+EXTERNAL_EVIDENCE_GAPS: **5** (authenticated axe, VoiceOver, live AI during canary, hourly cron verify, hosted Wave 8 SQL / live RLS)  
 OVERALL_SCORE: **93/100**  
 OVERALL_CONFIDENCE: **MEDIUM**  
 MANUAL_CANARY_REQUIRED: **YES**  
 PRODUCTION_DEPLOYED: **NO**  
 KAIOS_ROLLBACK_RETAINED: **YES**  
-EXTERNAL_ACTION_REQUIRED: Apply Wave 8 migration + set `ADMIN_EMAIL`; verify notification cron; run owner AI canary on staging; do not remove `KAIOS_RUNTIME=false` until soak.
+EXTERNAL_ACTION_REQUIRED: Apply Wave 8 SQL if not applied; confirm hourly pg_cron; run ~25 min AI canary on Preview (Gemini+DeepSeek keys present). Do not remove `KAIOS_RUNTIME=false`.
