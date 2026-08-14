@@ -6,6 +6,8 @@ import {
   createNotificationsBatch,
   type CreateNotificationInput,
 } from "@/lib/services/notifications.service";
+import { cacheGet, cacheSet, cacheDelete } from "@/lib/cache";
+import { createExecutionBudget } from "@/lib/cron/execution-budget";
 import {
   PRAISE_HOUR,
   STREAK_RISK_HOURS,
@@ -74,9 +76,12 @@ export const GET = defineCronRoute("/api/cron/notifications", async () => {
     // rows, so unbounded selects would silently skip users beyond the first
     // page. Paging by id keeps memory flat and scales to 10k+ users.
     const PAGE_SIZE = 1000;
-    let lastId = "";
+    const budget = createExecutionBudget(45_000);
+    const saved = await cacheGet<{ lastId: string }>("cron:notifications:cursor:v1");
+    let lastId = saved?.lastId ?? "";
     let totalCandidates = 0;
     let totalCreated = 0;
+    let complete = true;
 
     for (;;) {
       let query = admin
@@ -176,17 +181,31 @@ export const GET = defineCronRoute("/api/cron/notifications", async () => {
 
       lastId = ids[ids.length - 1];
       if (profiles.length < PAGE_SIZE) break;
+      if (!budget.hasTimeFor(1_500)) {
+        complete = false;
+        await cacheSet("cron:notifications:cursor:v1", { lastId }, 60 * 60 * 6);
+        logger.info("cron.notifications partial", { lastId, totalCreated });
+        break;
+      }
+    }
+
+    if (complete) {
+      await cacheDelete("cron:notifications:cursor:v1");
     }
 
     logger.info("cron notifications run", {
       candidates: totalCandidates,
       created: totalCreated,
+      complete,
+      resumedFromCursor: Boolean(saved),
     });
 
     const payload = {
       ranAt: now.toISOString(),
       candidates: totalCandidates,
       created: totalCreated,
+      complete,
+      resumedFromCursor: Boolean(saved),
     };
 
     await recordCronRun("notifications", "ok", payload);

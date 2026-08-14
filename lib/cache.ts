@@ -20,6 +20,10 @@ function isConfigured(): boolean {
   );
 }
 
+export function isCacheConfigured(): boolean {
+  return isConfigured();
+}
+
 async function redisCommand<T>(command: (string | number)[]): Promise<T | null> {
   const base = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -67,6 +71,52 @@ export async function cacheSet(
       key,
       error: error instanceof Error ? error.message : "unknown",
     });
+  }
+}
+
+/**
+ * SET key NX EX — returns true when this caller created the key.
+ * Redis/cache outage returns false (fail-closed for lock acquisition).
+ */
+export async function cacheSetNx(
+  key: string,
+  value: unknown,
+  ttlSeconds: number,
+): Promise<boolean> {
+  if (!isConfigured()) return false;
+  try {
+    const result = await redisCommand<string | null>([
+      "SET",
+      key,
+      JSON.stringify(value),
+      "EX",
+      String(ttlSeconds),
+      "NX",
+    ]);
+    return result === "OK";
+  } catch (error) {
+    logger.warn("cache setnx failed", {
+      key,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+    return false;
+  }
+}
+
+/** INCR with TTL refresh. Returns null when Redis is unavailable. */
+export async function cacheIncr(key: string, ttlSeconds: number): Promise<number | null> {
+  if (!isConfigured()) return null;
+  try {
+    const next = await redisCommand<number>(["INCR", key]);
+    if (next === null) return null;
+    await redisCommand(["EXPIRE", key, String(ttlSeconds)]);
+    return Number(next);
+  } catch (error) {
+    logger.warn("cache incr failed", {
+      key,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+    return null;
   }
 }
 

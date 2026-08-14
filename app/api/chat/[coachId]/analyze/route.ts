@@ -5,6 +5,8 @@ import {
   MAX_JSON_BODY_ANALYZE,
   parseJsonWithLimit,
 } from "@/lib/security/body-limit";
+import { getOptionalIdempotencyKey } from "@/lib/api/idempotency";
+import { withIdempotency } from "@/lib/api/idempotency-store";
 import { analyzeImageInputSchema } from "@/lib/validations/analysis.schema";
 import { visionCoachIdSchema } from "@/lib/validations/chat.schema";
 
@@ -46,12 +48,23 @@ export const POST = defineDynamicRoute<{ coachId: string }>(
       );
     }
 
-    return analyzePhoto({
+    return withIdempotency({
       userId: user.id,
-      coachId: coach.data,
-      imageBase64: parsed.data.imageBase64,
-      mimeType: parsed.data.mimeType,
-      note: parsed.data.note,
+      endpoint: `POST /api/chat/${coach.data}/analyze`,
+      key: getOptionalIdempotencyKey(request),
+      requestBody: {
+        mimeType: parsed.data.mimeType,
+        note: parsed.data.note ?? null,
+        imageLen: parsed.data.imageBase64.length,
+      },
+      handler: () =>
+        analyzePhoto({
+          userId: user.id,
+          coachId: coach.data,
+          imageBase64: parsed.data.imageBase64,
+          mimeType: parsed.data.mimeType,
+          note: parsed.data.note,
+        }),
     });
   },
 );

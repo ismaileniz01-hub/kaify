@@ -1,4 +1,11 @@
 import { defineRoute } from "@/lib/api/route-handler";
+import { getOptionalIdempotencyKey } from "@/lib/api/idempotency";
+import { withIdempotency } from "@/lib/api/idempotency-store";
+import {
+  MAX_JSON_BODY_CHAT,
+  parseJsonWithLimit,
+} from "@/lib/security/body-limit";
+import { ApiError } from "@/lib/api/errors";
 import {
   confirmPendingAnalytics,
   rejectPendingAnalytics,
@@ -9,7 +16,7 @@ export const dynamic = "force-dynamic";
 export const POST = defineRoute(
   { route: "POST /api/analytics/confirm", auth: "user" },
   async ({ user, request }) => {
-    const raw = (await request.json().catch(() => null)) as {
+    const raw = (await parseJsonWithLimit(request, MAX_JSON_BODY_CHAT)) as {
       pendingId?: string;
       action?: string;
     } | null;
@@ -17,15 +24,23 @@ export const POST = defineRoute(
     const action = raw?.action === "reject" ? "reject" : "confirm";
 
     if (!pendingId) {
-      return { ok: false };
+      throw new ApiError("VALIDATION_ERROR", "pendingId zorunludur.");
     }
 
-    if (action === "reject") {
-      await rejectPendingAnalytics(user.id, pendingId);
-    } else {
-      await confirmPendingAnalytics(user.id, pendingId);
-    }
-
-    return { ok: true, action };
+    const key = getOptionalIdempotencyKey(request);
+    return withIdempotency({
+      userId: user.id,
+      endpoint: "POST /api/analytics/confirm",
+      key,
+      requestBody: { pendingId, action },
+      handler: async () => {
+        if (action === "reject") {
+          await rejectPendingAnalytics(user.id, pendingId);
+        } else {
+          await confirmPendingAnalytics(user.id, pendingId);
+        }
+        return { ok: true, action };
+      },
+    });
   },
 );

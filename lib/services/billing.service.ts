@@ -16,6 +16,10 @@ import type { SubscriptionTier } from "@/lib/types/database.types";
 import { parsePaddleExpiresAt } from "@/lib/billing/paddle-period";
 import { logger } from "@/lib/logger";
 import { minimizeBillingPayload } from "@/lib/privacy/billing-payload";
+import {
+  billingEventTypeRank,
+  isBillingEventNewer,
+} from "@/lib/billing/event-order";
 
 type BillingCycle = "monthly" | "yearly";
 
@@ -31,6 +35,7 @@ type NormalizedEvent = {
   eventType: string;
   data: Record<string, unknown>;
   rawPayload: unknown;
+  occurredAt?: string | null;
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -137,6 +142,7 @@ export async function verifyAndParsePaddleWebhook(
         eventId: event.eventId,
         eventType: String(event.eventType),
         data: entityToRecord(event.data),
+        occurredAt: event.occurredAt ?? null,
         rawPayload: {
           event_id: event.eventId,
           event_type: event.eventType,
@@ -168,6 +174,7 @@ export async function verifyAndParsePaddleWebhook(
     eventId,
     eventType: payload.event_type ?? "unknown",
     data: asRecord(payload.data) ?? {},
+    occurredAt: payload.occurred_at ?? null,
     rawPayload: payload,
   };
 }
@@ -523,6 +530,9 @@ async function upsertPaddleSubscription(
     productId: string;
     scheduledChangeAction: string | null;
     scheduledChangeAt: string | null;
+    lastEventOccurredAt?: string | null;
+    lastEventId?: string | null;
+    lastEventRank?: number | null;
   },
 ): Promise<void> {
   const { data: existing } = await admin
@@ -541,6 +551,9 @@ async function upsertPaddleSubscription(
       product_id: input.productId,
       scheduled_change_action: input.scheduledChangeAction,
       scheduled_change_at: input.scheduledChangeAt,
+      last_event_occurred_at: input.lastEventOccurredAt ?? null,
+      last_event_id: input.lastEventId ?? null,
+      last_event_rank: input.lastEventRank ?? null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "subscription_id" },
@@ -585,6 +598,7 @@ async function syncSubscriptionMirror(
   admin: ReturnType<typeof createAdminSupabaseClient>,
   data: Record<string, unknown>,
   userId: string | null,
+  eventMeta?: { eventId: string; eventType: string; occurredAt?: string | null },
 ): Promise<void> {
   const subscriptionId = pickString(data.id);
   const customerId = pickString(data.customerId, data.customer_id);
@@ -603,7 +617,63 @@ async function syncSubscriptionMirror(
     productId: productIdFromData(data),
     scheduledChangeAction: scheduled.action,
     scheduledChangeAt: scheduled.at,
+    lastEventOccurredAt: eventMeta?.occurredAt ?? null,
+    lastEventId: eventMeta?.eventId ?? null,
+    lastEventRank: eventMeta ? billingEventTypeRank(eventMeta.eventType) : null,
   });
+}
+
+function subscriptionEventTypes(): Set<string> {
+  return new Set([
+    EventName.SubscriptionCreated,
+    EventName.SubscriptionUpdated,
+    EventName.SubscriptionActivated,
+    EventName.SubscriptionResumed,
+    EventName.SubscriptionTrialing,
+    EventName.SubscriptionCanceled,
+    EventName.SubscriptionPastDue,
+    EventName.SubscriptionPaused,
+    "subscription.created",
+    "subscription.updated",
+    "subscription.activated",
+    "subscription.resumed",
+    "subscription.trialing",
+    "subscription.canceled",
+    "subscription.cancelled",
+    "subscription.past_due",
+    "subscription.paused",
+    EventName.TransactionCompleted,
+    "transaction.completed",
+  ]);
+}
+
+async function isStaleSubscriptionEvent(
+  admin: ReturnType<typeof createAdminSupabaseClient>,
+  subscriptionId: string | undefined,
+  incoming: { eventId: string; eventType: string; occurredAt?: string | null },
+): Promise<boolean> {
+  if (!subscriptionId) return false;
+  const { data: existing } = await admin
+    .from("paddle_subscriptions")
+    .select("last_event_occurred_at, last_event_id, last_event_rank")
+    .eq("subscription_id", subscriptionId)
+    .maybeSingle();
+
+  if (!existing?.last_event_id) return false;
+
+  const lastType =
+    existing.last_event_rank === 3
+      ? "subscription.canceled"
+      : existing.last_event_rank === 1
+        ? "subscription.created"
+        : "subscription.updated";
+
+  const newer = isBillingEventNewer(incoming, {
+    eventId: existing.last_event_id,
+    eventType: lastType,
+    occurredAt: existing.last_event_occurred_at,
+  });
+  return !newer;
 }
 
 async function handleCustomerEvent(
@@ -647,6 +717,7 @@ export async function handlePaddleWebhook(
     eventId,
     eventType: payload.event_type ?? "unknown",
     data: asRecord(payload.data) ?? {},
+    occurredAt: payload.occurred_at ?? null,
     rawPayload: payload,
   });
 }
@@ -658,7 +729,7 @@ export async function handleNormalizedPaddleEvent(
   | { ok: false; reason: string; retryable?: boolean }
 > {
   const admin = createAdminSupabaseClient();
-  const { eventId, eventType, data, rawPayload } = event;
+  const { eventId, eventType, data, rawPayload, occurredAt } = event;
 
   if (!data || Object.keys(data).length === 0) {
     return { ok: false, reason: "missing_data" };
@@ -700,6 +771,26 @@ export async function handleNormalizedPaddleEvent(
   };
 
   try {
+    if (subscriptionEventTypes().has(eventType)) {
+      const stale = await isStaleSubscriptionEvent(admin, subscriptionId, {
+        eventId,
+        eventType,
+        occurredAt,
+      });
+      if (stale) {
+        logger.info("billing.stale_event_ignored", {
+          eventId,
+          eventType,
+          subscriptionId,
+          occurredAt: occurredAt ?? null,
+        });
+        await finalizeBillingEvent(admin, eventId);
+        return { ok: true, skipped: true };
+      }
+    }
+
+    const eventMeta = { eventId, eventType, occurredAt };
+
     switch (eventType) {
       case EventName.CustomerCreated:
       case EventName.CustomerUpdated:
@@ -719,7 +810,7 @@ export async function handleNormalizedPaddleEvent(
       case "subscription.activated":
       case "subscription.resumed":
       case "subscription.trialing": {
-        await syncSubscriptionMirror(admin, data, userId);
+        await syncSubscriptionMirror(admin, data, userId, eventMeta);
         if (!userId) return failRetryable("user_not_found");
         const status = pickString(data.status) ?? "";
         if (subscriptionGrantsAccess(status)) {
@@ -738,7 +829,7 @@ export async function handleNormalizedPaddleEvent(
       case EventName.SubscriptionCanceled:
       case "subscription.canceled":
       case "subscription.cancelled": {
-        await syncSubscriptionMirror(admin, data, userId);
+        await syncSubscriptionMirror(admin, data, userId, eventMeta);
         if (!userId) return failRetryable("user_not_found");
         await revokeSubscription(userId);
         break;
@@ -748,7 +839,7 @@ export async function handleNormalizedPaddleEvent(
       case EventName.SubscriptionPaused:
       case "subscription.past_due":
       case "subscription.paused": {
-        await syncSubscriptionMirror(admin, data, userId);
+        await syncSubscriptionMirror(admin, data, userId, eventMeta);
         break;
       }
 

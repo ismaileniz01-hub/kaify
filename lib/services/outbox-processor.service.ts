@@ -7,6 +7,9 @@ import {
 } from "@/lib/cache/invalidate";
 import { logger } from "@/lib/logger";
 import type { DomainEventType } from "@/lib/events/types";
+import {
+  createExecutionBudget,
+} from "@/lib/cron/execution-budget";
 
 const BATCH_SIZE = 100;
 const MAX_ATTEMPTS = 5;
@@ -124,6 +127,42 @@ export async function processDomainEventOutbox(): Promise<{
   processed: number;
   failed: number;
   deadLettered: number;
+  complete: boolean;
+}> {
+  const budget = createExecutionBudget(45_000);
+  let processed = 0;
+  let failed = 0;
+  let deadLettered = 0;
+  let complete = true;
+
+  while (budget.hasTimeFor(1_500)) {
+    const batch = await processOutboxBatch();
+    processed += batch.processed;
+    failed += batch.failed;
+    deadLettered += batch.deadLettered;
+    if (batch.processed + batch.failed + batch.deadLettered === 0) {
+      complete = true;
+      break;
+    }
+    if (!batch.more) {
+      complete = true;
+      break;
+    }
+    complete = false;
+  }
+
+  if (!complete) {
+    logger.info("outbox.partial", { processed, failed, deadLettered });
+  }
+
+  return { processed, failed, deadLettered, complete };
+}
+
+async function processOutboxBatch(): Promise<{
+  processed: number;
+  failed: number;
+  deadLettered: number;
+  more: boolean;
 }> {
   const admin = createAdminSupabaseClient();
   const db = admin as unknown as SupabaseClient;
@@ -144,7 +183,7 @@ export async function processDomainEventOutbox(): Promise<{
 
   const rows = (pending ?? []) as OutboxRow[];
   if (rows.length === 0) {
-    return { processed: 0, failed: 0, deadLettered: 0 };
+    return { processed: 0, failed: 0, deadLettered: 0, more: false };
   }
 
   let processed = 0;
@@ -218,5 +257,10 @@ export async function processDomainEventOutbox(): Promise<{
     }
   }
 
-  return { processed, failed, deadLettered };
+  return {
+    processed,
+    failed,
+    deadLettered,
+    more: rows.length >= BATCH_SIZE,
+  };
 }

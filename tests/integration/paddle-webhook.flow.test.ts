@@ -10,6 +10,8 @@ const updateEq = vi.fn();
 const deleteEqIs = vi.fn();
 const rpc = vi.fn();
 
+const paddleSubSelect = vi.fn();
+
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminSupabaseClient: () => ({
     from: (table: string) => {
@@ -35,6 +37,9 @@ vi.mock("@/lib/supabase/admin", () => ({
       }
       if (table === "paddle_subscriptions") {
         return {
+          select: () => ({
+            eq: () => ({ maybeSingle: paddleSubSelect }),
+          }),
           upsert: vi.fn().mockResolvedValue({ error: null }),
           update: () => ({ eq: vi.fn().mockResolvedValue({ error: null }) }),
         };
@@ -91,6 +96,8 @@ beforeEach(() => {
   updateEq.mockReset();
   deleteEqIs.mockReset();
   rpc.mockReset();
+  paddleSubSelect.mockReset();
+  paddleSubSelect.mockResolvedValue({ data: null, error: null });
 });
 
 afterEach(() => {
@@ -236,5 +243,35 @@ describe("POST /api/webhooks/paddle", () => {
       received: true,
       skipped: true,
     });
+  });
+});
+
+describe("stale Paddle subscription events", () => {
+  it("does not apply an older updated after a newer cancel", async () => {
+    insert.mockResolvedValue({ error: null });
+    paddleSubSelect.mockResolvedValue({
+      data: {
+        last_event_occurred_at: "2026-08-01T12:00:00.000Z",
+        last_event_id: "evt_cancel",
+        last_event_rank: 3,
+      },
+      error: null,
+    });
+    updateEq.mockResolvedValue({ error: null });
+
+    const result = await handleNormalizedPaddleEvent({
+      eventId: "evt_old_update",
+      eventType: "subscription.updated",
+      occurredAt: "2026-08-01T11:00:00.000Z",
+      data: {
+        id: "sub_1",
+        custom_data: { user_id: "u1" },
+        status: "active",
+      },
+      rawPayload: {},
+    });
+
+    expect(result).toEqual({ ok: true, skipped: true });
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

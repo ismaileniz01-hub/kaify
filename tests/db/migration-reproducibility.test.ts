@@ -66,6 +66,13 @@ describe("migration-reproducibility (static)", () => {
     expect(readdirSync(MIGRATIONS_DIR)).toContain(LEADERBOARD);
   });
 
+  it("migration timestamps (first 14 chars) are unique", () => {
+    const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql"));
+    const prefixes = files.map((f) => f.slice(0, 14));
+    const dupes = prefixes.filter((p, i) => prefixes.indexOf(p) !== i);
+    expect(dupes, `duplicate migration timestamps: ${dupes.join(",")}`).toEqual([]);
+  });
+
   it("pg_cron vault schedules do not hard-fail clean databases", () => {
     const sql = readMigration("20260804171000_faz1_pg_cron_vault_schedules.sql");
     expect(sql).not.toMatch(

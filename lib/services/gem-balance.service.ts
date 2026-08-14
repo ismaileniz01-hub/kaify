@@ -11,6 +11,20 @@ export type GemBalanceDTO = {
 export async function getGemBalance(userId: string): Promise<GemBalanceDTO> {
   const supabase = await createServerSupabaseClient();
 
+  const { data: kai, error: kaiError } = await supabase
+    .from("user_kai_state")
+    .select("gem_balance, gem_total_earned, gem_total_spent")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!kaiError && kai && typeof kai.gem_balance === "number") {
+    return {
+      balance: Number(kai.gem_balance ?? 0),
+      totalEarned: Number(kai.gem_total_earned ?? 0),
+      totalSpent: Number(kai.gem_total_spent ?? 0),
+    };
+  }
+
   const { data, error } = await supabase
     .from("user_gem_balances")
     .select("balance, total_earned, total_spent")

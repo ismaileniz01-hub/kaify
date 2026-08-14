@@ -41,6 +41,8 @@ type PurgeTarget = {
   idColumn: string;
   /** Composite PK tables need both columns for safe batched deletes. */
   compositeDateColumn?: string;
+  /** When set, only rows with processed_at IS NOT NULL are deleted. */
+  processedOnly?: boolean;
 };
 
 async function deleteBatch(
@@ -78,12 +80,17 @@ async function deleteBatch(
     return { deleted, done: rows.length < BATCH_SIZE };
   }
 
-  const { data: rows, error: selectError } = await db
+  let query = db
     .from(target.table)
     .select(target.idColumn)
     .lt(target.column, target.cutoff)
     .order(target.idColumn, { ascending: true })
     .limit(BATCH_SIZE);
+  if (target.processedOnly) {
+    query = query.not("processed_at", "is", null);
+  }
+
+  const { data: rows, error: selectError } = await query;
 
   if (selectError) {
     logger.warn("retention.purge select failed", {
@@ -199,6 +206,25 @@ export async function runRetentionPurge(): Promise<RetentionPurgeResult> {
       column: "created_at",
       cutoff: monthsAgoIso(RETENTION.billingEventsMonths),
       idColumn: "id",
+    },
+    {
+      table: "usage_events",
+      column: "created_at",
+      cutoff: monthsAgoIso(RETENTION.usageEventsMonths),
+      idColumn: "id",
+    },
+    {
+      table: "referral_events",
+      column: "created_at",
+      cutoff: monthsAgoIso(RETENTION.referralEventsMonths),
+      idColumn: "id",
+    },
+    {
+      table: "domain_events",
+      column: "occurred_at",
+      cutoff: daysAgoIso(RETENTION.domainEventsDays),
+      idColumn: "id",
+      processedOnly: true,
     },
     {
       table: "idempotency_keys",

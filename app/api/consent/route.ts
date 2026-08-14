@@ -2,6 +2,8 @@ import { ok } from "@/lib/api/response";
 import { defineRoute } from "@/lib/api/route-handler";
 import { getClientIP } from "@/lib/api-security";
 import { ApiError } from "@/lib/api/errors";
+import { getOptionalIdempotencyKey } from "@/lib/api/idempotency";
+import { withIdempotency } from "@/lib/api/idempotency-store";
 import {
   getConsentStatus,
   isRevocableConsentType,
@@ -41,12 +43,21 @@ export const POST = defineRoute(
       );
     }
 
-    await recordConsent({
+    await withIdempotency({
       userId: user.id,
-      consentType: parsed.data.consentType,
-      ipAddress: getClientIP(request),
-      userAgent: request.headers.get("user-agent"),
-      metadata: parsed.data.metadata,
+      endpoint: "POST /api/consent",
+      key: getOptionalIdempotencyKey(request),
+      requestBody: parsed.data,
+      handler: async () => {
+        await recordConsent({
+          userId: user.id,
+          consentType: parsed.data.consentType,
+          ipAddress: getClientIP(request),
+          userAgent: request.headers.get("user-agent"),
+          metadata: parsed.data.metadata,
+        });
+        return { recorded: true };
+      },
     });
 
     return ok({ recorded: true });
@@ -77,11 +88,20 @@ export const DELETE = defineRoute(
       throw new ApiError("VALIDATION_ERROR", "Bu onay türü geri çekilemez.");
     }
 
-    await revokeConsent({
+    await withIdempotency({
       userId: user.id,
-      consentType: parsed.data.consentType,
-      ipAddress: getClientIP(request),
-      userAgent: request.headers.get("user-agent"),
+      endpoint: "DELETE /api/consent",
+      key: getOptionalIdempotencyKey(request),
+      requestBody: parsed.data,
+      handler: async () => {
+        await revokeConsent({
+          userId: user.id,
+          consentType: parsed.data.consentType,
+          ipAddress: getClientIP(request),
+          userAgent: request.headers.get("user-agent"),
+        });
+        return { revoked: true };
+      },
     });
 
     return ok({ revoked: true });

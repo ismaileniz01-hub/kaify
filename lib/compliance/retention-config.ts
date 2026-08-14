@@ -14,6 +14,9 @@ export const RETENTION = {
    * (7 years / tax-accounting). OWNER_REVIEW if legal counsel revises.
    */
   billingEventsMonths: 84,
+  usageEventsMonths: 24,
+  referralEventsMonths: 36,
+  domainEventsDays: 90,
 } as const;
 
 export const RETENTION_WARNING_DAYS = 30;
