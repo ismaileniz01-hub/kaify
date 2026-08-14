@@ -119,8 +119,8 @@ BACKEND_API_SCORE_BEFORE: 83/100
 **ROOT_CAUSE:** SUM as sole runtime source (correct but racy/slow); no materialized counter.  
 **CHANGE:** Columns `gem_balance`, `gem_total_earned`, `gem_total_spent` on `user_kai_state`; FOR UPDATE; insert ledger then increment; `getGemBalance` prefers kai columns, falls back to view. After first CI, `earn_gems` no longer uses PL/pgSQL `FOUND` after `EXECUTE … ON CONFLICT DO NOTHING` (always true); duplicate path is `EXISTS` on ledger then `GET DIAGNOSTICS ROW_COUNT` so a second key cannot increment balance without a ledger row.  
 **TESTS_ADDED:** Live earn duplicate + reconcile SQL; sequential spend duplicate in `tests/db/wave4-integrity.test.ts`.  
-**RUNTIME_EVIDENCE:** CI run [31787327063](https://github.com/ismaileniz01-hub/kaify/actions/runs/31787327063) on `91cff06`: clean double reset PASS; RLS/RPC 100/101 — only `earn_gems` duplicate flag failed (`FOUND`). Analytics CHECK, RPC clamp, NULL notification dedup, spend duplicate PASS. Follow-up SHA after this FOUND fix. Unit gem.service mapping PASS.  
-**STATUS:** VERIFIED (code + unit + live CHECK/clamp/dedup/spend on CI). Live earn duplicate re-check on follow-up SHA.  
+**RUNTIME_EVIDENCE:** CI [31787327063](https://github.com/ismaileniz01-hub/kaify/actions/runs/31787327063) on `91cff06`: 100/101, `FOUND` duplicate miss. Follow-up [31787837532](https://github.com/ismaileniz01-hub/kaify/actions/runs/31787837532) on `2097000`: **Supabase DB · RLS · RPC success** (double reset, auth smoke, `test:db` including earn duplicate + reconcile). Unit gem.service mapping PASS.  
+**STATUS:** VERIFIED (code + unit + live CI).  
 **FILES_CHANGED:** migration, `lib/services/gem-balance.service.ts`, types  
 **RESIDUAL_RISK:** View remains for fallback/reconcile. Parallel overspend is locked in SQL; JS test is duplicate-key not two workers.
 
@@ -317,14 +317,14 @@ DATABASE_INTEGRITY_OPEN: 0
 RELIABILITY_SCORE: 91/100  
 DATABASE_SCORE: 92/100  
 BACKEND_API_SCORE: 90/100  
-CLEAN_RESET: PASS (GitHub Actions double reset on `91cff06`)  
-DATABASE_RLS_SUITE: PASS except earn duplicate (`FOUND`); follow-up SHA re-runs full suite  
-CONCURRENCY_SUITE: PASS (unit; live spend duplicate + analytics CHECK on CI)  
+CLEAN_RESET: PASS (GitHub Actions double reset on `2097000`, run [31787837532](https://github.com/ismaileniz01-hub/kaify/actions/runs/31787837532))  
+DATABASE_RLS_SUITE: PASS (same run, job [94727669334](https://github.com/ismaileniz01-hub/kaify/actions/runs/31787837532/job/94727669334))  
+CONCURRENCY_SUITE: PASS (unit + live earn/spend duplicate + analytics CHECK on CI)  
 TYPECHECK: PASS  
 LINT: PASS  
 TESTS: PASS (620 passed, 8 skipped)  
 BUILD: PASS  
 NPM_AUDIT_HIGH: PASS  
-EXTERNAL_ACTION_REQUIRED: Confirm **Supabase DB · RLS · RPC** green on the `earn_gems` ROW_COUNT follow-up commit (Lint job may still fail Lighthouse; do not change Lighthouse).
+EXTERNAL_ACTION_REQUIRED: NONE for Wave 4 DB. Lint job still fails **Lighthouse CI budgets** (unchanged; do not retune). Wave 5 leftover: `get_global_leaderboard` full `rank()` cost; gem_ledger archive.
 
 Wave 5 leftover (do not start here): `get_global_leaderboard` full `rank()` cost; gem_ledger archive; SUM-vs-materialized hot-path micro-opts.
