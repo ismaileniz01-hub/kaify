@@ -8,13 +8,11 @@ import { useLang } from "@/lib/lang-context";
 type Props = {
   progress: FirstTaskProgress;
   onGoalsClick?: () => void;
-  onChatMarked?: () => void;
 };
 
 export function FirstTaskChecklist({
   progress,
   onGoalsClick,
-  onChatMarked,
 }: Props) {
   const { t } = useLang();
   const doneCount =
@@ -30,7 +28,6 @@ export function FirstTaskChecklist({
     label: string;
     href: string | null;
     onClick?: () => void;
-    onNavigate?: () => void;
   }> = [
     {
       id: "check_in",
@@ -50,7 +47,6 @@ export function FirstTaskChecklist({
       done: progress.chatDone,
       label: t("home.first_task.chat"),
       href: "/chat/kai",
-      onNavigate: onChatMarked,
     },
   ];
 
@@ -101,7 +97,7 @@ export function FirstTaskChecklist({
           if (step.id === "goals" && step.onClick) {
             return (
               <li key={step.id}>
-                <button type="button" className="w-full text-left" onClick={step.onClick}>
+                <button type="button" className="w-full text-start" onClick={step.onClick}>
                   {row}
                 </button>
               </li>
@@ -110,11 +106,7 @@ export function FirstTaskChecklist({
 
           return (
             <li key={step.id}>
-              <Link
-                href={step.href ?? "/welcome"}
-                className="block"
-                onClick={step.onNavigate}
-              >
+              <Link href={step.href ?? "/welcome"} className="block">
                 {row}
               </Link>
             </li>

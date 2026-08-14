@@ -3051,6 +3051,13 @@ select:active {
   box-shadow: 0 0 0 4px rgba(147, 51, 234, 0.2);
 }
 
+html:not([data-theme="light"]) .text-zinc-500 {
+  color: var(--fg-muted);
+}
+html:not([data-theme="light"]) .text-zinc-600 {
+  color: #a1a1aa;
+}
+
 /* Reduced motion — animasyonları kapat */
 @media (prefers-reduced-motion: reduce) {
   *:active,

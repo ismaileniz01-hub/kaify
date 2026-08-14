@@ -16,7 +16,7 @@ jobs:
   verify:
     name: Lint · Typecheck · Test · Build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     env:
       # Build-safe placeholders: the app must compile without live secrets.

@@ -224,7 +224,10 @@ export default function ChatPage() {
               onInputChange={setInputValue}
               onSend={handleSend}
               showCamera={contactId !== "kai" && contactId !== "alex"}
-              onCameraClick={() => setShowImagePicker(true)}
+              onCameraClick={() => {
+                if (!isAuthenticated) return;
+                setShowImagePicker(true);
+              }}
               compactSend
             />
           </>
@@ -249,6 +252,7 @@ export default function ChatPage() {
         isOpen={showImagePicker}
         onClose={() => setShowImagePicker(false)}
         onImageSelect={() => {
+          if (!isAuthenticated) return;
           setUserMessages((prev) => [
             ...prev,
             {

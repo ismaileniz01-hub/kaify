@@ -52,6 +52,21 @@ vi.mock("@/lib/date-utils", () => ({
 vi.mock("@/lib/kai-food-insight", () => ({
   buildKaiFoodInsight: vi.fn().mockReturnValue("Insight"),
 }));
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminSupabaseClient: () => ({
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          eq: () => ({
+            limit: () => ({
+              maybeSingle: async () => ({ data: null }),
+            }),
+          }),
+        }),
+      }),
+    }),
+  }),
+}));
 vi.mock("@/lib/activation/today-job", () => ({
   resolveTodayJob: vi.fn().mockReturnValue({
     kind: "chat_kai",
@@ -74,6 +89,7 @@ describe("home.service locale-free core (PERF-002 / Wave 2)", () => {
     expect(core.nutrition?.caloriesConsumed).toBe(500);
     expect(core).not.toHaveProperty("motivation");
     expect(core).not.toHaveProperty("dailyTip");
+    expect(core.firstTask.chatDone).toBe(false);
   });
 
   it("localizeHomeData applies presentation strings for a locale", async () => {

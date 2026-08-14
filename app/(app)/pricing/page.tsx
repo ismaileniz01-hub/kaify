@@ -1,16 +1,13 @@
-import type { Metadata } from "next";
 import { PricingPage } from "@/components/landing/PricingPage";
 import { PaddleProvider } from "@/components/billing/PaddleProvider";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata = publicPageMetadata({
   title: "Pricing — K.AIFY",
   description:
     "Choose Essential, Pro, or Premium. Four AI coaches and Kai from $14.99/month.",
-  openGraph: {
-    title: "K.AIFY Pricing — Your Pro Coaching Team",
-    description: "Compare plans and download K.AIFY free.",
-  },
-};
+  path: "/pricing",
+});
 
 export default function PricingRoute() {
   return (

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import { AppShellProviders } from "@/components/providers/AppShellProviders";
@@ -8,6 +9,11 @@ import { AppChrome } from "@/components/navigation/AppChrome";
 import { headers } from "next/headers";
 import "../light-theme.css";
 import "../styles/marketing.css";
+
+/** Default: product chrome is not indexed. Pricing overrides to INDEX. */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 /** Authenticated product shell (+ pricing/signup marketing styles). */
 export default async function AppLayout({ children }: { children: ReactNode }) {

@@ -19,10 +19,14 @@ export function AnalyticsConfirmationCard({
   const { t } = useLang();
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<"confirmed" | "rejected" | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"confirm" | "reject" | null>(null);
 
   const act = async (action: "confirm" | "reject") => {
     if (busy || done) return;
     setBusy(true);
+    setFailed(false);
+    setPendingAction(action);
     try {
       await apiPost("/api/analytics/confirm", {
         pendingId: payload.pendingId,
@@ -30,6 +34,8 @@ export function AnalyticsConfirmationCard({
       });
       setDone(action === "confirm" ? "confirmed" : "rejected");
       onResolved?.();
+    } catch {
+      setFailed(true);
     } finally {
       setBusy(false);
     }
@@ -48,13 +54,18 @@ export function AnalyticsConfirmationCard({
     <div className="mt-2 rounded-xl border border-white/10 bg-black/30 p-3">
       <p className="text-xs text-zinc-300">{payload.summary}</p>
       <div className="mt-2 flex gap-2">
+        {failed ? (
+          <p className="w-full text-xs text-red-300" role="alert">
+            {t("analytics.confirm.failed")}
+          </p>
+        ) : null}
         <button
           type="button"
           disabled={busy}
-          onClick={() => void act("confirm")}
+          onClick={() => void act(pendingAction ?? "confirm")}
           className="flex-1 rounded-lg bg-emerald-600/80 py-2 text-xs font-semibold text-white disabled:opacity-50"
         >
-          {t("analytics.confirm.yes")}
+          {failed ? t("common.retry") : t("analytics.confirm.yes")}
         </button>
         <button
           type="button"

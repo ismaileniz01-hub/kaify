@@ -2,11 +2,13 @@ import { LegalPageShell } from "@/components/legal/LegalPageShell";
 import { PrivacyPolicyContent } from "@/components/legal/PrivacyPolicyContent";
 import { PrivacyLocaleRedirect } from "@/components/legal/PrivacyLocaleRedirect";
 import { PRIVACY_VERSION } from "@/lib/legal/constants";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 
-export const metadata = {
-  title: "Privacy Policy — Kaify",
+export const metadata = publicPageMetadata({
+  title: "Privacy Policy — K.AIFY",
   description: "How Kaify collects, uses, and protects your personal data.",
-};
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (

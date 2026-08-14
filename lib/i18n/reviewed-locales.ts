@@ -37,4 +37,11 @@ export const PRIORITY_QUALITY_LOCALES = [
 ] as const;
 
 /** Minimum share of non-admin keys that must differ from English. */
-export const REVIEWED_LOCALE_MIN_TRANSLATED_RATIO = 0.55;
+export const REVIEWED_LOCALE_MIN_TRANSLATED_RATIO = 0.58;
+
+/**
+ * Public HTML is not locale-prefixed. Crawlers index English canonical URLs.
+ * Product UI locales (picker) are independent of SEO_INDEXABLE.
+ */
+export const SEO_PUBLIC_HTML_LANG = "en" as const;
+export const SEO_HREFLANG_STRATEGY = "single_canonical_public_language" as const;

@@ -188,7 +188,7 @@ function NotificationPanel({
               type="button"
               onClick={onClose}
               aria-label={t("nav.back")}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-zinc-300 ring-1 ring-white/15 transition hover:bg-white/15 active:scale-95"
+                          className="touch-44 min-h-11 min-w-11 flex items-center justify-center rounded-full bg-white/10 text-zinc-300 ring-1 ring-white/15 transition hover:bg-white/15 active:scale-95"
             >
               <X className="h-4 w-4" strokeWidth={2} />
             </button>

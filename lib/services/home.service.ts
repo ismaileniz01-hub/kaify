@@ -5,6 +5,7 @@ import {
   type AnalyticsDailyDTO,
 } from "@/lib/services/analytics.service";
 import { getUserSettings } from "@/lib/services/settings.service";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { buildKaiFoodInsight } from "@/lib/kai-food-insight";
 import { resolveLocale, translateKey } from "@/lib/i18n/dictionary";
 import { getDailyMotivationQuote } from "@/lib/motivation-quotes";
@@ -56,6 +57,18 @@ export type HomeCoreDTO = {
   profileLocale: string;
 };
 
+async function userHasSentChat(userId: string): Promise<boolean> {
+  const admin = createAdminSupabaseClient();
+  const { data } = await admin
+    .from("chat_messages")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("sender", "user")
+    .limit(1)
+    .maybeSingle();
+  return Boolean(data);
+}
+
 export type HomeDataPrefetch = {
   profile?: ProfileDTO;
   streakStatus?: StreakStatusDTO;
@@ -65,16 +78,18 @@ export async function getHomeCoreData(
   userId: string,
   prefetch?: HomeDataPrefetch,
 ): Promise<HomeCoreDTO> {
-  const [profile, streakStatus, todayNutrition, settings] = await Promise.all([
-    prefetch?.profile
-      ? Promise.resolve(prefetch.profile)
-      : getOwnProfile(userId),
-    prefetch?.streakStatus
-      ? Promise.resolve(prefetch.streakStatus)
-      : getStreakStatus(userId),
-    getTodayNutritionSnapshot(userId).catch(() => null),
-    getUserSettings(userId).catch(() => null),
-  ]);
+  const [profile, streakStatus, todayNutrition, settings, chatDone] =
+    await Promise.all([
+      prefetch?.profile
+        ? Promise.resolve(prefetch.profile)
+        : getOwnProfile(userId),
+      prefetch?.streakStatus
+        ? Promise.resolve(prefetch.streakStatus)
+        : getStreakStatus(userId),
+      getTodayNutritionSnapshot(userId).catch(() => null),
+      getUserSettings(userId).catch(() => null),
+      userHasSentChat(userId).catch(() => false),
+    ]);
 
   const today = localTodayDate(profile.timezone ?? "UTC");
   const checkedInToday = streakStatus.lastCheckInDate === today;
@@ -110,7 +125,7 @@ export async function getHomeCoreData(
     firstTask: {
       checkInDone: checkedInToday || streakStatus.currentStreak > 0,
       goalsDone: goalsConfigured,
-      chatDone: false,
+      chatDone,
     },
     goals: {
       configured: goalsConfigured,

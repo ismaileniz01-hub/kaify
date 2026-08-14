@@ -6,7 +6,6 @@ import {
   streamChatMessage,
   apiGet,
   apiPost,
-  ApiClientError,
   createIdempotencyKey,
 } from "@/lib/api/client";
 import type { ChatMessageDTO } from "@/lib/types/domain.types";
@@ -461,16 +460,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           ),
         );
       } catch (err) {
-        // Photo-analysis server messages (e.g. "photo not clear enough, try
-        // these tips", quota limits) are already localized and actionable, so
-        // surface them verbatim. Fall back to the generic code map otherwise.
-        const friendly =
-          err instanceof ApiClientError &&
-          (err.code === "VALIDATION_ERROR" || err.code === "FORBIDDEN") &&
-          err.message.trim().length > 0
-            ? err.message
-            : errorToMessage(err, t);
-        setError(friendly);
+        setError(errorToMessage(err, t));
         failPhotoMessage();
       } finally {
         clearTyping();

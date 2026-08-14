@@ -42,6 +42,14 @@ test.describe("language smoke", () => {
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   });
 
+  test("Arabic login and pricing keep rtl", async ({ page }) => {
+    await setLang(page, "ar");
+    await page.goto("/login");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await page.goto("/pricing");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  });
+
   test("pricing follows Turkish cookie without English hero leftovers", async ({
     page,
   }) => {

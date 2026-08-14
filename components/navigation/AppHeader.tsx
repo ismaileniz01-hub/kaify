@@ -36,7 +36,7 @@ export function AppHeader({
         className="app-header__action"
         aria-label={resolvedBackLabel}
       >
-        <ArrowLeft className="h-5 w-5" />
+        <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
       </Link>
     ) : (
       <span className="app-header__spacer" aria-hidden />
@@ -45,7 +45,7 @@ export function AppHeader({
   return (
     <header className={`app-header animate-in animate-in--1 ${className}`.trim()}>
       <div className="app-header__side app-header__side--leading">{leadingContent}</div>
-      <div className="app-header__title">{title}</div>
+      <div className={`app-header__title`}>{title ? <h1 className="m-0 text-inherit">{title}</h1> : null}</div>
       <div className="app-header__side app-header__side--trailing">
         {trailing ?? <span className="app-header__spacer" aria-hidden />}
       </div>

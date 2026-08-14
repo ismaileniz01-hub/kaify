@@ -71,7 +71,27 @@ export function MotionDialog({
     previousFocusRef.current = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const frame = requestAnimationFrame(() => panelRef.current?.focus());
+    const inerted: HTMLElement[] = [];
+    const markSiblingsInert = (node: HTMLElement | null) => {
+      let current = node;
+      while (current && current !== document.body) {
+        const parent = current.parentElement;
+        if (!parent) break;
+        for (const sibling of Array.from(parent.children)) {
+          if (sibling !== current && sibling instanceof HTMLElement) {
+            if (!sibling.hasAttribute("inert")) {
+              sibling.setAttribute("inert", "");
+              inerted.push(sibling);
+            }
+          }
+        }
+        current = parent;
+      }
+    };
+    const frame = requestAnimationFrame(() => {
+      panelRef.current?.focus();
+      markSiblingsInert(panelRef.current);
+    });
 
     const onKeyDown = (event: KeyboardEvent) => {
       const dialogs = document.querySelectorAll<HTMLElement>(
@@ -117,6 +137,7 @@ export function MotionDialog({
     return () => {
       cancelAnimationFrame(frame);
       document.body.style.overflow = previousOverflow;
+      inerted.forEach((el) => el.removeAttribute("inert"));
       document.removeEventListener("keydown", onKeyDown);
       previousFocusRef.current?.focus();
     };

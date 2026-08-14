@@ -73,19 +73,8 @@ test.describe("public smoke", () => {
     await expect(progress).toHaveClass(/signup-wizard-progress-sticky/);
   });
 
-  test("messages list marks coach avatars for shared transitions", async ({ page }) => {
+  test("messages list requires sign-in", async ({ page }) => {
     await page.goto("/messages");
-    const count = await page.locator(".message-row").count();
-    expect(count).toBeGreaterThan(0);
-    const hasTransitionName = await page.locator(".message-row").first().evaluate((row) => {
-      const avatar = row.querySelector("div");
-      if (!avatar) return false;
-      const style = avatar.getAttribute("style") ?? "";
-      return (
-        /view-transition-name\s*:/i.test(style) ||
-        Boolean((avatar as HTMLElement).style.viewTransitionName)
-      );
-    });
-    expect(hasTransitionName).toBe(true);
+    await expect(page).toHaveURL(/\/login/);
   });
 });

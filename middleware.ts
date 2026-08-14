@@ -11,6 +11,7 @@ import { CSP_REPORT_PATH } from "@/lib/security/csp-report";
 import { attachCsrfCookie } from "@/lib/security/csrf-crypto";
 import { logger } from "@/lib/logger";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
+import { isMarketingPath, isProtectedProductPath } from "@/lib/seo/policy";
 import {
   isLegacyPublicApi,
   legacyApiDeprecationHeaders,
@@ -36,25 +37,6 @@ const SUSPICIOUS_PATHS = [
   "/server-status", "/server-info",
   "/cgi-bin", "/cpanel", "/webmail",
 ];
-
-const MARKETING_EXACT = new Set([
-  "/",
-  "/privacy",
-  "/terms",
-  "/terms&conditions",
-  "/cookies",
-  "/kvkk",
-]);
-
-function isMarketingPath(pathname: string): boolean {
-  if (MARKETING_EXACT.has(pathname)) return true;
-  return (
-    pathname.startsWith("/privacy/") ||
-    pathname.startsWith("/terms/") ||
-    pathname.startsWith("/cookies/") ||
-    pathname.startsWith("/kvkk/")
-  );
-}
 
 function hasSupabaseAuthCookie(request: NextRequest): boolean {
   return request.cookies
@@ -201,6 +183,19 @@ export async function middleware(request: NextRequest) {
     return finalizeResponse(forwardedRequest, nonce, requestId, pathname, undefined, {
       skipSessionRefresh: true,
     });
+  }
+
+  // Guest product routes: send to login (cookie presence only — not a security check).
+  if (
+    isProtectedProductPath(pathname) &&
+    !pathname.startsWith("/api/") &&
+    !hasSupabaseAuthCookie(request)
+  ) {
+    const login = request.nextUrl.clone();
+    login.pathname = "/login";
+    login.search = "";
+    login.searchParams.set("next", pathname);
+    return NextResponse.redirect(login);
   }
 
   const bucket = getRateLimitBucket(pathname);

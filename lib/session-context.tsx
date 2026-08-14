@@ -42,7 +42,7 @@ import { hasBrowserAuthCookie } from "@/lib/auth/browser-auth-hint";
 import { alreadyCheckedInOnLocalDay } from "@/lib/check-in-gate";
 
 const DEFAULT_GEMS: GemBalanceDTO = {
-  balance: 1000,
+  balance: 0,
   totalEarned: 0,
   totalSpent: 0,
 };
@@ -59,7 +59,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isPreviewMode, setIsPreviewMode] = useState(true);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [profile, setProfile] = useState<ProfileDTO | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile>(DEMO_USER_PROFILE);
   const [gemBalance, setGemBalance] = useState<GemBalanceDTO>(DEFAULT_GEMS);
