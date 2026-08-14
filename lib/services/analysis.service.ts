@@ -12,6 +12,12 @@ import {
   type PhotoAnalyticsConfirmation,
 } from "@/lib/ai/coach-analytics";
 import type { ScoreDrift } from "@/lib/ai/consistency";
+import {
+  extractScoresFromPayload,
+  findPriorAnalysisForFingerprint,
+  fingerprintVisionImage,
+} from "@/lib/kaios/vision/fingerprint";
+import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import type {
   AnalysisMimeType,
   ImageQuality,
@@ -48,28 +54,6 @@ function resourceForCoach(coachId: "maya" | "leo"): UsageResource {
   return coachId === "maya" ? "maya_photo" : "leo_photo";
 }
 
-/** Safely extracts a previous score map from a stored analysis payload. */
-function extractScores(payload: Json | null): MuscleScores | null {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    return null;
-  }
-  const analysis = (payload as Record<string, unknown>).analysis;
-  if (!analysis || typeof analysis !== "object" || Array.isArray(analysis)) {
-    return null;
-  }
-  const scores = (analysis as Record<string, unknown>).scores;
-  if (!scores || typeof scores !== "object" || Array.isArray(scores)) {
-    return null;
-  }
-  const out: MuscleScores = {};
-  for (const [key, value] of Object.entries(scores)) {
-    if (typeof value === "number") {
-      out[key as keyof MuscleScores] = value;
-    }
-  }
-  return out;
-}
-
 async function getLocale(admin: AdminClient, userId: string): Promise<string> {
   const { data } = await admin
     .from("profiles")
@@ -95,7 +79,29 @@ async function getPreviousScores(
     .limit(1)
     .maybeSingle();
 
-  return extractScores(data?.payload ?? null);
+  return extractScoresFromPayload(data?.payload ?? null);
+}
+
+async function getPriorAnalysisByFingerprint(
+  admin: AdminClient,
+  userId: string,
+  coachId: string,
+  fingerprint: string,
+): Promise<TechnicalAnalysis | null> {
+  const { data } = await admin
+    .from("chat_messages")
+    .select("payload")
+    .eq("user_id", userId)
+    .eq("coach_id", coachId)
+    .eq("sender", "coach")
+    .eq("message_type", "score")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  return findPriorAnalysisForFingerprint(
+    (data ?? []).map((row) => row.payload ?? null),
+    fingerprint,
+  );
 }
 
 /**
@@ -105,6 +111,7 @@ async function getPreviousScores(
  *   3. Persist on success; refund the credit when AI rejects or fails.
  *
  * Low-quality photos are rejected (AiError -> 400) and the reserved credit is refunded.
+ * Same-image Leo reuploads reuse prior scores via fingerprint (score stability).
  */
 export async function analyzePhoto(
   params: AnalyzePhotoParams,
@@ -125,13 +132,22 @@ export async function analyzePhoto(
   // Validate + downscale BEFORE reserving quota, so a bad image never burns a
   // credit and the (2×) Gemini calls receive a compact, cheaper payload.
   const vision = await prepareVisionImage(params.imageBase64);
+  const imageFingerprint = fingerprintVisionImage(vision.base64, vision.mimeType);
 
   const usage = await reserveQuota({ userId: params.userId, resource, amount: 1 });
 
-  const [locale, previousScores] = await Promise.all([
+  const [locale, previousScores, reuseAnalysis] = await Promise.all([
     getLocale(admin, params.userId),
     persona.kind === "body"
       ? getPreviousScores(admin, params.userId, params.coachId)
+      : Promise.resolve(null),
+    persona.kind === "body"
+      ? getPriorAnalysisByFingerprint(
+          admin,
+          params.userId,
+          params.coachId,
+          imageFingerprint,
+        )
       : Promise.resolve(null),
   ]);
 
@@ -144,6 +160,7 @@ export async function analyzePhoto(
       locale,
       image: { base64: vision.base64, mimeType: vision.mimeType },
       previousScores,
+      reuseAnalysis,
       userNote: params.note,
     });
   } catch (error) {
@@ -152,11 +169,16 @@ export async function analyzePhoto(
   }
 
   // 3) Persist (no raw image stored) + consume one credit.
+  // Maya confirmation flow stays below — analyze ≠ auto-save.
   const messageType = persona.kind === "food" ? "analysis" : "score";
   const payload = {
     analysis: result.analysis,
     drift: result.drift,
     quality: result.quality,
+    ...(persona.kind === "body" ? { image_fingerprint: imageFingerprint } : {}),
+    ...(result.nutritionProvenance
+      ? { provenance: result.nutritionProvenance }
+      : {}),
   } as unknown as Json;
 
   const { error: userPhotoError } = await admin.from("chat_messages").insert({
@@ -199,6 +221,20 @@ export async function analyzePhoto(
     });
     await refundQuota({ userId: params.userId, resource, amount: 1 });
     throw new ApiError("INTERNAL_ERROR", "Analiz sonucu kaydedilemedi.");
+  }
+
+  if (persona.kind === "body") {
+    await emitKaiosEventBestEffort({
+      category: "physique",
+      type: "physique_scored",
+      userId: params.userId,
+      payload: {
+        overall_score: result.analysis.overall_score,
+        reused: Boolean(reuseAnalysis),
+        messageId: inserted.id,
+      },
+      at: new Date().toISOString(),
+    });
   }
 
   let confirmation: PhotoAnalyticsConfirmation | null = null;

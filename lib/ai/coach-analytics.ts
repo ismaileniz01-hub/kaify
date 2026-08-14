@@ -4,7 +4,10 @@ import { TOKEN_BUDGET, AI_FEATURES } from "@/lib/ai/budget";
 import { isAiPressureMode } from "@/lib/ai/daily-cost-cap";
 import { sanitizeUserText, wrapUntrustedInput } from "@/lib/ai/prompt-safety";
 import { resolveLocale } from "@/lib/i18n/dictionary";
-import { createPendingAnalyticsConfirmation } from "@/lib/services/analytics-confirmation.service";
+import {
+  createPendingAnalyticsConfirmation,
+  linkPendingConfirmationToMessage,
+} from "@/lib/services/analytics-confirmation.service";
 import type { ChatTurn } from "@/lib/ai/types";
 import type { Json } from "@/lib/types/database.types";
 
@@ -86,6 +89,12 @@ async function attachConfirmationToMessage(params: {
       .update({ payload: merged as unknown as Json })
       .eq("id", params.attachToMessageId);
 
+    await linkPendingConfirmationToMessage({
+      userId: params.userId,
+      pendingId: params.pendingId,
+      messageId: params.attachToMessageId,
+    });
+
     return { content, messageId: params.attachToMessageId };
   }
 
@@ -104,7 +113,16 @@ async function attachConfirmationToMessage(params: {
     .select("id")
     .single();
 
-  return { content, messageId: inserted?.id ?? "" };
+  const messageId = inserted?.id ?? "";
+  if (messageId) {
+    await linkPendingConfirmationToMessage({
+      userId: params.userId,
+      pendingId: params.pendingId,
+      messageId,
+    });
+  }
+
+  return { content, messageId };
 }
 
 export async function applyCoachAnalyticsFromChat(params: {

@@ -60,7 +60,12 @@ test.describe("public smoke", () => {
       await route.continue();
     });
 
-    await page.getByRole("link", { name: /sign up|kayıt/i }).click();
+    // AuthModeToggle waits for native detection before rendering the web signup link.
+    const signup = page.getByRole("link", {
+      name: /create account|hesap oluştur|sign up|kayıt ol|kayıt/i,
+    });
+    await expect(signup).toBeVisible({ timeout: 15_000 });
+    await signup.click();
     await expect(progress).toHaveAttribute("aria-hidden", "false");
     await expect(page).toHaveURL(/\/signup/);
   });

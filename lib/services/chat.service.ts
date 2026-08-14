@@ -18,7 +18,17 @@ import {
 } from "@/lib/services/memory.service";
 import { applyCoachAnalyticsFromChat } from "@/lib/ai/coach-analytics";
 import { maybeGenerateStructuredCard } from "@/lib/ai/structured-chat";
-import { TOKEN_BUDGET, CONTEXT_BUDGET } from "@/lib/ai/budget";
+import { TOKEN_BUDGET, CONTEXT_BUDGET, AI_FEATURES } from "@/lib/ai/budget";
+import {
+  orchestrateCoachChat,
+  type OrchestrateResultMeta,
+} from "@/lib/kaios/orchestrator";
+import { prepareMemoriesForContext } from "@/lib/kaios/memory";
+import {
+  resolveIntent,
+  type CoachId,
+} from "@/lib/kaios/routing/intent";
+import type { Json } from "@/lib/types/database.types";
 import {
   buildCanaryReminder,
   containsCanary,
@@ -187,18 +197,334 @@ export type StreamReplyParams = {
   tokensReserved?: number;
 };
 
+function asCoachId(coachId: string): CoachId | null {
+  if (
+    coachId === "alex" ||
+    coachId === "maya" ||
+    coachId === "leo" ||
+    coachId === "kai"
+  ) {
+    return coachId;
+  }
+  return null;
+}
+
+/** Compact cross-coach facts — never full teammate personality prompts. */
+function compactTeamFacts(activeCoachId: string): string[] {
+  const facts: Record<string, string> = {
+    alex: "alex_owns: training_programming_form",
+    maya: "maya_owns: nutrition_meals_hydration",
+    leo: "leo_owns: physique_scores_priorities",
+    kai: "kai_owns: motivation_continuity",
+  };
+  return Object.entries(facts)
+    .filter(([id]) => id !== activeCoachId)
+    .map(([, fact]) => fact);
+}
+
+async function settleChatQuota(params: {
+  userId: string;
+  tokensReserved: number;
+  totalTokens: number;
+}) {
+  const reserved = params.tokensReserved;
+  const extraTokens = params.totalTokens - reserved;
+  if (extraTokens > 0) {
+    return (
+      (await settleQuota({
+        userId: params.userId,
+        resource: "text_tokens",
+        amount: extraTokens,
+      })) ??
+      (await checkQuotaGuard({
+        userId: params.userId,
+        resource: "text_tokens",
+      }))
+    );
+  }
+  if (extraTokens < 0) {
+    await refundQuota({
+      userId: params.userId,
+      resource: "text_tokens",
+      amount: -extraTokens,
+    });
+  }
+  return checkQuotaGuard({
+    userId: params.userId,
+    resource: "text_tokens",
+  });
+}
+
 /**
- * Orchestrates a text chat turn end-to-end and yields SSE chunks:
- *   - { event: "delta", data: { content } }            (incremental tokens)
- *   - { event: "done",  data: { messageId, warning_trigger, usage } }
- *   - { event: "error", data: { code, message, details? } }
+ * KAIOS production path: capsules + context compiler + single inference.
+ * No structured-chat second model call.
+ */
+async function* streamKaiosCoachReply(
+  params: StreamReplyParams,
+): AsyncGenerator<SseChunk> {
+  const admin = createAdminSupabaseClient();
+  let quotaSettled = false;
+  let assistantText = "";
+
+  try {
+    const coachId = asCoachId(params.coachId);
+    if (!coachId) {
+      throw new ApiError("VALIDATION_ERROR", "Geçersiz koç.");
+    }
+    await getCoachOrThrow(params.coachId);
+
+    const cleanMessage = sanitizeUserText(params.message);
+    const signal = detectInjectionSignals(cleanMessage);
+    if (signal.suspicious) {
+      logger.warn("prompt injection signal", {
+        userId: params.userId,
+        coachId: params.coachId,
+        score: signal.score,
+        matched: signal.matched,
+      });
+      if (signal.score >= INJECTION_SOFT_BLOCK_SCORE) {
+        throw new ApiError(
+          "FORBIDDEN",
+          "Mesaj güvenlik kontrolünden geçemedi. Lütfen fitness ve sağlık konularında sor.",
+        );
+      }
+    }
+
+    const [locale, state, memories, fitnessContext, history] =
+      await Promise.all([
+        getLocale(admin, params.userId),
+        getCoachingState(admin, params.userId),
+        getRecentMemories(params.userId, 8),
+        buildFitnessContextSummary(params.userId).catch(() => ""),
+        fetchRecentTurns(admin, params.userId, params.coachId),
+      ]);
+
+    const intent = resolveIntent({ coach: coachId, message: cleanMessage });
+    const memoryItems = prepareMemoriesForContext(memories, {
+      coach: coachId,
+      intent,
+      limit: 5,
+    })
+      .map((m) => m.text)
+      .filter((text): text is string => typeof text === "string" && text.length > 0);
+
+    const { error: userInsertError } = await admin.from("chat_messages").insert({
+      user_id: params.userId,
+      coach_id: params.coachId,
+      thread_type: "direct",
+      sender: "user",
+      message_type: "text",
+      content: cleanMessage,
+      locale,
+    });
+    if (userInsertError) {
+      logger.error("[chat.service] persist user message error", {
+        error: userInsertError.message,
+      });
+      throw new ApiError("INTERNAL_ERROR", "Mesaj kaydedilemedi.");
+    }
+
+    const out: { meta?: OrchestrateResultMeta } = {};
+    for await (const chunk of orchestrateCoachChat(
+      {
+        userId: params.userId,
+        coachId,
+        message: cleanMessage,
+        locale,
+        userState: buildStateSummary(state, fitnessContext),
+        memoryItems,
+        teamFacts: compactTeamFacts(coachId),
+        conversationTurns: history,
+      },
+      out,
+    )) {
+      if (chunk.event === "delta") {
+        const content =
+          typeof chunk.data === "object" &&
+          chunk.data &&
+          "content" in chunk.data
+            ? String((chunk.data as { content: string }).content)
+            : "";
+        assistantText += content;
+      }
+      if (chunk.event === "error") {
+        yield chunk;
+        return;
+      }
+      yield chunk;
+    }
+
+    const meta = out.meta;
+    if (!meta) {
+      throw new ApiError("INTERNAL_ERROR", "Yanıt üretilemedi.");
+    }
+    assistantText = meta.assistantText || assistantText;
+    const totalTokens = meta.usageTokens;
+
+    logger.info("kaios chat telemetry", {
+      userId: params.userId,
+      coachId: params.coachId,
+      intent: meta.intent,
+      modelCallCount: meta.modelCallCount,
+      estimatedInputTokens: meta.telemetry.estimatedInputTokens,
+      usageTokens: totalTokens,
+    });
+
+    const { data: inserted, error: insertError } = await admin
+      .from("chat_messages")
+      .insert({
+        user_id: params.userId,
+        coach_id: params.coachId,
+        thread_type: "direct",
+        sender: "coach",
+        message_type: meta.messageType,
+        content: assistantText,
+        payload: (meta.payload ?? null) as Json | null,
+        tokens_used: totalTokens,
+        locale,
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      logger.error("[chat.service] persist reply error", {
+        error: insertError.message,
+      });
+      throw new ApiError("INTERNAL_ERROR", "Yanıt kaydedilemedi.");
+    }
+
+    const usage = await settleChatQuota({
+      userId: params.userId,
+      tokensReserved: params.tokensReserved ?? 0,
+      totalTokens,
+    });
+    quotaSettled = true;
+
+    yield {
+      event: "done",
+      data: {
+        messageId: inserted?.id ?? null,
+        messageType: meta.messageType,
+        payload: meta.payload,
+        await_user: meta.awaitUser ?? false,
+        warning_trigger: usage.warning_trigger,
+        usage: {
+          used: usage.used,
+          limit: usage.limit,
+          remaining: usage.remaining,
+          percent: usage.percent,
+        },
+      },
+    };
+
+    // Same-inference card transport alias (NOT a second LLM call).
+    if (
+      inserted?.id &&
+      meta.messageType !== "text" &&
+      meta.payload != null
+    ) {
+      yield {
+        event: "card",
+        data: {
+          messageId: inserted.id,
+          messageType: meta.messageType,
+          payload: meta.payload,
+        },
+      };
+    }
+
+    after(async () => {
+      try {
+        await bumpAndMaybeCondense({
+          userId: params.userId,
+          coachId: params.coachId,
+          delta: 2,
+        });
+      } catch (memoryError) {
+        logger.error("[chat.service] condense error", {
+          error:
+            memoryError instanceof Error ? memoryError.message : "unknown",
+        });
+      }
+
+      // Prefer envelope actions when present; skip extra analytics LLM when
+      // structured cards already encoded state. Still allow cheap extract for
+      // casual text unless disabled.
+      if (AI_FEATURES.chatAnalytics && meta.messageType === "text") {
+        try {
+          await applyCoachAnalyticsFromChat({
+            userId: params.userId,
+            coachId: params.coachId,
+            userMessage: cleanMessage,
+            coachReply: assistantText,
+          });
+        } catch (analyticsError) {
+          logger.error("[chat.service] analytics extract error", {
+            error:
+              analyticsError instanceof Error
+                ? analyticsError.message
+                : "unknown",
+          });
+        }
+      }
+    });
+  } catch (error) {
+    if (!quotaSettled && (params.tokensReserved ?? 0) > 0) {
+      try {
+        await refundQuota({
+          userId: params.userId,
+          resource: "text_tokens",
+          amount: params.tokensReserved ?? 0,
+        });
+      } catch (refundError) {
+        logger.error("[chat.service] kaios quota refund error", {
+          error:
+            refundError instanceof Error ? refundError.message : "unknown",
+        });
+      }
+    }
+    const apiError =
+      error instanceof ApiError
+        ? error
+        : error instanceof AiError
+          ? toApiError(error)
+          : new ApiError(
+              "INTERNAL_ERROR",
+              error instanceof Error ? error.message : "Chat failed",
+            );
+    yield {
+      event: "error",
+      data: {
+        code: apiError.code,
+        message: apiError.message,
+        details: apiError.details,
+      },
+    };
+  }
+}
+
+/**
+ * When AI_FEATURES.kaiosRuntime is true (default), uses KAIOS orchestrator only.
+ * There is NO fallback into legacy personality / COACH_CHAT_VOICE / structured-chat
+ * when the KAIOS path errors — failures surface as SSE error events.
  *
- * Quota is reserved by the route; tokens are settled here AFTER the stream
- * completes, surfacing LIMIT_80 / LIMIT_100 in the terminal event.
+ * Set KAIOS_RUNTIME=false only as an explicit temporary soak rollback.
+ * That is NOT the final architecture; see kaios/MIGRATION_REPORT.md.
  */
 export async function* streamCoachReply(
   params: StreamReplyParams,
 ): AsyncGenerator<SseChunk> {
+  if (AI_FEATURES.kaiosRuntime) {
+    yield* streamKaiosCoachReply(params);
+    return;
+  }
+
+  // --- LEGACY PATH (reachable only when KAIOS_RUNTIME=false) ---
+  logger.warn("kaios.runtime.rollback_active", {
+    path: "legacy_chat",
+    userId: params.userId,
+    coachId: params.coachId,
+  });
   const admin = createAdminSupabaseClient();
   let quotaSettled = false;
   let assistantText = "";

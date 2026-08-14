@@ -18,6 +18,9 @@ export type AiOperation =
   | "analytics"
   | "memory"
   | "team_chat"
+  | "council_turn"
+  | "kaios_chat_stream"
+  | "kaios_chat_structured"
   | "home_copy"
   | "self_heal_report";
 

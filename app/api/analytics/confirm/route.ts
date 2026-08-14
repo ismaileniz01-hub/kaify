@@ -1,4 +1,5 @@
 import { defineRoute } from "@/lib/api/route-handler";
+import { ApiError } from "@/lib/api/errors";
 import {
   confirmPendingAnalytics,
   rejectPendingAnalytics,
@@ -17,7 +18,7 @@ export const POST = defineRoute(
     const action = raw?.action === "reject" ? "reject" : "confirm";
 
     if (!pendingId) {
-      return { ok: false };
+      throw new ApiError("VALIDATION_ERROR", "pendingId gerekli.");
     }
 
     if (action === "reject") {

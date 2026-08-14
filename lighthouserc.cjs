@@ -9,6 +9,7 @@ module.exports = {
         "http://127.0.0.1:3000/privacy",
         "http://127.0.0.1:3000/login",
       ],
+      chromePath: process.env.CHROME_PATH || undefined,
       settings: {
         // Mobile form factor — app shell + marketing share the same CI gate.
         formFactor: "mobile",
@@ -20,7 +21,10 @@ module.exports = {
           disabled: false,
         },
         throttlingMethod: "simulate",
-        chromePath: process.env.CHROME_PATH || undefined,
+        // String flags only — LHCI node-runner serializes settings.chromeFlags
+        // into the Lighthouse CLI flags file (arrays are not applied correctly).
+        chromeFlags:
+          "--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage",
         onlyCategories: ["performance", "accessibility", "best-practices"],
         skipAudits: ["uses-http2", "is-on-https"],
       },

@@ -12,7 +12,8 @@ test.describe("language smoke", () => {
     await setLang(page, "tr");
     await page.goto("/");
     await expect(page.locator("html")).toHaveAttribute("lang", "tr");
-    await expect(page.getByRole("link", { name: /içeriğe geç/i })).toBeAttached();
+    // Prefer stable selector — Turkish İ/i casing breaks /içeriğe geç/i name matching.
+    await expect(page.locator("a.skip-to-content")).toBeAttached();
     const hero = page.locator("#main-content");
     await expect(hero).toBeVisible();
     const text = (await hero.innerText()).toLowerCase();
@@ -24,7 +25,7 @@ test.describe("language smoke", () => {
     await setLang(page, "en");
     await page.goto("/");
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
-    await expect(page.getByRole("link", { name: /skip to content/i })).toBeAttached();
+    await expect(page.locator("a.skip-to-content")).toBeAttached();
   });
 
   test("German login page respects cookie language", async ({ page }) => {

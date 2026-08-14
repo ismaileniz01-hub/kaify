@@ -1,0 +1,16 @@
+{
+  "purpose": "Synthetic non-PII Gemini fixtures",
+  "personalData": false,
+  "files": [
+    "leo-blur.jpg",
+    "leo-crop.jpg",
+    "leo-invalid.jpg",
+    "leo-valid-repeat.jpg",
+    "leo-valid.jpg",
+    "maya-ambiguous-portion.jpg",
+    "maya-mixed-meal.jpg",
+    "maya-poor-quality.jpg",
+    "maya-sauce-oil.jpg",
+    "maya-single-food.jpg"
+  ]
+}

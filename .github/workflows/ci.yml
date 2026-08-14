@@ -82,7 +82,10 @@ jobs:
         run: |
           export CHROME_PATH="$(node -e "console.log(require('playwright').chromium.executablePath())")"
           echo "Using Chrome at $CHROME_PATH"
-          npx --yes @lhci/cli@0.14.0 autorun --config=lighthouserc.cjs
+          # GitHub-hosted runners (AppArmor) cannot start Chromium's sandbox; this
+          # does not weaken product security checks — only the LH collector browser.
+          npx --yes @lhci/cli@0.14.0 autorun --config=lighthouserc.cjs \
+            --collect.settings.chromeFlags="--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage"
         env:
           LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.sha }}
 

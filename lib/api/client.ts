@@ -142,6 +142,7 @@ export type ChatStreamHandlers = {
     messageType?: string | null;
     payload?: unknown;
     warning_trigger?: string | null;
+    await_user?: boolean;
   }) => void;
   /** Optional rich-card patch after `done` (meal plan / score cards). */
   onCard?: (data: {
@@ -223,6 +224,10 @@ export async function streamChatMessage(
             messageType: (parsed.messageType as string | null) ?? null,
             payload: parsed.payload,
             warning_trigger: (parsed.warning_trigger as string | null) ?? null,
+            await_user:
+              typeof parsed.await_user === "boolean"
+                ? parsed.await_user
+                : undefined,
           });
         } else if (event === "card") {
           handlers.onCard?.({

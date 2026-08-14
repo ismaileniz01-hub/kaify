@@ -11,10 +11,11 @@ export type StructuredChatResult = {
 } | null;
 
 /**
- * Card generation is a SECOND (expensive, ~900 output-token) model call, so it
- * only fires on a genuine PLAN/SUMMARY request — not on any casual mention of a
- * keyword. Casual food/workout talk still gets a normal text reply and is still
- * logged by the (cheap) analytics extractor; it just won't spawn a card.
+ * Card generation is a SECOND (expensive, ~900 output-token) model call.
+ *
+ * LEGACY ONLY: when AI_FEATURES.kaiosRuntime is true (default), chat.service
+ * does NOT call this — structured ui/data come from the same KAIOS inference.
+ * Kept temporarily for KAIOS_RUNTIME=false rollback. Remove after soak.
  */
 const CARD_TRIGGERS: Record<string, RegExp[]> = {
   alex: [
@@ -53,6 +54,8 @@ export async function maybeGenerateStructuredCard(params: {
   coachReply: string;
   locale: string;
 }): Promise<StructuredChatResult> {
+  // Hard stop: KAIOS path never uses a second card LLM. No silent dual-path.
+  if (AI_FEATURES.kaiosRuntime) return null;
   if (!AI_FEATURES.structuredCards) return null;
   if (await isAiPressureMode()) return null;
 
