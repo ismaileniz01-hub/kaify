@@ -17,6 +17,10 @@ export default defineConfig({
     hookTimeout: 120_000,
     fileParallelism: false,
     sequence: { concurrent: false },
+    reporters: process.env.CI ? ["default", "json"] : ["default"],
+    outputFile: {
+      json: "audit/remediation/_vitest-db-last.json",
+    },
   },
   resolve: {
     alias: {

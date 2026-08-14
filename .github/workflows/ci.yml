@@ -265,6 +265,35 @@ jobs:
           NO_COLOR: "1"
           FORCE_COLOR: "0"
 
+      - name: Record test:db counts
+        if: success()
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("fs");
+          const p = "audit/remediation/_vitest-db-last.json";
+          if (!fs.existsSync(p)) {
+            console.log("No vitest JSON reporter output");
+            process.exit(0);
+          }
+          const j = JSON.parse(fs.readFileSync(p, "utf8"));
+          const executed = j.numTotalTests ?? 0;
+          const passed = j.numPassedTests ?? 0;
+          const failed = j.numFailedTests ?? 0;
+          const skipped = (j.numPendingTests ?? 0) + (j.numTodoTests ?? 0);
+          const files = (j.testResults || []).length;
+          const lines = [
+            `DATABASE_TEST_FILES: ${files}`,
+            `DATABASE_TESTS_EXECUTED: ${executed}`,
+            `DATABASE_TESTS_PASSED: ${passed}`,
+            `DATABASE_TESTS_FAILED: ${failed}`,
+            `DATABASE_TESTS_SKIPPED: ${skipped}`,
+          ];
+          console.log(lines.join("\n"));
+          const summary = process.env.GITHUB_STEP_SUMMARY;
+          if (summary) fs.appendFileSync(summary, "## test:db counts\n\n" + lines.map((l) => `- ${l}`).join("\n") + "\n");
+          NODE
+
       - name: Publish test:db failure to check run
         if: failure()
         uses: actions/github-script@v7

@@ -15,6 +15,7 @@
 /blob-report/
 /playwright/.cache/
 /.lighthouseci/
+audit/remediation/_vitest-db-last.json
 
 # next.js
 /.next/
