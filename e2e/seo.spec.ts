@@ -115,6 +115,31 @@ test.describe("rendered public SEO", () => {
     expect(loc).toMatch(/\/terms\/?$/);
   });
 
+  test("sitemap.xml is a valid urlset of canonical https locs", async ({
+    request,
+  }) => {
+    const res = await request.get("/sitemap.xml");
+    expect(res.status()).toBe(200);
+    expect(res.headers()["content-type"] ?? "").toMatch(/xml/i);
+    const xml = await res.text();
+    expect(xml).toMatch(/<urlset[\s>]/);
+    expect(xml).toContain("http://www.sitemaps.org/schemas/sitemap/0.9");
+    const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+    expect(locs).toEqual([
+      "https://kaifyai.org",
+      "https://kaifyai.org/pricing",
+      "https://kaifyai.org/privacy",
+      "https://kaifyai.org/terms",
+      "https://kaifyai.org/cookies",
+      "https://kaifyai.org/kvkk",
+    ]);
+    expect(xml.match(/<lastmod>/g)?.length).toBe(locs.length);
+    expect(xml).not.toContain("http://kaifyai.org");
+    expect(xml).not.toContain("vercel.app");
+    expect(xml).not.toContain("terms&amp;conditions");
+    expect(xml).not.toContain("/index.html");
+  });
+
   test("private routes are not in sitemap and guests are sent to login", async ({
     page,
     request,

@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
 import {
+  SEO_CONTENT_DATES,
   SEO_DISALLOW_PREFIXES,
   SEO_INDEXABLE_PATHS,
   isProtectedProductPath,
   isSeoIndexablePath,
 } from "@/lib/seo/policy";
 import { seoAbsoluteUrl, seoCanonicalOrigin } from "@/lib/seo/origin";
+import { SITEMAP_PAGE_META } from "@/lib/seo/sitemap";
 import {
   SEO_HREFLANG_STRATEGY,
   SEO_PUBLIC_HTML_LANG,
@@ -40,12 +42,31 @@ describe("SEO contract", () => {
     const entries = sitemap();
     const urls = entries.map((e) => e.url);
     expect(urls).toEqual(SEO_INDEXABLE_PATHS.map((p) => seoAbsoluteUrl(p)));
-    for (const url of urls) {
-      expect(url.startsWith("https://kaifyai.org")).toBe(true);
-      expect(url).not.toContain("/api/");
-      expect(url).not.toContain("/welcome");
-      expect(url).not.toContain("/chat");
-      expect(url).not.toContain("?");
+    expect(new Set(urls).size).toBe(urls.length);
+    expect(urls[0]).toBe("https://kaifyai.org");
+    for (const entry of entries) {
+      expect(entry.url.startsWith("https://kaifyai.org")).toBe(true);
+      expect(entry.url).not.toContain("/api/");
+      expect(entry.url).not.toContain("/welcome");
+      expect(entry.url).not.toContain("/chat");
+      expect(entry.url).not.toContain("?");
+      expect(entry.url).not.toContain("#");
+      expect(entry.lastModified).toBeInstanceOf(Date);
+      expect(Number.isNaN((entry.lastModified as Date).getTime())).toBe(false);
+      expect(entry.priority).toBeGreaterThanOrEqual(0);
+      expect(entry.priority).toBeLessThanOrEqual(1);
+      if (entry.url !== "https://kaifyai.org") {
+        expect(entry.url.endsWith("/")).toBe(false);
+      }
+    }
+  });
+
+  it("sitemap meta covers every indexable path and no extras", () => {
+    expect(Object.keys(SITEMAP_PAGE_META).sort()).toEqual(
+      [...SEO_INDEXABLE_PATHS].sort(),
+    );
+    for (const path of SEO_INDEXABLE_PATHS) {
+      expect(SITEMAP_PAGE_META[path].lastModified).toBe(SEO_CONTENT_DATES[path]);
     }
   });
 
