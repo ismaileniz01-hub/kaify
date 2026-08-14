@@ -88,6 +88,10 @@ test.describe("rendered public SEO", () => {
         "content",
         "summary_large_image",
       );
+      await expect(page.locator('meta[name="twitter:image"]').first()).toHaveAttribute(
+        "content",
+        /https:\/\/kaifyai\.org\/opengraph-image/,
+      );
       await expect(page.locator("h1")).toHaveCount(1);
       await expect(page.locator("main").first()).toBeVisible();
       const html = await page.content();
@@ -96,7 +100,8 @@ test.describe("rendered public SEO", () => {
         const json = await page.locator('script[type="application/ld+json"]').first().textContent();
         const data = JSON.parse(json!) as { "@graph": Array<Record<string, unknown>> };
         expect(data["@graph"].some((n) => n["@type"] === "Organization")).toBe(true);
-        expect(json).not.toMatch(/aggregateRating|reviewCount/);
+        expect(json).toContain("Kaify Ai");
+        expect(json).not.toMatch(/aggregateRating|reviewCount|ratingValue|userCount/);
       }
     });
   }

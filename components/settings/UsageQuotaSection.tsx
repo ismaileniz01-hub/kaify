@@ -40,7 +40,15 @@ function UsageBar({
           limit: formatNumber(limit, lang),
         })}
       </p>
-      <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+      <div
+        className="h-1.5 overflow-hidden rounded-full bg-white/10"
+        role="progressbar"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(pct)}
+        aria-valuetext={`${formatNumber(used, lang)} / ${formatNumber(limit, lang)}`}
+      >
         <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
       {warning && warningLabel && (

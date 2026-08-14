@@ -94,7 +94,15 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
           {macros.map((m) => (
             <div key={m.key} className="flex items-center gap-2">
               <span className="w-24 truncate text-[11px] text-zinc-400">{m.label}</span>
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800">
+              <div
+                className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800"
+                role="progressbar"
+                aria-label={m.label}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round((m.grams / Math.max(totalG, 1)) * 100)}
+                aria-valuetext={`${m.grams}g`}
+              >
                 <div
                   className="h-full rounded-full"
                   style={{ width: `${(m.grams / totalG) * 100}%`, backgroundColor: m.color }}
@@ -192,7 +200,15 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
             {Object.entries(mp.macros).map(([key, data]) => (
               <div key={key} className="flex items-center gap-2">
                 <span className="w-16 text-[11px] capitalize text-zinc-400">{key}</span>
-                <div className="h-1.5 flex-1 rounded-full bg-zinc-800">
+                <div
+                  className="h-1.5 flex-1 rounded-full bg-zinc-800"
+                  role="progressbar"
+                  aria-label={key}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(Math.min(100, (data.current / data.target) * 100))}
+                  aria-valuetext={`${data.current}g / ${data.target}g`}
+                >
                   <div
                     className="h-full rounded-full bg-emerald-500"
                     style={{ width: `${Math.min(100, (data.current / data.target) * 100)}%` }}

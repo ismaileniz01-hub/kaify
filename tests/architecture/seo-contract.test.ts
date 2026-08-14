@@ -5,6 +5,7 @@ import {
   SEO_CONTENT_DATES,
   SEO_DISALLOW_PREFIXES,
   SEO_INDEXABLE_PATHS,
+  isMarketingPath,
   isProtectedProductPath,
   isSeoIndexablePath,
 } from "@/lib/seo/policy";
@@ -119,6 +120,8 @@ describe("SEO contract", () => {
     expect(isProtectedProductPath("/")).toBe(false);
     expect(isProtectedProductPath("/opengraph-image")).toBe(false);
     expect(isProtectedProductPath("/robots.txt")).toBe(false);
+    expect(isMarketingPath("/sitemap.xml")).toBe(true);
+    expect(isMarketingPath("/robots.txt")).toBe(true);
   });
 
   it("canonical terms path is /terms, not the legacy alias", () => {
