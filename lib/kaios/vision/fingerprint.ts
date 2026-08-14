@@ -57,6 +57,58 @@ export function extractAnalysisFromPayload(
   return analysis as TechnicalAnalysis;
 }
 
+export const VISION_REUSE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+export type StoredVisionRow = {
+  id: string;
+  created_at: string;
+  content: string | null;
+  payload: Json | null;
+  user_id?: string;
+  coach_id?: string;
+  message_type?: string;
+};
+
+function qualityLooksValid(payload: Json | null): boolean {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return false;
+  }
+  const quality = (payload as Record<string, unknown>).quality;
+  if (!quality || typeof quality !== "object" || Array.isArray(quality)) {
+    return false;
+  }
+  const score = (quality as Record<string, unknown>).score;
+  return typeof score === "number" && Number.isFinite(score) && score >= 1;
+}
+
+/**
+ * Same-image reuse: user-scoped, analysis-type (message_type) scoped, TTL-bounded.
+ * Failed analyses are never stored as coach rows, so they cannot be reused.
+ */
+export function selectReusableVisionRow(params: {
+  rows: StoredVisionRow[];
+  fingerprint: string;
+  userId: string;
+  coachId: string;
+  messageType: string;
+  now?: number;
+}): StoredVisionRow | null {
+  const now = params.now ?? Date.now();
+  for (const row of params.rows) {
+    if (row.user_id && row.user_id !== params.userId) continue;
+    if (row.coach_id && row.coach_id !== params.coachId) continue;
+    if (row.message_type && row.message_type !== params.messageType) continue;
+    const created = Date.parse(row.created_at);
+    if (!Number.isFinite(created) || now - created > VISION_REUSE_TTL_MS) continue;
+    if (extractFingerprintFromPayload(row.payload) !== params.fingerprint) continue;
+    if (!extractAnalysisFromPayload(row.payload)) continue;
+    if (!qualityLooksValid(row.payload)) continue;
+    if (!row.content || row.content.trim().length === 0) continue;
+    return row;
+  }
+  return null;
+}
+
 /**
  * Given recent coach score payloads, return a prior analysis for the same
  * fingerprint when present (same-image stability).

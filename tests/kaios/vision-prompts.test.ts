@@ -6,6 +6,7 @@ import {
   normalizeFoodObservation,
   normalizePhysiqueObservation,
 } from "@/lib/kaios/vision";
+import { buildVisionPrompt } from "@/lib/ai/personas";
 
 describe("KAIOS vision prompts", () => {
   it("does not instruct Gemini to speak as Maya or Leo", () => {
@@ -13,6 +14,8 @@ describe("KAIOS vision prompts", () => {
       buildFoodObservationPrompt(),
       buildPhysiqueObservationPrompt(),
       buildImageQualityPrompt(),
+      buildVisionPrompt("food"),
+      buildVisionPrompt("body"),
     ];
     for (const p of prompts) {
       expect(p).not.toMatch(/You are Maya/i);
@@ -35,6 +38,16 @@ describe("KAIOS vision prompts", () => {
     const phys = buildPhysiqueObservationPrompt();
     expect(phys).toMatch(/visibleMuscles/);
     expect(phys).toMatch(/chests/);
+  });
+
+  it("combined Gemini prompt asks for quality + observations in one JSON", () => {
+    const food = buildVisionPrompt("food");
+    expect(food).toMatch(/quality/);
+    expect(food).toMatch(/observations/);
+    expect(food).toMatch(/not a coach/i);
+    const body = buildVisionPrompt("body");
+    expect(body).toMatch(/not a coach/i);
+    expect(body).toMatch(/Do not diagnose/i);
   });
 });
 

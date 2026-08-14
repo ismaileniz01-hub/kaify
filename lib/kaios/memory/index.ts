@@ -42,14 +42,20 @@ export function prepareMemoriesForContext(
   options: {
     coach?: string;
     intent?: string;
+    userMessage?: string;
     limit?: number;
     source?: string;
+    createdAt?: string[];
   } = {},
 ): StructuredMemoryItem[] {
-  const items = memoriesFromSummaries(summaries, options.source);
+  const items = memoriesFromSummaries(summaries, options.source).map((item, i) => ({
+    ...item,
+    createdAt: options.createdAt?.[i],
+  }));
   return selectRelevantMemories(items, {
     coach: options.coach,
     intent: options.intent,
+    userMessage: options.userMessage,
     limit: options.limit,
   });
 }

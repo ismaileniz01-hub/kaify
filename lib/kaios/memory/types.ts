@@ -21,6 +21,8 @@ export type StructuredMemoryItem = {
 export type SelectMemoriesOptions = {
   coach?: string;
   intent?: string;
-  /** Soft max; hard-capped at 5. Default 5. */
+  /** Current user turn — overlap is required for casual, and boosts ranking. */
+  userMessage?: string;
+  /** Soft max; hard-capped at 5. Default 5. Not a minimum. */
   limit?: number;
 };

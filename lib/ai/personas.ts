@@ -79,30 +79,47 @@ export function buildImageQualityPrompt(): string {
 }
 
 export function buildVisionPrompt(kind: AnalysisKind): string {
+  const qualityBlock = [
+    '"quality": {',
+    '  "score": <number 1-10>,',
+    '  "issues": [<short lighting/angle/sharpness/framing problems>],',
+    '  "tips": [<short actionable tips>]',
+    "}",
+  ].join(" ");
+
   if (kind === "food") {
     return [
-      "You are a clinical nutrition vision analyzer.",
-      "Analyze the meal in the image and estimate its TOTAL macros.",
+      "You are a clinical nutrition vision observer, not a coach.",
+      "Return ONE JSON object with image quality AND meal observations.",
+      "Do not speak as Maya. Do not claim catalog-verified nutrition facts.",
+      "Macro numbers, if present, are rough model-side estimates only.",
       IMAGE_INJECTION_GUARD,
-      "Return ONLY a JSON object with EXACTLY these keys:",
-      '{ "visible_muscles": [], "scores": {}, "overall_score": 0,',
-      '  "food_analysis": { "calories": <kcal number>, "protein": <grams>, "carb": <grams>, "fat": <grams> } }.',
-      "All numbers must be non-negative. Do not output anything except the JSON.",
+      "Return ONLY JSON with EXACTLY these top-level keys: quality, observations.",
+      `{ ${qualityBlock}, "observations": {`,
+      '  "visible_muscles": [], "scores": {}, "overall_score": 0,',
+      '  "food_analysis": { "calories": <kcal>, "protein": <g>, "carb": <g>, "fat": <g> } or null,',
+      '  "ambiguity": [<strings if portion/identity is uncertain>] } }.',
+      "Be strict on quality: blurry, dark, awkward-angle or cluttered photos must score below 6.",
+      "If the meal is too ambiguous for macros, set food_analysis to null and list ambiguity.",
+      "Do not output anything except the JSON.",
     ].join(" ");
   }
 
   return [
-    "You are a biomechanics & physique vision analyzer.",
-    "Score ONLY the muscle groups that are clearly VISIBLE in the image.",
-    `Allowed muscle keys: ${MUSCLE_GROUPS.join(", ")}.`,
+    "You are a biomechanics & physique vision observer, not a coach.",
+    "Return ONE JSON object with image quality AND visible-region observations.",
+    "Do not speak as Leo. Do not diagnose disease. Do not claim precise body-fat or muscle-mass percentages.",
+    "Numeric scores are observations for a later coach evaluation, not final authority.",
     IMAGE_INJECTION_GUARD,
-    "Return ONLY a JSON object with EXACTLY these keys:",
-    '{ "visible_muscles": [<visible keys>],',
-    '  "scores": { <visible key>: <0-100 development score>, ... },',
+    `Allowed muscle keys: ${MUSCLE_GROUPS.join(", ")}.`,
+    "Return ONLY JSON with EXACTLY these top-level keys: quality, observations.",
+    `{ ${qualityBlock}, "observations": {`,
+    '  "visible_muscles": [<visible keys>],',
+    '  "scores": { <visible key>: <0-100 development observation> },',
     '  "overall_score": <0-100 across visible groups>,',
-    '  "food_analysis": null }.',
-    "OMIT non-visible muscle groups entirely from both arrays/objects.",
-    "Do not output anything except the JSON.",
+    '  "food_analysis": null } }.',
+    "Be strict on quality: blurry, dark, awkward-angle, cropped-unusable or cluttered photos must score below 6.",
+    "OMIT non-visible muscle groups. Do not output anything except the JSON.",
   ].join(" ");
 }
 
@@ -136,8 +153,8 @@ export function buildSynthesisMessages(params: SynthesisParams): SynthesisBuild 
     `Always respond in the user's language (locale: "${params.locale}").`,
     "Keep it short, motivating and easy to read; light Markdown only where it helps.",
     profile.kind === "food"
-      ? "Summarize the meal's calories and macro breakdown (protein/carbs/fat), comment on balance, and give 1-2 concrete tips."
-      : "Summarize the physique scores per visible muscle group and the overall score, highlight the strongest area and the best opportunity, and give 1-2 concrete tips.",
+      ? "Summarize visible meal observations. Treat calories/macros as estimates, never as a verified nutrition database. If ambiguity is listed, ask one concise clarification instead of false precision."
+      : "Summarize visible-region physique observations only. Do not diagnose. Do not claim precise body-fat or muscle-mass percentages. Observation scores are inputs, not your medical authority. Calibrate against history when a consistency note is provided; if none, do not invent progress.",
     "At the very end, append a SHORT disclaimer line in your own voice and in the user's language, making clear this is not medical advice and that a professional should be consulted for medical concerns.",
     buildCanaryReminder(canary),
   ].join("\n");

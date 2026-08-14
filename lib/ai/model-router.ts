@@ -4,7 +4,7 @@ import {
   type CompletionOptions,
 } from "@/lib/ai/deepseek.client";
 import { generateGeminiJson } from "@/lib/ai/gemini.client";
-import { assessImageQuality, MIN_QUALITY_SCORE } from "@/lib/ai/image-quality";
+import { MIN_QUALITY_SCORE } from "@/lib/ai/image-quality";
 import { computeScoreDrift, type ScoreDrift } from "@/lib/ai/consistency";
 import { AiError } from "@/lib/ai/errors";
 import { aiCopy } from "@/lib/ai/ai-copy";
@@ -18,7 +18,7 @@ import {
 import { scrubModelOutput } from "@/lib/ai/prompt-safety";
 import { TOKEN_BUDGET } from "@/lib/ai/budget";
 import {
-  technicalAnalysisSchema,
+  interpretVisionEnvelope,
   type ImageQuality,
   type MuscleScores,
   type TechnicalAnalysis,
@@ -31,13 +31,10 @@ import type {
 } from "@/lib/ai/types";
 
 /**
- * ModelRouter — the hybrid engine entry point.
+ * ModelRouter — hybrid engine.
  *
  *  Text / logic / synthesis  -> DeepSeek
- *  Vision / measurement      -> Gemini
- *
- * `analyzeImagePipeline` chains both: Gemini produces strict JSON, then
- * DeepSeek turns it into a personalized (Maya/Leo) Markdown summary.
+ *  Vision observation        -> one Gemini structured call (quality + observations)
  */
 
 export type ImagePipelineParams = {
@@ -45,7 +42,6 @@ export type ImagePipelineParams = {
   persona: AnalysisPersona;
   locale: string;
   image: ImageInput;
-  /** Previous body scores for the consistency check (body persona only). */
   previousScores?: MuscleScores | null;
   userNote?: string;
   signal?: AbortSignal;
@@ -57,10 +53,11 @@ export type ImagePipelineResult = {
   drift: ScoreDrift[];
   summary: string;
   usage: TokenUsage | null;
+  geminiCalls: number;
+  deepseekCalls: number;
 };
 
 export const ModelRouter = {
-  /** DeepSeek streaming text (chat). */
   streamText(
     messages: ChatTurn[],
     options?: CompletionOptions,
@@ -68,7 +65,6 @@ export const ModelRouter = {
     return streamChatCompletion(messages, options);
   },
 
-  /** DeepSeek non-streaming text (synthesis/condensation). */
   completeText(
     messages: ChatTurn[],
     options?: CompletionOptions,
@@ -77,28 +73,14 @@ export const ModelRouter = {
   },
 
   /**
-   * Gemini (vision) -> JSON -> DeepSeek (synthesis) -> personalized summary.
-   * Throws AiError("AI_LOW_QUALITY") when the pre-analysis gate rejects the
-   * photo, BEFORE any vision/synthesis cost is incurred.
+   * One Gemini vision envelope → fail-closed quality → DeepSeek coach synthesis.
+   * Insufficient quality stops before DeepSeek.
    */
   async analyzeImagePipeline(
     params: ImagePipelineParams,
   ): Promise<ImagePipelineResult> {
     const profile = ANALYSIS_PERSONAS[params.persona];
 
-    // 1) Pre-analysis quality gate (cheap Gemini call).
-    const quality = await assessImageQuality(params.image, params.signal, {
-      userId: params.userId,
-    });
-    if (quality.score < MIN_QUALITY_SCORE) {
-      throw new AiError(
-        "AI_LOW_QUALITY",
-        aiCopy(params.locale, "low_quality_image"),
-        { score: quality.score, issues: quality.issues, tips: quality.tips },
-      );
-    }
-
-    // 2) Vision measurement -> strict JSON.
     const raw = await generateGeminiJson({
       prompt: buildVisionPrompt(profile.kind),
       image: params.image,
@@ -109,24 +91,34 @@ export const ModelRouter = {
         : { operation: "vision" },
     });
 
-    const parsed = technicalAnalysisSchema.safeParse(raw);
-    if (!parsed.success) {
-      aiLogger.error("[model-router] vision output failed schema", {
+    const interpreted = interpretVisionEnvelope(raw, MIN_QUALITY_SCORE);
+    if (interpreted.status === "INVALID_PROVIDER_OUTPUT") {
+      aiLogger.error("[model-router] combined vision envelope invalid", {
         kind: profile.kind,
         raw: JSON.stringify(raw).slice(0, 600),
-        issues: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
       });
       throw new AiError("AI_BAD_OUTPUT", aiCopy(params.locale, "bad_analysis_output"));
     }
-    const analysis = parsed.data;
+    if (interpreted.status === "INSUFFICIENT_QUALITY") {
+      throw new AiError(
+        "AI_LOW_QUALITY",
+        aiCopy(params.locale, "low_quality_image"),
+        {
+          status: interpreted.status,
+          score: interpreted.quality.score,
+          issues: interpreted.quality.issues,
+          tips: interpreted.quality.tips,
+        },
+      );
+    }
 
-    // 3) Consistency check (body scoring only).
+    const { quality, analysis } = interpreted;
+
     const drift =
       profile.kind === "body"
         ? computeScoreDrift(params.previousScores ?? null, analysis.scores)
         : [];
 
-    // 4) Synthesis -> personalized Markdown (DeepSeek).
     const synth = buildSynthesisMessages({
       persona: params.persona,
       locale: params.locale,
@@ -143,9 +135,16 @@ export const ModelRouter = {
         : { operation: "synthesis" },
     });
 
-    // Backstop: strip any leaked canary/scaffolding from the user-facing text.
     const summary = scrubModelOutput(content, synth.canary);
 
-    return { quality, analysis, drift, summary, usage };
+    return {
+      quality,
+      analysis,
+      drift,
+      summary,
+      usage,
+      geminiCalls: 1,
+      deepseekCalls: 1,
+    };
   },
 };

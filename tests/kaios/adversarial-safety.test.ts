@@ -84,7 +84,12 @@ describe("poison memory + prepareMemoriesForContext", () => {
 
     const prepared = prepareMemoriesForContext(
       [...jailbreaks, "Hits protein most training days"],
-      { coach: "kai", intent: "motivation", limit: 5 },
+      {
+        coach: "kai",
+        intent: "motivation",
+        userMessage: "I feel unmotivated about protein on training days",
+        limit: 5,
+      },
     );
     expect(prepared).toHaveLength(1);
     expect(prepared[0]?.text).toMatch(/protein/i);

@@ -11,45 +11,35 @@ import type { ChatTurn } from "@/lib/ai/types";
 import type { MessageSender } from "@/lib/types/database.types";
 
 /**
- * Memory condensation (auto-summary).
+ * Coaching memory persistence.
  *
- * Every chat turn bumps `user_coaching_state.message_count_since_condense` via
- * an atomic RPC. Once the threshold is crossed we summarize the recent
- * conversation with DeepSeek (lightweight: low temperature + capped tokens, so
- * automatic prefix caching keeps cost down) and store a compact memory row,
- * then reset the counter.
- *
- * The shared memory is cross-coach: all 4 coaches read the same `coaching_memory`.
+ * Automatic periodic LLM condensation (every N turns) is disabled.
+ * Continuity comes from:
+ *  - deterministic KAIOS event-fact rows
+ *  - hint-gated analytics extraction (metered `analytics`, not a turn counter)
+ *  - `condenseMemory` which is opt-in only (not called from the chat path)
  */
 
-export const CONDENSE_THRESHOLD = 20;
+export type RecentMemory = {
+  summary: string;
+  createdAt: string;
+};
+
 const RECENT_WINDOW = 50;
 const SUMMARY_MAX_TOKENS = TOKEN_BUDGET.memory;
 
 type AdminClient = ReturnType<typeof createAdminSupabaseClient>;
 
-/** Atomically increments the counter and condenses when the threshold is hit. */
+/**
+ * Formerly incremented a counter and summarized after 20 turns.
+ * Kept as a no-op so any leftover callers cannot spawn a hidden LLM call.
+ */
 export async function bumpAndMaybeCondense(params: {
   userId: string;
   coachId?: string;
   delta: number;
 }): Promise<void> {
-  const admin = createAdminSupabaseClient();
-
-  const { data, error } = await admin.rpc("increment_condense_counter", {
-    p_user_id: params.userId,
-    p_delta: params.delta,
-  });
-
-  if (error) {
-    logger.error("[memory.service] counter error", { error: error.message });
-    return;
-  }
-
-  const count = typeof data === "number" ? data : 0;
-  if (count >= CONDENSE_THRESHOLD) {
-    await condenseMemory({ userId: params.userId, coachId: params.coachId });
-  }
+  void params;
 }
 
 async function resetCounter(admin: AdminClient, userId: string): Promise<void> {
@@ -63,8 +53,8 @@ async function resetCounter(admin: AdminClient, userId: string): Promise<void> {
 }
 
 /**
- * Summarizes the recent conversation into a compact memory row and resets the
- * counter. Failures are swallowed (logged) so they never break the chat flow.
+ * Opt-in conversation compress. Not invoked automatically from chat.
+ * If used, the DeepSeek call is platform-metered (`operation: "memory"`).
  */
 export async function condenseMemory(params: {
   userId: string;
@@ -97,9 +87,6 @@ export async function condenseMemory(params: {
     return;
   }
 
-  // Second-order injection guard: this summary is later re-injected into the
-  // chat system prompt, so sanitize each turn and forbid the summarizer from
-  // acting on any instruction embedded in the conversation.
   const transcript = rows
     .map(
       (row) =>
@@ -128,7 +115,7 @@ export async function condenseMemory(params: {
     logger.error("[memory.service] condense AI error", {
       error: aiError instanceof Error ? aiError.message : "unknown",
     });
-    return; // keep the counter so we retry next turn
+    return;
   }
 
   if (!summary) {
@@ -149,11 +136,11 @@ export async function condenseMemory(params: {
   await resetCounter(admin, params.userId);
 }
 
-/** Returns the most recent condensed memory summaries for a user. */
+/** Returns the most recent memory summaries for a user (with timestamps for stale filters). */
 export async function getRecentMemories(
   userId: string,
   limit = 3,
-): Promise<string[]> {
+): Promise<RecentMemory[]> {
   const admin = createAdminSupabaseClient();
 
   const { data, error } = await admin
@@ -168,5 +155,8 @@ export async function getRecentMemories(
     return [];
   }
 
-  return (data ?? []).map((row) => row.summary);
+  return (data ?? []).map((row) => ({
+    summary: row.summary,
+    createdAt: row.created_at,
+  }));
 }

@@ -15,9 +15,9 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST /api/chat/[coachId]/analyze — image analysis pipeline (Maya/Leo only).
- * Runs quota guard -> Gemini quality gate -> Gemini measurement -> DeepSeek
- * synthesis, then returns the personalized summary + structured analysis with
- * a `warning_trigger` surfaced through the standard response envelope.
+ * Same-image reuse (no provider calls) or: quota → one Gemini vision envelope
+ * (quality + observations) → DeepSeek synthesis. `warning_trigger` is surfaced
+ * through the standard response envelope.
  */
 export const POST = defineDynamicRoute<{ coachId: string }>(
   {
@@ -64,6 +64,7 @@ export const POST = defineDynamicRoute<{ coachId: string }>(
           imageBase64: parsed.data.imageBase64,
           mimeType: parsed.data.mimeType,
           note: parsed.data.note,
+          signal: request.signal,
         }),
     });
   },

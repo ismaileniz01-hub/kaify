@@ -11,6 +11,12 @@ import {
   requestPhotoAnalyticsConfirmation,
   type PhotoAnalyticsConfirmation,
 } from "@/lib/ai/coach-analytics";
+import {
+  extractAnalysisFromPayload,
+  fingerprintVisionImage,
+  selectReusableVisionRow,
+  type StoredVisionRow,
+} from "@/lib/kaios/vision/fingerprint";
 import type { ScoreDrift } from "@/lib/ai/consistency";
 import type {
   AnalysisMimeType,
@@ -20,6 +26,7 @@ import type {
 } from "@/lib/validations/analysis.schema";
 import type {
   Json,
+  MessageType,
   UsageResource,
   WarningTrigger,
 } from "@/lib/types/database.types";
@@ -43,13 +50,15 @@ export type AnalyzePhotoResult = {
   warningTrigger: WarningTrigger | null;
   messageId: string | null;
   confirmation: PhotoAnalyticsConfirmation | null;
+  geminiCalls: number;
+  deepseekCalls: number;
+  reused: boolean;
 };
 
 function resourceForCoach(coachId: "maya" | "leo"): UsageResource {
   return coachId === "maya" ? "maya_photo" : "leo_photo";
 }
 
-/** Safely extracts a previous score map from a stored analysis payload. */
 function extractScores(payload: Json | null): MuscleScores | null {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return null;
@@ -71,13 +80,36 @@ function extractScores(payload: Json | null): MuscleScores | null {
   return out;
 }
 
+function extractQuality(payload: Json | null): ImageQuality | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+  const quality = (payload as Record<string, unknown>).quality;
+  if (!quality || typeof quality !== "object" || Array.isArray(quality)) {
+    return null;
+  }
+  const score = (quality as Record<string, unknown>).score;
+  if (typeof score !== "number" || !Number.isFinite(score)) return null;
+  const issues = (quality as Record<string, unknown>).issues;
+  const tips = (quality as Record<string, unknown>).tips;
+  return {
+    score,
+    issues: Array.isArray(issues)
+      ? issues.filter((v): v is string => typeof v === "string")
+      : [],
+    tips: Array.isArray(tips)
+      ? tips.filter((v): v is string => typeof v === "string")
+      : [],
+  };
+}
+
 async function getLocale(admin: AdminClient, userId: string): Promise<string> {
   const { data } = await admin
     .from("profiles")
     .select("locale")
     .eq("id", userId)
     .maybeSingle();
-    return data?.locale ?? "en";
+  return data?.locale ?? "en";
 }
 
 async function getPreviousScores(
@@ -99,13 +131,50 @@ async function getPreviousScores(
   return extractScores(data?.payload ?? null);
 }
 
+async function loadRecentVisionRows(
+  admin: AdminClient,
+  userId: string,
+  coachId: string,
+  messageType: MessageType,
+): Promise<StoredVisionRow[]> {
+  const { data, error } = await admin
+    .from("chat_messages")
+    .select("id, created_at, content, payload, user_id, coach_id, message_type")
+    .eq("user_id", userId)
+    .eq("coach_id", coachId)
+    .eq("sender", "coach")
+    .eq("message_type", messageType)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    logger.warn("[analysis.service] vision reuse lookup failed", {
+      error: error.message,
+    });
+    return [];
+  }
+  return (data ?? []) as StoredVisionRow[];
+}
+
+function foodHasUsableMacros(analysis: TechnicalAnalysis): boolean {
+  const food = analysis.food_analysis;
+  if (!food) return false;
+  return [food.calories, food.protein, food.carb, food.fat].every(
+    (n) => typeof n === "number" && Number.isFinite(n) && n >= 0,
+  );
+}
+
+function observationAmbiguous(analysis: TechnicalAnalysis): boolean {
+  const extra = analysis as TechnicalAnalysis & { ambiguity?: unknown };
+  if (!Array.isArray(extra.ambiguity)) return false;
+  return extra.ambiguity.some((v) => typeof v === "string" && v.trim().length > 0);
+}
+
 /**
- * analyzeImagePipeline orchestration (§1 Pipelining):
- *   1. Reserve one photo credit atomically before AI work.
- *   2. Gemini quality gate -> Gemini measurement (JSON) -> DeepSeek synthesis.
- *   3. Persist on success; refund the credit when AI rejects or fails.
- *
- * Low-quality photos are rejected (AiError -> 400) and the reserved credit is refunded.
+ * Photo analysis:
+ *  1. Normalize image bytes (fingerprint source).
+ *  2. Same-user / same-type fingerprint reuse (no Gemini, no extra quota).
+ *  3. Else reserve quota → one Gemini envelope → DeepSeek synthesis → persist.
  */
 export async function analyzePhoto(
   params: AnalyzePhotoParams,
@@ -120,23 +189,50 @@ export async function analyzePhoto(
       "Bu koç fotoğraf analizini desteklemiyor.",
     );
   }
-  const visionCoachId = persona.id; // "maya" | "leo"
+  const visionCoachId = persona.id;
   const resource = resourceForCoach(visionCoachId);
+  const messageType = persona.kind === "food" ? "analysis" : "score";
 
-  // Validate + downscale BEFORE reserving quota, so a bad image never burns a
-  // credit and the (2×) Gemini calls receive a compact, cheaper payload.
   const vision = await prepareVisionImage(params.imageBase64);
+  const fingerprint = fingerprintVisionImage(vision.base64, vision.mimeType);
 
-  const usage = await reserveQuota({ userId: params.userId, resource, amount: 1 });
-
-  const [locale, previousScores] = await Promise.all([
+  const [locale, previousScores, priorRows] = await Promise.all([
     getLocale(admin, params.userId),
     persona.kind === "body"
       ? getPreviousScores(admin, params.userId, params.coachId)
       : Promise.resolve(null),
+    loadRecentVisionRows(admin, params.userId, params.coachId, messageType),
   ]);
 
-  // 2) Hybrid pipeline (Gemini -> DeepSeek). May throw AI_LOW_QUALITY.
+  const reusedRow = selectReusableVisionRow({
+    rows: priorRows,
+    fingerprint,
+    userId: params.userId,
+    coachId: params.coachId,
+    messageType,
+  });
+
+  if (reusedRow) {
+    const analysis = extractAnalysisFromPayload(reusedRow.payload);
+    const quality = extractQuality(reusedRow.payload);
+    if (analysis && quality) {
+      return {
+        summary: reusedRow.content ?? "",
+        analysis,
+        drift: [],
+        quality,
+        warningTrigger: null,
+        messageId: reusedRow.id,
+        confirmation: null,
+        geminiCalls: 0,
+        deepseekCalls: 0,
+        reused: true,
+      };
+    }
+  }
+
+  const usage = await reserveQuota({ userId: params.userId, resource, amount: 1 });
+
   let result: ImagePipelineResult;
   try {
     result = await ModelRouter.analyzeImagePipeline({
@@ -153,12 +249,13 @@ export async function analyzePhoto(
     throw toApiError(error, locale);
   }
 
-  // 3) Persist (no raw image stored) + consume one credit.
-  const messageType = persona.kind === "food" ? "analysis" : "score";
   const payload = {
     analysis: result.analysis,
     drift: result.drift,
     quality: result.quality,
+    image_fingerprint: fingerprint,
+    nutrition_provenance: persona.kind === "food" ? "model_estimate" : null,
+    score_authority: persona.kind === "body" ? "leo_eval" : null,
   } as unknown as Json;
 
   const { error: userPhotoError } = await admin.from("chat_messages").insert({
@@ -168,7 +265,7 @@ export async function analyzePhoto(
     sender: "user",
     message_type: "photo_analysis",
     content: params.note && params.note.length > 0 ? params.note : "[photo]",
-    payload: { mimeType: params.mimeType } as unknown as Json,
+    payload: { mimeType: params.mimeType, image_fingerprint: fingerprint } as unknown as Json,
     locale,
   });
   if (userPhotoError) {
@@ -205,9 +302,12 @@ export async function analyzePhoto(
 
   let confirmation: PhotoAnalyticsConfirmation | null = null;
 
-  // Reflect a logged meal onto today's analytics after user confirmation.
-  if (persona.kind === "food" && result.analysis.food_analysis) {
-    const food = result.analysis.food_analysis;
+  if (
+    persona.kind === "food" &&
+    foodHasUsableMacros(result.analysis) &&
+    !observationAmbiguous(result.analysis)
+  ) {
+    const food = result.analysis.food_analysis!;
     try {
       confirmation = await requestPhotoAnalyticsConfirmation({
         userId: params.userId,
@@ -235,5 +335,11 @@ export async function analyzePhoto(
     warningTrigger: usage.warning_trigger,
     messageId: inserted?.id ?? null,
     confirmation,
+    geminiCalls: result.geminiCalls,
+    deepseekCalls: result.deepseekCalls,
+    reused: false,
   };
 }
+
+export { extractFingerprintFromPayload } from "@/lib/kaios/vision/fingerprint";
+export { fingerprintVisionImage };

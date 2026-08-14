@@ -76,6 +76,11 @@ export const technicalAnalysisSchema = z.object({
     }),
   overall_score: scoreSchema.default(0),
   food_analysis: foodAnalysisSchema.nullable().default(null),
+  ambiguity: z
+    .array(z.string())
+    .optional()
+    .default([])
+    .transform((arr) => arr.filter((s) => s.trim().length > 0).slice(0, 8)),
 });
 
 export type TechnicalAnalysis = z.infer<typeof technicalAnalysisSchema>;
@@ -113,6 +118,61 @@ export const imageQualitySchema = z.object({
 });
 
 export type ImageQuality = z.infer<typeof imageQualitySchema>;
+
+export const visionEnvelopeSchema = z.object({
+  quality: imageQualitySchema,
+  observations: z.unknown().optional(),
+});
+
+export type VisionQualityStatus =
+  | "VALID"
+  | "INSUFFICIENT_QUALITY"
+  | "INVALID_PROVIDER_OUTPUT";
+
+export type InterpretedVisionEnvelope =
+  | { status: "INVALID_PROVIDER_OUTPUT" }
+  | {
+      status: "INSUFFICIENT_QUALITY";
+      quality: ImageQuality;
+    }
+  | {
+      status: "VALID";
+      quality: ImageQuality;
+      analysis: TechnicalAnalysis;
+    };
+
+/**
+ * Fail-closed interpreter for the combined Gemini quality+observation envelope.
+ * Missing/NaN/OOR quality → INVALID_PROVIDER_OUTPUT (never a default passing score).
+ * Finite low score → INSUFFICIENT_QUALITY.
+ * Valid quality without parseable observations → INVALID_PROVIDER_OUTPUT.
+ */
+export function interpretVisionEnvelope(
+  raw: unknown,
+  minQualityScore: number,
+): InterpretedVisionEnvelope {
+  const envelope = visionEnvelopeSchema.safeParse(raw);
+  if (!envelope.success) {
+    return { status: "INVALID_PROVIDER_OUTPUT" };
+  }
+  const quality = envelope.data.quality;
+  if (quality.score < minQualityScore) {
+    return { status: "INSUFFICIENT_QUALITY", quality };
+  }
+  const observations = envelope.data.observations;
+  if (
+    observations == null ||
+    typeof observations !== "object" ||
+    Array.isArray(observations)
+  ) {
+    return { status: "INVALID_PROVIDER_OUTPUT" };
+  }
+  const analysis = technicalAnalysisSchema.safeParse(observations);
+  if (!analysis.success) {
+    return { status: "INVALID_PROVIDER_OUTPUT" };
+  }
+  return { status: "VALID", quality, analysis: analysis.data };
+}
 
 // ---------------------------------------------------------------------------
 // Route input
