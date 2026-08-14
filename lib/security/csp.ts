@@ -1,3 +1,5 @@
+import { CSP_REPORT_GROUP, CSP_REPORT_PATH } from "@/lib/security/csp-report";
+
 /** Builds a per-request Content-Security-Policy with a cryptographic nonce. */
 export function isLegalContentPath(pathname: string): boolean {
   return (
@@ -91,8 +93,15 @@ export function buildContentSecurityPolicy(
     "form-action 'self'",
     "frame-ancestors 'none'",
     "upgrade-insecure-requests",
+    `report-uri ${CSP_REPORT_PATH}`,
+    `report-to ${CSP_REPORT_GROUP}`,
   ];
   return directives.join("; ");
+}
+
+/** Reporting-Endpoints (modern) — pair with report-uri for Safari/Firefox. */
+export function buildCspReportingEndpoints(): string {
+  return `${CSP_REPORT_GROUP}="${CSP_REPORT_PATH}"`;
 }
 
 export function generateCspNonce(): string {

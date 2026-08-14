@@ -47,7 +47,7 @@ export const RETAINED_AFTER_DELETE: readonly DeletionTableSpec[] = [
     table: "billing_events",
     column: "user_id",
     behavior: "set_null",
-    notes: "Financial audit; customer_email may remain — legal retention 7y",
+    notes: "Financial audit row retained (SET NULL); payload is minimized at insert. Row TTL: RETENTION.billingEventsMonths (policy 7y).",
   },
   {
     table: "paddle_customers",

@@ -9,6 +9,11 @@ export const RETENTION = {
   notificationsMonths: 12,
   dataExportLogsMonths: 24,
   adminAuditDays: 90,
+  /**
+   * billing_events row retention. Matches docs/compliance/retention-policy.md
+   * (7 years / tax-accounting). OWNER_REVIEW if legal counsel revises.
+   */
+  billingEventsMonths: 84,
 } as const;
 
 export const RETENTION_WARNING_DAYS = 30;

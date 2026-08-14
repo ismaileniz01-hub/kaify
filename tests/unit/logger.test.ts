@@ -39,10 +39,64 @@ describe("logger", () => {
     expect(record.authorization).toBe("[redacted]");
     expect(record.password).toBe("[redacted]");
     expect(record.email).toBe("[redacted]");
-    expect((record.nested as Record<string, unknown>).access_token).toBe(
-      "[redacted]",
+    const nested = record.nested as Record<string, unknown>;
+    expect(nested.access_token).toBe("[redacted]");
+    expect(nested.safe).toBe("ok");
+  });
+
+  it("redacts ip/clientIp/ipAddress and nested forwarded headers", () => {
+    const record = captureLog(() =>
+      logger.warn("middleware rate limit exceeded", {
+        ip: "203.0.113.9",
+        clientIp: "198.51.100.7",
+        ipAddress: "192.0.2.1",
+        nested: {
+          "x-forwarded-for": "10.0.0.1, 10.0.0.2",
+          remoteIp: "172.16.0.4",
+          tip: "keep",
+        },
+      }),
     );
-    expect((record.nested as Record<string, unknown>).safe).toBe("ok");
+    expect(record.ip).toBe("[redacted]");
+    expect(record.clientIp).toBe("[redacted]");
+    expect(record.ipAddress).toBe("[redacted]");
+    const nested = record.nested as Record<string, unknown>;
+    expect(nested["x-forwarded-for"]).toBe("[redacted]");
+    expect(nested.remoteIp).toBe("[redacted]");
+    expect(nested.tip).toBe("keep");
+  });
+
+  it("redacts cookies, JWTs, api keys, and truncates user-agent", () => {
+    const jwt =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFBPVxLhYGA";
+    const record = captureLog(() =>
+      logger.info("req", {
+        cookie: "sb-access-token=abc",
+        refreshToken: "r1",
+        apiKey: "k",
+        session: "sess",
+        authorization: "Bearer x",
+        userAgent:
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Extra/Info",
+        bearer: jwt,
+      }),
+    );
+    expect(record.cookie).toBe("[redacted]");
+    expect(record.refreshToken).toBe("[redacted]");
+    expect(record.apiKey).toBe("[redacted]");
+    expect(record.session).toBe("[redacted]");
+    expect(record.authorization).toBe("[redacted]");
+    expect(record.bearer).toBe("[redacted]");
+    expect(String(record.userAgent).length).toBeLessThanOrEqual(81);
+    expect(String(record.userAgent)).not.toContain("Extra/Info");
+  });
+
+  it("does not treat pipeline/tip as IP keys", () => {
+    const record = captureLog(() =>
+      logger.info("safe", { pipeline: "etl", tip: "hydrate" }),
+    );
+    expect(record.pipeline).toBe("etl");
+    expect(record.tip).toBe("hydrate");
   });
 
   it("partially masks long user ids", () => {

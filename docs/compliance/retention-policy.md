@@ -39,6 +39,6 @@ When a user deletes their account:
 ## Payment data split
 
 - **Card data:** never stored by Kaify — Paddle (Merchant of Record)
-- **Kaify stores:** subscription tier, webhook metadata, billing email from webhooks
+- **Kaify stores:** subscription tier, webhook metadata (minimized operational fields), billing email from webhooks. Full Paddle JSON is not retained in `billing_events.payload`.
 
 Contact: privacy@kaifyai.org

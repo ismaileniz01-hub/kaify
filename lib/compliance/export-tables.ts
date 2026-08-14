@@ -37,7 +37,7 @@ export const USER_EXPORT_TABLES: readonly ExportTableSpec[] = [
   { table: "data_export_logs", column: "user_id", description: "History of your data export requests" },
 ] as const;
 
-export const EXPORT_SCHEMA_VERSION = "2026-07-06";
+export const EXPORT_SCHEMA_VERSION = "2026-08-14";
 
 export function exportSchemaReadme(): Record<string, string> {
   return Object.fromEntries(

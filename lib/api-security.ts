@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDisposableRisk } from "./disposable-domains";
 import { logger } from "@/lib/logger";
+import { validateRecaptcha as verifyRecaptchaToken } from "@/lib/security/recaptcha";
 
 // ──────────────────────────────────────────────
 // 1. Zod Schemas — Tüm API route'ları için
@@ -62,36 +63,7 @@ export const leaderboardQuerySchema = z.object({
 // ──────────────────────────────────────────────
 
 export async function validateRecaptcha(token: string): Promise<boolean> {
-  const secretKey = process.env.RECAPTCHA_SECRET_KEY;
-  const isProduction = process.env.NODE_ENV === "production";
-
-  if (!secretKey || secretKey.includes("your_") || secretKey.includes("_here")) {
-    if (isProduction) {
-      logger.error("[security] RECAPTCHA_SECRET_KEY is missing in production");
-      return false;
-    }
-    logger.warn("[security] RECAPTCHA_SECRET_KEY is not configured — skipping validation");
-    return true;
-  }
-
-  try {
-    const response = await fetch(
-      "https://www.google.com/recaptcha/api/siteverify",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `secret=${secretKey}&response=${token}`,
-      }
-    );
-
-    const data = await response.json();
-    return data.success === true;
-  } catch (error) {
-    logger.error("[security] reCAPTCHA validation error", {
-      error: error instanceof Error ? error.message : "unknown",
-    });
-    return false;
-  }
+  return verifyRecaptchaToken(token);
 }
 
 // ──────────────────────────────────────────────

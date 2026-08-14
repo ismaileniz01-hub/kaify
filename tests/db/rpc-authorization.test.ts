@@ -18,6 +18,7 @@ import {
   createTestUser,
   dbTestsEnabled,
   listSecurityDefinerFunctions,
+  runSqlJson,
   type TestUser,
 } from "./setup";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -207,5 +208,24 @@ describe.skipIf(!enabled)("rpc-authorization (live)", () => {
   it("trigger_only / internal entries are classified", () => {
     expect(rpcByMode("trigger_only").length).toBeGreaterThan(0);
     expect(rpcByMode("internal").length).toBeGreaterThan(0);
+  });
+
+  it("trg_unlock_team_chat_on_streak is DEFINER with empty search_path (SEC-011)", () => {
+    const rows = runSqlJson<{
+      proname: string;
+      prosecdef: boolean;
+      proconfig: string[] | null;
+    }>(`
+      select p.proname, p.prosecdef, p.proconfig
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.proname = 'trg_unlock_team_chat_on_streak'
+    `);
+    expect(rows.length).toBe(1);
+    expect(rows[0]?.prosecdef).toBe(true);
+    const cfg = (rows[0]?.proconfig ?? []).join(",");
+    expect(cfg).toMatch(/search_path=/);
+    expect(cfg.toLowerCase()).not.toMatch(/search_path=public/);
   });
 });

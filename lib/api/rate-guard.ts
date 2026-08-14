@@ -25,6 +25,10 @@ export const AI_RATE_LIMITS = {
   profile_delete: { requests: 2, windowMs: 24 * 60 * 60 * 1000 },
   waitlist: { requests: 5, windowMs: 60 * 60 * 1000 },
   subscribe: { requests: 5, windowMs: 60 * 60 * 1000 },
+  /** Browser CSP reports — public, fail-open would invite log floods. */
+  csp_report: { requests: 40, windowMs: 60 * 1000 },
+  /** Same-origin avatar proxy for leaderboard / public surfaces. */
+  public_media: { requests: 120, windowMs: 60 * 1000 },
   /** Email OTP send — separate from waitlist subscribe to avoid shared IP buckets. */
   otp_send: { requests: 12, windowMs: 15 * 60 * 1000 },
   /** Email OTP verify attempts (wrong codes, retries). */
@@ -68,7 +72,13 @@ export async function enforcePublicRateLimit(
   ip: string,
   action: Extract<
     AiRateAction,
-    "waitlist" | "subscribe" | "otp_send" | "otp_verify" | "health_probe"
+    | "waitlist"
+    | "subscribe"
+    | "otp_send"
+    | "otp_verify"
+    | "health_probe"
+    | "csp_report"
+    | "public_media"
   >,
 ): Promise<void> {
   const config = AI_RATE_LIMITS[action];

@@ -11,7 +11,10 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import {
   uploadAvatarObject,
   createSignedAvatarUrl,
+  avatarObjectPath,
 } from "@/lib/services/avatar-storage.service";
+import { cacheDelete } from "@/lib/cache";
+import { CacheKeys } from "@/lib/cache/keys";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +46,12 @@ export const POST = defineRoute(
         buffer: validated.buffer,
         mimeType: validated.mimeType,
       });
+
+      await cacheDelete(CacheKeys.avatarSigned(path));
+      await cacheDelete(CacheKeys.avatarSigned(avatarObjectPath(user.id, "jpg")));
+      await cacheDelete(CacheKeys.avatarSigned(avatarObjectPath(user.id, "jpeg")));
+      await cacheDelete(CacheKeys.avatarSigned(avatarObjectPath(user.id, "png")));
+      await cacheDelete(CacheKeys.avatarSigned(avatarObjectPath(user.id, "webp")));
 
       const admin = createAdminSupabaseClient();
       const { error: profileError } = await admin

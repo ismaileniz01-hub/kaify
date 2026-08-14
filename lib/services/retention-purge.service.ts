@@ -195,6 +195,12 @@ export async function runRetentionPurge(): Promise<RetentionPurgeResult> {
       idColumn: "id",
     },
     {
+      table: "billing_events",
+      column: "created_at",
+      cutoff: monthsAgoIso(RETENTION.billingEventsMonths),
+      idColumn: "id",
+    },
+    {
       table: "idempotency_keys",
       column: "expires_at",
       cutoff: new Date().toISOString(),

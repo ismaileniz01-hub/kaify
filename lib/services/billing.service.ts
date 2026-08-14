@@ -15,6 +15,7 @@ import { applyLegacyProfileWrites } from "@/lib/supabase/profile-compat";
 import type { SubscriptionTier } from "@/lib/types/database.types";
 import { parsePaddleExpiresAt } from "@/lib/billing/paddle-period";
 import { logger } from "@/lib/logger";
+import { minimizeBillingPayload } from "@/lib/privacy/billing-payload";
 
 type BillingCycle = "monthly" | "yearly";
 
@@ -341,7 +342,7 @@ async function claimBillingEvent(
     provider_event_id: eventId,
     event_name: eventType,
     user_id: userId,
-    payload,
+    payload: minimizeBillingPayload(payload),
     subscription_id: extras?.subscriptionId ?? null,
     customer_email: extras?.customerEmail ?? null,
     processed_at: null,

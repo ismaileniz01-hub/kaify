@@ -1,7 +1,13 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getClientIP, isLikelyBot, isAllowedOrigin } from "@/lib/api-security";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { buildContentSecurityPolicy, generateCspNonce, isLegalContentPath } from "@/lib/security/csp";
+import {
+  buildContentSecurityPolicy,
+  buildCspReportingEndpoints,
+  generateCspNonce,
+  isLegalContentPath,
+} from "@/lib/security/csp";
+import { CSP_REPORT_PATH } from "@/lib/security/csp-report";
 import { attachCsrfCookie } from "@/lib/security/csrf-crypto";
 import { logger } from "@/lib/logger";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
@@ -97,6 +103,7 @@ async function finalizeResponse(
     "Content-Security-Policy",
     buildContentSecurityPolicy(nonce, { legalEmbed: isLegalContentPath(pathname) }),
   );
+  response.headers.set("Reporting-Endpoints", buildCspReportingEndpoints());
   response.headers.set("X-Request-ID", requestId);
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
@@ -143,6 +150,7 @@ export async function middleware(request: NextRequest) {
     !pathname.startsWith("/api/webhooks/") &&
     !pathname.startsWith("/api/cron/") &&
     pathname !== "/api/health" &&
+    pathname !== CSP_REPORT_PATH &&
     isLikelyBot(request)
   ) {
     logger.warn("middleware blocked bot request", { requestId, pathname, ip });
@@ -155,6 +163,7 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/api/") &&
     !pathname.startsWith("/api/webhooks/") &&
+    pathname !== CSP_REPORT_PATH &&
     ["POST", "PUT", "DELETE", "PATCH"].includes(request.method) &&
     !isAllowedOrigin(request)
   ) {
@@ -172,6 +181,12 @@ export async function middleware(request: NextRequest) {
 
   if (pathname === "/api/health") {
     return finalizeResponse(forwardedRequest, nonce, requestId, pathname);
+  }
+
+  if (pathname === CSP_REPORT_PATH) {
+    return finalizeResponse(forwardedRequest, nonce, requestId, pathname, undefined, {
+      skipSessionRefresh: true,
+    });
   }
 
   if (pathname.startsWith("/api/cron/") || pathname.startsWith("/api/webhooks/")) {

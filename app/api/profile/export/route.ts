@@ -1,14 +1,14 @@
 import { defineRouteRaw } from "@/lib/api/route-handler";
 import { getClientIP } from "@/lib/api-security";
-import { exportUserData, logDataExport } from "@/lib/services/account.service";
+import { streamUserDataExport } from "@/lib/services/account.service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
  * GET /api/profile/export
- * Returns all data the app holds about the caller as a downloadable JSON file
- * (KVKK/GDPR right to data portability).
+ * Streams all data the app holds about the caller as a downloadable JSON file
+ * (KVKK/GDPR right to data portability). Incomplete streams omit complete:true.
  */
 export const GET = defineRouteRaw(
   {
@@ -18,15 +18,13 @@ export const GET = defineRouteRaw(
     requireCsrf: true,
   },
   async ({ user, request }) => {
-    const data = await exportUserData(user.id);
-
-    await logDataExport(user.id, data, {
+    const stream = streamUserDataExport(user.id, {
       ipAddress: getClientIP(request),
       userAgent: request.headers.get("user-agent"),
     });
 
     const filename = `kaify-data-export-${new Date().toISOString().slice(0, 10)}.json`;
-    return new Response(JSON.stringify(data, null, 2), {
+    return new Response(stream, {
       status: 200,
       headers: {
         "Content-Type": "application/json; charset=utf-8",

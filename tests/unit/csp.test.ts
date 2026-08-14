@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildContentSecurityPolicy, generateCspNonce } from "@/lib/security/csp";
+import { buildContentSecurityPolicy, buildCspReportingEndpoints, generateCspNonce } from "@/lib/security/csp";
 
 describe("buildContentSecurityPolicy", () => {
   const nonce = "test-nonce-123";
@@ -39,6 +39,13 @@ describe("buildContentSecurityPolicy", () => {
     expect(csp).toContain("https://cdn.paddle.com");
     expect(csp).toContain("https://buy.paddle.com");
     expect(csp).toContain("https://api.paddle.com");
+  });
+
+  it("declares CSP reporting without weakening object-src", () => {
+    expect(csp).toContain("report-uri /api/security/csp-report");
+    expect(csp).toContain("report-to csp-endpoint");
+    expect(csp).toContain("object-src 'none'");
+    expect(buildCspReportingEndpoints()).toContain("/api/security/csp-report");
   });
 });
 
