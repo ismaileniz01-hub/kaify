@@ -1,7 +1,7 @@
 # FINAL RELEASE DECISION
 
 **FINAL_DATE:** 2026-08-14  
-**FINAL_GIT_SHA:** *(stamped in follow-up commit after this file lands)*  
+**FINAL_GIT_SHA:** `c2de9141bf014e4b058c8cb902aff93516e3bbf4`  
 **BRANCH:** `cursor/signup-onboarding-lifestyle-fields`  
 **PRODUCTION_DEPLOYED:** NO  
 
@@ -14,7 +14,7 @@ Authority: Wave 8 full-product re-audit of **current HEAD**, plus targeted closu
 P0_OPEN: **0**  
 P1_OPEN: **0** (hosted DB must still **apply** Wave 8 migration)  
 P2_OPEN: **4**  
-P3_OPEN: **4**  
+P3_OPEN: **5**  
 
 SECURITY_SCORE: **95**  
 PRIVACY_SCORE: **95**  

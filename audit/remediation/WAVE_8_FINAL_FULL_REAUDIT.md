@@ -2,6 +2,7 @@
 
 **Date:** 2026-08-14  
 **Branch:** `cursor/signup-onboarding-lifestyle-fields`  
+**FINAL_GIT_SHA:** `c2de9141bf014e4b058c8cb902aff93516e3bbf4`  
 **Base SHA (pre-Wave-8 commit):** `5611781f9543ed921756b61eed12e6637add0ba7`  
 **Stop:** Wave 8 is the last engineering wave. Production was **not** deployed. `KAIOS_RUNTIME=false` remains. **No** automatic KAIOS → legacy fallback. Wave 9 was **not** started.
 
@@ -13,7 +14,7 @@ Previous-wave scores were treated as **context only**. This document scores **cu
 
 | Metric | Value |
 | --- | --- |
-| GIT_SHA (pre-closure) | `5611781f9543ed921756b61eed12e6637add0ba7` |
+| GIT_SHA | `c2de9141bf014e4b058c8cb902aff93516e3bbf4` |
 | BRANCH | `cursor/signup-onboarding-lifestyle-fields` |
 | NODE_VERSION | v26.4.0 |
 | NEXT_VERSION | 15.5.22 |
@@ -234,7 +235,7 @@ No production secrets printed. Gitleaks unavailable.
 **P0_OPEN: 0**  
 **P1_OPEN: 0** (implementation; hosted migration must be applied)  
 **P2_OPEN: 4** (W8-011, 012, 017, 018)  
-**P3_OPEN: 4** (W8-013–016, 019)
+**P3_OPEN: 5** (W8-013–016, 019)
 
 ---
 
@@ -304,3 +305,22 @@ Re-gates: typecheck, lint, Vitest 865, i18n check, build, bundle, npm audit high
 | PLAYWRIGHT_STAGING | local timeouts | Staging public smoke | — | — |
 
 Do not mix these with source P0.
+
+---
+
+## RELEASE DECISION
+
+WAVE_8_STATUS: **COMPLETE_WITH_EXTERNAL_EVIDENCE_GAPS**  
+PRODUCTION_CANARY_DECISION: **GO**  
+BROAD_PRODUCTION_DECISION: **GO_AFTER_CANARY**  
+LEGACY_REMOVAL_READY: **NO**  
+P0_OPEN: **0**  
+P1_OPEN: **0**  
+RELEASE_CRITICAL_IMPLEMENTATION_DEFECTS: **0**  
+EXTERNAL_EVIDENCE_GAPS: **8**  
+OVERALL_SCORE: **93/100**  
+OVERALL_CONFIDENCE: **MEDIUM**  
+MANUAL_CANARY_REQUIRED: **YES**  
+PRODUCTION_DEPLOYED: **NO**  
+KAIOS_ROLLBACK_RETAINED: **YES**  
+EXTERNAL_ACTION_REQUIRED: Apply Wave 8 migration + set `ADMIN_EMAIL`; verify notification cron; run owner AI canary on staging; do not remove `KAIOS_RUNTIME=false` until soak.
