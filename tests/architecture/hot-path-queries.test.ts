@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 describe("hot-path query shape", () => {
@@ -34,5 +34,32 @@ describe("hot-path query shape", () => {
     const src = readFileSync(join(process.cwd(), "app/api/home/route.ts"), "utf8");
     expect(src).not.toContain("dailyAiBudget");
     expect(src).not.toContain("requireAi");
+  });
+
+  it("marketing nav does not import the SessionProvider module", () => {
+    const src = readFileSync(
+      join(process.cwd(), "components/landing/LandingNav.tsx"),
+      "utf8",
+    );
+    expect(src).not.toMatch(/from ["']@\/lib\/session-context["']/);
+    expect(src).toMatch(/from ["']@\/lib\/session-contexts["']/);
+  });
+
+  it("runtime TS never SUMs gem_ledger for balance", () => {
+    const roots = [join(process.cwd(), "lib"), join(process.cwd(), "app")];
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const full = join(dir, name);
+        if (statSync(full).isDirectory()) walk(full);
+        else if (/\.(ts|tsx)$/.test(name)) files.push(full);
+      }
+    };
+    for (const root of roots) walk(root);
+    const offenders = files.filter((file) => {
+      const src = readFileSync(file, "utf8");
+      return /from\(["']gem_ledger["']\)/.test(src);
+    });
+    expect(offenders).toEqual([]);
   });
 });

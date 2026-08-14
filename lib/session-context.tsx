@@ -1,14 +1,20 @@
 "use client";
 
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
+import {
+  SessionAuthContext,
+  SessionContext,
+  SessionDataContext,
+  type SessionAuthValue,
+  type SessionContextValue,
+  type SessionDataValue,
+} from "@/lib/session-contexts";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
   apiGet,
@@ -35,34 +41,6 @@ import { clearAuthLocalState, signOutUser } from "@/lib/auth/logout";
 import { hasBrowserAuthCookie } from "@/lib/auth/browser-auth-hint";
 import { alreadyCheckedInOnLocalDay } from "@/lib/check-in-gate";
 
-type SessionAuthValue = {
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  isPreviewMode: boolean;
-  isAdmin: boolean;
-  sessionError: boolean;
-  clearSessionError: () => void;
-  refreshSession: () => Promise<void>;
-  signOut: () => Promise<boolean>;
-};
-
-type SessionDataValue = {
-  profile: ProfileDTO | null;
-  userProfile: UserProfile;
-  displayName: string;
-  gemBalance: GemBalanceDTO;
-  streak: StreakStatusDTO;
-  home: HomeDTO | null;
-  kai: KaiStateDTO | null;
-  referralCode: string;
-  refreshHome: (locale?: string) => Promise<void>;
-  applyChestClaim: (balances: { gemBalance: number; freezieBalance: number }) => void;
-  updateProfile: (form: UserProfile) => Promise<void>;
-  checkIn: () => Promise<CheckInDTO>;
-};
-
-type SessionContextValue = SessionAuthValue & SessionDataValue;
-
 const DEFAULT_GEMS: GemBalanceDTO = {
   balance: 1000,
   totalEarned: 0,
@@ -76,10 +54,6 @@ const DEFAULT_STREAK: StreakStatusDTO = {
   lastCheckInDate: null,
   kaiUnlockedLevel: 1,
 };
-
-const SessionContext = createContext<SessionContextValue | null>(null);
-const SessionAuthContext = createContext<SessionAuthValue | null>(null);
-const SessionDataContext = createContext<SessionDataValue | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
@@ -357,32 +331,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useSession(): SessionContextValue {
-  const ctx = useContext(SessionContext);
-  if (!ctx) {
-    throw new Error("useSession must be used within SessionProvider");
-  }
-  return ctx;
-}
-
-/** Auth flags only — avoids re-render when gems/streak/home change. */
-export function useSessionAuth(): SessionAuthValue {
-  const ctx = useContext(SessionAuthContext);
-  if (!ctx) {
-    throw new Error("useSessionAuth must be used within SessionProvider");
-  }
-  return ctx;
-}
-
-export function useSessionData(): SessionDataValue {
-  const ctx = useContext(SessionDataContext);
-  if (!ctx) {
-    throw new Error("useSessionData must be used within SessionProvider");
-  }
-  return ctx;
-}
-
-/** Safe on marketing routes that omit SessionProvider (guest defaults). */
-export function useSessionOptional(): SessionContextValue | null {
-  return useContext(SessionContext);
-}
+export {
+  useSession,
+  useSessionAuth,
+  useSessionData,
+  useSessionOptional,
+} from "@/lib/session-contexts";

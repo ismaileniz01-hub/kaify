@@ -9,6 +9,6 @@ describe("bundle budgets (PERF-001)", () => {
       "utf8",
     );
     const caps = [...src.matchAll(/maxKb: (\d+)/g)].map((m) => Number(m[1]));
-    expect(caps).toEqual([135, 350, 125]);
+    expect(caps).toEqual([135, 350, 125, 250]);
   });
 });

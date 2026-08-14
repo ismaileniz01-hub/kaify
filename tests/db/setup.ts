@@ -322,6 +322,64 @@ export function runSqlJson<T = Record<string, unknown>>(sql: string): T[] {
   throw new Error(`SQL inventory failed:\n${errors.join("\n")}`);
 }
 
+/** Unwrapped SQL (EXPLAIN, DO blocks). Returns psql stdout. */
+export function runSqlText(sql: string): string {
+  const env = loadDbEnv();
+  const tmpSql = join(tmpdir(), `kaify-db-raw-${process.pid}-${Date.now()}.sql`);
+  writeFileSync(tmpSql, `${sql.replace(/;\s*$/, "")};\n`, "utf8");
+  const errors: string[] = [];
+  try {
+    {
+      const cp = spawnSync("docker", ["cp", tmpSql, "supabase_db_kaify-local:/tmp/kaify-raw.sql"], {
+        encoding: "utf8",
+        shell: false,
+        timeout: 30_000,
+      });
+      if (cp.status === 0) {
+        const q = spawnSync(
+          "docker",
+          [
+            "exec",
+            "supabase_db_kaify-local",
+            "psql",
+            "-U",
+            "postgres",
+            "-d",
+            "postgres",
+            "-v",
+            "ON_ERROR_STOP=1",
+            "-t",
+            "-A",
+            "-f",
+            "/tmp/kaify-raw.sql",
+          ],
+          { encoding: "utf8", shell: false, timeout: 60_000 },
+        );
+        if (q.status === 0) return (q.stdout || "").trim();
+        errors.push(`docker-psql: exit=${q.status} stderr=${(q.stderr || "").slice(0, 300)}`);
+      } else {
+        errors.push(`docker-cp: exit=${cp.status} stderr=${(cp.stderr || "").slice(0, 300)}`);
+      }
+    }
+    if (env.dbUrl) {
+      const q = spawnSync(
+        "psql",
+        [env.dbUrl, "-v", "ON_ERROR_STOP=1", "-t", "-A", "-f", tmpSql],
+        { encoding: "utf8", shell: false, timeout: 60_000 },
+      );
+      if (q.status === 0) return (q.stdout || "").trim();
+      errors.push(`psql: exit=${q.status} stderr=${(q.stderr || "").slice(0, 300)}`);
+    }
+  } finally {
+    try {
+      unlinkSync(tmpSql);
+    } catch {
+      /* ignore */
+    }
+  }
+  throw new Error(`SQL text failed:\n${errors.join("\n")}`);
+}
+
 function parseJsonInventory(out: string): unknown[] | null {
   const trimmed = out.trim();
   // psql -t -A often prints a bare JSON array from json_agg

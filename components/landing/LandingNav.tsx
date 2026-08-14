@@ -3,9 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { hasBrowserAuthCookie } from "@/lib/auth/browser-auth-hint";
 import { hasActiveSubscription } from "@/lib/auth/post-auth-redirect";
 import { useLang } from "@/lib/lang-context";
-import { useSessionOptional } from "@/lib/session-context";
+import { useSessionOptional } from "@/lib/session-contexts";
 
 const LINKS = [
   { href: "#about", labelKey: "landing.nav.about" },
@@ -24,7 +25,8 @@ export function LandingNav({
 }) {
   const { t } = useLang();
   const session = useSessionOptional();
-  const isAuthenticated = session?.isAuthenticated ?? false;
+  const cookieAuthed = hasBrowserAuthCookie();
+  const isAuthenticated = session?.isAuthenticated ?? cookieAuthed;
   const isLoading = session?.isLoading ?? false;
   const displayName = session?.displayName ?? "";
   const profile = session?.profile ?? null;

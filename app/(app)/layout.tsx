@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ToastProvider } from "@/components/ui/ToastProvider";
 import { AppShellProviders } from "@/components/providers/AppShellProviders";
 import { CookieConsentBanner } from "@/components/consent/CookieConsentBanner";
 import { OptionalAnalytics } from "@/components/consent/OptionalAnalytics";
@@ -13,16 +14,18 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
-    <AppShellProviders>
-      <NavigationExperience>
-        <AppChrome>
-          <div id="main-content" tabIndex={-1}>
-            {children}
-          </div>
-        </AppChrome>
-      </NavigationExperience>
-      <CookieConsentBanner />
-      <OptionalAnalytics nonce={nonce} />
-    </AppShellProviders>
+    <ToastProvider>
+      <AppShellProviders>
+        <NavigationExperience>
+          <AppChrome>
+            <div id="main-content" tabIndex={-1}>
+              {children}
+            </div>
+          </AppChrome>
+        </NavigationExperience>
+        <CookieConsentBanner />
+        <OptionalAnalytics nonce={nonce} />
+      </AppShellProviders>
+    </ToastProvider>
   );
 }

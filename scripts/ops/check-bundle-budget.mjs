@@ -3,8 +3,9 @@
  * Post-build bundle budget gate (Faz 4).
  * Fails CI when core shared / largest chunk exceed budgets.
  *
- * Budgets sit slightly above the Wave 5 measured baseline so regressions trip
+ * Budgets sit slightly above the Wave 5 closure baseline so regressions trip
  * the gate without being brittle to chunk hash renames. Never raise these.
+ * landing-first-load-js-gzip tracks Next `/` First Load (measured 240 KB).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -45,7 +46,39 @@ const BUDGETS = [
       return Math.round(zlib.gzipSync(fs.readFileSync(mw)).length / 1024);
     },
   },
+  {
+    name: "landing-first-load-js-gzip",
+    maxKb: 250,
+    getKb: () => landingFirstLoadGzKb(),
+  },
 ];
+
+function landingFirstLoadGzKb() {
+  const manifestPath = path.join(ROOT, ".next", "app-build-manifest.json");
+  if (!fs.existsSync(manifestPath)) return 0;
+  const pages = JSON.parse(fs.readFileSync(manifestPath, "utf8")).pages ?? {};
+  const keys = Object.keys(pages).filter(
+    (k) =>
+      k.includes("(marketing)/page") ||
+      k === "/page" ||
+      k.endsWith("/(marketing)/page"),
+  );
+  const layoutKeys = Object.keys(pages).filter(
+    (k) => k === "/layout" || k.includes("(marketing)/layout"),
+  );
+  const files = new Set();
+  for (const k of [...keys, ...layoutKeys]) {
+    for (const f of pages[k] || []) files.add(f);
+  }
+  let bytes = 0;
+  for (const rel of files) {
+    if (!String(rel).endsWith(".js")) continue;
+    const full = path.join(ROOT, ".next", rel);
+    if (!fs.existsSync(full)) continue;
+    bytes += zlib.gzipSync(fs.readFileSync(full)).length;
+  }
+  return Math.round(bytes / 1024);
+}
 
 /**
  * @typedef {{ name: string; rawKb: number; gzKb: number }} FileStat

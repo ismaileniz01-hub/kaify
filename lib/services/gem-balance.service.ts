@@ -8,6 +8,11 @@ export type GemBalanceDTO = {
   totalSpent: number;
 };
 
+/**
+ * Hot-path gem reads MUST use materialized balances.
+ * Never read gem_ledger on this path — ledger growth is storage-only until an
+ * archive/partition trigger (see Wave 5 report).
+ */
 export async function getGemBalance(userId: string): Promise<GemBalanceDTO> {
   const supabase = await createServerSupabaseClient();
 

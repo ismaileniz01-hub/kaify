@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import enFallback from "@/lib/lang/en.json";
-import { apiPatch } from "@/lib/api/client";
 import {
   REVIEWED_LANG_OPTIONS,
   type ReviewedLangOption,
@@ -39,9 +38,13 @@ export function isRtlLang(code: LangCode): boolean {
  */
 function persistLocaleToProfile(code: LangCode): void {
   if (typeof window === "undefined") return;
-  void apiPatch("/api/profile", { locale: code }).catch(() => {
-    // Non-fatal: language still applies locally via localStorage.
-  });
+  void import("@/lib/api/client")
+    .then(({ apiPatch }) =>
+      apiPatch("/api/profile", { locale: code }).catch(() => {
+        // Non-fatal: language still applies locally via localStorage.
+      }),
+    )
+    .catch(() => {});
 }
 
 interface LangContextType {
