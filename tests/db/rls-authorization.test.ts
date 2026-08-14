@@ -13,6 +13,7 @@ import {
   createTestUser,
   dbTestsEnabled,
   listPublicBaseTables,
+  runSqlJson,
   type TestUser,
 } from "./setup";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -208,6 +209,39 @@ describe.skipIf(!enabled)("rls-authorization (live)", () => {
       expect(entry.skipReason, entry.table).toBeTruthy();
     }
     expect(SCHEMA_REGISTRY.length).toBeGreaterThan(30);
+  });
+
+  it("avatars bucket is private with no public-read policy (SEC-012)", () => {
+    const buckets = runSqlJson<{ id: string; is_public: boolean }>(`
+      select id, (public)::boolean as is_public
+      from storage.buckets
+      where id = 'avatars'
+    `);
+    expect(buckets.length).toBe(1);
+    expect(buckets[0]?.is_public).toBe(false);
+
+    const publicRead = runSqlJson<{ polname: string }>(`
+      select policyname as polname
+      from pg_policies
+      where schemaname = 'storage'
+        and tablename = 'objects'
+        and policyname = 'avatars_public_read'
+    `);
+    expect(publicRead).toEqual([]);
+
+    const ownWrites = runSqlJson<{ polname: string }>(`
+      select policyname as polname
+      from pg_policies
+      where schemaname = 'storage'
+        and tablename = 'objects'
+        and policyname in ('avatars_upload_own', 'avatars_update_own', 'avatars_delete_own')
+      order by policyname
+    `);
+    expect(ownWrites.map((r) => r.polname).sort()).toEqual([
+      "avatars_delete_own",
+      "avatars_update_own",
+      "avatars_upload_own",
+    ]);
   });
 });
 

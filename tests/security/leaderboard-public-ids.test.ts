@@ -41,13 +41,17 @@ describe("public leaderboard identifiers (SEC-009)", () => {
     expect(src).toContain("auth: \"none\"");
   });
 
-  it("leaderboard service strips storage paths before responding", () => {
+  it("leaderboard service loads global rows via service role, not anon PostgREST", () => {
     const src = readFileSync(
       join(process.cwd(), "lib/services/leaderboard.service.ts"),
       "utf8",
     );
+    expect(src).toContain("createAdminSupabaseClient");
     expect(src).toContain("publicAvatarSrc");
     expect(src).toContain("resolveLeaderboardUserId");
     expect(src).not.toContain("signLeaderboardAvatars");
+    expect(src).not.toMatch(
+      /createServerSupabaseClient\(\)[\s\S]*get_global_leaderboard/,
+    );
   });
 });

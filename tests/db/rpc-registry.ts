@@ -36,17 +36,17 @@ export const RPC_REGISTRY: readonly RpcRegistryEntry[] = [
     note: "EXECUTE to authenticated; body gated by is_admin()/service_role",
   },
   {
-    name: "get_global_leaderboard",
-    mode: "client_callable",
-    note: "anon + authenticated",
-  },
-  {
     name: "get_country_leaderboard",
     mode: "client_callable",
-    note: "anon + authenticated",
+    note: "anon + authenticated; no user identifiers",
   },
 
   // ---- service_only (PostgREST: authenticated EXECUTE must fail) ----
+  {
+    name: "get_global_leaderboard",
+    mode: "service_only",
+    note: "SEC-009: returns raw user_id; HTTP API only (service_role). Not PostgREST for anon/authenticated",
+  },
   { name: "admin_create_pending_gift", mode: "service_only" },
   { name: "admin_get_ai_cost_by_user", mode: "service_only" },
   { name: "admin_get_ai_cost_summary", mode: "service_only" },

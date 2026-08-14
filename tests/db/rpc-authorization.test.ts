@@ -184,16 +184,49 @@ describe.skipIf(!enabled)("rpc-authorization (live)", () => {
       });
     });
 
-    it("leaderboard RPCs are callable (anon or authenticated)", async () => {
+    it("leaderboard country RPC remains callable; global is service_role only (SEC-009)", async () => {
       const anon = createAnonClient();
-      const g = await anon.rpc("get_global_leaderboard", { p_limit: 5, p_offset: 0 });
-      assertAllowed({
+      const gAnon = await anon.rpc("get_global_leaderboard", { p_limit: 5, p_offset: 0 });
+      assertDenied({
         table: "get_global_leaderboard",
         op: "rpc",
         actor: "anon",
-        ok: !g.error,
-        error: g.error?.message ?? null,
+        ok: !gAnon.error,
+        detail: gAnon.data == null ? undefined : `data=${JSON.stringify(gAnon.data).slice(0, 200)}`,
+        error: gAnon.error?.message ?? null,
       });
+      expect(JSON.stringify(gAnon.data ?? null)).not.toMatch(
+        /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
+      );
+
+      const gAuth = await userA.client.rpc("get_global_leaderboard", {
+        p_limit: 5,
+        p_offset: 0,
+      });
+      assertDenied({
+        table: "get_global_leaderboard",
+        op: "rpc",
+        actor: "USER_A",
+        ok: !gAuth.error,
+        detail: gAuth.data == null ? undefined : `data=${JSON.stringify(gAuth.data).slice(0, 200)}`,
+        error: gAuth.error?.message ?? null,
+      });
+      expect(JSON.stringify(gAuth.data ?? null)).not.toMatch(
+        /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
+      );
+
+      const gService = await admin.rpc("get_global_leaderboard", {
+        p_limit: 5,
+        p_offset: 0,
+      });
+      assertAllowed({
+        table: "get_global_leaderboard",
+        op: "rpc",
+        actor: "service_role",
+        ok: !gService.error,
+        error: gService.error?.message ?? null,
+      });
+
       const c = await userA.client.rpc("get_country_leaderboard", { p_limit: 5 });
       assertAllowed({
         table: "get_country_leaderboard",

@@ -1,5 +1,6 @@
 import { publicAvatarSrc } from "@/lib/security/avatar-access-token";
 import { resolveLeaderboardUserId } from "@/lib/privacy/mask-user-id";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
 import { cached, cachedWithStale } from "@/lib/cache";
@@ -48,8 +49,8 @@ async function loadGlobalLeaderboardEntries(
   const snapshot = await readGlobalSnapshotEntries(limit, offset);
   if (snapshot) return snapshot;
 
-  const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.rpc("get_global_leaderboard", {
+  const admin = createAdminSupabaseClient();
+  const { data, error } = await admin.rpc("get_global_leaderboard", {
     p_limit: limit,
     p_offset: offset,
   });
@@ -89,7 +90,7 @@ async function loadUserRank(viewerId: string): Promise<UserRankResult | null> {
   });
 }
 
-/** Public global leaderboard (anon-safe RPC). Used by legacy/demo routes. */
+/** Public global leaderboard via HTTP API (RPC is service_role only). */
 export async function getPublicGlobalLeaderboard(params: {
   limit: number;
 }): Promise<{
