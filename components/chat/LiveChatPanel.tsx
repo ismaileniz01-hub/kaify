@@ -244,6 +244,13 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             });
           },
           onDone: (data) => {
+            if (streamRafRef.current !== null) {
+              cancelAnimationFrame(streamRafRef.current);
+              streamRafRef.current = null;
+            }
+            const finalText =
+              streamTextRef.current ||
+              (typeof data.content === "string" ? data.content : "");
             if (data.warning_trigger === "LIMIT_80" || data.warning_trigger === "LIMIT_100") {
               setQuotaWarning(data.warning_trigger);
             }
@@ -254,6 +261,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                     ? {
                         ...msg,
                         id: data.messageId ?? msg.id,
+                        text: finalText || msg.text,
                         streaming: false,
                         messageType: data.messageType as MessageType | undefined,
                         payload: data.payload,

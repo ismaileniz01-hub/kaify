@@ -350,6 +350,7 @@ async function* streamKaiosCoachReply(
               payload: existingCoach.payload,
               warning_trigger: null,
               replayed: true,
+              content: existingCoach.content,
             },
           };
           return;
@@ -450,6 +451,7 @@ async function* streamKaiosCoachReply(
         messageType: meta.messageType,
         payload: meta.payload,
         await_user: meta.awaitUser ?? false,
+        content: assistantText,
         warning_trigger: usage.warning_trigger,
         usage: {
           used: usage.used,
@@ -680,6 +682,7 @@ export async function* streamCoachReply(
               payload: existingCoach.payload,
               warning_trigger: null,
               replayed: true,
+              content: existingCoach.content,
             },
           };
           return;
@@ -805,6 +808,7 @@ export async function* streamCoachReply(
         messageId: inserted?.id ?? null,
         messageType: "text",
         payload: null,
+        content: assistantText,
         warning_trigger: usage.warning_trigger,
         usage: {
           used: usage.used,

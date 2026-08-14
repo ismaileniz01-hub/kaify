@@ -185,6 +185,8 @@ export type ChatStreamHandlers = {
     messageType?: string | null;
     payload?: unknown;
     warning_trigger?: string | null;
+    /** Full assistant text; used if rAF-coalesced deltas have not flushed yet. */
+    content?: string | null;
   }) => void;
   /** Optional rich-card patch after `done` (meal plan / score cards). */
   onCard?: (data: {
@@ -269,6 +271,8 @@ export async function streamChatMessage(
             messageType: (parsed.messageType as string | null) ?? null,
             payload: parsed.payload,
             warning_trigger: (parsed.warning_trigger as string | null) ?? null,
+            content:
+              typeof parsed.content === "string" ? parsed.content : null,
           });
         } else if (event === "card") {
           handlers.onCard?.({
