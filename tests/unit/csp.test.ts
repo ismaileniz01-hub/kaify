@@ -41,6 +41,13 @@ describe("buildContentSecurityPolicy", () => {
     expect(csp).toContain("https://api.paddle.com");
   });
 
+  it("marketing static HTML CSP omits nonce so CDN HTML can hydrate", () => {
+    const staticCsp = buildContentSecurityPolicy(nonce, { staticHtml: true });
+    expect(staticCsp).not.toContain(`'nonce-${nonce}'`);
+    expect(staticCsp).toContain("'unsafe-inline'");
+    expect(csp).toContain(`'nonce-${nonce}'`);
+  });
+
   it("declares CSP reporting without weakening object-src", () => {
     expect(csp).toContain("report-uri /api/security/csp-report");
     expect(csp).toContain("report-to csp-endpoint");

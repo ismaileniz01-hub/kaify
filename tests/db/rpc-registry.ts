@@ -2,7 +2,7 @@
  * Classification of public SECURITY DEFINER functions.
  * Completeness is enforced at runtime against pg_proc when DB tests run.
  *
- * Original audit counted 43 names; clean schema has 39 SECURITY DEFINER functions.
+ * Original audit counted 43 names; Wave 5 clean schema has 41 SECURITY DEFINER functions.
  * The 4 removed names are NOT prosecdef on live schema:
  *   build_usage_node, is_valid_timezone, set_updated_at, protect_profile_columns.
  */
@@ -19,7 +19,7 @@ export type RpcRegistryEntry = {
 };
 
 /** Live clean-schema SECURITY DEFINER count (pg_proc.prosecdef). */
-export const AUDIT_SECURITY_DEFINER_COUNT = 39;
+export const AUDIT_SECURITY_DEFINER_COUNT = 41;
 
 export const RPC_REGISTRY: readonly RpcRegistryEntry[] = [
   // ---- client_callable (EXECUTE granted to authenticated and/or anon) ----
@@ -73,10 +73,12 @@ export const RPC_REGISTRY: readonly RpcRegistryEntry[] = [
   { name: "spend_gems", mode: "service_only" },
   { name: "upsert_analytics_daily", mode: "service_only" },
   { name: "increment_condense_counter", mode: "service_only" },
+  { name: "reconcile_ai_daily_usage", mode: "service_only" },
 
   // ---- trigger_only (SECURITY DEFINER) ----
   { name: "handle_new_user", mode: "trigger_only" },
   { name: "trg_unlock_team_chat_on_streak", mode: "trigger_only" },
+  { name: "trg_ai_usage_ledger_daily_agg", mode: "trigger_only" },
 
   // ---- internal helpers that ARE SECURITY DEFINER ----
   {

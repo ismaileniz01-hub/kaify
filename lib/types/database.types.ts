@@ -308,6 +308,19 @@ type AiUsageLedgerRow = {
   created_at: string;
 };
 
+type AiDailyUsageRow = {
+  user_id: string;
+  usage_date: string;
+  total_tokens: number;
+  estimated_usd_micro: number;
+};
+
+type AiPlatformDailyUsageRow = {
+  usage_date: string;
+  total_tokens: number;
+  estimated_usd_micro: number;
+};
+
 type CostAlertRow = {
   id: string;
   alert_type: string;
@@ -537,6 +550,20 @@ export type Database = {
           operation: string;
         } & Partial<Omit<AiUsageLedgerRow, "id" | "provider" | "operation">>;
         Update: Partial<AiUsageLedgerRow>;
+        Relationships: [];
+      };
+      ai_daily_usage: {
+        Row: AiDailyUsageRow;
+        Insert: { user_id: string; usage_date: string } & Partial<
+          Omit<AiDailyUsageRow, "user_id" | "usage_date">
+        >;
+        Update: Partial<AiDailyUsageRow>;
+        Relationships: [];
+      };
+      ai_platform_daily_usage: {
+        Row: AiPlatformDailyUsageRow;
+        Insert: { usage_date: string } & Partial<Omit<AiPlatformDailyUsageRow, "usage_date">>;
+        Update: Partial<AiPlatformDailyUsageRow>;
         Relationships: [];
       };
       cost_alerts: {

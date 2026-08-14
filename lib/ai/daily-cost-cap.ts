@@ -4,6 +4,7 @@ import { cacheGet, cacheSet } from "@/lib/cache";
 import { logger } from "@/lib/logger";
 import { enterDegradedMode } from "@/lib/resilience/degraded-mode";
 import { getCronCostSnapshot } from "@/lib/services/cost-cron.service";
+import { microToUsd } from "@/lib/ai/cost";
 
 function envInt(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -42,12 +43,11 @@ const PLATFORM_SPEND_CACHE_KEY = "ai:platform-spend:v1";
 const PLATFORM_SPEND_TTL_SEC = 45;
 const AI_PRESSURE_KEY = "sys:ai-pressure";
 
-function utcDayBounds(now = new Date()): { start: string; end: string } {
+function utcDayBounds(now = new Date()): { date: string } {
   const start = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
   );
-  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
-  return { start: start.toISOString(), end: end.toISOString() };
+  return { date: start.toISOString().slice(0, 10) };
 }
 
 export type PlatformSpendSnapshot = {
@@ -60,6 +60,26 @@ async function loadPlatformSpend(): Promise<PlatformSpendSnapshot> {
   if (cached) return cached;
 
   try {
+    const admin = createAdminSupabaseClient();
+    const { date } = utcDayBounds();
+    const { data, error } = await admin
+      .from("ai_platform_daily_usage")
+      .select("total_tokens, estimated_usd_micro")
+      .eq("usage_date", date)
+      .maybeSingle();
+
+    if (!error) {
+      const value = {
+        todayUsd: microToUsd(Number(data?.estimated_usd_micro ?? 0)),
+        todayTokens: Number(data?.total_tokens ?? 0),
+      };
+      await cacheSet(PLATFORM_SPEND_CACHE_KEY, value, PLATFORM_SPEND_TTL_SEC);
+      return value;
+    }
+
+    logger.warn("[daily-cost-cap] platform aggregate unavailable, using cron snapshot", {
+      error: error.message,
+    });
     const snap = await getCronCostSnapshot();
     const value = { todayUsd: snap.todayUsd, todayTokens: snap.todayTokens };
     await cacheSet(PLATFORM_SPEND_CACHE_KEY, value, PLATFORM_SPEND_TTL_SEC);
@@ -88,6 +108,8 @@ export async function isAiPressureMode(): Promise<boolean> {
 }
 
 async function setPressureFlag(active: boolean, reason: string): Promise<void> {
+  const current = await cacheGet<{ active?: boolean }>(AI_PRESSURE_KEY);
+  if (Boolean(current?.active) === active) return;
   if (active) {
     await cacheSet(AI_PRESSURE_KEY, { active: true, reason }, 900);
   } else {
@@ -139,8 +161,7 @@ export async function assertPlatformDailyAiBudget(): Promise<void> {
 
 /**
  * Rejects AI work when the user has consumed more than the daily hard cap.
- * Uses ai_usage_ledger (UTC day boundary), paginated so PostgREST row caps
- * cannot undercount heavy users.
+ * Reads the UTC-day aggregate (trigger-maintained from ai_usage_ledger).
  */
 export async function assertUserDailyAiBudget(userId: string): Promise<void> {
   const cap = userDailyTokenHardCap();
@@ -148,43 +169,29 @@ export async function assertUserDailyAiBudget(userId: string): Promise<void> {
 
   try {
     const admin = createAdminSupabaseClient();
-    const { start, end } = utcDayBounds();
-    const pageSize = 1000;
-    let used = 0;
-    let from = 0;
+    const { date } = utcDayBounds();
+    const { data, error } = await admin
+      .from("ai_daily_usage")
+      .select("total_tokens")
+      .eq("user_id", userId)
+      .eq("usage_date", date)
+      .maybeSingle();
 
-    for (;;) {
-      const { data, error } = await admin
-        .from("ai_usage_ledger")
-        .select("total_tokens")
-        .eq("user_id", userId)
-        .gte("created_at", start)
-        .lt("created_at", end)
-        .range(from, from + pageSize - 1);
-
-      if (error) {
-        logger.error("[daily-cost-cap] ledger read failed", {
-          userId,
-          error: error.message,
-        });
-        if (process.env.NODE_ENV === "production") {
-          throw new ApiError(
-            "SERVICE_UNAVAILABLE",
-            "AI kullanım limiti doğrulanamadı. Lütfen daha sonra tekrar dene.",
-          );
-        }
-        return;
+    if (error) {
+      logger.error("[daily-cost-cap] daily aggregate read failed", {
+        userId,
+        error: error.message,
+      });
+      if (process.env.NODE_ENV === "production") {
+        throw new ApiError(
+          "SERVICE_UNAVAILABLE",
+          "AI kullanım limiti doğrulanamadı. Lütfen daha sonra tekrar dene.",
+        );
       }
-
-      if (!data || data.length === 0) break;
-
-      used += data.reduce((sum, row) => sum + Number(row.total_tokens ?? 0), 0);
-
-      if (used >= cap) break;
-      if (data.length < pageSize) break;
-      from += pageSize;
+      return;
     }
 
+    const used = Number(data?.total_tokens ?? 0);
     if (used >= cap) {
       throw new ApiError(
         "FORBIDDEN",

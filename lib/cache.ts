@@ -211,6 +211,9 @@ export async function cached<T>(
 /**
  * Read-through cache with stale fallback: if `producer` throws, serve the last
  * good value from a longer-lived stale key instead of failing the request.
+ *
+ * Fresh hits do not rewrite the stale companion (PERF-006). Misses write both
+ * keys once after the producer succeeds.
  */
 export async function cachedWithStale<T>(
   key: string,
@@ -219,17 +222,33 @@ export async function cachedWithStale<T>(
   producer: () => Promise<T>,
 ): Promise<T> {
   const staleKey = staleCompanionKey(key);
+  const hit = await cacheGet<T>(key);
+  if (hit !== null) return hit;
 
-  try {
-    const fresh = await cached(key, ttlSeconds, producer);
-    await cacheSet(staleKey, fresh, staleTtlSeconds);
-    return fresh;
-  } catch (error) {
-    const stale = await cacheGet<T>(staleKey);
-    if (stale !== null) {
-      logger.warn("cache stale fallback served", { key });
-      return stale;
+  const existing = inflightProducers.get(key);
+  if (existing) return existing as Promise<T>;
+
+  const pending = (async () => {
+    try {
+      const again = await cacheGet<T>(key);
+      if (again !== null) return again;
+
+      const fresh = await producer();
+      await cacheSet(key, fresh, ttlSeconds);
+      await cacheSet(staleKey, fresh, staleTtlSeconds);
+      return fresh;
+    } catch (error) {
+      const stale = await cacheGet<T>(staleKey);
+      if (stale !== null) {
+        logger.warn("cache stale fallback served", { key });
+        return stale;
+      }
+      throw error;
+    } finally {
+      inflightProducers.delete(key);
     }
-    throw error;
-  }
+  })();
+
+  inflightProducers.set(key, pending);
+  return pending as Promise<T>;
 }

@@ -34,7 +34,7 @@ const PADDLE_CSP = {
 
 export function buildContentSecurityPolicy(
   nonce: string,
-  options?: { legalEmbed?: boolean },
+  options?: { legalEmbed?: boolean; staticHtml?: boolean },
 ): string {
   const styleSrc = options?.legalEmbed
     ? ["style-src", "'self'", "'unsafe-inline'", "https://app.termly.io", ...PADDLE_CSP.style].join(
@@ -42,16 +42,26 @@ export function buildContentSecurityPolicy(
       )
     : ["style-src", "'self'", "'unsafe-inline'", ...PADDLE_CSP.style].join(" ");
 
-  const scriptBase = [
-    "script-src",
-    "'self'",
-    `'nonce-${nonce}'`,
-    "'strict-dynamic'",
-    "https://www.google.com",
-    "https://www.gstatic.com",
-    "https://cdn.sender.net",
-    ...PADDLE_CSP.script,
-  ];
+  const scriptBase = options?.staticHtml
+    ? [
+        "script-src",
+        "'self'",
+        "'unsafe-inline'",
+        "https://www.google.com",
+        "https://www.gstatic.com",
+        "https://cdn.sender.net",
+        ...PADDLE_CSP.script,
+      ]
+    : [
+        "script-src",
+        "'self'",
+        `'nonce-${nonce}'`,
+        "'strict-dynamic'",
+        "https://www.google.com",
+        "https://www.gstatic.com",
+        "https://cdn.sender.net",
+        ...PADDLE_CSP.script,
+      ];
   const scriptSrc = options?.legalEmbed
     ? [...scriptBase, "https://app.termly.io"].join(" ")
     : scriptBase.join(" ");

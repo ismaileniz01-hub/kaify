@@ -38,6 +38,7 @@ export const CASCADE_ON_DELETE_TABLES: readonly DeletionTableSpec[] = [
   { table: "daily_chest_claims", column: "user_id", behavior: "cascade", notes: "" },
   { table: "idempotency_keys", column: "user_id", behavior: "cascade", notes: "" },
   { table: "ai_usage_ledger", column: "user_id", behavior: "cascade", notes: "Faz 2 — was SET NULL" },
+  { table: "ai_daily_usage", column: "user_id", behavior: "cascade", notes: "Daily AI token aggregate" },
   { table: "data_export_logs", column: "user_id", behavior: "cascade", notes: "" },
 ] as const;
 

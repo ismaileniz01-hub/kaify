@@ -68,6 +68,8 @@ export const SCHEMA_REGISTRY: readonly SchemaRegistryEntry[] = [
   // ---- service_only / deny for normal authenticated ----
   { table: "admin_audit_log", mode: "service_only", note: "admin policy; non-admin denied" },
   { table: "ai_usage_ledger", mode: "service_only" },
+  { table: "ai_daily_usage", mode: "service_only" },
+  { table: "ai_platform_daily_usage", mode: "service_only" },
   { table: "backup_verification_runs", mode: "service_only" },
   { table: "billing_events", mode: "service_only", note: "grants revoked in faz1" },
   { table: "cost_alerts", mode: "service_only" },

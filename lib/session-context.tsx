@@ -32,6 +32,8 @@ import type { SessionBundleDTO } from "@/lib/services/session.service";
 import type { ProfileUpdateInput } from "@/lib/validations/profile.schema";
 import { syncFreezieBalanceFromServer } from "@/lib/freezie";
 import { clearAuthLocalState, signOutUser } from "@/lib/auth/logout";
+import { hasBrowserAuthCookie } from "@/lib/auth/browser-auth-hint";
+import { alreadyCheckedInOnLocalDay } from "@/lib/check-in-gate";
 
 type SessionAuthValue = {
   isLoading: boolean;
@@ -130,20 +132,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setHome(bundle.home);
       setKai(bundle.kai);
 
-      void apiPost<CheckInDTO>("/api/check-in")
-        .then((result) => {
-          setGemBalance((prev) => ({ ...prev, balance: result.gemBalance }));
-          setStreak((prev) => ({
-            ...prev,
-            currentStreak: result.currentStreak,
-            longestStreak: result.longestStreak,
-            freezieBalance: result.freezieBalance,
-            lastCheckInDate: result.checkedInDate,
-            kaiUnlockedLevel: result.kaiUnlockedLevel,
-          }));
-          syncFreezieBalanceFromServer(result.freezieBalance);
-        })
-        .catch(() => undefined);
+      if (
+        !alreadyCheckedInOnLocalDay(
+          bundle.streak.lastCheckInDate,
+          bundle.profile.timezone ?? "UTC",
+        )
+      ) {
+        void apiPost<CheckInDTO>("/api/check-in")
+          .then((result) => {
+            setGemBalance((prev) => ({ ...prev, balance: result.gemBalance }));
+            setStreak((prev) => ({
+              ...prev,
+              currentStreak: result.currentStreak,
+              longestStreak: result.longestStreak,
+              freezieBalance: result.freezieBalance,
+              lastCheckInDate: result.checkedInDate,
+              kaiUnlockedLevel: result.kaiUnlockedLevel,
+            }));
+            syncFreezieBalanceFromServer(result.freezieBalance);
+          })
+          .catch(() => undefined);
+      }
     } catch (error) {
       if (error instanceof ApiClientError && error.code === "UNAUTHORIZED") {
         applyGuestState();
@@ -168,7 +177,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const supabase = tryCreateBrowserSupabaseClient();
 
     if (!supabase) {
-      void refreshSession();
+      if (hasBrowserAuthCookie()) {
+        void refreshSession();
+      } else {
+        applyGuestState();
+        setIsLoading(false);
+        setHasHydrated(true);
+      }
       return;
     }
 
@@ -186,7 +201,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    void refreshSession();
+    if (hasBrowserAuthCookie()) {
+      void refreshSession();
+    } else {
+      applyGuestState();
+      setIsLoading(false);
+      setHasHydrated(true);
+    }
 
     return () => subscription.unsubscribe();
   }, [applyGuestState, refreshSession]);

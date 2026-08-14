@@ -45,6 +45,23 @@ describe("check-in flow", () => {
     expect(emitDomainEvent).toHaveBeenCalled();
   });
 
+  it("does not emit or invalidate when already checked in", async () => {
+    rpc.mockResolvedValue({
+      data: {
+        current_streak: 5,
+        longest_streak: 10,
+        freezie_balance: 1,
+        gems_awarded: 0,
+        already_checked_in: true,
+        kai_level: 2,
+      },
+      error: null,
+    });
+    const result = await performCheckIn("user-1", "idem-key");
+    expect(result.alreadyCheckedIn).toBe(true);
+    expect(emitDomainEvent).not.toHaveBeenCalled();
+  });
+
   it("maps RPC conflict to ApiError CONFLICT", async () => {
     rpc.mockResolvedValue({
       data: null,

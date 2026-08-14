@@ -101,7 +101,10 @@ async function finalizeResponse(
 
   response.headers.set(
     "Content-Security-Policy",
-    buildContentSecurityPolicy(nonce, { legalEmbed: isLegalContentPath(pathname) }),
+    buildContentSecurityPolicy(nonce, {
+      legalEmbed: isLegalContentPath(pathname),
+      staticHtml: isMarketingPath(pathname),
+    }),
   );
   response.headers.set("Reporting-Endpoints", buildCspReportingEndpoints());
   response.headers.set("X-Request-ID", requestId);

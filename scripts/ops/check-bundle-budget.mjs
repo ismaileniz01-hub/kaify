@@ -3,8 +3,8 @@
  * Post-build bundle budget gate (Faz 4).
  * Fails CI when core shared / largest chunk exceed budgets.
  *
- * Budgets are intentionally above current HEAD so small regressions trip the gate
- * without being brittle to chunk hash renames.
+ * Budgets sit slightly above the Wave 5 measured baseline so regressions trip
+ * the gate without being brittle to chunk hash renames. Never raise these.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -17,12 +17,12 @@ const CHUNKS = path.join(ROOT, ".next", "static", "chunks");
 const BUDGETS = [
   {
     name: "largest-client-chunk-gzip",
-    maxKb: 150,
+    maxKb: 135,
     getKb: (files) => Math.max(0, ...files.map((f) => f.gzKb)),
   },
   {
     name: "core-shared-gzip (framework+polyfills+main+top shared)",
-    maxKb: 360,
+    maxKb: 350,
     getKb: (files) => {
       const sorted = [...files].sort((a, b) => b.gzKb - a.gzKb);
       const named = sorted.filter(
@@ -38,7 +38,7 @@ const BUDGETS = [
   },
   {
     name: "middleware-edge-gzip",
-    maxKb: 140,
+    maxKb: 125,
     getKb: () => {
       const mw = path.join(ROOT, ".next", "server", "middleware.js");
       if (!fs.existsSync(mw)) return 0;

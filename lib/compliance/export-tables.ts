@@ -31,6 +31,7 @@ export const USER_EXPORT_TABLES: readonly ExportTableSpec[] = [
   { table: "daily_chest_claims", column: "user_id", description: "Daily reward chest claims" },
   { table: "idempotency_keys", column: "user_id", description: "Server idempotency keys for your requests" },
   { table: "ai_usage_ledger", column: "user_id", description: "AI API usage and cost estimates" },
+  { table: "ai_daily_usage", column: "user_id", description: "Daily AI token and cost counters" },
   { table: "billing_events", column: "user_id", description: "Subscription and payment webhook events" },
   { table: "paddle_customers", column: "user_id", description: "Linked Paddle customer billing identity" },
   { table: "paddle_subscriptions", column: "user_id", description: "Mirrored Paddle subscription status" },

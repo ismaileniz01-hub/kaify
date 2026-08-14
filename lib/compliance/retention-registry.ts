@@ -56,6 +56,8 @@ export const RETENTION_REGISTRY: readonly RetentionRegistryEntry[] = [
   { table: "market_items", classification: "INDEFINITE_BY_DESIGN", purged: false, rationale: "Catalog." },
   { table: "admin_audit_log", classification: "LEGAL_AUDIT", retainDays: RETENTION.adminAuditDays, purged: true, rationale: "Admin actions." },
   { table: "ai_usage_ledger", classification: "OPERATIONAL_SHORT_LIVED", retainMonths: RETENTION.aiUsageLedgerMonths, purged: true, rationale: "Cost/usage telemetry." },
+  { table: "ai_daily_usage", classification: "OPERATIONAL_SHORT_LIVED", retainDays: 90, purged: false, rationale: "UTC-day AI token counters; rebuilt from ledger." },
+  { table: "ai_platform_daily_usage", classification: "OPERATIONAL_SHORT_LIVED", retainDays: 90, purged: false, rationale: "Platform AI spend counter; overwritten per day." },
   { table: "backup_verification_runs", classification: "OPERATIONAL_SHORT_LIVED", retainDays: 90, purged: false, rationale: "DR manifests; low volume." },
   { table: "billing_events", classification: "LEGAL_AUDIT", retainMonths: RETENTION.billingEventsMonths, purged: true, rationale: "Tax/accounting 7 years." },
   { table: "cost_alerts", classification: "OPERATIONAL_SHORT_LIVED", retainDays: 90, purged: false, rationale: "Ops alerts; low volume." },

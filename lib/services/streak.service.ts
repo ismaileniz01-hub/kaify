@@ -43,23 +43,23 @@ export async function performCheckIn(
 
   const dto = mapCheckInResult(data);
 
-  void invalidateHomeBundleCache(userId).catch(() => undefined);
-  void invalidateLeaderboardRankCache(userId).catch(() => undefined);
-  void invalidateSessionSliceCaches(userId).catch(() => undefined);
+  if (!dto.alreadyCheckedIn) {
+    void invalidateHomeBundleCache(userId).catch(() => undefined);
+    void invalidateLeaderboardRankCache(userId).catch(() => undefined);
+    void invalidateSessionSliceCaches(userId).catch(() => undefined);
 
-  emitDomainEvent(
-    createDomainEvent("check_in.completed", userId, {
-      streak: dto.currentStreak,
-    }, userId),
-  );
+    emitDomainEvent(
+      createDomainEvent("check_in.completed", userId, {
+        streak: dto.currentStreak,
+      }, userId),
+    );
 
-  // Fire-and-forget: surface Kai level-ups, Freezie awards and milestones.
-  // userId is the authenticated caller (RLS already scopes the RPC to them).
-  void emitCheckInNotifications(userId, dto).catch((emitError) => {
-    logger.warn("check-in notification emit failed", {
-      error: emitError instanceof Error ? emitError.message : "unknown",
+    void emitCheckInNotifications(userId, dto).catch((emitError) => {
+      logger.warn("check-in notification emit failed", {
+        error: emitError instanceof Error ? emitError.message : "unknown",
+      });
     });
-  });
+  }
 
   return dto;
 }

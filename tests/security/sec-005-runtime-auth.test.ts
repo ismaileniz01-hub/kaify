@@ -12,9 +12,9 @@ describe("SEC-005 runtime authorization gates remain active", () => {
   });
 
   it("registries still require complete classification", () => {
-    expect(SCHEMA_REGISTRY).toHaveLength(44);
+    expect(SCHEMA_REGISTRY).toHaveLength(46);
     expect(RPC_REGISTRY).toHaveLength(AUDIT_SECURITY_DEFINER_COUNT);
-    expect(AUDIT_SECURITY_DEFINER_COUNT).toBe(39);
+    expect(AUDIT_SECURITY_DEFINER_COUNT).toBe(41);
   });
 
   it("live suite files still encode USER_A / USER_B denial", () => {

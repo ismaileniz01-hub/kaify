@@ -25,6 +25,7 @@ const REQUIRED_EXPORT_TABLES = [
   "daily_chest_claims",
   "idempotency_keys",
   "ai_usage_ledger",
+  "ai_daily_usage",
   "billing_events",
   "data_export_logs",
 ] as const;

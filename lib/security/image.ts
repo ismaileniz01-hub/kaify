@@ -7,8 +7,8 @@ export type ValidatedImage = {
   ext: "jpg" | "png" | "webp";
 };
 
-const MAX_DIMENSION = 4096;
 const MAX_OUTPUT_BYTES = 5 * 1024 * 1024;
+const STORED_MAX_DIMENSION = 2048;
 
 /**
  * Long-edge cap for images sent to the vision model. Gemini bills by image
@@ -77,24 +77,28 @@ export async function validateAndProcessImage(
   if (!meta.width || !meta.height || meta.width < 1 || meta.height < 1) {
     throw new ApiError("VALIDATION_ERROR", "Geçersiz görsel dosyası.");
   }
-  if (meta.width > MAX_DIMENSION || meta.height > MAX_DIMENSION) {
-    throw new ApiError("VALIDATION_ERROR", "Görsel boyutu çok büyük.");
-  }
+
+  const resized = pipeline.resize({
+    width: STORED_MAX_DIMENSION,
+    height: STORED_MAX_DIMENSION,
+    fit: "inside",
+    withoutEnlargement: true,
+  });
 
   let mimeType: ValidatedImage["mimeType"];
   let ext: ValidatedImage["ext"];
   let buffer: Buffer;
 
   if (declaredMime === "image/png") {
-    buffer = await pipeline.png({ compressionLevel: 9 }).toBuffer();
+    buffer = await resized.png({ compressionLevel: 9 }).toBuffer();
     mimeType = "image/png";
     ext = "png";
   } else if (declaredMime === "image/webp") {
-    buffer = await pipeline.webp({ quality: 85 }).toBuffer();
+    buffer = await resized.webp({ quality: 85 }).toBuffer();
     mimeType = "image/webp";
     ext = "webp";
   } else {
-    buffer = await pipeline.jpeg({ quality: 85, mozjpeg: true }).toBuffer();
+    buffer = await resized.jpeg({ quality: 85, mozjpeg: true }).toBuffer();
     mimeType = "image/jpeg";
     ext = "jpg";
   }

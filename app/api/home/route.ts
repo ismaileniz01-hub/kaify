@@ -14,8 +14,6 @@ export const GET = defineRoute(
   {
     route: "GET /api/home",
     rateLimit: "session",
-    requireAi: true,
-    dailyAiBudget: true,
   },
   async ({ user, request }) => {
     const localeParam = new URL(request.url).searchParams.get("locale");
