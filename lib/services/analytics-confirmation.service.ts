@@ -6,6 +6,18 @@ import { invalidateHomeBundleCache } from "@/lib/cache/invalidate";
 import { sanitizeAnalyticsPatch, sanitizeMealMacros } from "@/lib/analytics/bounds";
 import type { Json } from "@/lib/types/database.types";
 
+/** Pending meal/analytics confirmations expire after 24h (application-enforced). */
+export const PENDING_ANALYTICS_TTL_MS = 24 * 60 * 60 * 1000;
+
+export function pendingAnalyticsIsExpired(
+  createdAt: string,
+  now = Date.now(),
+): boolean {
+  const t = Date.parse(createdAt);
+  if (!Number.isFinite(t)) return true;
+  return now - t > PENDING_ANALYTICS_TTL_MS;
+}
+
 export type PendingAnalyticsPayload = {
   summary: string;
   patch?: Record<string, number>;
@@ -61,14 +73,37 @@ export async function rejectPendingAnalytics(
   pendingId: string,
 ): Promise<void> {
   const admin = createAdminSupabaseClient() as SupabaseClient;
-  const { error } = await admin
+  const { data, error } = await admin
     .from("analytics_pending_confirmations")
     .update({ status: "rejected", resolved_at: new Date().toISOString() })
     .eq("id", pendingId)
     .eq("user_id", userId)
-    .eq("status", "pending");
+    .eq("status", "pending")
+    .select("id");
 
   if (error) {
     throw new ApiError("INTERNAL_ERROR", "Onay reddedilemedi.");
   }
+  if (!data || data.length === 0) {
+    throw new ApiError("NOT_FOUND", "Onay bekleyen kayıt bulunamadı.");
+  }
+}
+
+export async function linkPendingConfirmationToMessage(params: {
+  userId: string;
+  pendingId: string;
+  messageId: string;
+}): Promise<void> {
+  const admin = createAdminSupabaseClient() as SupabaseClient;
+  const { data, error } = await admin
+    .from("analytics_pending_confirmations")
+    .update({ message_id: params.messageId })
+    .eq("id", params.pendingId)
+    .eq("user_id", params.userId)
+    .select("id");
+
+  if (error) {
+    throw new ApiError("INTERNAL_ERROR", "Onay kaydı bağlanamadı.");
+  }
+  void data;
 }

@@ -1,6 +1,7 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ModelRouter } from "@/lib/ai/model-router";
 import { TOKEN_BUDGET, AI_FEATURES } from "@/lib/ai/budget";
+import { extractJsonObject } from "@/lib/ai/extract-json";
 import { isAiPressureMode } from "@/lib/ai/daily-cost-cap";
 import { sanitizeUserText, wrapUntrustedInput } from "@/lib/ai/prompt-safety";
 import { resolveLocale } from "@/lib/i18n/dictionary";
@@ -59,7 +60,13 @@ async function attachConfirmationToMessage(params: {
   const content =
     locale === "tr"
       ? `Harika iş! Analiz sayfana şunu eklememi onaylıyor musun? ${params.summary}`
-      : `Great work! Should I add this to your analytics? ${params.summary}`;
+      : locale === "de"
+        ? `Starke Arbeit! Soll ich das zu deiner Analyse hinzufügen? ${params.summary}`
+        : locale === "es"
+          ? `¡Buen trabajo! ¿Lo añado a tu analítica? ${params.summary}`
+          : locale === "ar"
+            ? `عمل رائع! هل أضيف هذا إلى تحليلك؟ ${params.summary}`
+            : `Great work! Should I add this to your analytics? ${params.summary}`;
 
   const confirmationData = {
     confirmation: {
@@ -139,10 +146,10 @@ export async function applyCoachAnalyticsFromChat(params: {
       maxTokens: TOKEN_BUDGET.analytics,
       usageContext: { userId: params.userId, operation: "analytics" },
     });
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return;
+    const extracted = extractJsonObject(content);
+    if (!extracted.ok) return;
 
-    const parsed = JSON.parse(jsonMatch[0]) as AnalyticsPatch;
+    const parsed = extracted.value as AnalyticsPatch;
     const patch: Record<string, number> = {};
 
     for (const key of allowed) {

@@ -18,6 +18,7 @@ export function encodeSseChunk(chunk: SseChunk): string {
 
 export function createSseResponse(
   generator: AsyncGenerator<SseChunk>,
+  options?: { onDisconnect?: () => void },
 ): Response {
   const encoder = new TextEncoder();
   const iterator = generator[Symbol.asyncIterator]();
@@ -52,7 +53,7 @@ export function createSseResponse(
       }
     },
     async cancel() {
-      // Client disconnect — let the async generator run finally (quota refund).
+      options?.onDisconnect?.();
       try {
         await iterator.return?.(undefined);
       } catch {

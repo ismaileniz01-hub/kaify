@@ -1,4 +1,5 @@
 import { ApiError } from "@/lib/api/errors";
+import { aiCopy } from "@/lib/ai/ai-copy";
 import {
   checkAndIncrementUsage,
   refundUsage,
@@ -8,22 +9,26 @@ import type { UsageCheckResult, UsageResource } from "@/lib/types/database.types
 /** Minimum tokens reserved atomically before a chat stream starts. */
 export const CHAT_TOKEN_RESERVE = 500;
 
-function quotaMessage(resource: UsageResource): string {
+function quotaMessage(resource: UsageResource, locale?: string): string {
   switch (resource) {
     case "text_tokens":
-      return "Aylık mesaj limitin doldu. Devam etmek için planını yükseltebilirsin.";
+      return aiCopy(locale, "quota_text");
     case "maya_photo":
-      return "Günlük fotoğraf analiz hakkın doldu. Yarın tekrar deneyebilir ya da planını yükseltebilirsin.";
+      return aiCopy(locale, "quota_maya_photo");
     case "leo_photo":
-      return "Haftalık fotoğraf analiz hakkın doldu. Planını yükselterek devam edebilirsin.";
+      return aiCopy(locale, "quota_leo_photo");
     default:
-      return "Kullanım limitin doldu.";
+      return aiCopy(locale, "quota_generic");
   }
 }
 
-function assertAllowed(result: UsageCheckResult, resource: UsageResource): void {
+function assertAllowed(
+  result: UsageCheckResult,
+  resource: UsageResource,
+  locale?: string,
+): void {
   if (!result.allowed) {
-    throw new ApiError("FORBIDDEN", quotaMessage(resource), {
+    throw new ApiError("FORBIDDEN", quotaMessage(resource, locale), {
       warning_trigger: result.warning_trigger ?? "LIMIT_100",
       resource: result.resource,
       used: result.used,
@@ -35,6 +40,7 @@ function assertAllowed(result: UsageCheckResult, resource: UsageResource): void 
 export type QuotaParams = {
   userId: string;
   resource: UsageResource;
+  locale?: string;
 };
 
 /** Read-only quota probe (amount=0). Prefer reserveQuota for AI routes. */
@@ -46,7 +52,7 @@ export async function checkQuotaGuard(
     resource: params.resource,
     amount: 0,
   });
-  assertAllowed(result, params.resource);
+  assertAllowed(result, params.resource, params.locale);
   return result;
 }
 
@@ -58,13 +64,14 @@ export async function reserveQuota(params: {
   userId: string;
   resource: UsageResource;
   amount: number;
+  locale?: string;
 }): Promise<UsageCheckResult> {
   const result = await checkAndIncrementUsage({
     userId: params.userId,
     resource: params.resource,
     amount: params.amount,
   });
-  assertAllowed(result, params.resource);
+  assertAllowed(result, params.resource, params.locale);
   return result;
 }
 

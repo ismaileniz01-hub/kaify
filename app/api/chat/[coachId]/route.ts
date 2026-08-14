@@ -173,6 +173,10 @@ export const POST = defineDynamicRouteRaw<{ coachId: string }>(
       throw error;
     }
 
+    const abort = new AbortController();
+    const onAbort = () => abort.abort();
+    request.signal.addEventListener("abort", onAbort, { once: true });
+
     return createSseResponse(
       withChatIdempotency(
         user.id,
@@ -184,8 +188,10 @@ export const POST = defineDynamicRouteRaw<{ coachId: string }>(
           message: parsed.data.message,
           tokensReserved: CHAT_TOKEN_RESERVE,
           clientIdempotencyKey: key,
+          signal: abort.signal,
         }),
       ),
+      { onDisconnect: () => abort.abort() },
     );
   },
 );

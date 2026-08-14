@@ -45,18 +45,74 @@ const DEFAULT_MAX_LEN = 4000;
 
 // Emails, phone-like numbers, and TR national ID patterns (minimize PII in LLM prompts).
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-const PHONE_PATTERN = /(?:\+?\d{1,3}[\s-]?)?(?:\(?\d{3}\)?[\s-]?)?\d{3}[\s-]?\d{2}[\s-]?\d{2,4}/g;
 const TR_ID_PATTERN = /\b\d{11}\b/g;
+const PHONE_CONTEXT =
+  /(?:tel(?:ephone|efon)?|phone|whatsapp|gsm|mobile|cell|ara|call|numara)\s*[:#]?\s*$/i;
+const FITNESS_UNIT =
+  /^(?:kg|lbs?|kcal|cal|reps?|sets?|rpe|rir|bpm|km|mi|cm|mm|%|x)\b/i;
+
+function digitsOnly(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+function isFitnessNumericNeighborhood(text: string, start: number, end: number): boolean {
+  const before = text.slice(Math.max(0, start - 12), start).toLowerCase();
+  const after = text.slice(end, end + 12).toLowerCase();
+  if (/\b(?:x|×|\/|-)\s*$/.test(before) || /^(?:\s*[x×\/-])/.test(after)) return true;
+  if (FITNESS_UNIT.test(after.trimStart())) return true;
+  if (/\b(?:rpe|rir|tempo|1rm|kcal|macros?)\b/.test(before) || /\b(?:rpe|rir|tempo|1rm)\b/.test(after)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Phone-like spans: E.164 / international, or 10–15 digits with phone context.
+ * Ordinary training/nutrition numbers (3x10, 225x5, 10-12 reps, 1800 kcal, 80 kg,
+ * 120/80, tempos) must survive.
+ */
+function redactPhoneLikeNumbers(text: string): string {
+  const plusPattern =
+    /\+\d{1,3}[\s.-]*(?:\(?\d{2,4}\)?[\s.-]*){2,5}\d{2,4}/g;
+  let out = text.replace(plusPattern, (match, offset: number) => {
+    const digits = digitsOnly(match);
+    if (digits.length < 10 || digits.length > 15) return match;
+    if (isFitnessNumericNeighborhood(text, offset, offset + match.length)) return match;
+    return "[phone redacted]";
+  });
+
+  const grouped =
+    /(?:\(?\d{3,4}\)?[\s.-])(?:\d{3}[\s.-])\d{2}[\s.-]?\d{2,4}/g;
+  out = out.replace(grouped, (match, offset: number) => {
+    const digits = digitsOnly(match);
+    if (digits.length < 10 || digits.length > 15) return match;
+    if (isFitnessNumericNeighborhood(out, offset, offset + match.length)) return match;
+    const before = out[offset - 1];
+    if (before && /[\w+]/.test(before)) return match;
+    const prefix = out.slice(Math.max(0, offset - 24), offset);
+    if (!PHONE_CONTEXT.test(prefix) && digits.length < 11) return match;
+    return "[phone redacted]";
+  });
+
+  const contextual =
+    /(?:tel(?:ephone|efon)?|phone|whatsapp|gsm|mobile|cell|ara(?:yın)?|call|numara)\s*[:#]?\s*[\d()+.\s-]{8,22}/gi;
+  out = out.replace(contextual, (match) => {
+    const digits = digitsOnly(match);
+    if (digits.length < 8) return match;
+    return match.replace(/[\d()+.\s-]{8,22}$/, "[phone redacted]");
+  });
+
+  return out;
+}
 
 /**
  * Redacts common personal identifiers before text is sent to external LLMs.
  * GDPR data minimization (Compliance Faz 3).
  */
 export function redactPersonalIdentifiers(text: string): string {
-  return text
-    .replace(EMAIL_PATTERN, "[email redacted]")
-    .replace(TR_ID_PATTERN, "[id redacted]")
-    .replace(PHONE_PATTERN, "[phone redacted]");
+  return redactPhoneLikeNumbers(
+    text.replace(EMAIL_PATTERN, "[email redacted]").replace(TR_ID_PATTERN, "[id redacted]"),
+  );
 }
 
 /**

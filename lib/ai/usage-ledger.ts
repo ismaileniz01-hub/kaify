@@ -11,6 +11,8 @@ import type { TokenUsage } from "@/lib/ai/types";
 export type AiOperation =
   | "chat"
   | "chat_stream"
+  | "kaios_chat_stream"
+  | "kaios_chat_structured"
   | "synthesis"
   | "vision"
   | "quality_gate"
@@ -18,6 +20,7 @@ export type AiOperation =
   | "analytics"
   | "memory"
   | "team_chat"
+  | "council_turn"
   | "home_copy"
   | "self_heal_report";
 

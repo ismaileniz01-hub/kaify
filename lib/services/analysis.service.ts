@@ -32,6 +32,7 @@ export type AnalyzePhotoParams = {
   imageBase64: string;
   mimeType: AnalysisMimeType;
   note?: string;
+  signal?: AbortSignal;
 };
 
 export type AnalyzePhotoResult = {
@@ -76,7 +77,7 @@ async function getLocale(admin: AdminClient, userId: string): Promise<string> {
     .select("locale")
     .eq("id", userId)
     .maybeSingle();
-  return data?.locale ?? "tr";
+    return data?.locale ?? "en";
 }
 
 async function getPreviousScores(
@@ -145,10 +146,11 @@ export async function analyzePhoto(
       image: { base64: vision.base64, mimeType: vision.mimeType },
       previousScores,
       userNote: params.note,
+      signal: params.signal,
     });
   } catch (error) {
     await refundQuota({ userId: params.userId, resource, amount: 1 });
-    throw toApiError(error);
+    throw toApiError(error, locale);
   }
 
   // 3) Persist (no raw image stored) + consume one credit.

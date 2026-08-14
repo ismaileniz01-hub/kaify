@@ -72,4 +72,10 @@ export const AI_FEATURES = {
    * Set AI_CHAT_ANALYTICS=false to skip.
    */
   chatAnalytics: envBool("AI_CHAT_ANALYTICS", true),
+  /**
+   * Production KAIOS orchestrator (capsules + compiler + one conversational call).
+   * Set KAIOS_RUNTIME=false only as an explicit soak/canary rollback.
+   * Failures on the KAIOS path must NOT automatically fall back to legacy.
+   */
+  kaiosRuntime: envBool("KAIOS_RUNTIME", true),
 } as const;

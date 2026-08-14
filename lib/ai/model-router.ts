@@ -7,6 +7,7 @@ import { generateGeminiJson } from "@/lib/ai/gemini.client";
 import { assessImageQuality, MIN_QUALITY_SCORE } from "@/lib/ai/image-quality";
 import { computeScoreDrift, type ScoreDrift } from "@/lib/ai/consistency";
 import { AiError } from "@/lib/ai/errors";
+import { aiCopy } from "@/lib/ai/ai-copy";
 import { logger as aiLogger } from "@/lib/logger";
 import {
   ANALYSIS_PERSONAS,
@@ -92,7 +93,7 @@ export const ModelRouter = {
     if (quality.score < MIN_QUALITY_SCORE) {
       throw new AiError(
         "AI_LOW_QUALITY",
-        "Fotoğraf analiz için yeterince net değil. Lütfen ipuçlarını uygulayıp tekrar dene.",
+        aiCopy(params.locale, "low_quality_image"),
         { score: quality.score, issues: quality.issues, tips: quality.tips },
       );
     }
@@ -115,7 +116,7 @@ export const ModelRouter = {
         raw: JSON.stringify(raw).slice(0, 600),
         issues: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
       });
-      throw new AiError("AI_BAD_OUTPUT", "Analiz çıktısı doğrulanamadı.");
+      throw new AiError("AI_BAD_OUTPUT", aiCopy(params.locale, "bad_analysis_output"));
     }
     const analysis = parsed.data;
 

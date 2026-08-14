@@ -1,0 +1,312 @@
+﻿{
+  "capturedAt": "2026-08-07T14:59:12.051Z",
+  "method": "static_prompt_construction",
+  "tokenEstimateRule": "ceil(chars / 4)",
+  "liveProviderCalls": false,
+  "reasonLiveSkipped": "DEEPSEEK_API_KEY and/or GEMINI_API_KEY not set in environment",
+  "legacyBudgets": {
+    "chatReply": 800,
+    "synthesis": 700,
+    "structuredCard": 900,
+    "analytics": 120,
+    "teamChat": 700
+  },
+  "featureDefaults": {
+    "AI_STRUCTURED_CARDS": true,
+    "AI_CHAT_ANALYTICS": true
+  },
+  "topologyNotes": [
+    "Normal chat: 1 stream + optional structured_card + optional analytics extract",
+    "Vision: 2 Gemini JSON + 1 DeepSeek synthesis",
+    "Team: 1 DeepSeek complete returning fake multi-coach JSON",
+    "DB personality + COACH_CHAT_VOICE + syncAgents team prose all injected every direct chat"
+  ],
+  "workflows": [
+    {
+      "workflow": "kai_casual",
+      "coach": "kai",
+      "userMessage": "Selam, nasılsın?",
+      "input": {
+        "chars": 4470,
+        "estimatedTokens": 1118,
+        "systemChars": 3762,
+        "systemEstimatedTokens": 941,
+        "historyChars": 573,
+        "historyEstimatedTokens": 144,
+        "currentTurnChars": 135
+      },
+      "outputBudget": {
+        "chatMaxTokens": 800,
+        "cardMaxTokens": 0,
+        "analyticsMaxTokens": 120,
+        "worstCaseOutputTokens": 920
+      },
+      "modelCallCount": 2,
+      "visionCallCount": 0,
+      "modelCalls": [
+        {
+          "name": "chat_stream",
+          "maxOutputTokens": 800
+        },
+        {
+          "name": "chat_analytics_extract",
+          "maxOutputTokens": 120,
+          "note": "fires when AI_CHAT_ANALYTICS=true (default)"
+        }
+      ],
+      "notes": [
+        "Ordinary casual; may still fire analytics extract (default on)."
+      ]
+    },
+    {
+      "workflow": "kai_motivation",
+      "coach": "kai",
+      "userMessage": "Bugün salona gidesim yok.",
+      "input": {
+        "chars": 4479,
+        "estimatedTokens": 1120,
+        "systemChars": 3762,
+        "systemEstimatedTokens": 941,
+        "historyChars": 573,
+        "historyEstimatedTokens": 144,
+        "currentTurnChars": 144
+      },
+      "outputBudget": {
+        "chatMaxTokens": 800,
+        "cardMaxTokens": 0,
+        "analyticsMaxTokens": 120,
+        "worstCaseOutputTokens": 920
+      },
+      "modelCallCount": 2,
+      "visionCallCount": 0,
+      "modelCalls": [
+        {
+          "name": "chat_stream",
+          "maxOutputTokens": 800
+        },
+        {
+          "name": "chat_analytics_extract",
+          "maxOutputTokens": 120,
+          "note": "fires when AI_CHAT_ANALYTICS=true (default)"
+        }
+      ],
+      "notes": [
+        "Motivation path; Kai accountability rules inflate system."
+      ]
+    },
+    {
+      "workflow": "alex_simple_training",
+      "coach": "alex",
+      "userMessage": "Bench'te dirseklerim nasıl olmalı?",
+      "input": {
+        "chars": 3871,
+        "estimatedTokens": 968,
+        "systemChars": 3145,
+        "systemEstimatedTokens": 787,
+        "historyChars": 573,
+        "historyEstimatedTokens": 144,
+        "currentTurnChars": 153
+      },
+      "outputBudget": {
+        "chatMaxTokens": 800,
+        "cardMaxTokens": 0,
+        "analyticsMaxTokens": 120,
+        "worstCaseOutputTokens": 920
+      },
+      "modelCallCount": 2,
+      "visionCallCount": 0,
+      "modelCalls": [
+        {
+          "name": "chat_stream",
+          "maxOutputTokens": 800
+        },
+        {
+          "name": "chat_analytics_extract",
+          "maxOutputTokens": 120,
+          "note": "fires when AI_CHAT_ANALYTICS=true (default)"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "workflow": "alex_program_related",
+      "coach": "alex",
+      "userMessage": "Bana 3 günlük bir antrenman programı hazırla.",
+      "input": {
+        "chars": 3882,
+        "estimatedTokens": 971,
+        "systemChars": 3145,
+        "systemEstimatedTokens": 787,
+        "historyChars": 573,
+        "historyEstimatedTokens": 144,
+        "currentTurnChars": 164
+      },
+      "outputBudget": {
+        "chatMaxTokens": 800,
+        "cardMaxTokens": 900,
+        "analyticsMaxTokens": 120,
+        "worstCaseOutputTokens": 1820
+      },
+      "modelCallCount": 3,
+      "visionCallCount": 0,
+      "modelCalls": [
+        {
+          "name": "chat_stream",
+          "maxOutputTokens": 800
+        },
+        {
+          "name": "structured_card",
+          "maxOutputTokens": 900
+        },
+        {
+          "name": "chat_analytics_extract",
+          "maxOutputTokens": 120,
+          "note": "fires when AI_CHAT_ANALYTICS=true (default)"
+        }
+      ],
+      "notes": [
+        "Triggers structured-chat SECOND model call (workout_plan card).",
+        "Worst-case model_call_count = 3 (stream + card + analytics)."
+      ]
+    },
+    {
+      "workflow": "maya_normal_nutrition",
+      "coach": "maya",
+      "userMessage": "Bu akşam ne yiyebilirim?",
+      "input": {
+        "chars": 3861,
+        "estimatedTokens": 966,
+        "systemChars": 3145,
+        "systemEstimatedTokens": 787,
+        "historyChars": 573,
+        "historyEstimatedTokens": 144,
+        "currentTurnChars": 143
+      },
+      "outputBudget": {
+        "chatMaxTokens": 800,
+        "cardMaxTokens": 0,
+        "analyticsMaxTokens": 120,
+        "worstCaseOutputTokens": 920
+      },
+      "modelCallCount": 2,
+      "visionCallCount": 0,
+      "modelCalls": [
+        {
+          "name": "chat_stream",
+          "maxOutputTokens": 800
+        },
+        {
+          "name": "chat_analytics_extract",
+          "maxOutputTokens": 120,
+          "note": "fires when AI_CHAT_ANALYTICS=true (default)"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "workflow": "maya_image_analysis",
+      "coach": "maya",
+      "input": {
+        "chars": 1592,
+        "estimatedTokens": 398,
+        "synthesisSystemChars": 1332,
+        "note": "Gemini vision image tokens not included (AI_COST_GEMINI_VISION_EST_TOKENS ~8000)",
+        "geminiVisionEstTokensEnv": 8000
+      },
+      "outputBudget": {
+        "synthesisMaxTokens": 700,
+        "worstCaseOutputTokens": 700
+      },
+      "modelCallCount": 1,
+      "visionCallCount": 2,
+      "modelCalls": [
+        {
+          "name": "gemini_quality",
+          "provider": "gemini"
+        },
+        {
+          "name": "gemini_measure",
+          "provider": "gemini"
+        },
+        {
+          "name": "deepseek_synthesis",
+          "provider": "deepseek",
+          "maxOutputTokens": 700
+        }
+      ],
+      "notes": [
+        "Legacy: Gemini produces numeric macros/scores directly (not observation→lookup).",
+        "Live API usage unavailable (no provider keys in this environment)."
+      ]
+    },
+    {
+      "workflow": "leo_analysis",
+      "coach": "leo",
+      "input": {
+        "chars": 1561,
+        "estimatedTokens": 391,
+        "synthesisSystemChars": 1300,
+        "note": "Gemini vision image tokens not included (AI_COST_GEMINI_VISION_EST_TOKENS ~8000)",
+        "geminiVisionEstTokensEnv": 8000
+      },
+      "outputBudget": {
+        "synthesisMaxTokens": 700,
+        "worstCaseOutputTokens": 700
+      },
+      "modelCallCount": 1,
+      "visionCallCount": 2,
+      "modelCalls": [
+        {
+          "name": "gemini_quality",
+          "provider": "gemini"
+        },
+        {
+          "name": "gemini_measure",
+          "provider": "gemini"
+        },
+        {
+          "name": "deepseek_synthesis",
+          "provider": "deepseek",
+          "maxOutputTokens": 700
+        }
+      ],
+      "notes": [
+        "Legacy: Gemini produces numeric macros/scores directly (not observation→lookup).",
+        "Live API usage unavailable (no provider keys in this environment)."
+      ]
+    },
+    {
+      "workflow": "team_council_oneshot",
+      "coach": "council",
+      "input": {
+        "chars": 360,
+        "estimatedTokens": 90,
+        "systemChars": 208,
+        "systemEstimatedTokens": 52
+      },
+      "outputBudget": {
+        "teamMaxTokens": 700,
+        "worstCaseOutputTokens": 700
+      },
+      "modelCallCount": 1,
+      "visionCallCount": 0,
+      "modelCalls": [
+        {
+          "name": "team_meeting_complete",
+          "maxOutputTokens": 700
+        }
+      ],
+      "notes": [
+        "Legacy Council is ONE-SHOT JSON — not interactive await_user.",
+        "Loads all four coach voices in a single prompt."
+      ]
+    }
+  ],
+  "summary": {
+    "maxSystemEstimatedTokens": 941,
+    "maxInputEstimatedTokens": 1120,
+    "maxModelCallCount": 3,
+    "maxVisionCallCount": 2,
+    "maxWorstCaseOutputBudget": 1820
+  }
+}

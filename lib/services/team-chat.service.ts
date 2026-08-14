@@ -2,7 +2,11 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
 import { canUseTeamChat } from "@/lib/billing/team-chat-access";
 import { ModelRouter } from "@/lib/ai/model-router";
-import { TOKEN_BUDGET } from "@/lib/ai/budget";
+import { TOKEN_BUDGET, AI_FEATURES } from "@/lib/ai/budget";
+import { runCouncilTurn } from "@/lib/kaios/council/turns";
+import { logger } from "@/lib/logger";
+import { aiCopy } from "@/lib/ai/ai-copy";
+import { extractJsonArray } from "@/lib/ai/extract-json";
 import {
   checkQuotaGuard,
   refundQuota,
@@ -79,15 +83,27 @@ export async function assertTeamChatUnlocked(userId: string): Promise<void> {
     throw new ApiError(
       "FORBIDDEN",
       isEssential
-        ? "Team chat is available on Pro and Premium plans."
-        : "Team chat unlocks after a 7-day streak.",
+        ? aiCopy(undefined, "team_unlock_essential")
+        : aiCopy(undefined, "team_unlock_streak"),
     );
   }
 }
 
+export { runCouncilTurn };
+
 export async function generateWeeklyTeamMeeting(
   userId: string,
 ): Promise<ChatMessageDTO[]> {
+  if (AI_FEATURES.kaiosRuntime) {
+    const result = await runCouncilTurn({ userId });
+    return result.messages;
+  }
+
+  logger.warn("kaios.runtime.rollback_active", {
+    path: "legacy_team_meeting",
+    userId,
+  });
+
   await assertTeamChatUnlocked(userId);
 
   const admin = createAdminSupabaseClient();
@@ -95,7 +111,7 @@ export async function generateWeeklyTeamMeeting(
 
   const claimed = await claimTeamMeetingWeek(userId, weekStart);
   if (!claimed) {
-    throw new ApiError("CONFLICT", "Bu hafta takım toplantısı zaten yapıldı.");
+    throw new ApiError("CONFLICT", aiCopy(undefined, "team_week_exists"));
   }
 
   const [analytics, streak, { data: profile }] = await Promise.all([
@@ -153,10 +169,8 @@ export async function generateWeeklyTeamMeeting(
 
   let parsed: { coachId: string; text: string }[] = [];
   try {
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    const raw = JSON.parse(jsonMatch?.[0] ?? content) as unknown;
-    // Guard against the model returning a non-array (object/string): a later
-    // `.map` outside this try would otherwise throw and 500 the route.
+    const extracted = extractJsonArray(content);
+    const raw = extracted.ok ? extracted.value : null;
     if (
       Array.isArray(raw) &&
       raw.every(
@@ -171,7 +185,7 @@ export async function generateWeeklyTeamMeeting(
   } catch {
     parsed = COACH_VOICES.map((c) => ({
       coachId: c.id,
-      text: `${c.name}: Great week ${name}! Keep going.`,
+      text: `${c.name}: ${aiCopy(locale, "team_fallback")}`,
     }));
   }
 

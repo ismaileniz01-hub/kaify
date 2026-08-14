@@ -16,6 +16,7 @@ export default defineConfig({
     exclude: [
       "tests/db/rls-authorization.test.ts",
       "tests/db/rpc-authorization.test.ts",
+      "tests/kaios/live/**",
     ],
     globals: true,
     coverage: {

@@ -98,10 +98,16 @@ const stringListSchema = z.preprocess(
 );
 
 export const imageQualitySchema = z.object({
-  // Default to a PASSING score (7) when the model returns a malformed score, so
-  // a formatting glitch never blocks a legitimate photo with a false "low
-  // quality" rejection. A genuinely low score still gates the analysis.
-  score: lenientNumber(1, 10, 7),
+  // Fail closed: missing / NaN / wrong type / out-of-range must NOT become a
+  // passing score. Only a finite 1–10 number is valid.
+  score: z.preprocess((value) => {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+      const n = Number.parseFloat(value);
+      if (Number.isFinite(n)) return n;
+    }
+    return undefined;
+  }, z.number().min(1).max(10)),
   issues: stringListSchema,
   tips: stringListSchema,
 });

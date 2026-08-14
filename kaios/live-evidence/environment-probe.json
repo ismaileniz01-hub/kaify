@@ -1,0 +1,11 @@
+﻿{
+  "capturedAt": "2026-08-11T11:05:15.992Z",
+  "deepseek": false,
+  "gemini": false,
+  "supabase": false,
+  "supabaseServiceRole": false,
+  "stagingUrl": false,
+  "e2eAuth": false,
+  "dualUser": false,
+  "councilEntitledUser": false
+}
