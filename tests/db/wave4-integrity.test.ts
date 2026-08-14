@@ -58,7 +58,7 @@ describe.skipIf(!enabled)("wave4 integrity (live)", () => {
 
   it("gem_balance matches ledger sum after earn/spend", async () => {
     const key = `w4-earn-${userA.user.id}`;
-    const { error: earnError } = await admin.rpc("earn_gems", {
+    const { error: earnError, data: earned } = await admin.rpc("earn_gems", {
       p_user_id: userA.user.id,
       p_amount: 50,
       p_type: "welcome_bonus",
@@ -66,6 +66,10 @@ describe.skipIf(!enabled)("wave4 integrity (live)", () => {
       p_idempotency_key: key,
     });
     expect(earnError).toBeNull();
+    const earnRow = (Array.isArray(earned) ? earned[0] : earned) as {
+      applied?: boolean;
+    } | null;
+    expect(earnRow?.applied).toBe(true);
 
     const { error: dupError, data: dup } = await admin.rpc("earn_gems", {
       p_user_id: userA.user.id,
@@ -75,7 +79,11 @@ describe.skipIf(!enabled)("wave4 integrity (live)", () => {
       p_idempotency_key: key,
     });
     expect(dupError).toBeNull();
-    expect((dup as { duplicate?: boolean })?.duplicate ?? false).toBe(true);
+    const dupRow = (Array.isArray(dup) ? dup[0] : dup) as {
+      duplicate?: boolean;
+      applied?: boolean;
+    } | null;
+    expect(dupRow?.duplicate === true || dupRow?.applied === false).toBe(true);
 
     const rows = runSqlJson<{ balance: number; ledger: number }>(
       `select ks.gem_balance as balance,

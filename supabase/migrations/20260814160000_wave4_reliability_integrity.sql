@@ -278,6 +278,8 @@ set search_path = ''
 as $$
 declare
   v_inserted      boolean := false;
+  v_exists        boolean := false;
+  v_n             integer := 0;
   v_balance       bigint;
   v_type_col      text;
   v_has_meta      boolean;
@@ -299,6 +301,25 @@ begin
   on conflict (user_id) do nothing;
 
   perform 1 from public.user_kai_state where user_id = p_user_id for update;
+
+  select exists (
+    select 1 from public.gem_ledger
+    where user_id = p_user_id
+      and idempotency_key = p_idempotency_key
+  ) into v_exists;
+
+  if v_exists then
+    select gem_balance into v_balance
+    from public.user_kai_state
+    where user_id = p_user_id;
+    return jsonb_build_object(
+      'applied',         false,
+      'duplicate',       true,
+      'amount',          p_amount,
+      'balance',         coalesce(v_balance, 0),
+      'idempotency_key', p_idempotency_key
+    );
+  end if;
 
   select case
     when exists (
@@ -366,7 +387,8 @@ begin
     using p_user_id, p_amount, p_type, p_description, p_idempotency_key;
   end if;
 
-  v_inserted := found;
+  get diagnostics v_n = row_count;
+  v_inserted := v_n > 0;
 
   if v_inserted then
     update public.user_kai_state

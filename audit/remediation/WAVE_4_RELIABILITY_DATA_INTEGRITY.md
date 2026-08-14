@@ -37,8 +37,8 @@ BACKEND_API_SCORE_BEFORE: 83/100
 **ROOT_CAUSE:** Trust of model JSON + unconstrained columns.  
 **CHANGE:** App `lib/analytics/bounds.ts`; pending-confirm sanitization; RPC clamp via `analytics_safe_numeric`; CHECK constraints after clamping existing rows; meal increment caps.  
 **TESTS_ADDED:** `tests/unit/analytics-bounds.test.ts`; live `tests/db/wave4-integrity.test.ts` (CHECK + RPC clamp).  
-**RUNTIME_EVIDENCE:** Unit: NaN dropped, -12 kcal → 0, 99999 → 20000. Live CHECK pending CI.  
-**STATUS:** VERIFIED (app + migration + unit). Live CHECK pending CI.  
+**RUNTIME_EVIDENCE:** Unit: NaN dropped, -12 kcal → 0, 99999 → 20000. Live CI: CHECK rejects `calories_consumed = -5`; `upsert_analytics_daily` clamps 999999 / −3.  
+**STATUS:** VERIFIED (app + migration + unit + live CI).  
 **FILES_CHANGED:** `lib/analytics/bounds.ts`, `lib/repositories/analytics-write.repository.ts`, `lib/services/analytics-confirmation.service.ts`, `supabase/migrations/20260814160000_wave4_reliability_integrity.sql`  
 **RESIDUAL_RISK:** Ceilings are anti-corruption, not medical. `calorie_goal` floor 500 may rewrite historical 0 after clamp-on-migrate.
 
@@ -117,10 +117,10 @@ BACKEND_API_SCORE_BEFORE: 83/100
 **CURRENT_REPRODUCTION:** Confirmed in `20260704150000_earn_gems_schema_drift.sql`.  
 **INVARIANT:** Ledger is append-only audit. `user_kai_state.gem_balance` is the transactional current balance, updated in the same plpgsql transaction as the ledger insert. `gem_balance >= 0`. Duplicate idempotency_key does not double-apply. `gem_balance == SUM(ledger.amount)` while ledger is retained.  
 **ROOT_CAUSE:** SUM as sole runtime source (correct but racy/slow); no materialized counter.  
-**CHANGE:** Columns `gem_balance`, `gem_total_earned`, `gem_total_spent` on `user_kai_state`; FOR UPDATE; insert ledger then increment; `getGemBalance` prefers kai columns, falls back to view.  
+**CHANGE:** Columns `gem_balance`, `gem_total_earned`, `gem_total_spent` on `user_kai_state`; FOR UPDATE; insert ledger then increment; `getGemBalance` prefers kai columns, falls back to view. After first CI, `earn_gems` no longer uses PL/pgSQL `FOUND` after `EXECUTE … ON CONFLICT DO NOTHING` (always true); duplicate path is `EXISTS` on ledger then `GET DIAGNOSTICS ROW_COUNT` so a second key cannot increment balance without a ledger row.  
 **TESTS_ADDED:** Live earn duplicate + reconcile SQL; sequential spend duplicate in `tests/db/wave4-integrity.test.ts`.  
-**RUNTIME_EVIDENCE:** Pending CI for live RPC. Unit gem.service mapping still PASS.  
-**STATUS:** VERIFIED (code + unit). Live concurrency pending CI.  
+**RUNTIME_EVIDENCE:** CI run [31787327063](https://github.com/ismaileniz01-hub/kaify/actions/runs/31787327063) on `91cff06`: clean double reset PASS; RLS/RPC 100/101 — only `earn_gems` duplicate flag failed (`FOUND`). Analytics CHECK, RPC clamp, NULL notification dedup, spend duplicate PASS. Follow-up SHA after this FOUND fix. Unit gem.service mapping PASS.  
+**STATUS:** VERIFIED (code + unit + live CHECK/clamp/dedup/spend on CI). Live earn duplicate re-check on follow-up SHA.  
 **FILES_CHANGED:** migration, `lib/services/gem-balance.service.ts`, types  
 **RESIDUAL_RISK:** View remains for fallback/reconcile. Parallel overspend is locked in SQL; JS test is duplicate-key not two workers.
 
@@ -167,7 +167,7 @@ BACKEND_API_SCORE_BEFORE: 83/100
 **ROOT_CAUSE:** Postgres NULL uniqueness, which matches product intent.  
 **CHANGE:** None (NULLS NOT DISTINCT would merge unrelated unkeyed events).  
 **TESTS_ADDED:** Live two NULL inserts succeed; same `dedup_key` second insert fails (`tests/db/wave4-integrity.test.ts`).  
-**RUNTIME_EVIDENCE:** Intent documented; live pending CI.  
+**RUNTIME_EVIDENCE:** Intent documented. Live CI: two NULL `dedup_key` inserts succeed; same `dedup_key` second insert fails.  
 **STATUS:** NOT_APPLICABLE_WITH_EVIDENCE  
 **FILES_CHANGED:** tests  
 **RESIDUAL_RISK:** Callers that omit `dedupKey` on semantically identical events will duplicate — by design.
@@ -273,13 +273,13 @@ High-volume leftovers from the original audit:
 | 1 | same mutation twice | one side effect | idempotency replay / unique key — PASS (unit) |
 | 2 | response lost after commit | replay stored body | PASS (`idempotency-replay`) |
 | 3 | concurrent duplicate mutation | 409 in_progress | PASS |
-| 4 | concurrent gem spends | no overspend / no double spend | SQL lock + duplicate key; live parallel pending CI |
+| 4 | concurrent gem spends | no overspend / no double spend | SQL lock + sequential duplicate PASS on CI; two workers not simulated |
 | 5 | stale Paddle webhook | no apply; skip | PASS |
 | 6 | duplicate Paddle webhook | skipped claim | PASS (existing) |
 | 7 | partial cron + restart | resume cursor, no skip | PASS (`cron-resume`) |
 | 8 | Redis unavailable breaker | local open still works | PASS |
 | 9 | DB write failure after prep | billing release; idempotency delete in_progress | existing claim/release; not a new chaos harness |
-| 10 | malformed analytics numeric | not persisted / clamped | PASS unit; live CHECK pending CI |
+| 10 | malformed analytics numeric | not persisted / clamped | PASS unit + live CHECK/clamp on CI |
 | 11 | stale cache vs mutation | invalidation unchanged (Wave 2) | not re-opened |
 
 No test passed merely because an exception was thrown.
@@ -317,14 +317,14 @@ DATABASE_INTEGRITY_OPEN: 0
 RELIABILITY_SCORE: 91/100  
 DATABASE_SCORE: 92/100  
 BACKEND_API_SCORE: 90/100  
-CLEAN_RESET: pending GitHub Actions (local Docker unavailable)  
-DATABASE_RLS_SUITE: pending GitHub Actions  
-CONCURRENCY_SUITE: PASS (unit; live gem/analytics pending CI)  
+CLEAN_RESET: PASS (GitHub Actions double reset on `91cff06`)  
+DATABASE_RLS_SUITE: PASS except earn duplicate (`FOUND`); follow-up SHA re-runs full suite  
+CONCURRENCY_SUITE: PASS (unit; live spend duplicate + analytics CHECK on CI)  
 TYPECHECK: PASS  
 LINT: PASS  
 TESTS: PASS (620 passed, 8 skipped)  
 BUILD: PASS  
 NPM_AUDIT_HIGH: PASS  
-EXTERNAL_ACTION_REQUIRED: NONE (confirm **Supabase DB · RLS · RPC** on the Wave 4 commit)
+EXTERNAL_ACTION_REQUIRED: Confirm **Supabase DB · RLS · RPC** green on the `earn_gems` ROW_COUNT follow-up commit (Lint job may still fail Lighthouse; do not change Lighthouse).
 
 Wave 5 leftover (do not start here): `get_global_leaderboard` full `rank()` cost; gem_ledger archive; SUM-vs-materialized hot-path micro-opts.
