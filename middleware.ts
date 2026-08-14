@@ -38,6 +38,8 @@ const MARKETING_EXACT = new Set([
   "/terms&conditions",
   "/cookies",
   "/kvkk",
+  "/sitemap.xml",
+  "/robots.txt",
 ]);
 
 function isMarketingPath(pathname: string): boolean {
