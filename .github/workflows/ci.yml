@@ -28,6 +28,7 @@ jobs:
       ADMIN_HUB_SECRET: placeholder-hub-hmac-for-ci-only
       CRON_SECRET: placeholder-cron-secret-for-ci-only
       NEXT_TELEMETRY_DISABLED: "1"
+      NODE_OPTIONS: "--max-old-space-size=4096"
 
     steps:
       - name: Checkout

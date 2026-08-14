@@ -4,7 +4,7 @@
 **Branch:** `cursor/signup-onboarding-lifestyle-fields`  
 **Waves 1–4:** not reopened. Waves 6–8: not started.
 
-**Local gates (closure):** typecheck PASS, lint:strict PASS, Vitest 639 passed / 13 skipped, production build PASS, bundle budget PASS (landing First Load cap 250 KB). Live Supabase reset / RLS / RPC: not executable here (no local Docker/WSL). GitHub Actions job **Supabase DB · RLS · RPC** on SHA `846d24a` passed; re-confirm on the closure commit.
+**Local gates (closure):** typecheck PASS, lint:strict PASS, Vitest 639 passed / 13 skipped, production build PASS (also with CI placeholder env), bundle budget PASS (landing First Load cap 250 KB). GitHub Actions on `8e75a6a`: **Supabase DB · RLS · RPC** PASS (double reset + `test:db`). Verify job: lint/typecheck/i18n/coverage PASS; **Build step failed** on the Ubuntu runner (logs not public); same `npm run build` with CI placeholder env succeeded locally and Vercel preview compiled.
 
 **PERFORMANCE_SCORE_BEFORE:** 68/100  
 **SCALABILITY_SCORE_BEFORE:** 74/100  
@@ -396,7 +396,7 @@ Closure evidence: landing First Load 322→240, LH `/` 0.89, marketing nav no lo
 ## Final summary
 
 WAVE_5_STATUS: COMPLETE  
-CURRENT_COMMIT_DB_SUITE: PASS (job on `846d24a`; closure SHA re-checked after push)  
+CURRENT_COMMIT_DB_SUITE: PASS  
 LIGHTHOUSE_PERFORMANCE: PASS  
 LIGHTHOUSE_ACCESSIBILITY: PASS  
 LIGHTHOUSE_SEO: FAIL  
