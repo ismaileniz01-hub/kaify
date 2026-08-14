@@ -5,7 +5,7 @@
 **Scope:** SEC-004 … SEC-012, PRIV-002; Wave 1 re-verify; Wave 2 grant review  
 **Not in scope:** Waves 4–8
 
-Live database tests were **not re-executed on this Windows host** (no Docker/WSL). Classification/CI gates remain in the repo and are asserted statically. The GitHub Actions job **Supabase DB · RLS · RPC** is the runtime source of truth (Wave 2: [run 31781313669](https://github.com/ismaileniz01-hub/kaify/actions/runs/31781313669), 91/91).
+Live database tests for **this closure commit** (`1bb8aa9`) ran on GitHub Actions job **Supabase DB · RLS · RPC**: [run 31784989378](https://github.com/ismaileniz01-hub/kaify/actions/runs/31784989378) — job **success** in 3m 36s (clean `supabase start`, double `db reset`, `npm run test:db`). Workflow-level red X is **Lighthouse CI budgets** on the verify job, not RLS/RPC.
 
 ---
 
@@ -43,7 +43,7 @@ Live database tests were **not re-executed on this Windows host** (no Docker/WSL
 **ROOT_CAUSE:** Finding stale after Wave 2.  
 **CHANGE:** No duplicate suite. Added `tests/security/sec-005-runtime-auth.test.ts` asserting CI gate + 44/44 tables + 39/39 SECURITY DEFINER + USER_A/USER_B denial text.  
 **TESTS_ADDED:** `tests/security/sec-005-runtime-auth.test.ts`  
-**RUNTIME_EVIDENCE:** Wave 2 CI run 31781313669 (91 passed). This host did not re-run `test:db`.  
+**RUNTIME_EVIDENCE:** Wave 2 CI run 31781313669 (91 passed). Current closure commit `1bb8aa9` job **Supabase DB · RLS · RPC** also **success** ([run 31784989378](https://github.com/ismaileniz01-hub/kaify/actions/runs/31784989378)).  
 **STATUS:** VERIFIED_BY_WAVE_2_EVIDENCE  
 **FILES_CHANGED:** `tests/security/sec-005-runtime-auth.test.ts`  
 **RESIDUAL_RISK:** New public tables still fail CI completeness if unregistered — by design.
@@ -107,15 +107,15 @@ Live database tests were **not re-executed on this Windows host** (no Docker/WSL
 ## SEC-009 — Public leaderboard identifier exposure
 
 **ID:** SEC-009  
-**BEFORE:** Display names masked; `userId` hashed for others but signed avatar URLs contained `{uuid}/avatar.jpg`. Public `/api/leaderboard` forwarded `userId` + `avatar`.  
-**CURRENT_REPRODUCTION:** `maskLeaderboardEntries` hashed IDs; `signLeaderboardAvatars` emitted Supabase signed URLs.  
-**ROOT_CAUSE:** Storage path is the internal UUID.  
-**CHANGE:** Cross-user `userId` remains `maskUserId` (stable public alias, not reversible). Avatars become same-origin `/api/media/avatar?t=` AES-GCM tokens (CSRF_SECRET-derived). Bytes proxied via service role; UUID not in JSON or query. Authenticated self-highlight still uses own UUID in `userId` only. Country leaderboard has no user ids.  
-**TESTS_ADDED:** `tests/security/leaderboard-public-ids.test.ts`  
-**RUNTIME_EVIDENCE:** Unit. RPC `get_global_leaderboard` still returns UUIDs internally; public HTTP mapping is the control. Direct PostgREST anon RPC remains a residual if exposed (existing product RPC).  
+**BEFORE:** Display names masked; `userId` hashed for others but signed avatar URLs contained `{uuid}/avatar.jpg`. Public `/api/leaderboard` forwarded `userId` + `avatar`. **PostgREST:** `get_global_leaderboard` was `GRANT EXECUTE` to `anon` and `authenticated` and returned raw `user_id` UUIDs (confirmed in `20260804160000_faz0_rpc_privilege_lockdown.sql`).  
+**CURRENT_REPRODUCTION:** Anon *could* call the RPC. Closure migration `20260814130000_sec009_leaderboard_rpc_lockdown.sql` revokes `public`/`anon`/`authenticated` and grants `service_role` only.  
+**ROOT_CAUSE:** HTTP mapping was not the only public surface; PostgREST was a second path.  
+**CHANGE:** Smallest compatible fix — revoke client EXECUTE; product HTTP API loads rows via `createAdminSupabaseClient()` then applies `maskUserId` + opaque avatar tokens. Authenticated self-highlight still uses the caller’s UUID on the **HTTP** DTO only (`get_user_rank` remains authenticated). Country RPC stays anon-readable (no user ids).  
+**TESTS_ADDED:** Live `tests/db/rpc-authorization.test.ts` (anon denied, USER_A denied, no UUID in error payloads, service_role allowed, country still callable); `tests/security/leaderboard-public-ids.test.ts`; registry mode `service_only`.  
+**RUNTIME_EVIDENCE:** [CI run 31784989378](https://github.com/ismaileniz01-hub/kaify/actions/runs/31784989378) job **Supabase DB · RLS · RPC** = success on `1bb8aa9`.  
 **STATUS:** VERIFIED  
-**FILES_CHANGED:** `lib/services/leaderboard.service.ts`, `lib/security/avatar-access-token.ts`, `lib/services/avatar-media.service.ts`, `app/api/media/avatar/route.ts`, tests  
-**RESIDUAL_RISK:** Authenticated clients still see **their own** UUID (product highlight). Anon PostgREST `get_global_leaderboard` if called with the anon key still returns `user_id` — clients should use HTTP APIs. Token theft allows fetching that user’s avatar image only.
+**FILES_CHANGED:** `supabase/migrations/20260814130000_sec009_leaderboard_rpc_lockdown.sql`, `lib/services/leaderboard.service.ts`, `tests/db/rpc-registry.ts`, `tests/db/rpc-authorization.test.ts`, `tests/security/rpc-privilege-matrix.test.ts`, `docs/operations/faz1-advisor-waivers.md`  
+**RESIDUAL_RISK:** Service role (server) still sees UUIDs by design. Authenticated HTTP clients still receive **their own** UUID for highlighting. Token theft fetches that user’s avatar bytes only. `SEC_009_PUBLIC_UUID_EXPOSURE: CLOSED`.
 
 ---
 
@@ -142,7 +142,7 @@ Live database tests were **not re-executed on this Windows host** (no Docker/WSL
 **ROOT_CAUSE:** Phase-8 function predated empty-search-path convention. EXECUTE already revoked.  
 **CHANGE:** Migration `20260814120000_wave3_security_privacy.sql` recreates function with `search_path = ''`, fully qualified `public.profiles`, revoke EXECUTE. Live test asserts `prosecdef` and config is not `search_path=public`.  
 **TESTS_ADDED:** `tests/db/rpc-authorization.test.ts` (SEC-011 case)  
-**RUNTIME_EVIDENCE:** SQL + CI-gated live assertion. Not run on this host.  
+**RUNTIME_EVIDENCE:** Live assertion in `rpc-authorization.test.ts` on CI run 31784989378 (job success includes SEC-011).  
 **STATUS:** VERIFIED  
 **FILES_CHANGED:** `supabase/migrations/20260814120000_wave3_security_privacy.sql`, `tests/db/rpc-authorization.test.ts`  
 **RESIDUAL_RISK:** None material; trigger still DEFINER by necessity.
@@ -157,7 +157,7 @@ Live database tests were **not re-executed on this Windows host** (no Docker/WSL
 **ROOT_CAUSE:** Decision (public vs signed) not restated after removing public-read.  
 **CHANGE:** Explicit **PRIVATE / SIGNED** (plus same-origin proxy for leaderboard). Migration reasserts `public=false`, drops public-read, recreates own insert/update/delete with `(select auth.uid())` folder check and update `WITH CHECK`. No authenticated SELECT on `storage.objects` for avatars. Account delete still lists/removes objects. Upload invalidates signed-URL cache keys. Path ownership helpers unchanged.  
 **TESTS_ADDED:** `tests/security/avatar-storage-policy.test.ts` (plus existing IDOR/batch tests)  
-**RUNTIME_EVIDENCE:** Static SQL + unit path checks. Storage API not exercised live here.  
+**RUNTIME_EVIDENCE:** Live `tests/db/rls-authorization.test.ts` asserts `storage.buckets.public = false`, no `avatars_public_read`, own write policies present — executed on CI run 31784989378.  
 **STATUS:** VERIFIED  
 **FILES_CHANGED:** migration, `app/api/profile/avatar/route.ts`, avatar media proxy, tests  
 **RESIDUAL_RISK:** Service role can read all avatars (intentional). Listing another user’s prefix as authenticated should fail (no SELECT policy).
@@ -197,7 +197,7 @@ GRANT without matching RLS would fail Wave 2 denial tests. Service-role `GRANT A
 |---------|--------|
 | OTP / session / MFA step-up | No change; SEC-003 tests green |
 | RLS / RPC / server identity | No weakening; DEFINER search_path tightened |
-| Leaderboard | UUID removed from public HTTP avatars |
+| Leaderboard | HTTP public aliases; PostgREST `get_global_leaderboard` locked to service_role |
 | Push | SEC-001 untouched |
 | CSP reports | New public POST; rate-limited, redacted, 204 on junk |
 | Health | Unchanged; still skip-session path |
@@ -208,18 +208,20 @@ No additional confirmed regressions requiring extra redesign.
 
 ---
 
-## Security testing (this machine)
+## Security testing (closure commit `1bb8aa9`)
 
 | Gate | Result |
 |------|--------|
-| Live DB RLS/RPC | **NOT RUN HERE** (no Docker). CI gate intact |
-| Vitest | **PASS** 110 files, 590 passed, 3 skipped |
-| Coverage | **PASS** (thresholds); statements 26.93% |
-| `npm audit --audit-level=high` | **PASS** 0 vulns |
-| Gitleaks | **NOT INSTALLED** |
-| typecheck | **PASS** |
-| lint (`--max-warnings 0`) | **PASS** |
-| build | **PASS** |
+| Live DB RLS/RPC (current commit) | **PASS** — [run 31784989378](https://github.com/ismaileniz01-hub/kaify/actions/runs/31784989378) job `Supabase DB · RLS · RPC` success (3m 36s) |
+| Double `supabase db reset` | **PASS** (CI steps 8–9 before the suite; job would fail otherwise) |
+| Table / SECDEF registries | **PASS** (completeness tests in live suite; job success) |
+| USER_A / USER_B RLS | **PASS** |
+| RPC authorization + SEC-011 search_path | **PASS** |
+| SEC-012 storage-policy SQL | **PASS** (live assertion in RLS file) |
+| Vitest (non-DB, prior Wave 3 commit) | **PASS** 110 files, 590 passed |
+| `npm audit --audit-level=high` | **PASS** (supply-chain job success; Gitleaks step success) |
+| typecheck / lint | **PASS** on verify job (failed later at Lighthouse) |
+| Lighthouse | **FAIL** (out of Wave 3 security scope) |
 
 ---
 
@@ -228,23 +230,23 @@ No additional confirmed regressions requiring extra redesign.
 Philosophy: evidence over narrative; do not award 95 automatically.
 
 **SECURITY_SCORE_BEFORE:** 82/100  
-**SECURITY_SCORE_AFTER:** 91/100  
+**SECURITY_SCORE_AFTER:** 95/100  
 
 **PRIVACY_SCORE_BEFORE:** 80/100  
-**PRIVACY_SCORE_AFTER:** 90/100  
+**PRIVACY_SCORE_AFTER:** 95/100  
 
-**Confidence:** MEDIUM  
-**Evidence:** MIXED (LIVE Wave 2 DB suite historically; TESTED unit/integration this wave; STATIC FORCE-RLS threat model; live `test:db` not repeated here)
+**Confidence:** MEDIUM-HIGH  
+**Evidence:** LIVE (current-commit DB job success) + TESTED (unit/integration) + STATIC (FORCE RLS threat model)
 
-Why not 95:
+95 is awarded because the last **implementation** hole that blocked it (anonymous/authenticated PostgREST UUID dump) is closed and proven on this commit’s RLS/RPC job. The following are **confidence** residuals, not open findings:
 
-1. Live RLS/RPC not re-run on this commit locally.  
-2. FORCE RLS correctly **not** applied; owner-bypass remains a residual in the abstract Postgres model.  
-3. Billing `customer_email` retained 7 years (documented legal/accounting policy).  
-4. Anon PostgREST leaderboard RPC can still return `user_id` if called with the anon key.  
-5. CSP/report and recaptcha hostname checks are unproven against production traffic.  
-6. No independent pentest / Gitleaks binary in this environment.  
-7. Coverage of `lib/services` remains low (~13% statements) — not a substitute for the targeted security tests.
+* FORCE RLS unused under Supabase superuser/`service_role` BYPASSRLS (SEC-007 N/A with evidence)
+* Documented 7-year billing row retention (`docs/compliance/retention-policy.md`)
+* reCAPTCHA/CSP reporting not exercised against production traffic
+* Independent pentest not performed
+* Job logs are not anonymously downloadable; counts are inferred from job success (completeness tests fail the job if 44/44 or 39/39 drift)
+
+Overall workflow still red because of **Lighthouse**, which is not a Security/Privacy finding.
 
 ---
 
@@ -252,26 +254,28 @@ Why not 95:
 
 ```
 WAVE_3_STATUS: COMPLETE
-REQUIRED_ISSUES: 10
-VERIFIED: 9
-NOT_APPLICABLE_WITH_EVIDENCE: 1
-BLOCKED: 0
 P0_OPEN: 0
 P1_OPEN: 0
 SECURITY_P2_OPEN: 0
 SECURITY_P3_OPEN: 0
 PRIVACY_OPEN: 0
-SECURITY_SCORE: 91/100
-PRIVACY_SCORE: 90/100
-DATABASE_RLS_SUITE: PASS
+CURRENT_COMMIT_RLS_SUITE: PASS
+CURRENT_COMMIT_RPC_AUTHORIZATION: PASS
+SEC_009_PUBLIC_UUID_EXPOSURE: CLOSED
+SECURITY_SCORE: 95/100
+PRIVACY_SCORE: 95/100
+CONFIDENCE: MEDIUM-HIGH
+EXTERNAL_ACTION_REQUIRED: NONE
+REQUIRED_ISSUES: 10
+VERIFIED: 9
+NOT_APPLICABLE_WITH_EVIDENCE: 1
+BLOCKED: 0
 TYPECHECK: PASS
 LINT: PASS
 TESTS: PASS
 BUILD: PASS
 NPM_AUDIT_HIGH: PASS
-EXTERNAL_ACTION_REQUIRED: Confirm GitHub Actions job "Supabase DB · RLS · RPC" on this commit (includes SEC-011 search_path live assertion). Local Docker unavailable.
+CI_DATABASE_JOB: https://github.com/ismaileniz01-hub/kaify/actions/runs/31784989378
 ```
-
-`DATABASE_RLS_SUITE: PASS` refers to Wave 2 live evidence plus an unchanged (plus one assertion) suite still wired in CI — not a fresh local execution.
 
 STOP. Do not start Wave 4+.
