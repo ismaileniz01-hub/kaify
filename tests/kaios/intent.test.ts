@@ -13,6 +13,16 @@ describe("resolveIntent", () => {
       resolveIntent({ coach: "kai", message: "Selam, nasılsın?" }),
     ).toBe("casual");
     expect(resolveIntent({ coach: "kai", message: "hey" })).toBe("casual");
+    expect(
+      resolveIntent({ coach: "kai", message: "nasılsın?" }),
+    ).toBe("casual");
+  });
+
+  it("does not treat short how/nasıl follow-ups as a greeting", () => {
+    expect(resolveIntent({ coach: "kai", message: "nasıl?" })).toBe("unknown");
+    expect(resolveIntent({ coach: "kai", message: "nasil?" })).toBe("unknown");
+    expect(resolveIntent({ coach: "kai", message: "how?" })).toBe("unknown");
+    expect(resolveIntent({ coach: "kai", message: "peki?" })).toBe("unknown");
   });
 
   it("routes motivation cues for kai", () => {

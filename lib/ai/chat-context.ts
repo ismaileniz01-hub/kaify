@@ -1,8 +1,8 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { getStreakStatus } from "@/lib/services/streak-status.service";
-import { countConsecutiveRestDays } from "@/lib/ai/count-consecutive-rest-days";
+import { countConsecutiveRestDays, gymSkipFacts } from "@/lib/ai/count-consecutive-rest-days";
 
-export { countConsecutiveRestDays } from "@/lib/ai/count-consecutive-rest-days";
+export { countConsecutiveRestDays, gymSkipFacts } from "@/lib/ai/count-consecutive-rest-days";
 
 type WorkoutRow = {
   entry_date: string;
@@ -38,22 +38,18 @@ export async function buildFitnessContextSummary(userId: string): Promise<string
 
   const parts: string[] = [];
   if (streak) {
-    parts.push(`app check-in streak: ${streak.currentStreak} days`);
+    parts.push(
+      `app check-in streak: ${streak.currentStreak} days (daily app check-in, not gym attendance)`,
+    );
   }
   parts.push(`today workouts logged: ${todayWorkouts}/${todayTarget}`);
-  parts.push(`consecutive days without gym: ${restDays}`);
 
   const weekWorkouts = workoutRows.reduce(
     (sum, r) => sum + (Number(r.workouts_completed) >= 1 ? 1 : 0),
     0,
   );
   parts.push(`gym days in last 14 calendar days: ${weekWorkouts}`);
-
-  if (restDays >= 5) {
-    parts.push("accountability flag: user has skipped gym 5+ days — motivate them to go today");
-  } else if (restDays >= 2) {
-    parts.push("accountability flag: gym gap building — nudge them back with warmth");
-  }
+  parts.push(...gymSkipFacts(workoutRows, restDays));
 
   return parts.join("; ");
 }

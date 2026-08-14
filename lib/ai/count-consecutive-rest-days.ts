@@ -38,3 +38,24 @@ export function countConsecutiveRestDays(
 
   return count;
 }
+
+/** Only claim a gym gap when at least one workout was logged in the window. */
+export function gymSkipFacts(
+  workoutRows: WorkoutRow[],
+  restDays: number,
+): string[] {
+  const everGym = workoutRows.some((r) => Number(r.workouts_completed) >= 1);
+  if (!everGym) return [];
+
+  const parts = [`consecutive days without gym: ${restDays}`];
+  if (restDays >= 5) {
+    parts.push(
+      "accountability flag: user has skipped gym 5+ days — motivate them to go today",
+    );
+  } else if (restDays >= 2) {
+    parts.push(
+      "accountability flag: gym gap building — nudge them back with warmth",
+    );
+  }
+  return parts;
+}

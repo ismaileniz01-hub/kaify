@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countConsecutiveRestDays } from "@/lib/ai/count-consecutive-rest-days";
+import { countConsecutiveRestDays, gymSkipFacts } from "@/lib/ai/count-consecutive-rest-days";
 import { buildChatSystemPrompt } from "@/lib/ai/personas";
 
 describe("countConsecutiveRestDays", () => {
@@ -23,6 +23,21 @@ describe("countConsecutiveRestDays", () => {
   it("counts missing rows as rest days", () => {
     const rows = [{ entry_date: "2026-07-02", workouts_completed: 1 }];
     expect(countConsecutiveRestDays(rows, "2026-07-04")).toBe(2);
+  });
+
+  it("does not claim a gym skip when no workouts were ever logged", () => {
+    expect(gymSkipFacts([], 14)).toEqual([]);
+    expect(
+      gymSkipFacts([{ entry_date: "2026-07-04", workouts_completed: 0 }], 14),
+    ).toEqual([]);
+  });
+
+  it("claims a gym skip only after a logged workout exists", () => {
+    const rows = [
+      { entry_date: "2026-07-02", workouts_completed: 1 },
+      { entry_date: "2026-07-04", workouts_completed: 0 },
+    ];
+    expect(gymSkipFacts(rows, 2).join(" ")).toMatch(/consecutive days without gym: 2/);
   });
 });
 

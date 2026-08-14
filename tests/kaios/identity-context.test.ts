@@ -65,6 +65,23 @@ describe("long-history bounded context", () => {
     expect(compilePrompt(ctx).messages.length).toBe(2);
   });
 
+  it("keeps recent history for short nasıl/how follow-ups", () => {
+    const ctx = buildRuntimeContext({
+      coach: "kai",
+      message: "nasıl?",
+      locale: "tr",
+      conversationTurns: [
+        { role: "user", content: "bugun spora gitmek istemiyorum" },
+        {
+          role: "assistant",
+          content: "Gel, 20 dakika. Gerisini ben hallederim.",
+        },
+      ],
+    });
+    expect(ctx.intent).toBe("unknown");
+    expect(ctx.conversationTurns?.length).toBe(2);
+  });
+
   it("history budget env stays finite for product chat", () => {
     expect(CONTEXT_BUDGET.historyTurns).toBeLessThanOrEqual(20);
     expect(CONTEXT_BUDGET.historyUserChars).toBeLessThanOrEqual(2000);

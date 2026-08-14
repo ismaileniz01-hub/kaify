@@ -214,7 +214,9 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
     return "nutrition_question";
   }
 
-  // Short social pings without domain keywords
+  // Short social pings without domain keywords.
+  // Bare "nasıl?" / "how?" is a follow-up, not a greeting — keep unknown so
+  // context tier can attach recent history (casual is tier 0 / no history).
   if (
     msg.length <= 40 &&
     !NUTRITION_Q_RE.test(msg) &&
@@ -224,6 +226,7 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
   ) {
     if (/[?]/.test(msg) && input.coach === "maya") return "nutrition_question";
     if (/[?]/.test(msg) && input.coach === "alex") return "exercise_form";
+    if (/[?]/.test(msg) && !looksCasual(msg)) return "unknown";
     return "casual";
   }
 
