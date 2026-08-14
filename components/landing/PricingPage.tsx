@@ -13,7 +13,7 @@ import { PlanSavingsCard } from "./PlanSavingsCard";
 import { PricingBillingToggle } from "./PricingBillingToggle";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { usePaddle } from "@/components/billing/PaddleProvider";
-import { useSession } from "@/lib/session-context";
+import { useSessionOptional } from "@/lib/session-contexts";
 import { useNativeApp } from "@/lib/native/platform";
 import { NATIVE_CHECKOUT_RETURN_URL } from "@/lib/billing/native-web-checkout";
 import { useLang } from "@/lib/lang-context";
@@ -136,7 +136,9 @@ function PlanCheckoutButton({
 }) {
   const router = useRouter();
   const { paddle, ready, configured } = usePaddle();
-  const { isAuthenticated, profile } = useSession();
+  const session = useSessionOptional();
+  const isAuthenticated = session?.isAuthenticated ?? false;
+  const profile = session?.profile ?? null;
   const native = useNativeApp();
   const { t } = useLang();
 

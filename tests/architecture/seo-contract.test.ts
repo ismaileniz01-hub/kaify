@@ -13,6 +13,7 @@ import {
   SEO_PUBLIC_HTML_LANG,
 } from "@/lib/i18n/reviewed-locales";
 import { publicPageMetadata, rootMetadata } from "@/lib/seo/metadata";
+import { TERMS_PATH } from "@/lib/legal/constants";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -80,6 +81,11 @@ describe("SEO contract", () => {
     const meta = rootMetadata();
     expect(meta.metadataBase?.toString()).toBe("https://kaifyai.org/");
     expect(meta.openGraph?.siteName).toBe("K.AIFY");
+    const ogImages = meta.openGraph?.images;
+    const firstOg = Array.isArray(ogImages) ? ogImages[0] : ogImages;
+    expect(firstOg && typeof firstOg === "object" && "url" in firstOg ? firstOg.url : firstOg).toBe(
+      "https://kaifyai.org/opengraph-image",
+    );
     const twitter = meta.twitter as { card?: string } | undefined;
     expect(twitter?.card).toBe("summary_large_image");
   });
@@ -90,5 +96,11 @@ describe("SEO contract", () => {
     expect(isProtectedProductPath("/pricing")).toBe(false);
     expect(isProtectedProductPath("/login")).toBe(false);
     expect(isProtectedProductPath("/")).toBe(false);
+    expect(isProtectedProductPath("/opengraph-image")).toBe(false);
+    expect(isProtectedProductPath("/robots.txt")).toBe(false);
+  });
+
+  it("canonical terms path is /terms, not the legacy alias", () => {
+    expect(TERMS_PATH).toBe("/terms");
   });
 });

@@ -166,7 +166,7 @@ export function LandingAbout() {
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-end">
                     <p className="text-3xl font-extrabold text-white">
                       $14.99
                     </p>
@@ -189,7 +189,7 @@ export function LandingAbout() {
                       $1,500+/{t("pricing.unit.year")}
                     </span>
                   </span>
-                  <span className="ml-auto text-[10px] font-medium text-emerald-400/60">
+                  <span className="ms-auto text-[10px] font-medium text-emerald-400/60">
                     {t("landing.value.comparison_note")}
                   </span>
                 </div>

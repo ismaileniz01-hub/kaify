@@ -84,7 +84,7 @@ const sections: LegalSection[] = [
         Kaify uses third-party AI providers (Google Gemini, DeepSeek) to generate coaching
         responses and analyze photos. Prompts are sanitized; images are processed transiently
         for analysis. Outputs are not medical advice. See our{" "}
-        <Link href="/terms&conditions" className="text-emerald-400 underline">
+        <Link href="/terms" className="text-emerald-400 underline">
           Terms of Service
         </Link>{" "}
         for disclaimers.
@@ -219,7 +219,7 @@ export function PrivacyPolicyContent() {
       {sections.map((s) => (
         <section key={s.id} id={s.id} className="mb-10">
           <h2>{s.title}</h2>
-          <div className="text-zinc-300 [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5">
+          <div className="text-zinc-300 [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:ps-5">
             {s.body}
           </div>
         </section>

@@ -220,7 +220,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
       {/* Yol */}
       <div className="relative">
         {/* Dikey yol çizgisi */}
-        <div className="absolute left-[18px] top-0 bottom-0 w-0.5 bg-gradient-to-b from-orange-500/40 via-amber-500/30 to-zinc-700/20" />
+        <div className="absolute start-[18px] top-0 bottom-0 w-0.5 bg-gradient-to-b from-orange-500/40 via-amber-500/30 to-zinc-700/20" />
 
         <div className="flex flex-col gap-0">
           {SEGMENTS.map((segment, segIdx) => {
@@ -273,7 +273,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
 
                   {/* Kai level rozeti */}
                   {kaiLevel && (
-                    <div className="ml-auto flex items-center gap-1">
+                    <div className="ms-auto flex items-center gap-1">
                       {pendingKaiLevel === kaiLevel ? (
                         <button
                           onClick={handleClaimEvolution}
@@ -306,7 +306,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
 
                   {/* Milestone gem ödülü */}
                   {segment.milestone && isMilestoneReached && !kaiLevel && (
-                    <div className="ml-auto flex items-center gap-1">
+                    <div className="ms-auto flex items-center gap-1">
                       {isMilestoneClaimed ? (
                         <div className="flex items-center gap-1 rounded-full bg-purple-500/15 px-2 py-0.5 text-[10px] text-purple-400">
                           <Gem size={12} style={GEM_ICON_STYLE} />
@@ -322,15 +322,22 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                   )}
 
                   {isActive && !segment.milestone && (
-                    <span className="ml-auto text-[10px] font-medium text-orange-400">
+                    <span className="ms-auto text-[10px] font-medium text-orange-400">
                       %{Math.round(progress * 100)}
                     </span>
                   )}
                 </div>
 
                 {/* Segment içi noktalar (duraklar/istasyonlar) */}
-                <div className="relative ml-[18px] pl-9">
-                  <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-zinc-800/50">
+                <div className="relative ms-[18px] ps-9">
+                  <div
+                    className="absolute start-0 top-0 bottom-0 w-0.5 bg-zinc-800/50"
+                    role={isActive ? "progressbar" : undefined}
+                    aria-valuemin={isActive ? 0 : undefined}
+                    aria-valuemax={isActive ? 100 : undefined}
+                    aria-valuenow={isActive ? Math.round(progress * 100) : undefined}
+                    aria-label={isActive ? t("streak.daily") : undefined}
+                  >
                     <div
                       className="w-full bg-gradient-to-b from-orange-500 to-amber-500 transition-all duration-700 ease-out"
                       style={{ height: `${progress * 100}%` }}
@@ -408,7 +415,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
 
                 {/* Kai Level görseli - segmentin sonunda (milestone noktasından sonra) */}
                 {kaiLevel && (
-                  <div className="ml-[18px] pl-9 pt-4 pb-2">
+                  <div className="ms-[18px] ps-9 pt-4 pb-2">
                     <div className={`flex items-center gap-4 rounded-xl border p-4 transition-all duration-500 ${
                       isKaiUnlocked && !pendingKaiLevel
                         ? "border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-orange-600/5"

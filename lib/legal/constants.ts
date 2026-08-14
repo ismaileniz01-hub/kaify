@@ -6,7 +6,7 @@ export const COOKIES_VERSION = "2026-07-05";
 
 export const LEGAL_ENTITY = "Kaify Ai";
 export const LEGAL_URL = "https://kaifyai.org";
-export const TERMS_PATH = "/terms&conditions";
+export const TERMS_PATH = "/terms";
 export const COOKIES_PATH = "/cookies";
 export const SUPPORT_EMAIL = "support@kaifyai.org";
 export const PRIVACY_EMAIL = "privacy@kaifyai.org";

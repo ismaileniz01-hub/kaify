@@ -175,7 +175,7 @@ export default function MessagesPage() {
                 {teamUnlocked ? t("messages.team_sub") : t("messages.team_locked")}
               </p>
             </div>
-            <ChevronRight className="h-4 w-4 text-zinc-500" />
+            <ChevronRight className="h-4 w-4 text-zinc-500 rtl:rotate-180" />
           </Link>
         )}
       </main>

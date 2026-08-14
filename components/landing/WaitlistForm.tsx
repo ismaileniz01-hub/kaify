@@ -240,7 +240,7 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <>
-              {t("landing.waitlist.join")} <ArrowRight className="h-4 w-4" />
+              {t("landing.waitlist.join")} <ArrowRight className="h-4 w-4 rtl:rotate-180" />
             </>
           )}
         </button>

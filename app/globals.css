@@ -2877,7 +2877,7 @@ a, button, input, select, textarea, label {
 /* Skip link — keyboard-first navigation (WCAG 2.4.1) */
 .skip-to-content {
   position: absolute;
-  left: 1rem;
+  inset-inline-start: 1rem;
   top: 0;
   z-index: 10000;
   transform: translateY(-120%);

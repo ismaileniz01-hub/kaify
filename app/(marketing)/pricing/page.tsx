@@ -9,6 +9,7 @@ export const metadata = publicPageMetadata({
   path: "/pricing",
 });
 
+/** Public indexable pricing — static HTML so SEO tags sit in the first head. */
 export default function PricingRoute() {
   return (
     <PaddleProvider>

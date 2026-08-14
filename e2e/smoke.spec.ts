@@ -60,7 +60,7 @@ test.describe("public smoke", () => {
       await route.continue();
     });
 
-    await page.getByRole("link", { name: /sign up|kayıt/i }).click();
+    await page.getByRole("link", { name: /create account|sign up|kayıt|hesap/i }).click();
     await expect(progress).toHaveAttribute("aria-hidden", "false");
     await expect(page).toHaveURL(/\/signup/);
   });

@@ -65,7 +65,7 @@ export function LandingCTA() {
                 </a>{" "}
                 &{" "}
                 <a
-                  href="/terms&conditions"
+                  href="/terms"
                   className="underline transition hover:text-zinc-300"
                 >
                   {t("legal.terms")}

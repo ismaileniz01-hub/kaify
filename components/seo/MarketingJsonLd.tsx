@@ -7,7 +7,8 @@ export function MarketingJsonLd() {
     "@graph": [
       {
         "@type": "Organization",
-        name: "Kaify Ai",
+        name: "K.AIFY",
+        legalName: "Kaify Ai",
         url: origin,
         logo: `${origin}/icons/icon-512.png`,
       },
@@ -19,6 +20,7 @@ export function MarketingJsonLd() {
       {
         "@type": "SoftwareApplication",
         name: "K.AIFY",
+        url: origin,
         applicationCategory: "HealthApplication",
         operatingSystem: "Web, iOS, Android",
         offers: {

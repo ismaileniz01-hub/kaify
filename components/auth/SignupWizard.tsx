@@ -959,7 +959,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                         ? t("signup.profile.submit")
                         : t("signup.wizard.send_code")
                       : t("signup.wizard.continue")}
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4 rtl:rotate-180" />
                 </button>
 
                 {currentStep === "lifestyle" && (

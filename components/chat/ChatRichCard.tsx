@@ -100,7 +100,7 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
                   style={{ width: `${(m.grams / totalG) * 100}%`, backgroundColor: m.color }}
                 />
               </div>
-              <span className="w-10 text-right text-[11px] font-bold" style={{ color: m.color }}>
+              <span className="w-10 text-end text-[11px] font-bold" style={{ color: m.color }}>
                 {m.grams}g
               </span>
             </div>
@@ -148,7 +148,7 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
                   }}
                 />
               </div>
-              <span className="w-10 text-right text-[11px] font-bold" style={{ color: cat.color }}>
+              <span className="w-10 text-end text-[11px] font-bold" style={{ color: cat.color }}>
                 {cat.score}
               </span>
             </div>

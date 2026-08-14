@@ -62,7 +62,7 @@ export function LandingNav({
   return (
     <header className={`landing-nav ${scrolled ? "landing-nav--scrolled" : ""}`}>
       <div className="landing-container flex items-center justify-between gap-4">
-        <Link href="/" className="flex shrink-0 items-center">
+        <Link href="/" className="flex shrink-0 items-center" aria-label="K.AIFY">
           <Image
             src="/kaify-logo.png"
             alt="K.AIFY"

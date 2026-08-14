@@ -11,6 +11,7 @@ describe("marketing JSON-LD (SEO structured data)", () => {
     expect(src).toContain('"@type": "Organization"');
     expect(src).toContain('"@type": "WebSite"');
     expect(src).toContain('"@type": "SoftwareApplication"');
+    expect(src).toContain('legalName: "Kaify Ai"');
     expect(src).toContain('price: "14.99"');
     expect(src).toContain('priceCurrency: "USD"');
     expect(src).not.toMatch(/aggregateRating|reviewRating|bestRating/);

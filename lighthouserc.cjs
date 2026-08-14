@@ -7,6 +7,9 @@ module.exports = {
         "http://127.0.0.1:3000/",
         "http://127.0.0.1:3000/pricing",
         "http://127.0.0.1:3000/privacy",
+        "http://127.0.0.1:3000/terms",
+        "http://127.0.0.1:3000/cookies",
+        "http://127.0.0.1:3000/kvkk",
         "http://127.0.0.1:3000/login",
       ],
       settings: {

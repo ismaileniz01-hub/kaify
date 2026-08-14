@@ -70,7 +70,7 @@ const SETTINGS_GROUPS: { title: string; items: SettingItem[] }[] = [
         description: "settings.legal.terms.desc",
         type: "link",
         value: "settings.legal.open",
-        href: "/terms&conditions",
+        href: "/terms",
       },
       {
         icon: Shield,

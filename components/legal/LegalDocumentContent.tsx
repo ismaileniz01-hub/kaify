@@ -31,7 +31,7 @@ export function LegalDocumentContent({ document }: LegalDocumentContentProps) {
       {document.sections.map((section) => (
         <section key={section.id} id={section.id} className="mb-10">
           <h2>{section.title}</h2>
-          <div className="text-zinc-300 [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5">
+          <div className="text-zinc-300 [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:ps-5">
             {section.blocks.map((block, index) => {
               if (block.type === "p") {
                 return <p key={index}>{block.text}</p>;

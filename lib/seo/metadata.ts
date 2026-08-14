@@ -31,7 +31,7 @@ export function publicPageMetadata(input: {
       type: "website",
       images: [
         {
-          url: "/opengraph-image",
+          url: seoAbsoluteUrl("/opengraph-image"),
           width: 1200,
           height: 630,
           alt: SITE_NAME,
@@ -42,7 +42,7 @@ export function publicPageMetadata(input: {
       card: "summary_large_image",
       title: input.title,
       description: input.description,
-      images: ["/opengraph-image"],
+      images: [seoAbsoluteUrl("/opengraph-image")],
     },
   };
 }

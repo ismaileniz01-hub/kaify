@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/lib/theme-context";
 import { LangProvider } from "@/lib/lang-context";
 import { rootMetadata } from "@/lib/seo/metadata";
+import { SkipToContent } from "@/components/a11y/SkipToContent";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,11 +37,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <a href="#main-content" className="skip-to-content">
-          Skip to content
-        </a>
         <ThemeProvider>
           <LangProvider initialLang="en">
+            <SkipToContent />
             {children}
           </LangProvider>
         </ThemeProvider>

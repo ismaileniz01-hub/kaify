@@ -244,7 +244,7 @@ export function EmailOtpLogin({
           }}
           className="login-otp-back flex w-fit items-center gap-1.5 text-xs font-medium text-zinc-400 transition hover:text-white"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
           {t("login.otp.change_email")}
         </button>
 
@@ -288,7 +288,7 @@ export function EmailOtpLogin({
             : isSignup
               ? t("login.signup.verify")
               : t("login.otp.verify")}
-          <ArrowRight className="h-5 w-5" />
+          <ArrowRight className="h-5 w-5 rtl:rotate-180" />
         </button>
 
         <div className="flex flex-col items-center gap-2 text-center">
@@ -375,7 +375,7 @@ export function EmailOtpLogin({
           : isSignup
             ? t("login.signup.submit")
             : t("login.otp.submit")}
-        <ArrowRight className="h-5 w-5" />
+        <ArrowRight className="h-5 w-5 rtl:rotate-180" />
       </button>
 
       {error && (

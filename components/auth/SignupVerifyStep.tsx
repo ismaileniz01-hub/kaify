@@ -89,7 +89,7 @@ export function SignupVerifyStep({ email, onVerified, onBack }: Props) {
           onClick={onBack}
           className="login-otp-back flex w-fit items-center gap-1.5 text-xs font-medium text-zinc-400 transition hover:text-white"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
           {t("signup.verify.back")}
         </button>
       )}
@@ -140,7 +140,7 @@ export function SignupVerifyStep({ email, onVerified, onBack }: Props) {
         className="landing-btn landing-btn--primary flex w-full items-center justify-center gap-2 disabled:opacity-45"
       >
         {loading ? t("login.otp.verifying") : t("signup.verify.submit")}
-        <ArrowRight className="h-5 w-5" />
+        <ArrowRight className="h-5 w-5 rtl:rotate-180" />
       </button>
 
       <div className="flex flex-col items-center gap-2 text-center">

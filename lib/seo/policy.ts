@@ -69,6 +69,7 @@ export function isPublicAppPath(pathname: string): boolean {
 
 export function isMarketingPath(pathname: string): boolean {
   if (pathname === "/") return true;
+  if (pathname === "/pricing") return true;
   return (
     pathname === "/privacy" ||
     pathname.startsWith("/privacy/") ||
@@ -88,6 +89,18 @@ export function isProtectedProductPath(pathname: string): boolean {
   if (isMarketingPath(pathname)) return false;
   if (isPublicAppPath(pathname)) return false;
   if (pathname.startsWith("/_next/")) return false;
+  if (
+    pathname === "/opengraph-image" ||
+    pathname.startsWith("/opengraph-image/") ||
+    pathname === "/twitter-image" ||
+    pathname.startsWith("/twitter-image/") ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname === "/manifest.json" ||
+    pathname === "/favicon.ico"
+  ) {
+    return false;
+  }
   return true;
 }
 
