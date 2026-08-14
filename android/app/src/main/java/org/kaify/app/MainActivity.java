@@ -17,7 +17,7 @@ public class MainActivity extends BridgeActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                 "kaify_default",
-                "K.AIFY",
+                "Kaify Ai",
                 NotificationManager.IMPORTANCE_HIGH
             );
             channel.setDescription("Streak reminders and coach updates");

@@ -1,4 +1,4 @@
-# Kaify Compliance Documentation
+# Kaify Ai Compliance Documentation
 
 Last updated: 2026-07-05 · **Compliance Faz 4 complete (82 → 90+ target)**
 

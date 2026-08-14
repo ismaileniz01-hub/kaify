@@ -1,7 +1,7 @@
 import { logger } from "@/lib/logger";
 
 /**
- * Kaify uses react-google-recaptcha `size="invisible"` (reCAPTCHA v2 Invisible).
+ * Kaify Ai uses react-google-recaptcha `size="invisible"` (reCAPTCHA v2 Invisible).
  * siteverify may still include v3 fields (`score`, `action`) if the key is v3.
  * Thresholds are explicit env config — never a silent default in production logs.
  */

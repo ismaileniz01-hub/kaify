@@ -70,7 +70,7 @@ Live database tests for **this closure commit** (`1bb8aa9`) ran on GitHub Action
 **ID:** SEC-007  
 **BEFORE:** Tables `ENABLE ROW LEVEL SECURITY` without `FORCE`.  
 **CURRENT_REPRODUCTION:** No `FORCE ROW LEVEL SECURITY` in migrations.  
-**ROOT_CAUSE / THREAT MODEL:** In hosted/local Supabase the table owner is `postgres` (superuser). Superusers and `service_role` (BYPASSRLS) ignore RLS whether or not FORCE is set. SECURITY DEFINER functions run as owner and likewise bypass. Authenticated/anon already hit RLS when ENABLE is on. FORCE would constrain a *non-superuser table owner* — a role Kaify does not use for app traffic. Applying FORCE everywhere would be theatre unless the owner role is deprivileged; it does not bind `service_role` jobs, migrations, or DEFINER triggers.  
+**ROOT_CAUSE / THREAT MODEL:** In hosted/local Supabase the table owner is `postgres` (superuser). Superusers and `service_role` (BYPASSRLS) ignore RLS whether or not FORCE is set. SECURITY DEFINER functions run as owner and likewise bypass. Authenticated/anon already hit RLS when ENABLE is on. FORCE would constrain a *non-superuser table owner* — a role Kaify Ai does not use for app traffic. Applying FORCE everywhere would be theatre unless the owner role is deprivileged; it does not bind `service_role` jobs, migrations, or DEFINER triggers.  
 **Classification:**
 
 | Category | Registry mode | FORCE RLS |

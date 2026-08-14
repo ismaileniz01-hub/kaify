@@ -11,18 +11,18 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
   title: "Kullanım Koşulları",
   subtitle: `Son güncelleme: 5 Temmuz 2026 · Sürüm ${TERMS_VERSION}`,
   intro:
-    'Bu Kullanım Koşulları ("Koşullar") Kaify kullanımınızı düzenler. Hesap oluşturarak bu Koşulları ve Gizlilik Politikamızı kabul edersiniz.',
+    'Bu Kullanım Koşulları ("Koşullar") Kaify Ai kullanımınızı düzenler. Hesap oluşturarak bu Koşulları ve Gizlilik Politikamızı kabul edersiniz.',
   sections: [
     {
       id: "services",
       title: "1. Hizmetler",
-      blocks: [{ type: "p", text: `${LEGAL_ENTITY}, sanal koçlar, seriler, analizler ve isteğe bağlı fotoğraf analizi sunan AI destekli fitness koçluğu uygulaması Kaify'ı (${LEGAL_URL}) işletir. Yasanın gerektirdiği durumlarda makul bildirimle özellikleri değiştirebilir, askıya alabilir veya sonlandırabiliriz.` }],
+      blocks: [{ type: "p", text: `${LEGAL_ENTITY}, sanal koçlar, seriler, analizler ve isteğe bağlı fotoğraf analizi sunan AI destekli fitness koçluğu uygulaması Kaify Ai'ı (${LEGAL_URL}) işletir. Yasanın gerektirdiği durumlarda makul bildirimle özellikleri değiştirebilir, askıya alabilir veya sonlandırabiliriz.` }],
     },
     {
       id: "ai-disclaimer",
       title: "2. AI ve Fitness — Tıbbi Tavsiye Değildir",
       blocks: [
-        { type: "p", text: "Kaify tıbbi cihaz değildir; tıbbi, beslenme, fizyoterapi veya acil durum hizmeti sunmaz. AI çıktıları eksik veya hatalı olabilir. Beslenme, egzersiz veya tedavinizi değiştirmeden önce yetkin bir uzmana danışmalısınız. Acil durumlarda Kaify'ı kullanmayın; 112'yi veya yerel acil hizmetleri arayın." },
+        { type: "p", text: "Kaify Ai tıbbi cihaz değildir; tıbbi, beslenme, fizyoterapi veya acil durum hizmeti sunmaz. AI çıktıları eksik veya hatalı olabilir. Beslenme, egzersiz veya tedavinizi değiştirmeden önce yetkin bir uzmana danışmalısınız. Acil durumlarda Kaify Ai'ı kullanmayın; 112'yi veya yerel acil hizmetleri arayın." },
         { type: "p", text: "Fiziksel aktivitenin doğasında bulunan riskleri üstlenirsiniz. AI özelliklerini kullanarak otomatik koçluğun profesyonel değerlendirmenin yerini tutmadığını kabul edersiniz." },
       ],
     },

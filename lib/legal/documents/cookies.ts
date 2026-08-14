@@ -11,7 +11,7 @@ export const COOKIES_DOCUMENT: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: `This Cookie Policy explains how Kaify (${LEGAL_URL}) uses cookies and similar technologies. When you click Accept on our cookie banner, optional analytics cookies may be enabled. Reject optional keeps only essential cookies.`,
+          text: `This Cookie Policy explains how Kaify Ai (${LEGAL_URL}) uses cookies and similar technologies. When you click Accept on our cookie banner, optional analytics cookies may be enabled. Reject optional keeps only essential cookies.`,
         },
       ],
     },

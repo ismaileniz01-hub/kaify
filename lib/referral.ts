@@ -66,11 +66,11 @@ export async function copyReferralCode(): Promise<boolean> {
 /** Kodu paylaş (Web Share API) */
 export async function shareReferralCode(): Promise<boolean> {
   const code = getReferralCode();
-  const text = `🎫 Join me on Kaify! Use my referral code: ${code}\n\n${referralShareUrl(code)}`;
+  const text = `🎫 Join me on Kaify Ai! Use my referral code: ${code}\n\n${referralShareUrl(code)}`;
   
   try {
     if (navigator.share) {
-      await navigator.share({ title: "Kaify Referral", text });
+      await navigator.share({ title: "Kaify Ai Referral", text });
       return true;
     }
     return false;

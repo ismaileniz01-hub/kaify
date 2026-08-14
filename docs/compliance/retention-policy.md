@@ -4,7 +4,7 @@ Last updated: 2026-07-05 · Version 2026-07-05
 
 ## Purpose
 
-This document defines how long Kaify retains personal data. **Automated enforcement:** weekly cron `/api/cron/retention-purge` (Sundays 02:00 UTC).
+This document defines how long Kaify Ai retains personal data. **Automated enforcement:** weekly cron `/api/cron/retention-purge` (Sundays 02:00 UTC).
 
 ## Retention schedule
 
@@ -38,7 +38,7 @@ When a user deletes their account:
 
 ## Payment data split
 
-- **Card data:** never stored by Kaify — Paddle (Merchant of Record)
-- **Kaify stores:** subscription tier, webhook metadata (minimized operational fields), billing email from webhooks. Full Paddle JSON is not retained in `billing_events.payload`.
+- **Card data:** never stored by Kaify Ai — Paddle (Merchant of Record)
+- **Kaify Ai stores:** subscription tier, webhook metadata (minimized operational fields), billing email from webhooks. Full Paddle JSON is not retained in `billing_events.payload`.
 
 Contact: privacy@kaifyai.org

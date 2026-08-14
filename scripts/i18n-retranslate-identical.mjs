@@ -81,7 +81,7 @@ const LOCALE_NAMES = {
 
 /** Values intentionally kept identical across locales (brands / product nouns). */
 const ALLOW_IDENTICAL = new Set([
-  "K.AIFY",
+  "Kaify Ai",
   "Kai",
   "Alex",
   "Maya",
@@ -170,7 +170,7 @@ async function translateChunk(entries, langName) {
     "- Translate values naturally for a friendly fitness coaching app UI; keep concise.",
     "- Keep ALL placeholders like {name}, {level}, {days}, {streak}, {percent} EXACTLY as-is.",
     "- Keep emojis, numbers, and newline characters intact.",
-    "- Do NOT translate brand/proper names: K.AIFY, Kai, Alex, Maya, Leo, Freezie, Paddle.",
+    "- Do NOT translate brand/proper names: Kaify Ai, Kai, Alex, Maya, Leo, Freezie, Paddle.",
     "- Keep the product shop label as Market when it is the nav/shop title.",
     "- Preserve leading/trailing spaces if present.",
     "",

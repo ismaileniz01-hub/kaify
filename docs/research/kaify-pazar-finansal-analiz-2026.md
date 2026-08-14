@@ -1,4 +1,4 @@
-# K.AIFY — Pazar araştırması, maliyet ve gelir modeli
+# Kaify Ai — Pazar araştırması, maliyet ve gelir modeli
 
 **Tarih:** 14 Ağustos 2026  
 **Para birimi:** USD (ürün fiyatları USD; Paddle checkout). TRY karşılığı ayrıca verilir.  
@@ -10,11 +10,11 @@ Yuvarlama: tablolarda $1–$20 sapma normaldir.
 
 ---
 
-## 0. Bu prompt K.AIFY’ye nasıl uyarlandı?
+## 0. Bu prompt Kaify Ai’ye nasıl uyarlandı?
 
 Genel mobil-uygulama şablonundan şu farklar bilinçli olarak işlendi:
 
-| Şablon varsayımı | K.AIFY gerçeği **[Tespit]** |
+| Şablon varsayımı | Kaify Ai gerçeği **[Tespit]** |
 |---|---|
 | App Store / Play IAP ve %15–30 mağaza komisyonu | **IAP yok.** ADR 019: native uygulama tüketim-only; abonelik **Paddle Merchant of Record** ile yalnızca sitede (`kaifyai.org/pricing`). |
 | Ücretsiz deneme + mağaza içi paywall | Kodda **satın almadan otomatik Essential yok**; kotasız / unpaid tier reddedilir. Native’de kayıt ve fiyat CTA yok. |
@@ -30,7 +30,7 @@ Paddle kamu fiyatı: **%5 + 0,50 USD / başarılı checkout** ([paddle.com/prici
 
 ### Tek cümlelik tanım **[Tespit]**
 
-K.AIFY, web (Next.js 15 / Vercel) ve Capacitor iOS/Android kabuğu üzerinden çalışan, dört kişilik AI koç ekibi (Alex, Dr. Maya, Leo, Kai) ile antrenman, beslenme fotoğraf analizi, fizik/duruş taraması, gamification ve abonelik sunan bir AI fitness koçudur. Üretim: `https://kaifyai.org`.
+Kaify Ai, web (Next.js 15 / Vercel) ve Capacitor iOS/Android kabuğu üzerinden çalışan, dört kişilik AI koç ekibi (Alex, Dr. Maya, Leo, Kai) ile antrenman, beslenme fotoğraf analizi, fizik/duruş taraması, gamification ve abonelik sunan bir AI fitness koçudur. Üretim: `https://kaifyai.org`.
 
 ### Çözdüğü problem **[Tespit]**
 
@@ -146,9 +146,9 @@ Yöntem: yukarıdaki pazar aralıklarından daraltma; indirme uydurulmadı.
 | MyFitnessPal Premium | ~19,99 / 79,99 USD | aynı |
 | Noom | ~70 / 209 USD | aynı |
 | Future (insan koç) | ~149–199 USD/ay | aynı |
-| **K.AIFY** | **14,99 / 24,99 / 34,99 USD**; yıllık ×11 | kod `lib/marketing/pricing-plans.ts` |
+| **Kaify Ai** | **14,99 / 24,99 / 34,99 USD**; yıllık ×11 | kod `lib/marketing/pricing-plans.ts` |
 
-K.AIFY Essential, fotoğraflı AI tarayıcıların aylık fiyatına yakın; Pro/Premium Cal AI yıllık etkin fiyatının **çok üstünde**. Yıllık indirim yalnızca **%8,3** — kategoride %40–70 yıllık indirim yaygın **[Benchmark]**.
+Kaify Ai Essential, fotoğraflı AI tarayıcıların aylık fiyatına yakın; Pro/Premium Cal AI yıllık etkin fiyatının **çok üstünde**. Yıllık indirim yalnızca **%8,3** — kategoride %40–70 yıllık indirim yaygın **[Benchmark]**.
 
 ### Abonelik hunisi **[Benchmark]**
 
@@ -158,13 +158,13 @@ K.AIFY Essential, fotoğraflı AI tarayıcıların aylık fiyatına yakın; Pro/
 - Health & Fitness deneme→ödeme medyan **%37,7**.
 - Kategori yıllık plan payı **%68**.
 - AI uygulamaları ödeyen başına **+%41 gelir**, **%30 daha hızlı churn**.
-- H&F Y1 RLTV medyan **~35,64 USD/ödeyen** (IAP ağırlıklı, düşük fiyatlı yıllık planlar dahil — K.AIFY ASP’si daha yüksek, karşılaştırma dikkatli).
+- H&F Y1 RLTV medyan **~35,64 USD/ödeyen** (IAP ağırlıklı, düşük fiyatlı yıllık planlar dahil — Kaify Ai ASP’si daha yüksek, karşılaştırma dikkatli).
 - Küresel D35 medyan ~%2 civarı (NA %2,6).
-- Web-to-app “artık ana akım” (Noom örneği) — K.AIFY’nin Paddle web checkout’u kategori trendine **uygun**, native IAP’sizliğe **kısmen** gerekçe.
+- Web-to-app “artık ana akım” (Noom örneği) — Kaify Ai’nin Paddle web checkout’u kategori trendine **uygun**, native IAP’sizliğe **kısmen** gerekçe.
 
 [Mirava trial benchmarks 2026](https://www.mirava.io/blog/free-trial-conversion-benchmarks-2026): freemium ~%2,6; H&F deneme %35–39,9.
 
-**K.AIFY uyarlaması [Varsayım]:** Native’de checkout yok + deneme yok + 15 USD giriş fiyatı → D35 benzeri indirme→ödeme **kategori hard-paywall medyanının altında** modellendi: Kötü %1,5 / İyi %3,5 / Harika %6,5.
+**Kaify Ai uyarlaması [Varsayım]:** Native’de checkout yok + deneme yok + 15 USD giriş fiyatı → D35 benzeri indirme→ödeme **kategori hard-paywall medyanının altında** modellendi: Kötü %1,5 / İyi %3,5 / Harika %6,5.
 
 ### Churn, CAC, CPI **[Benchmark]**
 
@@ -175,14 +175,14 @@ K.AIFY Essential, fotoğraflı AI tarayıcıların aylık fiyatına yakın; Pro/
 
 ### Mağaza komisyonu vs Paddle
 
-| | Apple/Google IAP | K.AIFY Paddle |
+| | Apple/Google IAP | Kaify Ai Paddle |
 |---|---|---|
 | Komisyon | %30 (küçük iş %15, eşikler var) | %5 + 0,50 USD |
 | KDV | Geliştirici veya mağaza; karmaşık | MoR Paddle |
 | 16,49 USD işlem | ~2,47–4,95 USD kesinti | ~1,32 USD |
 | Dönüşüm | In-app yüksek | Web’e çıkış **düşük** |
 
-K.AIFY için asıl vergi etkisi: müşteri ülkesinde KDV checkout’ta eklenir, **ciroya satıcı payı olarak yazılmaz**. Kurumlar vergisi (TR’de kâr üzerinden, modelde **%25 [Varsayım]**) faaliyet kârı pozitifse uygulanır. KVKK VERBİS maliyeti ayrı (legal tracker).
+Kaify Ai için asıl vergi etkisi: müşteri ülkesinde KDV checkout’ta eklenir, **ciroya satıcı payı olarak yazılmaz**. Kurumlar vergisi (TR’de kâr üzerinden, modelde **%25 [Varsayım]**) faaliyet kârı pozitifse uygulanır. KVKK VERBİS maliyeti ayrı (legal tracker).
 
 ### Trend / fırsat / risk
 
@@ -283,7 +283,7 @@ En şişen kalem: **AI API**, sonra destek, sonra DB compute. 100k MAU’da kodd
 
 ## 5. Gelir modeli önerisi
 
-| Model | K.AIFY’ye uyum | Risk | Beklenen gelir |
+| Model | Kaify Ai’ye uyum | Risk | Beklenen gelir |
 |---|---|---|---|
 | Abonelik (mevcut) | Yüksek | Churn, fiyat | Ana ciro |
 | Freemium | Liderlik/sosyal için yarar; dönüşüm düşer (RC %2,1) | AI maliyeti bedava kullanıcıda | Düşük ARPU |

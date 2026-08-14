@@ -2,7 +2,7 @@
 
 Last updated: 2026-07-05 · Architecture Faz 4
 
-Welcome to Kaify. This guide gets you from clone to first PR in under an hour.
+Welcome to Kaify Ai. This guide gets you from clone to first PR in under an hour.
 
 ## Prerequisites
 

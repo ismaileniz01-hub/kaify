@@ -1,4 +1,4 @@
-# Kaify Subprocessors (Compliance Faz 1)
+# Kaify Ai Subprocessors (Compliance Faz 1)
 
 Last updated: 2026-07-05
 

@@ -1,4 +1,4 @@
-/* K.AIFY service worker — Web Push notifications. */
+/* Kaify Ai service worker — Web Push notifications. */
 
 /* Keep in sync with lib/security/safe-notification-url.ts */
 var SAFE_NOTIFICATION_FALLBACK = "/welcome";
@@ -53,10 +53,10 @@ self.addEventListener("push", (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch {
-    payload = { title: "K.AIFY", body: event.data ? event.data.text() : "" };
+    payload = { title: "Kaify Ai", body: event.data ? event.data.text() : "" };
   }
 
-  const title = payload.title || "K.AIFY";
+  const title = payload.title || "Kaify Ai";
   const options = {
     body: payload.body || "",
     icon: payload.icon || "/kai-mascot-v2.png",

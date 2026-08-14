@@ -1,5 +1,5 @@
 /**
- * Canonical production URL for Kaify (web + Capacitor remote shell).
+ * Canonical production URL for Kaify Ai (web + Capacitor remote shell).
  * Override with NEXT_PUBLIC_APP_URL / CAPACITOR_SERVER_URL per environment.
  */
 export const CANONICAL_APP_URL = "https://kaifyai.org";
@@ -20,7 +20,7 @@ export function resolveAppUrl(): string {
   return (fromEnv ?? CANONICAL_APP_URL).replace(TRAILING_SLASH, "");
 }
 
-/** Hostnames treated as first-party Kaify origins (API CSRF, deep links). */
+/** Hostnames treated as first-party Kaify Ai origins (API CSRF, deep links). */
 export const APP_HOSTNAMES = [
   "kaifyai.org",
   "www.kaifyai.org",

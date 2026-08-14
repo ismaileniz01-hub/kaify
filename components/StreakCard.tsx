@@ -141,7 +141,7 @@ export function StreakCard({ open, streak, kaiLevel, onClose }: StreakCardProps)
       if (navigator.share) {
         const file = new File([blob], `kaify-streak-${streak}.png`, { type: "image/png" });
         await navigator.share({
-          title: `Kaify - ${streak} Day Streak!`,
+          title: `Kaify Ai - ${streak} Day Streak!`,
           files: [file],
         });
       } else {
@@ -193,8 +193,8 @@ export function StreakCard({ open, streak, kaiLevel, onClose }: StreakCardProps)
           {/* Üst kısım */}
           <div className="absolute top-8 left-6 right-6 flex items-start justify-between z-10">
             <div className="flex items-center gap-3">
-              <Image src="/kaify-logo.png" alt="Kaify" width={36} height={36} className="rounded-xl" style={{ filter: `drop-shadow(0 0 12px ${theme.glow})` }} />
-              <span className="text-2xl font-black text-white tracking-wide" style={{ textShadow: `0 0 30px ${theme.glow}, 0 0 60px ${theme.glowIntense}` }}>KAIFY</span>
+              <Image src="/kaify-logo.png" alt="Kaify Ai" width={36} height={36} className="rounded-xl" style={{ filter: `drop-shadow(0 0 12px ${theme.glow})` }} />
+              <span className="text-2xl font-black text-white tracking-wide" style={{ textShadow: `0 0 30px ${theme.glow}, 0 0 60px ${theme.glowIntense}` }}>Kaify Ai</span>
             </div>
             <div className="px-4 py-1.5 rounded-full text-sm font-bold bg-white/15 text-white ring-1" style={{ border: `1px solid ${theme.flameColor2}50`, boxShadow: `0 0 15px ${theme.flameColor2}30` }}>
               Lv.{kaiLevel}
@@ -264,10 +264,10 @@ export function StreakCard({ open, streak, kaiLevel, onClose }: StreakCardProps)
             </p>
           </div>
 
-          {/* KAIFY logosu */}
+          {/* Kaify Ai logosu */}
           <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10">
             <span className="text-3xl font-black tracking-wider" style={{ background: "linear-gradient(135deg, #c084fc, #a855f7, #7c3aed)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", filter: "drop-shadow(0 0 20px rgba(168,85,247,0.5))" }}>
-              KAIFY
+              Kaify Ai
             </span>
           </div>
         </div>

@@ -3,7 +3,7 @@ import { getPaddleServerClient, isPaddleServerConfigured } from "@/lib/billing/p
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 /**
- * Mint a Paddle-hosted customer portal session for the signed-in Kaify user.
+ * Mint a Paddle-hosted customer portal session for the signed-in Kaify Ai user.
  * Customer ID is resolved server-side from mirrored webhook state — never from the client.
  */
 export async function createCustomerPortalUrl(userId: string): Promise<string> {

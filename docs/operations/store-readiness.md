@@ -40,7 +40,7 @@ signing SHA-256 replace the checked-in placeholders.
 5. Successful website checkout offers `kaify://login` to return to the installed app.
 6. Native navigations to `/signup` or `/pricing` are redirected to `/login`.
 
-This is a consumption-only app policy. K.AIFY is not submitted as an Apple
+This is a consumption-only app policy. Kaify Ai is not submitted as an Apple
 reader app, and no reader-app external-link entitlement is claimed.
 
 ## Permissions

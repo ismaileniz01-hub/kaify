@@ -3,8 +3,8 @@ import { TermsOfServiceContent } from "@/components/legal/TermsOfServiceContent"
 import { publicPageMetadata } from "@/lib/seo/metadata";
 
 export const metadata = publicPageMetadata({
-  title: "Terms & Conditions — K.AIFY",
-  description: "Terms governing use of the Kaify AI fitness coaching application.",
+  title: "Terms & Conditions — Kaify Ai",
+  description: "Terms governing use of the Kaify Ai AI fitness coaching application.",
   path: "/terms",
 });
 

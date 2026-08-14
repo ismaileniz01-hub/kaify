@@ -1,4 +1,4 @@
-# Kaify Enterprise Scorecard
+# Kaify Ai Enterprise Scorecard
 
 Last updated: 2026-07-05
 

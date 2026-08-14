@@ -27,7 +27,7 @@ const prefixes = [
   "error.global.",
 ];
 const exact = new Set(["common.loading", "common.retry", "nav.home", "nav.settings"]);
-const allow = new Set(["K.AIFY", "Kai", "Market", "Freezie", "Paddle"]);
+const allow = new Set(["Kaify Ai", "Kai", "Market", "Freezie", "Paddle"]);
 
 function keep(v) {
   const t = v.trim();

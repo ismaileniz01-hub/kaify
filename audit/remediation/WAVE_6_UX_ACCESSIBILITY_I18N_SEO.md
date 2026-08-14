@@ -51,10 +51,10 @@ Referral `?ref=` / UTM: metadata canonical is path-only; welcome is not indexabl
 
 | Page | title | description | OG | Twitter | image | JSON-LD |
 |------|-------|-------------|----|---------|-------|---------|
-| `/` | K.AIFY — Your Personal Coach Team | Four expert coaches… $14.99/month | yes | summary_large_image | `/opengraph-image` 1200×630 | Organization, WebSite, SoftwareApplication + Offer 14.99 USD (no ratings) |
-| `/pricing` | Pricing — K.AIFY | Choose Essential, Pro, or Premium… | yes | yes | same | inherit page metadata |
+| `/` | Kaify Ai — Your Personal Coach Team | Four expert coaches… $14.99/month | yes | summary_large_image | `/opengraph-image` 1200×630 | Organization, WebSite, SoftwareApplication + Offer 14.99 USD (no ratings) |
+| `/pricing` | Pricing — Kaify Ai | Choose Essential, Pro, or Premium… | yes | yes | same | inherit page metadata |
 | Legal | unique per document | meaningful | yes | yes | same | none extra |
-| `/login` | Sign in — K.AIFY | noindex | yes | yes | same | none |
+| `/login` | Sign in — Kaify Ai | noindex | yes | yes | same | none |
 
 `metadataBase` = `https://kaifyai.org` (`seoCanonicalOrigin()` rejects vercel.app / localhost).
 

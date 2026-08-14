@@ -1,4 +1,4 @@
-# Kaify Reliability (Güvenilirlik)
+# Kaify Ai Reliability (Güvenilirlik)
 
 Last updated: 2026-07-05 · Score target track: **52 → 65 → 75 → 85 → 92+**
 

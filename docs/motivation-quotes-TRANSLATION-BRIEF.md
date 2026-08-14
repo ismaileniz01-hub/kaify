@@ -1,4 +1,4 @@
-# Kaify — Günlük Motivasyon Sözleri Çeviri Rehberi
+# Kaify Ai — Günlük Motivasyon Sözleri Çeviri Rehberi
 
 **Toplam:** 107 söz  
 **Kaynak dil:** İngilizce (`en`) — hazır  

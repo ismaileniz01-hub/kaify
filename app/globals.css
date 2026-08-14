@@ -3222,7 +3222,7 @@ html:not([data-theme="light"]) .text-zinc-600 {
   100% { transform: translateY(-500px) translateX(20px) scale(0.5); opacity: 0; }
 }
 
-/* YENİ: KAIFY logosu parıltısı */
+/* YENİ: Kaify Ai logosu parıltısı */
 @keyframes streakKaifyGlow {
   0%, 100% { filter: drop-shadow(0 0 15px rgba(168,85,247,0.5)) drop-shadow(0 0 30px rgba(168,85,247,0.3)); }
   50% { filter: drop-shadow(0 0 25px rgba(168,85,247,0.7)) drop-shadow(0 0 50px rgba(168,85,247,0.4)); }

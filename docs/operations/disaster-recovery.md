@@ -1,4 +1,4 @@
-# Disaster Recovery & Backup — Kaify
+# Disaster Recovery & Backup — Kaify Ai
 
 Last updated: 2026-07-06 · Owner: Engineering / Ops
 

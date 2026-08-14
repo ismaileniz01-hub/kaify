@@ -5,8 +5,8 @@ import { PRIVACY_VERSION } from "@/lib/legal/constants";
 import { publicPageMetadata } from "@/lib/seo/metadata";
 
 export const metadata = publicPageMetadata({
-  title: "Privacy Policy — K.AIFY",
-  description: "How Kaify collects, uses, and protects your personal data.",
+  title: "Privacy Policy — Kaify Ai",
+  description: "How Kaify Ai collects, uses, and protects your personal data.",
   path: "/privacy",
 });
 

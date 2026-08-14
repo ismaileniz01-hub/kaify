@@ -11,7 +11,7 @@ export const TERMS_DOCUMENT: LegalDocument = {
   title: "Terms of Service",
   subtitle: `Last updated: July 05, 2026 · Version ${TERMS_VERSION}`,
   intro:
-    'These Terms of Service ("Terms") govern your use of Kaify. By creating an account you agree to these Terms and our Privacy Policy.',
+    'These Terms of Service ("Terms") govern your use of Kaify Ai. By creating an account you agree to these Terms and our Privacy Policy.',
   sections: [
     {
       id: "services",
@@ -19,7 +19,7 @@ export const TERMS_DOCUMENT: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: `${LEGAL_ENTITY} operates Kaify (${LEGAL_URL}), an AI-assisted fitness coaching application with virtual coaches, streaks, analytics, and optional photo analysis. We may modify, suspend, or discontinue features with reasonable notice where required by law.`,
+          text: `${LEGAL_ENTITY} operates Kaify Ai (${LEGAL_URL}), an AI-assisted fitness coaching application with virtual coaches, streaks, analytics, and optional photo analysis. We may modify, suspend, or discontinue features with reasonable notice where required by law.`,
         },
       ],
     },
@@ -29,7 +29,7 @@ export const TERMS_DOCUMENT: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Kaify is not a medical device and does not provide medical, nutritional, physiotherapy, or emergency services. AI outputs may be incomplete or incorrect. You must consult a qualified professional before changing diet, exercise, or treatment. Do not use Kaify for emergencies — call local emergency services (112 / 911).",
+          text: "Kaify Ai is not a medical device and does not provide medical, nutritional, physiotherapy, or emergency services. AI outputs may be incomplete or incorrect. You must consult a qualified professional before changing diet, exercise, or treatment. Do not use Kaify Ai for emergencies — call local emergency services (112 / 911).",
         },
         {
           type: "p",

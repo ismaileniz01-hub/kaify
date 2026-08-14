@@ -61,7 +61,7 @@ export function PlanSavingsCard({ plan, interval }: Props) {
             </span>
             <div>
               <p className="pricing-savings-card__winner-name">
-                K.AIFY {t(`pricing.plan.${plan.id}.name`)}
+                Kaify Ai {t(`pricing.plan.${plan.id}.name`)}
               </p>
               <p className="pricing-savings-card__winner-sub">
                 {t("pricing.savings.all_in_one")}

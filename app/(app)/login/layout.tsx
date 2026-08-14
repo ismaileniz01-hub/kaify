@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { publicPageMetadata } from "@/lib/seo/metadata";
 
 export const metadata = publicPageMetadata({
-  title: "Sign in — K.AIFY",
-  description: "Sign in to K.AIFY with an email code. Your coaching team is waiting.",
+  title: "Sign in — Kaify Ai",
+  description: "Sign in to Kaify Ai with an email code. Your coaching team is waiting.",
   path: "/login",
   index: false,
 });

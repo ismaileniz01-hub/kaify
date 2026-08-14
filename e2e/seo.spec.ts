@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 const INDEXABLE = [
   {
     path: "/",
-    title: /K\.AIFY/i,
+    title: /Kaify Ai/i,
     description: /coach/i,
     canonical: /https:\/\/kaifyai\.org\/?$/,
     jsonLd: true,

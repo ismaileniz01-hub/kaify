@@ -56,7 +56,7 @@ function resolveMutationIdempotencyKey(
   return createIdempotencyKey();
 }
 
-/** Typed fetch wrapper for Kaify API routes (cookie session). Soft-retries GETs. */
+/** Typed fetch wrapper for Kaify Ai API routes (cookie session). Soft-retries GETs. */
 export async function apiFetch<T>(
   path: string,
   init?: RequestInit,

@@ -121,7 +121,7 @@ export const PRICING_PLANS: PricingPlan[] = [
       "Deepest coach memory",
       "Fastest priority responses",
       "VIP support priority",
-      "Full K.AIFY experience",
+      "Full Kaify Ai experience",
     ],
   },
 ];

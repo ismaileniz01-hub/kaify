@@ -7,7 +7,7 @@ Last updated: 2026-07-05 · Compliance Faz 4
 
 ## 1. Scope
 
-Personal data breach = confidentiality, integrity, or availability loss affecting Kaify user data (Supabase, auth, chat, health metrics, billing metadata, etc.).
+Personal data breach = confidentiality, integrity, or availability loss affecting Kaify Ai user data (Supabase, auth, chat, health metrics, billing metadata, etc.).
 
 **Contacts:**
 - **Incident lead:** privacy@kaifyai.org
@@ -87,7 +87,7 @@ Contact for DPO/privacy: privacy@kaifyai.org
 ### 6b. User notification (high-risk breach)
 
 ```
-Subject: Important security notice about your Kaify account
+Subject: Important security notice about your Kaify Ai account
 
 We detected [INCIDENT SUMMARY] on [DATE].
 

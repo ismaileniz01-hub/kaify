@@ -3,7 +3,7 @@ import { MarketingJsonLd } from "@/components/seo/MarketingJsonLd";
 import { publicPageMetadata } from "@/lib/seo/metadata";
 
 export const metadata = publicPageMetadata({
-  title: "K.AIFY — Your Personal Coach Team",
+  title: "Kaify Ai — Your Personal Coach Team",
   description:
     "Four expert coaches, smart analytics, and Kai your dragon companion. Plans from $14.99/month.",
   path: "/",

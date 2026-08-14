@@ -1,15 +1,15 @@
-# KAIFY — PRINCIPAL-LEVEL PRE-LAUNCH PRODUCT AUDIT
+# Kaify Ai — PRINCIPAL-LEVEL PRE-LAUNCH PRODUCT AUDIT
 
 **Audit date:** 2026-08-11
 **Auditor role:** Principal engineer / product reviewer (security, performance, reliability, UX, accessibility, AI systems)
-**Scope:** The Kaify application as it exists in this repository at HEAD. No production data was read or modified.
+**Scope:** The Kaify Ai application as it exists in this repository at HEAD. No production data was read or modified.
 **Method:** Static review of ~44,600 LOC across 498 source files, plus executed tooling — full Vitest suite with coverage, `npm audit`, bundle-budget gate against the existing production build, migration/RLS static analysis, WCAG contrast computation, locale-corpus diffing, and targeted reproduction scripts for cache-key and i18n defects.
 
 ---
 
 ## EXECUTIVE VERDICT
 
-Kaify is a **well-architected, security-conscious application built by someone who clearly knows what they are doing** — and it is **not yet ready to charge money to real users**.
+Kaify Ai is a **well-architected, security-conscious application built by someone who clearly knows what they are doing** — and it is **not yet ready to charge money to real users**.
 
 The engineering foundations are genuinely strong, and unusually so for a pre-launch product. Row-level security is enabled on all 44 tables. All 43 `SECURITY DEFINER` functions pin `search_path`, closing the single most common Supabase privilege-escalation hole. CSRF uses HMAC-signed double-submit cookies with strict SameSite. CSP is nonce-based. Every API route goes through one wrapper that declaratively enforces auth, MFA, rate limits, consent, and AI budget. Paddle webhooks verify signatures and use a claim/finalize/release idempotency protocol. Images are re-encoded through `sharp` to strip metadata. CI runs lint, typecheck, tests, build, a bundle budget, Lighthouse, Playwright, k6 load smoke, `npm audit`, and Gitleaks. There are zero `TODO`/`FIXME`/`HACK` markers in production source. This is the top decile of pre-launch hygiene.
 
@@ -292,7 +292,7 @@ Beyond that: there is a skip link, `#main-content` is asserted in E2E, the toast
 
 ### Confirmed defects
 
-**The core product interaction is silent to screen readers.** The chat message list in `LiveChatPanel.tsx` has no `aria-live` region and no `role="log"`. AI replies stream in token by token with zero announcement. The typing indicator is three unlabeled `<span class="typing-dot">` elements, so there is no "Kai is typing" signal either. Messages are nested `<div>`s without list semantics, and nothing in the accessible name distinguishes the user's messages from the coach's. A blind user can send a message into Kaify and receive no indication that anything happened. Only four files in the entire codebase use `aria-live`, and none of them is the chat. *(A11Y-001)*
+**The core product interaction is silent to screen readers.** The chat message list in `LiveChatPanel.tsx` has no `aria-live` region and no `role="log"`. AI replies stream in token by token with zero announcement. The typing indicator is three unlabeled `<span class="typing-dot">` elements, so there is no "Kai is typing" signal either. Messages are nested `<div>`s without list semantics, and nothing in the accessible name distinguishes the user's messages from the coach's. A blind user can send a message into Kaify Ai and receive no indication that anything happened. Only four files in the entire codebase use `aria-live`, and none of them is the chat. *(A11Y-001)*
 
 **Two heavily-used text colors fail WCAG AA.** Computed against the base surface `--kaify-black: #0a0a0a`:
 
@@ -525,7 +525,7 @@ Avoidable recurring cost, roughly in order of size: **unmetered secondary model 
 
 ## 16. SEO & Web Quality — 55/100 · Confidence HIGH · Evidence STATIC
 
-**Confirmed gaps.** There is **no `robots.txt`** — neither `app/robots.ts` nor `public/robots.txt` — and **no `sitemap.xml`**. Crawlers receive no directives at all, and the authenticated `/(app)` routes have no `Disallow`. There is **no OpenGraph or Twitter card metadata** anywhere except a single reference in the pricing page, so every shared Kaify link renders as a bare URL with no image or title card. For a product with a built-in referral system, that is a growth defect, not a cosmetic one. There are no canonical URLs or `hreflang` alternates despite 54 locales, creating duplicate-content ambiguity. `public/index.html` is a stray Capacitor fallback sitting in the web root where it can conflict with routing. And because `generateMetadata` reads cookies (PERF-004), the marketing pages that most need CDN caching are dynamically rendered.
+**Confirmed gaps.** There is **no `robots.txt`** — neither `app/robots.ts` nor `public/robots.txt` — and **no `sitemap.xml`**. Crawlers receive no directives at all, and the authenticated `/(app)` routes have no `Disallow`. There is **no OpenGraph or Twitter card metadata** anywhere except a single reference in the pricing page, so every shared Kaify Ai link renders as a bare URL with no image or title card. For a product with a built-in referral system, that is a growth defect, not a cosmetic one. There are no canonical URLs or `hreflang` alternates despite 54 locales, creating duplicate-content ambiguity. `public/index.html` is a stray Capacitor fallback sitting in the web root where it can conflict with routing. And because `generateMetadata` reads cookies (PERF-004), the marketing pages that most need CDN caching are dynamically rendered.
 
 **Recommendations.** Add `app/robots.ts` and `app/sitemap.ts`, add OpenGraph and Twitter metadata with a generated share image to the root layout, add canonical and `hreflang` alternates, remove or relocate `public/index.html`, and move cookie access out of `generateMetadata`.
 
@@ -578,7 +578,7 @@ Severity P1 · Security · Confidence HIGH · Evidence STATIC
 **Reproduction:** Inspect the `notificationclick` handler; it reads a URL from the push payload and passes it to navigation without origin validation.
 **Expected:** Only same-origin URLs are opened.
 **Actual:** Any absolute URL in the payload is opened from a trusted-looking app notification.
-**Risk:** Phishing and open redirect. A compromised or spoofed payload sends users to an attacker-controlled login page that appears to come from Kaify.
+**Risk:** Phishing and open redirect. A compromised or spoofed payload sends users to an attacker-controlled login page that appears to come from Kaify Ai.
 **Root cause:** Missing allowlist on a value that crosses a trust boundary.
 **Fix:** Parse the URL and compare `origin` against `self.location.origin`; fall back to the app root on mismatch.
 **Effort:** XS · **Regression test:** Unit test the URL resolver with same-origin, cross-origin, protocol-relative, and `javascript:` inputs. · **Blocks release: YES**

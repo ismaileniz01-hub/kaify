@@ -39,7 +39,7 @@ function translationRatio(en: Record<string, string>, locale: Record<string, str
     }
     // Brand / short tokens may legitimately match English.
     if (
-      ["K.AIFY", "Kai", "Market", "Freezie", "Paddle", "Coaching"].includes(enVal) ||
+      ["Kaify Ai", "Kai", "Market", "Freezie", "Paddle", "Coaching"].includes(enVal) ||
       /^[A-Z0-9+._\-/]{1,12}$/.test(enVal)
     ) {
       translated += 1;
@@ -196,7 +196,7 @@ describe("EN/TR localization quality", () => {
         const enVal = (en[key] ?? "").trim();
         if (dict[key] !== en[key]) return false;
         if (
-          ["K.AIFY", "Kai", "Market", "Freezie", "Paddle", "Coaching"].includes(
+          ["Kaify Ai", "Kai", "Market", "Freezie", "Paddle", "Coaching"].includes(
             enVal,
           )
         ) {

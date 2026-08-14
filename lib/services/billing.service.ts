@@ -496,7 +496,7 @@ async function upsertPaddleCustomer(
       .maybeSingle();
 
     if (byUser && byUser.customer_id !== customerId) {
-      // Same Kaify user, new Paddle customer (re-checkout) — rebind.
+      // Same Kaify Ai user, new Paddle customer (re-checkout) — rebind.
       const { error } = await admin
         .from("paddle_customers")
         .update({

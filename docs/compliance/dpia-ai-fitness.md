@@ -4,7 +4,7 @@ Last updated: 2026-07-05 · **Draft for internal review**
 
 ## 1. Processing description
 
-Kaify uses third-party LLMs (Google Gemini, DeepSeek) to provide AI coaching, meal/workout suggestions, and optional body/food photo analysis. Users may enter health-adjacent data (weight, injuries, steps, photos).
+Kaify Ai uses third-party LLMs (Google Gemini, DeepSeek) to provide AI coaching, meal/workout suggestions, and optional body/food photo analysis. Users may enter health-adjacent data (weight, injuries, steps, photos).
 
 ## 2. Necessity & proportionality
 

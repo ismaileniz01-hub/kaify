@@ -101,7 +101,7 @@ describe("SEO contract", () => {
   it("root metadata includes Open Graph and Twitter cards", () => {
     const meta = rootMetadata();
     expect(meta.metadataBase?.toString()).toBe("https://kaifyai.org/");
-    expect(meta.openGraph?.siteName).toBe("K.AIFY");
+    expect(meta.openGraph?.siteName).toBe("Kaify Ai");
     const ogImages = meta.openGraph?.images;
     const firstOg = Array.isArray(ogImages) ? ogImages[0] : ogImages;
     expect(firstOg && typeof firstOg === "object" && "url" in firstOg ? firstOg.url : firstOg).toBe(

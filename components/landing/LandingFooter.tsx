@@ -13,13 +13,13 @@ export function LandingFooter() {
         <div className="flex items-center gap-3">
           <Image
             src="/kaify-logo.png"
-            alt="K.AIFY"
+            alt="Kaify Ai"
             width={36}
             height={36}
             className="h-9 w-9 rounded-lg object-cover"
           />
           <span className="text-sm font-semibold tracking-[0.1em] text-zinc-400">
-            K.AIFY © 2026
+            Kaify Ai © 2026
           </span>
         </div>
 

@@ -75,7 +75,7 @@ const GTX_TARGET = {
 };
 
 const ALLOW_IDENTICAL = new Set([
-  "K.AIFY",
+  "Kaify Ai",
   "Kai",
   "Alex",
   "Maya",

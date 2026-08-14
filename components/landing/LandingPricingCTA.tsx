@@ -65,7 +65,7 @@ export function LandingPricingCTA() {
 
             <Image
               src="/kaify-logo.png"
-              alt="K.AIFY"
+              alt="Kaify Ai"
               width={72}
               height={72}
               className="mx-auto h-[72px] w-[72px] rounded-2xl object-cover shadow-[0_0_48px_rgba(168,85,247,0.5)]"

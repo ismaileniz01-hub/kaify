@@ -275,7 +275,7 @@ export function useSpeechRecognition(
         popup: false,
         addPunctuation: true,
         allowForSilence: SPEECH_SILENCE_CLOSE_MS,
-        contextualStrings: ["Kaify", "K.AIFY", "freezie", "streak"],
+        contextualStrings: ["Kaify Ai", "freezie", "streak"],
       });
 
       setIsListening(true);

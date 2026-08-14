@@ -3,8 +3,8 @@ import { CookiePolicyContent } from "@/components/legal/CookiePolicyContent";
 import { publicPageMetadata } from "@/lib/seo/metadata";
 
 export const metadata = publicPageMetadata({
-  title: "Cookie Policy — K.AIFY",
-  description: "How Kaify uses essential and optional cookies on the website and app.",
+  title: "Cookie Policy — Kaify Ai",
+  description: "How Kaify Ai uses essential and optional cookies on the website and app.",
   path: "/cookies",
 });
 

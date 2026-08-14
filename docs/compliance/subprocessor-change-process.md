@@ -6,7 +6,7 @@ Last updated: 2026-07-05 · Compliance Faz 4 (H7)
 
 ## When to use
 
-Add, remove, or materially change a subprocessor that processes personal data on Kaify's behalf.
+Add, remove, or materially change a subprocessor that processes personal data on Kaify Ai's behalf.
 
 ---
 

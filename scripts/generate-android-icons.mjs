@@ -1,5 +1,5 @@
 /**
- * Generates Android launcher + notification icons from the K.AIFY logo.
+ * Generates Android launcher + notification icons from the Kaify Ai logo.
  * Run: node scripts/generate-android-icons.mjs
  */
 import sharp from "sharp";

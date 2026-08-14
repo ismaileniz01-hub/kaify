@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "K.AIFY — Your Personal Coach Team";
+export const alt = "Kaify Ai — Your Personal Coach Team";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -27,7 +27,7 @@ export default function OpenGraphImage() {
             fontWeight: 600,
           }}
         >
-          K.AIFY
+          Kaify Ai
         </div>
         <div
           style={{

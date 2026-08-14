@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { seoAbsoluteUrl, seoCanonicalOrigin } from "@/lib/seo/origin";
 
-const SITE_NAME = "K.AIFY";
+const SITE_NAME = "Kaify Ai";
 
-export const DEFAULT_SEO_TITLE = "K.AIFY — Your Personal Coach Team";
+export const DEFAULT_SEO_TITLE = "Kaify Ai — Your Personal Coach Team";
 export const DEFAULT_SEO_DESCRIPTION =
   "Four expert coaches, smart analytics, and Kai your dragon companion. Plans from $14.99/month.";
 

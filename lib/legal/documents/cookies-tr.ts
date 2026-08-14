@@ -8,7 +8,7 @@ export const COOKIES_DOCUMENT_TR: LegalDocument = {
     {
       id: "overview",
       title: "1. Genel Bakış",
-      blocks: [{ type: "p", text: `Bu Çerez Politikası, Kaify'ın (${LEGAL_URL}) çerezleri ve benzer teknolojileri nasıl kullandığını açıklar. Çerez bildiriminde Kabul Et'e bastığınızda isteğe bağlı analiz çerezleri etkinleştirilebilir. İsteğe bağlıları reddetmek yalnızca zorunlu çerezleri korur.` }],
+      blocks: [{ type: "p", text: `Bu Çerez Politikası, Kaify Ai'ın (${LEGAL_URL}) çerezleri ve benzer teknolojileri nasıl kullandığını açıklar. Çerez bildiriminde Kabul Et'e bastığınızda isteğe bağlı analiz çerezleri etkinleştirilebilir. İsteğe bağlıları reddetmek yalnızca zorunlu çerezleri korur.` }],
     },
     {
       id: "essential",

@@ -56,7 +56,7 @@ function LoginPageContent() {
                 />
                 <Image
                   src="/kaify-logo.png"
-                  alt="K.AIFY"
+                  alt="Kaify Ai"
                   width={220}
                   height={220}
                   className="relative h-44 w-44 object-contain drop-shadow-[0_12px_40px_rgba(0,0,0,0.35)] sm:h-48 sm:w-48"
