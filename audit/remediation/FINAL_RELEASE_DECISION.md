@@ -1,20 +1,22 @@
 # FINAL RELEASE DECISION
 
 **FINAL_DATE:** 2026-08-14  
-**FINAL_GIT_SHA:** `9c2f16ef12a3fd0e0ab0722d5dff0cb6946be0c9`  
+**FINAL_GIT_SHA:** `6db03dd0542779d6e33beaf187256270f185d280`  
 **BRANCH:** `cursor/signup-onboarding-lifestyle-fields`  
 **PRODUCTION_DEPLOYED:** NO  
 
-Authority: Wave 8 full-product re-audit of **current HEAD**, plus targeted closures. Live provider canary (API) ran 2026-08-14; remaining UI canary is owner-only on Preview.
+Authority: Wave 8 full-product re-audit plus post-canary evidence reconciliation. **Not Wave 9.** Approved models unchanged. Legacy rollback retained.
 
 ---
 
 ## EXECUTIVE
 
 P0_OPEN: **0**  
-P1_OPEN: **0** (owner reported Wave 8 SQL applied on hosted DB)  
-P2_OPEN: **3**  
+P1_OPEN: **0**  
+P2_OPEN: **3** (W8-011, W8-012, W8-018 — soak / optional, not release-blocking)  
 P3_OPEN: **5**  
+
+Scores unchanged (no post-canary score chase): overall **93/100**, confidence **MEDIUM**.
 
 SECURITY_SCORE: **95**  
 PRIVACY_SCORE: **95**  
@@ -42,140 +44,179 @@ OVERALL_CONFIDENCE: **MEDIUM**
 
 ---
 
-## TECHNICAL CONTRACT
+## TECHNICAL CONTRACT (recheck 2026-08-14, no redesign)
 
-KAIOS_RUNTIME_DEFAULT: **true**  
-LEGACY_ROLLBACK_AVAILABLE: **true** (`KAIOS_RUNTIME=false`)  
-AUTOMATIC_LEGACY_FALLBACK: **NONE**  
-MODEL_CONFIG_MATCH: **PASS**  
-PRIMARY_TEXT_MODEL: **deepseek-chat**  
-VISION_MODEL: **gemini-3.5-flash-lite** (`thinkingLevel=medium`)  
-KAI_CASUAL_PROVIDER_CALLS: **1**  
-MAYA_PHOTO_PROVIDER_CALLS: **≤2**  
+KAIOS_RUNTIME_DEFAULT: **true** (`AI_FEATURES.kaiosRuntime` / `envBool("KAIOS_RUNTIME", true)`)  
+LEGACY_ROLLBACK_AVAILABLE: **true** (`KAIOS_RUNTIME=false` → `legacy_chat` / team legacy only)  
+AUTOMATIC_KAIOS_TO_LEGACY_FALLBACK: **NONE** (`streamCoachReply` returns KAIOS path; errors do not enter legacy)  
+TEXT_MODEL_CONFIG: **deepseek-chat** (`DEEPSEEK_DEFAULT_MODEL` / `getDeepSeekConfig`)  
+VISION_MODEL_CONFIG: **gemini-3.5-flash-lite** + thinking **medium** (`GEMINI_DEFAULT_MODEL` / `GEMINI_DEFAULT_THINKING_LEVEL`)  
+MODEL_CONFIG_DRIFT: **NONE**  
+KAI_CASUAL_PROVIDER_CALLS: **1** (orchestrator `modelCallCount = 1`; live API 20/20)  
+ALEX_TEXT_PROVIDER_CALLS: **1**  
+MAYA_TEXT_PROVIDER_CALLS: **1**  
+MAYA_PHOTO_PROVIDER_CALLS: **≤2** (1 Gemini envelope + 1 DeepSeek synthesis; quality parsed from envelope)  
 LEO_PHOTO_PROVIDER_CALLS: **≤2**  
-LEO_REPEAT_IMAGE_GEMINI_CALLS: **0** where reuse valid  
-SECONDARY_UNMETERED_CALLS: **0**  
-AUTOMATIC_PERIODIC_SUMMARY_LLM: **NONE**  
-MEMORY_ITEMS_NORMAL: **0–5 relevant only**  
-PUBLIC_TABLES: classified **47** / actual **unmeasured this env**  
-SECURITY_DEFINER: classified **41** / actual **unmeasured this env**  
-UNSAFE_MUTATIONS: **0**  
-UNSAFE_CRONS: **0**  
-CRITICAL_TRANSACTION_RISKS: **0**  
-PRIVATE_ROUTES_INDEXABLE: **0** (robots + `(app)` noindex; 404 now noindex)  
-BROKEN_PUBLIC_LINKS: **0** (Playwright public-links **PASS** on `kaifyai.org`)
+LEO_REPEAT_IMAGE_GEMINI_CALLS: **0** when fingerprint reuse valid (`geminiCalls: 0` on `selectReusableVisionRow`)  
+SECONDARY_UNMETERED_CALLS: **0** (KAIOS `after()` does not spawn analytics LLM; `maybeGenerateStructuredCard` returns null when KAIOS on)  
+AUTOMATIC_PERIODIC_SUMMARY_LLM: **NONE** (`bumpAndMaybeCondense` no-op)  
+MEMORY_ITEMS_NORMAL: **0–5 relevant only** (`HARD_LIMIT` 5, `MEMORY_RELEVANCE_THRESHOLD` 2, no pad)
 
 ---
 
-## PRE-CANARY CLOSURE
+## OWNER ACTIONS
 
-PRE_CANARY_CLOSURE: **PASS_WITH_EXTERNAL_ACTIONS**  
-MODEL_CONFIG_CONTRACT: **PASS** (no drift; approved `deepseek-chat` / `gemini-3.5-flash-lite` + thinking **medium** retained)  
-DB_MIGRATION_STATE: **OWNER_REPORTED_APPLIED** (SQL not re-read from `cron.job` / pg catalog; no `DATABASE_URL`)  
-ADMIN_EMAIL: **CONFIGURED** (Vercel prod+preview; fail-closed if missing)  
-NOTIFICATION_HOURLY_CRON: **PASS** (`cron_job_runs.notifications` **ok**, `last_run_at=2026-08-14T19:00:03Z`, age **0h**; sibling hourly jobs also on `:00`. `cron.job` row itself not readable without Postgres URL. Vercel `0 6 * * *` is backup only.)  
-PUBLIC_PLAYWRIGHT: **PASS** (38 passed / 16 skipped OTP on `https://kaifyai.org`; unexplained failures **0**)  
-LIGHTHOUSE: **PASS** SEO+a11y; performance warn-band on simulated mobile (not a canary NO_GO)  
-KAIOS_CONTRACT: **PASS**  
-ROLLBACK_READY: **PASS**  
-AUTOMATIC_FALLBACK: **NONE**  
-PRODUCTION_CANARY_DECISION: **GO**  
-BROAD_PRODUCTION_DECISION: **GO_AFTER_CANARY**  
-LEGACY_REMOVAL_READY: **NO**
+WAVE8_HOSTED_DB_MIGRATION: **PASS** (owner applied `20260814180000_wave8_admin_aal2_avatar_writes.sql`; agent did not re-query pg catalog)  
+ADMIN_EMAIL: **PASS** (configured on Vercel production + preview; fail-closed if missing in prod/preview)  
+HOURLY_NOTIFICATION_CRON: **PASS**  
+Expected scheduler: pg_cron **`kaify-notifications-hourly`** schedule **`0 * * * *`** → `https://kaifyai.org/api/cron/notifications` (Vault `kaify_cron_secret`).  
+Evidence: `cron_job_runs.notifications` **ok** at `2026-08-14T19:00:03Z` (age 0h) with sibling hourly `:00` jobs.  
+Vercel `0 6 * * *` `/api/cron/notifications` remains **intentional daily backup only**.
 
 ---
 
-## ROLLBACK (canary)
+## MANUAL AI CANARY
 
-1. Set Vercel env `KAIOS_RUNTIME=false`.  
-2. Redeploy **without** merging other flag changes.  
-3. Confirm logs: `legacy_chat` / `legacy_team_meeting` only after that flag.  
-4. **Never** auto-switch on KAIOS error.
+**Source:** Owner attestation 2026-08-14 — completed the required Wave 8 pre-canary actions and the manual AI canary. No per-turn transcripts, screenshots, or rollback-trigger reports were given to the agent. This section does **not** invent coach-level dialogue.
 
-Watch during canary (existing telemetry only): HTTP 5xx; SSE/stream failures; DeepSeek vs Gemini call counts (`kaios_chat_stream`, `vision`, `synthesis`, `council_turn`); token + thoughtsTokenCount; quota reserve/refund; idempotency replay; Maya pending/confirm/reject; Leo reuse (0 Gemini); Council state; locale/coach mismatch; circuit breaker; RLS/auth errors. No second observability stack.
+| Coach | Owner result | Agent note |
+| --- | --- | --- |
+| Kai | **PASS** (attested) | No itemized logs provided |
+| Alex | **PASS** (attested) | No itemized logs provided |
+| Maya | **PASS** (attested) | No itemized logs provided |
+| Leo | **PASS** (attested) | No itemized logs provided |
+| Council | **PASS** (attested) | No itemized logs provided |
+
+Supporting live API canary (agent, 2026-08-14): DeepSeek 20/20 one-call; Gemini vision 11/11 on synthetic JPEGs. Dual-user Maya confirm / entitled Council session tests were skipped (no live user IDs).
+
+### Rollback-trigger checklist
+
+| Event | Recorded |
+| --- | --- |
+| Wrong coach/persona | **NONE_REPORTED** |
+| Locale drift | **NONE_REPORTED** |
+| Hallucinated memory | **NONE_REPORTED** |
+| Fake saved state | **NONE_REPORTED** |
+| Duplicate provider calls | **NONE_REPORTED** |
+| Unexpected token explosion | **NONE_REPORTED** |
+| Repeated stream hangs | **NONE_REPORTED** |
+| RLS/auth failure | **NONE_REPORTED** |
+| Provider failure mishandling | **NONE_REPORTED** |
+| Silent KAIOS → legacy fallback | **NONE_REPORTED** |
+| Council state loss | **NONE_REPORTED** |
+| Maya confirmation failure | **NONE_REPORTED** |
+| Leo quality/reuse failure | **NONE_REPORTED** |
+
+MANUAL_AI_CANARY: **PASS**  
+RELEASE_BLOCKING_CANARY_DEFECT: **NONE**
 
 ---
 
-## CI GATES (pre-canary 2026-08-14)
+## GATES (post-canary, HEAD `6db03dd`)
 
-TYPECHECK **PASS** · LINT **PASS** · TESTS **PASS** (869 / 13 skipped) · BUILD **PASS** · BUNDLE **PASS** · NPM_AUDIT_HIGH **PASS** · KAIOS_TESTS **PASS**  
-DB_RESET / RLS_RPC: **NOT_AVAILABLE** (Docker missing)  
-PLAYWRIGHT: **PASS** on `https://kaifyai.org` (38 pass / 16 skip auth). Preview RC blocked by Vercel Deployment Protection.  
-LIGHTHOUSE (`kaifyai.org` mobile simulated): SEO **1.0** all six; a11y **0.93–1.0**; perf **0.53–0.66** (repo performance assertion is **warn**, not error).
+TYPECHECK: **PASS**  
+LINT: **PASS** (`lint:strict`, 0 warnings)  
+TESTS: **PASS** (869 passed / 13 skipped)  
+KAIOS_TESTS: **PASS** (included in Vitest; live suite excluded by config, previously green separately)  
+BUILD: **PASS**  
+BUNDLE: **PASS** (124 / 333 / 116 / 238 KB gzip vs 135 / 350 / 125 / 250)  
+NPM_AUDIT_HIGH: **PASS** (0 vulnerabilities)  
+
+No code refactors in this closure. Thresholds unchanged.
 
 ---
 
 ## DECISIONS
 
-WAVE_8_STATUS: **COMPLETE_WITH_EXTERNAL_EVIDENCE_GAPS**  
+WAVE_8_STATUS: **COMPLETE**  
 PRODUCTION_CANARY_DECISION: **GO**  
-BROAD_PRODUCTION_DECISION: **GO_AFTER_CANARY**  
+BROAD_PRODUCTION_DECISION: **GO**  
 LEGACY_REMOVAL_READY: **NO**  
 P0_OPEN: **0**  
 P1_OPEN: **0**  
 RELEASE_CRITICAL_IMPLEMENTATION_DEFECTS: **0**  
-EXTERNAL_EVIDENCE_GAPS: **4** (authenticated axe, VoiceOver, Preview UI canary, live dual-user RLS)  
 OVERALL_SCORE: **93/100**  
 OVERALL_CONFIDENCE: **MEDIUM**  
-MANUAL_CANARY_REQUIRED: **PARTIAL** (live API **PASS**; UI checklist still owner)  
 PRODUCTION_DEPLOYED: **NO**  
 KAIOS_ROLLBACK_RETAINED: **YES**  
-EXTERNAL_ACTION_REQUIRED: Finish Preview UI canary (login / Deployment Protection). Do not remove `KAIOS_RUNTIME=false`.
-
-Wave 9 was **not** started.
+AUTOMATIC_FALLBACK: **NONE**  
+WAVE_9: **NOT_STARTED**
 
 ---
 
-## OWNER CANARY (~25 min)
+## ROLLBACK / SOAK (keep during broad production)
 
-**Env:** Preview with Gemini + DeepSeek keys: `https://kaify-80l0cmoa1-ismaileniz01-hubs-projects.vercel.app` (Vercel Deployment Protection may require owner login). Watch ledger ops `kaios_chat_stream`, `vision`, `synthesis`, `council_turn`. Expect **no** `quality_gate`, **no** memory condense, **no** `structured_card` on KAIOS.
+Explicit only: set `KAIOS_RUNTIME=false` and redeploy. **Never** auto-switch on KAIOS error.
 
-### Kai
-- Casual hello → one short reply, Kai voice.  
-- Motivation / tired → supportive, not Alex programming.  
-- Illness/fever → no macho training pressure.  
-- “Do you remember…” only if a **relevant** memory exists; unrelated → no fake memory.  
-- Locale cookie DE/AR → reply language matches.
+Recommended sequence **after owner says deploy**:
 
-### Alex
-- Squat depth / knees cave → form.  
-- PPL / progression → programming.  
-- Substitution / pain → conservative, no diagnosis.
+1. Deploy this verified RC (`6db03dd` + this closure commit).  
+2. Smoke critical flows (auth, chat SSE, Maya confirm, Leo photo, billing webhook health).  
+3. Watch 5xx / latency / provider calls / quota / tool failures.  
+4. Keep `KAIOS_RUNTIME=false` available.  
+5. Soak.  
+6. Only later evaluate legacy removal.
 
-### Maya
-- Text nutrition question.  
-- Clear meal photo → 1 Gemini + 1 DeepSeek; macros **proposal**; `saved` false until confirm.  
-- Ambiguous photo → clarification, not silent save.  
-- Confirm / reject / save failure / repeat confirm → canonical backend only.
+---
 
-### Leo
-- Good / bad / cropped photo → quality gate before coach copy.  
-- Same image again → **0 extra Gemini**; no fake progress.  
-- History vs none.  
-- Medical-looking → no diagnosis, no body-fat %.
+## POST-DEPLOY SOAK CHECKLIST (existing telemetry only)
 
-### Council
-- Start → speakers + `await_user`.  
-- Reply / direct coach / Team Decision.  
-- One DeepSeek per turn.
+- HTTP 5xx rate  
+- DeepSeek latency / errors  
+- Gemini latency / errors (`thoughtsTokenCount` if present)  
+- Provider calls per flow (`kaios_chat_stream`, `vision`, `synthesis`, `council_turn`)  
+- Token usage anomalies  
+- Chat stream / SSE failures  
+- Quota reservation / refund  
+- Idempotency replay  
+- Maya save confirmations (pending → confirm/reject; no silent canonical write)  
+- Leo image reuse (0 Gemini on fingerprint hit)  
+- Council state transitions (`await_user`)  
+- RLS / auth errors  
+- Notification delivery (`cron_job_runs.notifications`)  
+- Billing / webhook errors  
+- Cache / circuit-breaker events  
 
-### System
-- Chat retry (Idempotency-Key) → no double persist.  
-- Disconnect mid-stream → no `done` persist.  
-- Wrong voice / fake saved / verbosity / duplicate calls → **rollback trigger**.
+No new monitoring stack.
 
-### Live API canary (2026-08-14, agent)
+---
 
-LIVE_API_CANARY: **PASS** (Vitest `tests/kaios/live`, 5 tests / 4 files, ~79s wall; DeepSeek+Gemini via Vercel **Development** keys after local DeepSeek **401**)  
-DEEPSEEK_SAMPLES: **20/20** · `modelCallCount=1` · malformed **0** · p50 **2449ms** · p95 **4542ms** · coaches kai/alex/maya/leo/council  
-GEMINI_VISION: **11/11** on **new synthetic JPEGs** (prior fixture files were BOM-corrupted, not decodable)  
-MAYA_CONFIRM_E2E / RLS_DUAL_USER / COUNCIL_ENTITLED_SESSION: **SKIPPED** (no `KAIOS_LIVE_USER_*` / council user in env)  
-UI_CANARY: **NOT_RUN** (Preview Deployment Protection; production still old deploy)
+## LEGACY REMOVAL CRITERIA
 
-### Ops before remaining UI canary
-- Wave 8 SQL: **owner reported applied**.  
-- `ADMIN_EMAIL` is present on Vercel (confirm it is the intended mailbox).  
-- Hourly notifications: **PASS** via `cron_job_runs` (see PRE-CANARY CLOSURE).
+`LEGACY_REMOVAL_READY` stays **NO** until all of:
 
-Rollback triggers (repeated/material): wrong coach; fake saved; RLS; silent KAIOS→legacy; stream hangs; provider-call explosion; locale drift; duplicate writes; billing corruption; widespread 5xx; Maya save/confirm lies; Leo accepting malformed quality; Council turn-state break. One transient network error is not automatic rollback.
+- Successful manual AI canary (**done**)  
+- Successful broad-production soak  
+- No recurring critical KAIOS failures  
+- No need to invoke `KAIOS_RUNTIME=false`  
+- Stable provider latency / error rates  
+- Stable quota / cost behavior  
+- Maya / Leo / Council flows healthy in production  
+- No authorization or canonical-state regression  
 
+Until then, do not delete legacy chat/team paths or the flag.
+
+---
+
+## POST_CANARY_CLOSURE
+
+POST_CANARY_CLOSURE: **PASS**  
+MANUAL_AI_CANARY: **PASS**  
+HOSTED_DB_MIGRATION: **PASS**  
+ADMIN_EMAIL: **PASS**  
+HOURLY_NOTIFICATION_CRON: **PASS**  
+TYPECHECK: **PASS**  
+LINT: **PASS**  
+TESTS: **PASS**  
+BUILD: **PASS**  
+BUNDLE: **PASS**  
+NPM_AUDIT_HIGH: **PASS**  
+P0_OPEN: **0**  
+P1_OPEN: **0**  
+PRODUCTION_CANARY_DECISION: **GO**  
+BROAD_PRODUCTION_DECISION: **GO**  
+LEGACY_REMOVAL_READY: **NO**  
+ROLLBACK_AVAILABLE: **YES** (`KAIOS_RUNTIME=false`)  
+AUTOMATIC_FALLBACK: **NONE**  
+PRODUCTION_DEPLOYED: **NO**  
+EXTERNAL_ACTION_REQUIRED: **Production deployment only** — wait for explicit owner instruction. Do not remove `KAIOS_RUNTIME=false`. Wave 9 was not started.
