@@ -22,6 +22,8 @@ Aşağıdakiler eksikse prod'da özellikler çalışmaz:
 | `ADMIN_EMAIL` | Opsiyonel ama önerilir — hub'ı tek operatör e-postasına kısıtlar |
 | `DEEPSEEK_API_KEY` | AI chat |
 | `GEMINI_API_KEY` | Vision / kalite kapısı |
+| `GEMINI_MODEL` | Varsayılan `gemini-3.5-flash-lite` (eski ID rollback allowlist’te) |
+| `GEMINI_THINKING_LEVEL` | Varsayılan `MEDIUM` |
 | `UPSTASH_REDIS_REST_URL` + `TOKEN` | Rate limit (prod'da zorunlu) |
 | `SENTRY_DSN` | Hata izleme |
 | `AI_COST_*` (opsiyonel) | Maliyet paneli USD tahmini — `.env.example`'a bak |

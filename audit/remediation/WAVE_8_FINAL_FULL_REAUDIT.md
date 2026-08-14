@@ -148,8 +148,8 @@ Canonical sources `kaios/source/01`–`17` present. Runtime does not concatenate
 | --- | --- |
 | INTENDED_TEXT_MODEL | `deepseek-chat` (`lib/ai/models.ts` + Wave 7 contract; KAIOS source does not name a contradictory vendor ID) |
 | CONFIGURED_TEXT_MODEL | `DEEPSEEK_MODEL` or default `deepseek-chat` |
-| INTENDED_VISION_MODEL | `gemini-flash-lite-latest` |
-| CONFIGURED_VISION_MODEL | `GEMINI_MODEL` or default `gemini-flash-lite-latest` |
+| INTENDED_VISION_MODEL | `gemini-3.5-flash-lite` (`thinkingLevel=medium`) |
+| CONFIGURED_VISION_MODEL | `GEMINI_MODEL` or default `gemini-3.5-flash-lite` |
 | MODEL_CONFIG_MATCH | **PASS** |
 
 Unknown env IDs → `AiEnvError`. Scripts (i18n fill) still hardcode Gemini IDs (**TEST_ONLY / POST_CANARY**, not request path).

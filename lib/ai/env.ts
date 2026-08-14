@@ -4,8 +4,11 @@ import {
   DEEPSEEK_DEFAULT_MODEL,
   GEMINI_ALLOWED_MODELS,
   GEMINI_DEFAULT_MODEL,
+  GEMINI_DEFAULT_THINKING_LEVEL,
+  GEMINI_THINKING_LEVELS,
   isAllowedDeepSeekModel,
   isAllowedGeminiModel,
+  type GeminiThinkingLevel,
 } from "@/lib/ai/models";
 
 /**
@@ -102,6 +105,7 @@ const geminiConfigSchema = z.object({
       isAllowedGeminiModel,
       `GEMINI_MODEL must be one of: ${GEMINI_ALLOWED_MODELS.join(", ")}`,
     ),
+  thinkingLevel: z.enum(GEMINI_THINKING_LEVELS),
 });
 
 export type GeminiConfig = z.infer<typeof geminiConfigSchema>;
@@ -112,6 +116,9 @@ export function getGeminiConfig(): GeminiConfig {
   const candidate = {
     apiKey: process.env.GEMINI_API_KEY ?? "",
     model: (process.env.GEMINI_MODEL ?? GEMINI_DEFAULT_MODEL).trim(),
+    thinkingLevel: (process.env.GEMINI_THINKING_LEVEL ?? GEMINI_DEFAULT_THINKING_LEVEL)
+      .trim()
+      .toUpperCase() as GeminiThinkingLevel,
   };
 
   const parsed = geminiConfigSchema.safeParse(candidate);

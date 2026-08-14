@@ -2,7 +2,7 @@
  * AI provider pricing — SERVER ONLY.
  *
  * Costs are estimated from env-tunable rates (USD per 1M tokens). Defaults reflect
- * public DeepSeek / Gemini Flash-Lite list pricing; override in production when
+ * public DeepSeek / Gemini 3.5 Flash-Lite list pricing; override in production when
  * your contract differs.
  */
 
@@ -30,7 +30,7 @@ export function inputRatePer1M(provider: AiProvider): number {
   if (provider === "deepseek") {
     return envRate("AI_COST_DEEPSEEK_INPUT_PER_1M", 0.14);
   }
-  return envRate("AI_COST_GEMINI_INPUT_PER_1M", 0.075);
+  return envRate("AI_COST_GEMINI_INPUT_PER_1M", 0.3);
 }
 
 /** USD per 1M output tokens. */
@@ -38,7 +38,7 @@ export function outputRatePer1M(provider: AiProvider): number {
   if (provider === "deepseek") {
     return envRate("AI_COST_DEEPSEEK_OUTPUT_PER_1M", 0.28);
   }
-  return envRate("AI_COST_GEMINI_OUTPUT_PER_1M", 0.3);
+  return envRate("AI_COST_GEMINI_OUTPUT_PER_1M", 2.5);
 }
 
 /**

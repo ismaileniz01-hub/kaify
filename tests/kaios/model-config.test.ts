@@ -2,17 +2,22 @@ import { describe, expect, it } from "vitest";
 import {
   DEEPSEEK_DEFAULT_MODEL,
   GEMINI_DEFAULT_MODEL,
+  GEMINI_DEFAULT_THINKING_LEVEL,
   isAllowedDeepSeekModel,
   isAllowedGeminiModel,
+  isGemini3Model,
 } from "@/lib/ai/models";
 import { AiEnvError, getDeepSeekConfig, getGeminiConfig } from "@/lib/ai/env";
+import { buildGeminiGenerationConfig } from "@/lib/ai/gemini.client";
 
 describe("KAIOS model config contract", () => {
   it("defaults are the intended production IDs", () => {
     expect(DEEPSEEK_DEFAULT_MODEL).toBe("deepseek-chat");
-    expect(GEMINI_DEFAULT_MODEL).toBe("gemini-flash-lite-latest");
+    expect(GEMINI_DEFAULT_MODEL).toBe("gemini-3.5-flash-lite");
+    expect(GEMINI_DEFAULT_THINKING_LEVEL).toBe("MEDIUM");
     expect(isAllowedDeepSeekModel(DEEPSEEK_DEFAULT_MODEL)).toBe(true);
     expect(isAllowedGeminiModel(GEMINI_DEFAULT_MODEL)).toBe(true);
+    expect(isGemini3Model(GEMINI_DEFAULT_MODEL)).toBe(true);
   });
 
   it("rejects unknown / obsolete model IDs", () => {
@@ -20,6 +25,28 @@ describe("KAIOS model config contract", () => {
     expect(isAllowedDeepSeekModel("deepseek-chat-old")).toBe(false);
     expect(isAllowedGeminiModel("gemini-pro-vision")).toBe(false);
     expect(isAllowedGeminiModel("gemini-1.5-flash")).toBe(false);
+  });
+
+  it("Gemini 3 generation config uses thinking medium and omits temperature", () => {
+    const config = buildGeminiGenerationConfig("gemini-3.5-flash-lite", {
+      temperature: 0.2,
+      thinkingLevel: "MEDIUM",
+    });
+    expect(config).toEqual({
+      responseMimeType: "application/json",
+      thinkingConfig: { thinkingLevel: "medium" },
+    });
+    expect(config).not.toHaveProperty("temperature");
+  });
+
+  it("legacy Gemini 2 generation config keeps temperature", () => {
+    const config = buildGeminiGenerationConfig("gemini-2.5-flash-lite", {
+      temperature: 0.2,
+    });
+    expect(config).toEqual({
+      responseMimeType: "application/json",
+      temperature: 0.2,
+    });
   });
 
   it("getDeepSeekConfig fails loud on an invalid DEEPSEEK_MODEL", () => {
@@ -49,6 +76,21 @@ describe("KAIOS model config contract", () => {
       else process.env.GEMINI_API_KEY = prevKey;
       if (prevModel === undefined) delete process.env.GEMINI_MODEL;
       else process.env.GEMINI_MODEL = prevModel;
+    }
+  });
+
+  it("getGeminiConfig fails loud on an invalid GEMINI_THINKING_LEVEL", () => {
+    const prevKey = process.env.GEMINI_API_KEY;
+    const prevThink = process.env.GEMINI_THINKING_LEVEL;
+    process.env.GEMINI_API_KEY = "AIza-valid-test-key-not-placeholder";
+    process.env.GEMINI_THINKING_LEVEL = "turbo";
+    try {
+      expect(() => getGeminiConfig()).toThrow(AiEnvError);
+    } finally {
+      if (prevKey === undefined) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = prevKey;
+      if (prevThink === undefined) delete process.env.GEMINI_THINKING_LEVEL;
+      else process.env.GEMINI_THINKING_LEVEL = prevThink;
     }
   });
 });

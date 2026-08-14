@@ -1,8 +1,10 @@
 import { getGeminiConfig } from "@/lib/ai/env";
 import { AiError } from "@/lib/ai/errors";
 import { logger as geminiLogger } from "@/lib/logger";
+import { isGemini3Model, type GeminiThinkingLevel } from "@/lib/ai/models";
 import { resilient, classifyStatus, UpstreamHttpError } from "@/lib/resilience";
 import type { ImageInput } from "@/lib/ai/types";
+import type { TokenUsage } from "@/lib/ai/types";
 import type { UsageContext } from "@/lib/ai/usage-ledger";
 import { geminiEstimatedUsage, recordAiUsage } from "@/lib/ai/usage-ledger";
 
@@ -15,15 +17,56 @@ import { geminiEstimatedUsage, recordAiUsage } from "@/lib/ai/usage-ledger";
  * parsed object with a Zod schema before use.
  */
 
-const DEFAULT_TIMEOUT_MS = 45_000;
+const DEFAULT_TIMEOUT_MS = 60_000;
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
 type GeminiPart = { text?: string };
 type GeminiCandidate = { content?: { parts?: GeminiPart[] } };
+type GeminiUsageMetadata = {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  totalTokenCount?: number;
+  thoughtsTokenCount?: number;
+};
+
 type GeminiResponse = {
   candidates?: GeminiCandidate[];
   promptFeedback?: { blockReason?: string };
+  usageMetadata?: GeminiUsageMetadata;
 };
+
+/** REST generateContent config: Gemini 3 omits temperature; thinking MEDIUM. */
+export function buildGeminiGenerationConfig(
+  model: string,
+  options?: { temperature?: number; thinkingLevel?: GeminiThinkingLevel },
+): Record<string, unknown> {
+  const generationConfig: Record<string, unknown> = {
+    responseMimeType: "application/json",
+  };
+  if (isGemini3Model(model)) {
+    const thinkingLevel = options?.thinkingLevel ?? "MEDIUM";
+    generationConfig.thinkingConfig = {
+      thinkingLevel: thinkingLevel.toLowerCase(),
+    };
+    return generationConfig;
+  }
+  generationConfig.temperature = options?.temperature ?? 0.2;
+  return generationConfig;
+}
+
+function usageFromGemini(meta: GeminiUsageMetadata | undefined): TokenUsage | null {
+  if (!meta) return null;
+  const prompt = meta.promptTokenCount ?? 0;
+  const completion =
+    (meta.candidatesTokenCount ?? 0) + (meta.thoughtsTokenCount ?? 0);
+  const total = meta.totalTokenCount ?? prompt + completion;
+  if (total <= 0) return null;
+  return {
+    prompt_tokens: prompt,
+    completion_tokens: completion,
+    total_tokens: total,
+  };
+}
 
 export type GenerateJsonParams = {
   /** Instruction describing the task and the exact JSON shape to return. */
@@ -91,10 +134,10 @@ export async function generateGeminiJson(
 
   const body: Record<string, unknown> = {
     contents: [{ role: "user", parts }],
-    generationConfig: {
-      temperature: params.temperature ?? 0.2,
-      responseMimeType: "application/json",
-    },
+    generationConfig: buildGeminiGenerationConfig(config.model, {
+      temperature: params.temperature,
+      thinkingLevel: config.thinkingLevel,
+    }),
   };
   if (params.systemInstruction) {
     body.systemInstruction = { parts: [{ text: params.systemInstruction }] };
@@ -137,6 +180,11 @@ export async function generateGeminiJson(
 
   try {
     if (!response.ok) {
+      const errBody = await response.text().catch(() => "");
+      geminiLogger.error("[gemini] http error", {
+        status: response.status,
+        body: errBody.slice(0, 400),
+      });
       throw new AiError(
         "AI_UPSTREAM",
         `Gemini request failed with status ${response.status}`,
@@ -174,14 +222,21 @@ export async function generateGeminiJson(
       throw new AiError("AI_BAD_OUTPUT", "Gemini did not return valid JSON");
     } finally {
       if (params.usageContext) {
+        const usage = usageFromGemini(json.usageMetadata);
         recordAiUsage({
           provider: "gemini",
           context: params.usageContext,
-          usage: null,
-          estimatedTotalTokens: geminiEstimatedUsage(
-            params.prompt.length + (params.systemInstruction?.length ?? 0),
-            Boolean(params.image),
-          ).total_tokens,
+          usage,
+          estimatedTotalTokens: usage
+            ? undefined
+            : geminiEstimatedUsage(
+                params.prompt.length + (params.systemInstruction?.length ?? 0),
+                Boolean(params.image),
+              ).total_tokens,
+          metadata:
+            json.usageMetadata?.thoughtsTokenCount != null
+              ? { thoughtsTokenCount: json.usageMetadata.thoughtsTokenCount }
+              : undefined,
         });
       }
     }

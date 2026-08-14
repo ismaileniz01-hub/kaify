@@ -49,7 +49,7 @@ LEGACY_ROLLBACK_AVAILABLE: **true** (`KAIOS_RUNTIME=false`)
 AUTOMATIC_LEGACY_FALLBACK: **NONE**  
 MODEL_CONFIG_MATCH: **PASS**  
 PRIMARY_TEXT_MODEL: **deepseek-chat**  
-VISION_MODEL: **gemini-flash-lite-latest**  
+VISION_MODEL: **gemini-3.5-flash-lite** (`thinkingLevel=medium`)  
 KAI_CASUAL_PROVIDER_CALLS: **1**  
 MAYA_PHOTO_PROVIDER_CALLS: **≤2**  
 LEO_PHOTO_PROVIDER_CALLS: **≤2**  
