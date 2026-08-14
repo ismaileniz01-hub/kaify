@@ -6,7 +6,7 @@
 ## Scope
 
 Weekly OWASP ZAP baseline in `.github/workflows/security-scan.yml` runs **only when**
-GitHub Actions variable `vars.STAGING_URL` is set. Kaify currently ships a single
+GitHub Actions variable `vars.STAGING_URL` is set. Kaify Ai currently ships a single
 production surface (`https://kaifyai.org`) without a long-lived public staging host.
 
 ## Residual risk

@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/api/errors";
 import { writeConfirmAnalyticsPending } from "@/lib/repositories/analytics-write.repository";
 import { invalidateHomeBundleCache } from "@/lib/cache/invalidate";
+import { sanitizeAnalyticsPatch, sanitizeMealMacros } from "@/lib/analytics/bounds";
 import type { Json } from "@/lib/types/database.types";
 
 export type PendingAnalyticsPayload = {
@@ -19,13 +20,22 @@ export async function createPendingAnalyticsConfirmation(params: {
   messageId?: string | null;
 }): Promise<string> {
   const admin = createAdminSupabaseClient() as SupabaseClient;
+  const payload: PendingAnalyticsPayload = {
+    summary: params.payload.summary,
+    patch: params.payload.patch
+      ? (sanitizeAnalyticsPatch(params.payload.patch) as Record<string, number>)
+      : undefined,
+    meal: params.payload.meal
+      ? sanitizeMealMacros(params.payload.meal)
+      : undefined,
+  };
   const { data, error } = await admin
     .from("analytics_pending_confirmations")
     .insert({
       user_id: params.userId,
       coach_id: params.coachId,
       source: params.source,
-      payload: params.payload as unknown as Json,
+      payload: payload as unknown as Json,
       message_id: params.messageId ?? null,
       status: "pending",
     })

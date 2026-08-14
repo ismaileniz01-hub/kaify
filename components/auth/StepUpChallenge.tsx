@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { apiPost, ApiClientError } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
 import { errorToMessage } from "@/lib/i18n/api-error";
@@ -14,6 +14,9 @@ type StepUpChallengeProps = {
 /** Email OTP challenge before delete / export when MFA is not enrolled. */
 export function StepUpChallenge({ onVerified, onCancel }: StepUpChallengeProps) {
   const { t } = useLang();
+  const idPrefix = useId();
+  const codeId = `${idPrefix}-code`;
+  const errorId = `${idPrefix}-error`;
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -59,11 +62,13 @@ export function StepUpChallenge({ onVerified, onCancel }: StepUpChallengeProps) 
       <p className="text-sm font-semibold text-amber-100">{t("settings.step_up.title")}</p>
       <p className="text-xs leading-relaxed text-zinc-400">{t("settings.step_up.body")}</p>
       {error && (
-        <InlineAlert
-          message={error}
-          onDismiss={() => setError(null)}
-          dismissLabel={t("common.dismiss")}
-        />
+        <div id={errorId}>
+          <InlineAlert
+            message={error}
+            onDismiss={() => setError(null)}
+            dismissLabel={t("common.dismiss")}
+          />
+        </div>
       )}
       {!sent ? (
         <button
@@ -76,15 +81,18 @@ export function StepUpChallenge({ onVerified, onCancel }: StepUpChallengeProps) 
         </button>
       ) : (
         <div className="space-y-2">
-          <label className="block">
+          <label htmlFor={codeId} className="block">
             <span className="type-caption type-muted">{t("settings.step_up.code_label")}</span>
             <input
+              id={codeId}
               value={code}
               onChange={(e) => setCode(e.target.value)}
               inputMode="numeric"
               autoComplete="one-time-code"
               className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 font-mono text-sm text-white outline-none focus:border-amber-400/40"
               placeholder="123456"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? errorId : undefined}
             />
           </label>
           <button

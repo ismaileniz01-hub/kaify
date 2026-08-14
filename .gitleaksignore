@@ -1,0 +1,4 @@
+# Paths that may contain ephemeral local-demo credentials from CI diagnostics.
+# These are not production secrets; values are redacted in new writes, but
+# historical diagnostic commits may still mention local supabase URLs.
+audit/remediation/_CI_DB_FAILURE_LOG.md

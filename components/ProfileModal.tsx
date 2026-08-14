@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useId } from "react";
 import { X, MapPin, Ruler, Weight, VenusAndMars, Leaf, Sparkles, Pencil, Check, Camera } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
 import { InlineAlert } from "@/components/InlineAlert";
@@ -20,12 +20,16 @@ type ProfileModalProps = {
 export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalProps) {
   const { t, unit } = useLang();
   const { toast } = useToast();
+  const idPrefix = useId();
+  const errorId = `${idPrefix}-error`;
+  const fid = (name: string) => `${idPrefix}-${name}`;
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<UserProfile>({ ...profile });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const nameInvalid = !form.name.trim();
 
   const handleChange = (field: keyof UserProfile, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -265,32 +269,44 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
 
           {/* İsim */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">{t("profile.name")}</label>
+            <label htmlFor={fid("name")} className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+              {t("profile.name")}
+            </label>
             <input
+              id={fid("name")}
               type="text"
               value={form.name}
               onChange={(e) => handleChange("name", e.target.value)}
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-purple-500/50 focus:bg-purple-500/5"
               placeholder={t("profile.placeholder_name")}
+              aria-invalid={saveError && nameInvalid ? true : undefined}
+              aria-describedby={saveError ? errorId : undefined}
             />
           </div>
 
           {/* Bio */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">{t("profile.bio")}</label>
+            <label htmlFor={fid("bio")} className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+              {t("profile.bio")}
+            </label>
             <textarea
+              id={fid("bio")}
               value={form.bio}
               onChange={(e) => handleChange("bio", e.target.value)}
               rows={2}
               className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-purple-500/50 focus:bg-purple-500/5"
               placeholder={t("profile.placeholder_bio")}
+              aria-describedby={saveError ? errorId : undefined}
             />
           </div>
 
           {/* Cinsiyet */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">{t("profile.field_gender")}</label>
+            <label htmlFor={fid("gender")} className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+              {t("profile.field_gender")}
+            </label>
             <select
+              id={fid("gender")}
               value={parseGenderInput(form.gender)}
               onChange={(e) => handleChange("gender", e.target.value)}
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition focus:border-purple-500/50 focus:bg-purple-500/5"
@@ -304,8 +320,11 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
           {/* Boy & Kilo - yan yana */}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">{t("profile.field_height")}</label>
+              <label htmlFor={fid("height")} className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                {t("profile.field_height")}
+              </label>
               <input
+                id={fid("height")}
                 type="text"
                 value={form.height}
                 onChange={(e) => handleChange("height", e.target.value)}
@@ -314,22 +333,27 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">{t("profile.field_weight")}</label>
+              <label htmlFor={fid("weight")} className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                {t("profile.field_weight")}
+              </label>
               <input
+                id={fid("weight")}
                 type="text"
                 value={form.weight}
                 onChange={(e) => handleChange("weight", e.target.value)}
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-purple-500/50 focus:bg-purple-500/5"
                 placeholder={unit === "metric" ? t("profile.placeholder_weight_metric") : t("profile.placeholder_weight_imperial")}
-
               />
             </div>
           </div>
 
           {/* Konum */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">{t("profile.field_location")}</label>
+            <label htmlFor={fid("location")} className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+              {t("profile.field_location")}
+            </label>
             <input
+              id={fid("location")}
               type="text"
               value={form.location}
               onChange={(e) => handleChange("location", e.target.value)}
@@ -340,11 +364,14 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
 
           {/* Natural / Destekli seçimi */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">{t("profile.field_status")}</label>
-            <div className="flex gap-2">
+            <label id={fid("status-label")} className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+              {t("profile.field_status")}
+            </label>
+            <div className="flex gap-2" role="group" aria-labelledby={fid("status-label")}>
               <button
                 type="button"
                 onClick={() => handleChange("isNatural", true)}
+                aria-pressed={form.isNatural}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium transition ${
                   form.isNatural
                     ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400"
@@ -357,6 +384,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
               <button
                 type="button"
                 onClick={() => handleChange("isNatural", false)}
+                aria-pressed={!form.isNatural}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium transition ${
                   !form.isNatural
                     ? "border-amber-500/50 bg-amber-500/15 text-amber-400"
@@ -371,7 +399,9 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
 
           {/* Butonlar */}
           {saveError && (
-            <InlineAlert message={saveError} dismissLabel={t("common.dismiss")} onDismiss={() => setSaveError(null)} />
+            <div id={errorId}>
+              <InlineAlert message={saveError} dismissLabel={t("common.dismiss")} onDismiss={() => setSaveError(null)} />
+            </div>
           )}
           <div className="mt-2 flex gap-3">
             <button

@@ -14,7 +14,8 @@ describe("RETENTION constants", () => {
     expect(RETENTION.coachingMemoryMonths).toBe(24);
     expect(RETENTION.analyticsMonths).toBe(36);
     expect(RETENTION.healthStepsMonths).toBe(36);
-    expect(RETENTION.notificationsMonths).toBe(12);
+    expect(RETENTION.dataExportLogsMonths).toBe(24);
+    expect(RETENTION.billingEventsMonths).toBe(84);
     expect(RETENTION_WARNING_DAYS).toBe(30);
   });
 });

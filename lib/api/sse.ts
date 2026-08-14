@@ -36,7 +36,7 @@ export function createSseResponse(
             encoder.encode(
               encodeSseChunk({
                 event: "error",
-                data: { message: "Akış sırasında bir hata oluştu." },
+                data: { code: "STREAM_ERROR" },
               }),
             ),
           );

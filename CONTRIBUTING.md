@@ -1,4 +1,4 @@
-# Contributing to Kaify
+# Contributing to Kaify Ai
 
 Thank you for contributing. This guide covers the minimum bar for changes landing on `main`.
 

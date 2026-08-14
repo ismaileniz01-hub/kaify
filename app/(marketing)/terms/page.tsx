@@ -1,17 +1,12 @@
 import { LegalPageShell } from "@/components/legal/LegalPageShell";
 import { TermsOfServiceContent } from "@/components/legal/TermsOfServiceContent";
-import type { Metadata } from "next";
-import { cookies } from "next/headers";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const isTurkish = (await cookies()).get("kaify-lang")?.value === "tr";
-  return {
-    title: isTurkish ? "Şartlar ve Koşullar — Kaify" : "Terms & Conditions — Kaify",
-    description: isTurkish
-      ? "Kaify AI fitness koçluğu uygulamasının kullanım koşulları."
-      : "Terms governing use of the Kaify AI fitness coaching application.",
-  };
-}
+export const metadata = publicPageMetadata({
+  title: "Terms & Conditions — Kaify Ai",
+  description: "Terms governing use of the Kaify Ai AI fitness coaching application.",
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (

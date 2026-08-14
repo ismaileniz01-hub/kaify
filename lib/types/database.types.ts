@@ -205,6 +205,9 @@ type UserKaiStateRow = {
   user_id: string;
   unlocked_level: number;
   active_aura: string;
+  gem_balance?: number;
+  gem_total_earned?: number;
+  gem_total_spent?: number;
   updated_at: string;
 };
 
@@ -305,6 +308,19 @@ type AiUsageLedgerRow = {
   created_at: string;
 };
 
+type AiDailyUsageRow = {
+  user_id: string;
+  usage_date: string;
+  total_tokens: number;
+  estimated_usd_micro: number;
+};
+
+type AiPlatformDailyUsageRow = {
+  usage_date: string;
+  total_tokens: number;
+  estimated_usd_micro: number;
+};
+
 type CostAlertRow = {
   id: string;
   alert_type: string;
@@ -369,6 +385,7 @@ type ChatMessageRow = {
   tokens_used: number;
   locale: string;
   created_at: string;
+  client_idempotency_key?: string | null;
 };
 
 type ChatMessageInsert = {
@@ -383,6 +400,7 @@ type ChatMessageInsert = {
   tokens_used?: number;
   locale?: string;
   created_at?: string;
+  client_idempotency_key?: string | null;
 };
 
 type UserCoachingStateRow = {
@@ -532,6 +550,20 @@ export type Database = {
           operation: string;
         } & Partial<Omit<AiUsageLedgerRow, "id" | "provider" | "operation">>;
         Update: Partial<AiUsageLedgerRow>;
+        Relationships: [];
+      };
+      ai_daily_usage: {
+        Row: AiDailyUsageRow;
+        Insert: { user_id: string; usage_date: string } & Partial<
+          Omit<AiDailyUsageRow, "user_id" | "usage_date">
+        >;
+        Update: Partial<AiDailyUsageRow>;
+        Relationships: [];
+      };
+      ai_platform_daily_usage: {
+        Row: AiPlatformDailyUsageRow;
+        Insert: { usage_date: string } & Partial<Omit<AiPlatformDailyUsageRow, "usage_date">>;
+        Update: Partial<AiPlatformDailyUsageRow>;
         Relationships: [];
       };
       cost_alerts: {
@@ -891,6 +923,9 @@ export type Database = {
           product_id: string;
           scheduled_change_action: string | null;
           scheduled_change_at: string | null;
+          last_event_occurred_at: string | null;
+          last_event_id: string | null;
+          last_event_rank: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -903,6 +938,9 @@ export type Database = {
           user_id?: string | null;
           scheduled_change_action?: string | null;
           scheduled_change_at?: string | null;
+          last_event_occurred_at?: string | null;
+          last_event_id?: string | null;
+          last_event_rank?: number | null;
           created_at?: string;
           updated_at?: string;
         };

@@ -27,6 +27,7 @@ import type { UserSettingsDTO } from "@/lib/services/settings.service";
 import { UsageQuotaSection } from "@/components/settings/UsageQuotaSection";
 import { AppHeader } from "@/components/navigation/AppHeader";
 import { DeleteAccountSection } from "@/components/settings/DeleteAccountSection";
+import { MotionDialog } from "@/components/ui/MotionDialog";
 
 type SettingItem = {
   icon: typeof Bell;
@@ -69,7 +70,7 @@ const SETTINGS_GROUPS: { title: string; items: SettingItem[] }[] = [
         description: "settings.legal.terms.desc",
         type: "link",
         value: "settings.legal.open",
-        href: "/terms&conditions",
+        href: "/terms",
       },
       {
         icon: Shield,
@@ -177,6 +178,7 @@ export default function SettingsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const [toggles, setToggles] = useState<Record<string, boolean>>({
     "settings.workout": true,
     "settings.water": false,
@@ -452,10 +454,13 @@ export default function SettingsPage() {
                           toggles[item.label] ? "bg-purple-500" : "bg-zinc-700"
                         }`}
                         aria-pressed={toggles[item.label]}
+                        aria-label={t(item.label)}
                       >
                         <span
-                          className={`absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
-                            toggles[item.label] ? "translate-x-5" : "translate-x-0"
+                          className={`absolute start-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                            toggles[item.label]
+                              ? "translate-x-5 rtl:-translate-x-5"
+                              : "translate-x-0"
                           }`}
                         />
                       </button>
@@ -465,9 +470,12 @@ export default function SettingsPage() {
                         <button
                           type="button"
                           onClick={() => setLangPickerOpen(!langPickerOpen)}
+                          aria-expanded={langPickerOpen}
+                          aria-haspopup="listbox"
+                          aria-label={t("settings.language")}
                           className="touch-44 flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-zinc-200 transition-all hover:border-white/20 hover:bg-white/[0.06]"
                         >
-                          <span className="max-w-[130px] truncate">{currentLangLabel}</span>
+                          <span>{currentLangLabel}</span>
                           <svg
                             className={`h-3.5 w-3.5 text-zinc-500 transition-transform ${langPickerOpen ? "rotate-180" : ""}`}
                             fill="none"
@@ -488,7 +496,7 @@ export default function SettingsPage() {
                                 setLangSearch("");
                               }}
                             />
-                            <div className="fixed left-1/2 top-1/2 z-50 max-h-[70vh] w-[320px] -translate-x-1/2 -translate-y-1/2 animate-in overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/95 shadow-2xl shadow-black/50 backdrop-blur-xl">
+                            <div className="fixed start-1/2 top-1/2 z-50 max-h-[70vh] w-[320px] -translate-x-1/2 -translate-y-1/2 animate-in overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/95 shadow-2xl shadow-black/50 backdrop-blur-xl">
                               <div className="relative border-b border-white/5 px-3 py-2.5">
                                 <Search className="absolute left-5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
                                 <input
@@ -562,7 +570,7 @@ export default function SettingsPage() {
                       (item.label === "settings.logout" ? (
                         <button
                           type="button"
-                          onClick={() => void handleLogout()}
+                          onClick={() => setLogoutOpen(true)}
                           disabled={logoutLoading}
                           className="text-xs font-medium text-purple-400 transition hover:text-purple-300 disabled:opacity-50"
                         >
@@ -652,6 +660,35 @@ export default function SettingsPage() {
           <p className="text-[11px] text-zinc-600">{t("settings.version")}</p>
         </div>
       </main>
+      <MotionDialog
+        open={logoutOpen}
+        onClose={() => setLogoutOpen(false)}
+        labelledBy="logout-confirm-title"
+      >
+        <div className="p-5">
+          <h2 id="logout-confirm-title" className="text-lg font-semibold text-white">
+            {t("settings.logout.confirm_title")}
+          </h2>
+          <p className="mt-2 text-sm text-zinc-400">{t("settings.logout.confirm_body")}</p>
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              className="touch-44 flex-1 rounded-full border border-white/15 py-2 text-sm text-zinc-200"
+              onClick={() => setLogoutOpen(false)}
+            >
+              {t("common.cancel")}
+            </button>
+            <button
+              type="button"
+              className="touch-44 flex-1 rounded-full bg-purple-600 py-2 text-sm font-semibold text-white"
+              disabled={logoutLoading}
+              onClick={() => void handleLogout()}
+            >
+              {t("settings.logout")}
+            </button>
+          </div>
+        </div>
+      </MotionDialog>
     </div>
   );
 }

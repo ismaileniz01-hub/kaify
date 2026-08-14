@@ -32,6 +32,103 @@ type WithIdempotencyOptions<T> = {
   handler: () => Promise<T>;
 };
 
+export type IdempotencyClaim<T> =
+  | { kind: "execute" }
+  | { kind: "replay"; body: T }
+  | { kind: "passthrough" };
+
+export async function claimIdempotency<T>(params: {
+  userId: string;
+  endpoint: string;
+  key: string | null;
+  requestBody: unknown;
+}): Promise<IdempotencyClaim<T>> {
+  if (!params.key) return { kind: "passthrough" };
+
+  const admin = createAdminSupabaseClient();
+  const requestHash = hashRequest(params.endpoint, params.requestBody);
+
+  const { error: insertError } = await admin.from("idempotency_keys").insert({
+    user_id: params.userId,
+    endpoint: params.endpoint,
+    idempotency_key: params.key,
+    request_hash: requestHash,
+    status: "in_progress",
+  });
+
+  if (!insertError) {
+    logger.info("idempotency.claimed", { endpoint: params.endpoint });
+    return { kind: "execute" };
+  }
+
+  if (insertError.code !== "23505") {
+    logger.error("idempotency insert failed", {
+      endpoint: params.endpoint,
+      error: insertError.message,
+    });
+    throw new ApiError("INTERNAL_ERROR", "İşlem kaydedilemedi.");
+  }
+
+  const { data: existing } = await admin
+    .from("idempotency_keys")
+    .select("request_hash, status, response_body")
+    .eq("user_id", params.userId)
+    .eq("endpoint", params.endpoint)
+    .eq("idempotency_key", params.key)
+    .maybeSingle();
+
+  if (!existing) {
+    throw new ApiError("CONFLICT", "İşlem durumu belirlenemedi. Tekrar deneyin.");
+  }
+  if (existing.request_hash !== requestHash) {
+    throw new ApiError(
+      "CONFLICT",
+      "Bu Idempotency-Key farklı bir istekle kullanılmış.",
+    );
+  }
+  if (existing.status === "in_progress") {
+    throw new ApiError("CONFLICT", "Aynı istek hâlâ işleniyor.");
+  }
+  logger.info("idempotency.replay", { endpoint: params.endpoint });
+  return { kind: "replay", body: existing.response_body as T };
+}
+
+export async function completeIdempotency(
+  userId: string,
+  endpoint: string,
+  key: string | null,
+  result: unknown,
+): Promise<void> {
+  if (!key) return;
+  const admin = createAdminSupabaseClient();
+  await admin
+    .from("idempotency_keys")
+    .update({
+      status: "completed",
+      response_status: 200,
+      response_body: result as never,
+    })
+    .eq("user_id", userId)
+    .eq("endpoint", endpoint)
+    .eq("idempotency_key", key);
+}
+
+export async function releaseIdempotency(
+  userId: string,
+  endpoint: string,
+  key: string | null,
+): Promise<void> {
+  if (!key) return;
+  const admin = createAdminSupabaseClient();
+  await admin
+    .from("idempotency_keys")
+    .delete()
+    .eq("user_id", userId)
+    .eq("endpoint", endpoint)
+    .eq("idempotency_key", key)
+    .eq("status", "in_progress");
+}
+
 export async function withIdempotency<T>({
   userId,
   endpoint,
@@ -39,78 +136,16 @@ export async function withIdempotency<T>({
   requestBody,
   handler,
 }: WithIdempotencyOptions<T>): Promise<T> {
-  if (!key) {
-    return handler();
-  }
-
-  const admin = createAdminSupabaseClient();
-  const requestHash = hashRequest(endpoint, requestBody);
-
-  const { error: insertError } = await admin.from("idempotency_keys").insert({
-    user_id: userId,
-    endpoint,
-    idempotency_key: key,
-    request_hash: requestHash,
-    status: "in_progress",
-  });
-
-  if (insertError) {
-    // 23505 = unique violation -> a row already exists for this tuple.
-    if (insertError.code !== "23505") {
-      logger.error("idempotency insert failed", {
-        endpoint,
-        error: insertError.message,
-      });
-      throw new ApiError("INTERNAL_ERROR", "İşlem kaydedilemedi.");
-    }
-
-    const { data: existing } = await admin
-      .from("idempotency_keys")
-      .select("request_hash, status, response_body")
-      .eq("user_id", userId)
-      .eq("endpoint", endpoint)
-      .eq("idempotency_key", key)
-      .maybeSingle();
-
-    if (!existing) {
-      throw new ApiError("CONFLICT", "İşlem durumu belirlenemedi. Tekrar deneyin.");
-    }
-    if (existing.request_hash !== requestHash) {
-      throw new ApiError(
-        "CONFLICT",
-        "Bu Idempotency-Key farklı bir istekle kullanılmış.",
-      );
-    }
-    if (existing.status === "in_progress") {
-      throw new ApiError("CONFLICT", "Aynı istek hâlâ işleniyor.");
-    }
-    return existing.response_body as T;
-  }
+  const claim = await claimIdempotency<T>({ userId, endpoint, key, requestBody });
+  if (claim.kind === "replay") return claim.body;
+  if (claim.kind === "passthrough") return handler();
 
   try {
     const result = await handler();
-
-    await admin
-      .from("idempotency_keys")
-      .update({
-        status: "completed",
-        response_status: 200,
-        response_body: result as never,
-      })
-      .eq("user_id", userId)
-      .eq("endpoint", endpoint)
-      .eq("idempotency_key", key);
-
+    await completeIdempotency(userId, endpoint, key, result);
     return result;
   } catch (error) {
-    // Roll back the placeholder so the client may retry the failed request.
-    await admin
-      .from("idempotency_keys")
-      .delete()
-      .eq("user_id", userId)
-      .eq("endpoint", endpoint)
-      .eq("idempotency_key", key)
-      .eq("status", "in_progress");
+    await releaseIdempotency(userId, endpoint, key);
     throw error;
   }
 }

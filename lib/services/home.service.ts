@@ -1,7 +1,11 @@
 import { getOwnProfile } from "@/lib/services/profile.service";
 import { getStreakStatus, type StreakStatusDTO } from "@/lib/services/streak-status.service";
-import { getTodayNutritionSnapshot } from "@/lib/services/analytics.service";
+import {
+  getTodayNutritionSnapshot,
+  type AnalyticsDailyDTO,
+} from "@/lib/services/analytics.service";
 import { getUserSettings } from "@/lib/services/settings.service";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { buildKaiFoodInsight } from "@/lib/kai-food-insight";
 import { resolveLocale, translateKey } from "@/lib/i18n/dictionary";
 import { getDailyMotivationQuote } from "@/lib/motivation-quotes";
@@ -36,36 +40,60 @@ export type HomeDTO = {
   };
 };
 
+/**
+ * Locale-free home payload — safe to cache without presentation dimensions.
+ * Localized strings are applied by `localizeHomeData` after the cache hit.
+ */
+export type HomeCoreDTO = {
+  displayName: string;
+  stats: HomeDTO["stats"];
+  kaiLevel: number;
+  todayJob: TodayJob;
+  firstTask: FirstTaskProgress;
+  goals: HomeDTO["goals"];
+  /** Enough nutrition state to rebuild kaiFoodInsight for any locale. */
+  nutrition: AnalyticsDailyDTO | null;
+  /** Profile locale used when the request does not override. */
+  profileLocale: string;
+};
+
+async function userHasSentChat(userId: string): Promise<boolean> {
+  const admin = createAdminSupabaseClient();
+  const { data } = await admin
+    .from("chat_messages")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("sender", "user")
+    .limit(1)
+    .maybeSingle();
+  return Boolean(data);
+}
+
 export type HomeDataPrefetch = {
   profile?: ProfileDTO;
   streakStatus?: StreakStatusDTO;
 };
 
-export async function getHomeData(
+export async function getHomeCoreData(
   userId: string,
-  localeOverride?: string | null,
   prefetch?: HomeDataPrefetch,
-): Promise<HomeDTO> {
-  const [profile, streakStatus, todayNutrition, settings] = await Promise.all([
-    prefetch?.profile
-      ? Promise.resolve(prefetch.profile)
-      : getOwnProfile(userId),
-    prefetch?.streakStatus
-      ? Promise.resolve(prefetch.streakStatus)
-      : getStreakStatus(userId),
-    getTodayNutritionSnapshot(userId).catch(() => null),
-    getUserSettings(userId).catch(() => null),
-  ]);
+): Promise<HomeCoreDTO> {
+  const [profile, streakStatus, todayNutrition, settings, chatDone] =
+    await Promise.all([
+      prefetch?.profile
+        ? Promise.resolve(prefetch.profile)
+        : getOwnProfile(userId),
+      prefetch?.streakStatus
+        ? Promise.resolve(prefetch.streakStatus)
+        : getStreakStatus(userId),
+      getTodayNutritionSnapshot(userId).catch(() => null),
+      getUserSettings(userId).catch(() => null),
+      userHasSentChat(userId).catch(() => false),
+    ]);
 
-  const resolvedLocale = resolveLocale(localeOverride ?? profile.locale);
   const today = localTodayDate(profile.timezone ?? "UTC");
   const checkedInToday = streakStatus.lastCheckInDate === today;
   const goalsConfigured = settings?.goalsConfigured ?? false;
-
-  const [motivation, dailyTip] = await Promise.all([
-    getDailyMotivationQuote(resolvedLocale),
-    translateKey(resolvedLocale, "home.tip.text"),
-  ]);
 
   const steps = todayNutrition?.steps ?? null;
   const goalPercent =
@@ -80,9 +108,6 @@ export async function getHomeData(
 
   return {
     displayName: profile.displayName,
-    motivation,
-    dailyTip,
-    kaiFoodInsight: buildKaiFoodInsight(todayNutrition ?? null, resolvedLocale),
     stats: {
       steps,
       streak: streakStatus.currentStreak,
@@ -100,7 +125,7 @@ export async function getHomeData(
     firstTask: {
       checkInDone: checkedInToday || streakStatus.currentStreak > 0,
       goalsDone: goalsConfigured,
-      chatDone: false,
+      chatDone,
     },
     goals: {
       configured: goalsConfigured,
@@ -109,5 +134,40 @@ export async function getHomeData(
       workoutsTarget: todayNutrition?.workoutsTarget ?? 5,
       waterGoalLiters: todayNutrition?.waterGoalLiters ?? 2.5,
     },
+    nutrition: todayNutrition,
+    profileLocale: profile.locale,
   };
+}
+
+/** Applies presentation-only locale strings to a cached home core payload. */
+export async function localizeHomeData(
+  core: HomeCoreDTO,
+  localeOverride?: string | null,
+): Promise<HomeDTO> {
+  const resolvedLocale = resolveLocale(localeOverride ?? core.profileLocale);
+  const [motivation, dailyTip] = await Promise.all([
+    getDailyMotivationQuote(resolvedLocale),
+    translateKey(resolvedLocale, "home.tip.text"),
+  ]);
+
+  return {
+    displayName: core.displayName,
+    motivation,
+    dailyTip,
+    kaiFoodInsight: buildKaiFoodInsight(core.nutrition, resolvedLocale),
+    stats: core.stats,
+    kaiLevel: core.kaiLevel,
+    todayJob: core.todayJob,
+    firstTask: core.firstTask,
+    goals: core.goals,
+  };
+}
+
+export async function getHomeData(
+  userId: string,
+  localeOverride?: string | null,
+  prefetch?: HomeDataPrefetch,
+): Promise<HomeDTO> {
+  const core = await getHomeCoreData(userId, prefetch);
+  return localizeHomeData(core, localeOverride);
 }

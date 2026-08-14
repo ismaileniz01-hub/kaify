@@ -6,6 +6,14 @@ import {
   createNotificationsBatch,
   type CreateNotificationInput,
 } from "@/lib/services/notifications.service";
+import { cacheGet, cacheSet, cacheDelete } from "@/lib/cache";
+import { createExecutionBudget } from "@/lib/cron/execution-budget";
+import {
+  PRAISE_HOUR,
+  STREAK_RISK_HOURS,
+  WATER_HOURS,
+  WEEKLY_HOURS,
+} from "./constants";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -50,17 +58,13 @@ function isoWeek(date: Date): string {
   return `${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
-// Local-hour windows (inclusive). Hourly cron catches these; dedup dedupes.
-const STREAK_RISK_HOURS = new Set([19, 20, 21]);
-// Water: every 2 hours from 08:00 to 22:00 local time.
-const WATER_HOURS = new Set([8, 10, 12, 14, 16, 18, 20, 22]);
-const WEEKLY_HOURS = new Set([18, 19]);
-const PRAISE_HOUR = 12;
-
 /**
  * GET /api/cron/notifications — timezone-aware engagement notifications.
  * Intended to run hourly. Each notification uses a dedup key so repeated runs
  * within a window never create duplicates.
+ *
+ * Production hourly cadence is provided by pg_cron (Hobby-safe);
+ * the Vercel daily entry is a backup only. See ./constants.ts for hour windows.
  */
 export const GET = defineCronRoute("/api/cron/notifications", async () => {
   try {
@@ -72,9 +76,12 @@ export const GET = defineCronRoute("/api/cron/notifications", async () => {
     // rows, so unbounded selects would silently skip users beyond the first
     // page. Paging by id keeps memory flat and scales to 10k+ users.
     const PAGE_SIZE = 1000;
-    let lastId = "";
+    const budget = createExecutionBudget(45_000);
+    const saved = await cacheGet<{ lastId: string }>("cron:notifications:cursor:v1");
+    let lastId = saved?.lastId ?? "";
     let totalCandidates = 0;
     let totalCreated = 0;
+    let complete = true;
 
     for (;;) {
       let query = admin
@@ -174,17 +181,31 @@ export const GET = defineCronRoute("/api/cron/notifications", async () => {
 
       lastId = ids[ids.length - 1];
       if (profiles.length < PAGE_SIZE) break;
+      if (!budget.hasTimeFor(1_500)) {
+        complete = false;
+        await cacheSet("cron:notifications:cursor:v1", { lastId }, 60 * 60 * 6);
+        logger.info("cron.notifications partial", { lastId, totalCreated });
+        break;
+      }
+    }
+
+    if (complete) {
+      await cacheDelete("cron:notifications:cursor:v1");
     }
 
     logger.info("cron notifications run", {
       candidates: totalCandidates,
       created: totalCreated,
+      complete,
+      resumedFromCursor: Boolean(saved),
     });
 
     const payload = {
       ranAt: now.toISOString(),
       candidates: totalCandidates,
       created: totalCreated,
+      complete,
+      resumedFromCursor: Boolean(saved),
     };
 
     await recordCronRun("notifications", "ok", payload);

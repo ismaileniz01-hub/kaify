@@ -48,12 +48,9 @@ const WelcomeExtras = dynamic(
   { ssr: false },
 );
 
-const FIRST_TASK_CHAT_KEY = "kaify-first-task-chat";
-
 function WelcomeContent() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [goalsOpen, setGoalsOpen] = useState(false);
-  const [chatDoneLocal, setChatDoneLocal] = useState(false);
   const [pendingReferral, setPendingReferral] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const { t, setLang, lang } = useLang();
@@ -80,10 +77,6 @@ function WelcomeContent() {
       setGoalsOpen(true);
     }
   }, [searchParams]);
-
-  useEffect(() => {
-    setChatDoneLocal(localStorage.getItem(FIRST_TASK_CHAT_KEY) === "1");
-  }, []);
 
   useEffect(() => {
     const code = captureReferralFromUrl(searchParams);
@@ -212,13 +205,9 @@ function WelcomeContent() {
               progress={{
                 checkInDone: home.firstTask.checkInDone,
                 goalsDone: home.firstTask.goalsDone,
-                chatDone: chatDoneLocal || home.firstTask.chatDone,
+                chatDone: home.firstTask.chatDone,
               }}
               onGoalsClick={() => setGoalsOpen(true)}
-              onChatMarked={() => {
-                localStorage.setItem(FIRST_TASK_CHAT_KEY, "1");
-                setChatDoneLocal(true);
-              }}
             />
           </section>
         )}

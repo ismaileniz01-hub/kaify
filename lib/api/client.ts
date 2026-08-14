@@ -5,6 +5,8 @@ import { resolveApiPath } from "@/lib/api/resolve-api-path";
 import { withRetry } from "@/lib/resilience/retry";
 import { UpstreamHttpError } from "@/lib/resilience/error-taxonomy";
 
+export const IDEMPOTENCY_HEADER = "Idempotency-Key";
+
 function csrfHeaders(): HeadersInit {
   const token = readCsrfCookieFromDocument();
   return token ? { [CSRF_HEADER_NAME]: token } : {};
@@ -18,13 +20,54 @@ function isIdempotentMethod(method: string): boolean {
   return method === "GET" || method === "HEAD";
 }
 
-/** Typed fetch wrapper for Kaify API routes (cookie session). Soft-retries GETs. */
+function headerMap(init?: HeadersInit): Record<string, string> {
+  if (!init) return {};
+  if (init instanceof Headers) {
+    const out: Record<string, string> = {};
+    init.forEach((value, key) => {
+      out[key] = value;
+    });
+    return out;
+  }
+  if (Array.isArray(init)) {
+    return Object.fromEntries(init);
+  }
+  return { ...init };
+}
+
+/** Stable UUID for one logical mutation; retries must reuse the same value. */
+export function createIdempotencyKey(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `idem-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function resolveMutationIdempotencyKey(
+  method: string,
+  headers: Record<string, string>,
+): string | undefined {
+  if (isIdempotentMethod(method)) return undefined;
+  const existing =
+    headers[IDEMPOTENCY_HEADER] ??
+    headers["idempotency-key"] ??
+    headers["Idempotency-key"];
+  if (typeof existing === "string" && existing.trim()) return existing.trim();
+  return createIdempotencyKey();
+}
+
+/** Typed fetch wrapper for Kaify Ai API routes (cookie session). Soft-retries GETs. */
 export async function apiFetch<T>(
   path: string,
   init?: RequestInit,
 ): Promise<ApiResponseBody<T>> {
   const method = (init?.method ?? "GET").toUpperCase();
   const idempotent = isIdempotentMethod(method);
+  const baseHeaders = headerMap(mergeHeaders(init?.headers));
+  const idempotencyKey = resolveMutationIdempotencyKey(method, baseHeaders);
+  if (idempotencyKey) {
+    baseHeaders[IDEMPOTENCY_HEADER] = idempotencyKey;
+  }
 
   return withRetry(
     async () => {
@@ -36,7 +79,7 @@ export async function apiFetch<T>(
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
-            ...mergeHeaders(init?.headers),
+            ...baseHeaders,
           },
         });
       } catch (error) {
@@ -159,12 +202,15 @@ export async function streamChatMessage(
   message: string,
   handlers: ChatStreamHandlers,
   signal?: AbortSignal,
+  idempotencyKey?: string,
 ): Promise<void> {
+  const key = idempotencyKey ?? createIdempotencyKey();
   const response = await fetch(resolveApiPath(`/api/chat/${coachId}`), {
     method: "POST",
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      [IDEMPOTENCY_HEADER]: key,
       ...csrfHeaders(),
     },
     body: JSON.stringify({ message }),
@@ -241,4 +287,3 @@ export async function streamChatMessage(
     }
   }
 }
-

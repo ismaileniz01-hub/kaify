@@ -25,6 +25,10 @@ export const AI_RATE_LIMITS = {
   profile_delete: { requests: 2, windowMs: 24 * 60 * 60 * 1000 },
   waitlist: { requests: 5, windowMs: 60 * 60 * 1000 },
   subscribe: { requests: 5, windowMs: 60 * 60 * 1000 },
+  /** Browser CSP reports — public, fail-open would invite log floods. */
+  csp_report: { requests: 40, windowMs: 60 * 1000 },
+  /** Same-origin avatar proxy for leaderboard / public surfaces. */
+  public_media: { requests: 120, windowMs: 60 * 1000 },
   /** Email OTP send — separate from waitlist subscribe to avoid shared IP buckets. */
   otp_send: { requests: 12, windowMs: 15 * 60 * 1000 },
   /** Email OTP verify attempts (wrong codes, retries). */
@@ -68,7 +72,13 @@ export async function enforcePublicRateLimit(
   ip: string,
   action: Extract<
     AiRateAction,
-    "waitlist" | "subscribe" | "otp_send" | "otp_verify" | "health_probe"
+    | "waitlist"
+    | "subscribe"
+    | "otp_send"
+    | "otp_verify"
+    | "health_probe"
+    | "csp_report"
+    | "public_media"
   >,
 ): Promise<void> {
   const config = AI_RATE_LIMITS[action];
@@ -79,6 +89,37 @@ export async function enforcePublicRateLimit(
 
   if (!result.allowed) {
     logger.warn("public rate limit exceeded", { ip, action });
+    throw new ApiError(
+      "RATE_LIMITED",
+      "Çok hızlı istek gönderiyorsun. Lütfen birkaç saniye bekle.",
+      { retryAfterMs: result.resetMs },
+    );
+  }
+}
+
+/**
+ * Per-target OTP send limit (email-hash bucket).
+ * Complements IP limiting so rotating IPs cannot linearly bomb one address.
+ * Never log or key on plaintext email — callers must pass a pre-hashed bucket.
+ */
+export const OTP_TARGET_RATE_LIMIT = {
+  requests: 5,
+  windowMs: 15 * 60 * 1000,
+} as const;
+
+export async function enforceOtpTargetRateLimit(
+  emailHash: string,
+): Promise<void> {
+  const result = await checkRateLimit(
+    `pub:otp_send:target:${emailHash}`,
+    OTP_TARGET_RATE_LIMIT,
+    { failClosedInProduction: true },
+  );
+
+  if (!result.allowed) {
+    logger.warn("otp target rate limit exceeded", {
+      emailHashPrefix: emailHash.slice(0, 8),
+    });
     throw new ApiError(
       "RATE_LIMITED",
       "Çok hızlı istek gönderiyorsun. Lütfen birkaç saniye bekle.",

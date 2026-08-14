@@ -5,7 +5,7 @@ import {
   type SupportedLocale,
 } from "@/lib/i18n/dictionary";
 
-/** ISO 639-3 (franc-min) → Kaify locale. Unmapped codes are skipped. */
+/** ISO 639-3 (franc-min) → Kaify Ai locale. Unmapped codes are skipped. */
 const FRANC_TO_LOCALE: Record<string, SupportedLocale> = {
   arb: "ar",
   azj: "az",

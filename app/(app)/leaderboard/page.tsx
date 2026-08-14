@@ -18,6 +18,7 @@ import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { useLang } from "@/lib/lang-context";
 import { formatNumber } from "@/lib/i18n/format";
 import { useSession } from "@/lib/session-context";
+import { prefersReducedMotion } from "@/lib/motion/perf-guards";
 import { apiGet } from "@/lib/api/client";
 import type { UserSettingsDTO } from "@/lib/services/settings.service";
 import { getCountryName } from "@/lib/country-names";
@@ -129,9 +130,13 @@ function PodiumStep({
   return (
     <div
       className="group flex flex-col items-center gap-2"
-      style={{
-        animation: `podiumRise 0.8s ${delay}ms cubic-bezier(0.34, 1.56, 0.64, 1) both`,
-      }}
+      style={
+        prefersReducedMotion()
+          ? undefined
+          : {
+              animation: `podiumRise 0.8s ${delay}ms cubic-bezier(0.34, 1.56, 0.64, 1) both`,
+            }
+      }
     >
       {/* Rozet */}
       <div
@@ -181,6 +186,7 @@ export default function LeaderboardPage() {
   const { profile, isAuthenticated } = useSession();
   const [data, setData] = useState<CountryLeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [leaderboardHidden, setLeaderboardHidden] = useState(false);
 
   useEffect(() => {
@@ -191,7 +197,10 @@ export default function LeaderboardPage() {
           setData(json);
           setLoading(false);
         })
-        .catch(() => setLoading(false));
+        .catch(() => {
+          setLoadError(true);
+          setLoading(false);
+        });
       return;
     }
 
@@ -224,7 +233,10 @@ export default function LeaderboardPage() {
         setLoading(false);
       })
       .catch(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoadError(true);
+          setLoading(false);
+        }
       });
 
     return () => {
@@ -267,6 +279,19 @@ export default function LeaderboardPage() {
               </div>
               <p className="text-sm font-medium text-zinc-500 animate-pulse">{t("leaderboard.loading")}</p>
             </div>
+          </div>
+        ) : loadError ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+            <p className="text-sm text-zinc-300" role="alert">
+              {t("leaderboard.load_error")}
+            </p>
+            <button
+              type="button"
+              className="touch-44 rounded-full bg-white/10 px-4 text-sm text-white"
+              onClick={() => window.location.reload()}
+            >
+              {t("common.retry")}
+            </button>
           </div>
         ) : data ? (
           <>
@@ -433,6 +458,11 @@ export default function LeaderboardPage() {
           100% {
             opacity: 1;
             transform: translateY(0) scale(1);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .group {
+            animation: none !important;
           }
         }
       `}</style>

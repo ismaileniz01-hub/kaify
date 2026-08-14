@@ -65,7 +65,7 @@ export function LandingPricingCTA() {
 
             <Image
               src="/kaify-logo.png"
-              alt="K.AIFY"
+              alt="Kaify Ai"
               width={72}
               height={72}
               className="mx-auto h-[72px] w-[72px] rounded-2xl object-cover shadow-[0_0_48px_rgba(168,85,247,0.5)]"
@@ -99,7 +99,7 @@ export function LandingPricingCTA() {
                 className="landing-btn landing-btn--primary landing-btn--lg group inline-flex gap-2"
               >
                 {t("landing.pricing.explore_plans")}
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
               </Link>
               <Link href="/signup" className="landing-btn landing-btn--ghost landing-btn--lg">
                 {t("landing.nav.login")}

@@ -151,7 +151,7 @@ export function LandingCoaches() {
                           {t(`landing.coaches.${coach.id}.quote` as "landing.coaches.alex.quote")}
                         </div>
                         <div
-                          className="landing-bubble landing-bubble--user ml-auto max-w-[75%]"
+                          className="landing-bubble landing-bubble--user ms-auto max-w-[75%]"
                           style={{ background: coach.color }}
                         >
                           {t(`landing.coaches.${coach.id}.reply` as "landing.coaches.alex.reply")}

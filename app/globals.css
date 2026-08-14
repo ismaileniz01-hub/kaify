@@ -2877,7 +2877,7 @@ a, button, input, select, textarea, label {
 /* Skip link — keyboard-first navigation (WCAG 2.4.1) */
 .skip-to-content {
   position: absolute;
-  left: 1rem;
+  inset-inline-start: 1rem;
   top: 0;
   z-index: 10000;
   transform: translateY(-120%);
@@ -3051,6 +3051,13 @@ select:active {
   box-shadow: 0 0 0 4px rgba(147, 51, 234, 0.2);
 }
 
+html:not([data-theme="light"]) .text-zinc-500 {
+  color: var(--fg-muted);
+}
+html:not([data-theme="light"]) .text-zinc-600 {
+  color: #a1a1aa;
+}
+
 /* Reduced motion — animasyonları kapat */
 @media (prefers-reduced-motion: reduce) {
   *:active,
@@ -3215,7 +3222,7 @@ select:active {
   100% { transform: translateY(-500px) translateX(20px) scale(0.5); opacity: 0; }
 }
 
-/* YENİ: KAIFY logosu parıltısı */
+/* YENİ: Kaify Ai logosu parıltısı */
 @keyframes streakKaifyGlow {
   0%, 100% { filter: drop-shadow(0 0 15px rgba(168,85,247,0.5)) drop-shadow(0 0 30px rgba(168,85,247,0.3)); }
   50% { filter: drop-shadow(0 0 25px rgba(168,85,247,0.7)) drop-shadow(0 0 50px rgba(168,85,247,0.4)); }

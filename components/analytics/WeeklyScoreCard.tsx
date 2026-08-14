@@ -35,7 +35,14 @@ export function WeeklyScoreCard({ score }: Props) {
           <span className="text-zinc-500">{t("analytics.weekly_score.goal_progress")}</span>
           <span className="font-semibold text-purple-200">{pct}%</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-white/10">
+        <div
+          className="h-2 overflow-hidden rounded-full bg-white/10"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={pct}
+          aria-label={t("analytics.weekly_score.goal_progress")}
+        >
           <div
             className="h-full rounded-full bg-gradient-to-r from-purple-500 to-violet-400 transition-all duration-700"
             style={{ width: `${pct}%` }}

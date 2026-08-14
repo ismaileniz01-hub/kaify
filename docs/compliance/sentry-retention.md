@@ -6,7 +6,7 @@ Last updated: 2026-07-05 · Compliance Faz 4 (D8)
 
 ## Context
 
-Account deletion removes data from Kaify's primary database (Supabase) and auth. **Third-party processors may retain scrubbed data** per their own retention schedules.
+Account deletion removes data from Kaify Ai's primary database (Supabase) and auth. **Third-party processors may retain scrubbed data** per their own retention schedules.
 
 ---
 
@@ -19,7 +19,7 @@ Account deletion removes data from Kaify's primary database (Supabase) and auth.
 | User ID in events | Hashed or omitted post-scrub |
 | Retention | ~90 days (Sentry project setting) |
 
-**After account delete:** Historical Sentry events may contain scrubbed stack traces tied to session context. They are not linked to an active Kaify account after auth deletion. Request Sentry data deletion via Sentry dashboard for specific users if DSAR requires (manual, case-by-case).
+**After account delete:** Historical Sentry events may contain scrubbed stack traces tied to session context. They are not linked to an active Kaify Ai account after auth deletion. Request Sentry data deletion via Sentry dashboard for specific users if DSAR requires (manual, case-by-case).
 
 ---
 
@@ -31,7 +31,7 @@ HTTP access logs may contain IP and URL paths for ~30 days. No chat body content
 
 ## Paddle
 
-Billing records retained by MoR per tax law (~7 years). Kaify `billing_events` uses `ON DELETE SET NULL` — see [deletion-behavior.md](./deletion-behavior.md).
+Billing records retained by MoR per tax law (~7 years). Kaify Ai `billing_events` uses `ON DELETE SET NULL` — see [deletion-behavior.md](./deletion-behavior.md).
 
 ---
 
@@ -39,7 +39,7 @@ Billing records retained by MoR per tax law (~7 years). Kaify `billing_events` u
 
 When user requests erasure and third-party retention applies:
 
-1. Complete Kaify-side delete (Settings or admin)
+1. Complete Kaify Ai-side delete (Settings or admin)
 2. Document in DSAR ticket which vendors may retain
 3. Submit vendor deletion requests if legally required and technically supported
 

@@ -1,5 +1,6 @@
-import { createSignedAvatarUrlsBatch } from "@/lib/services/avatar-storage.service";
+import { publicAvatarSrc } from "@/lib/security/avatar-access-token";
 import { resolveLeaderboardUserId } from "@/lib/privacy/mask-user-id";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
 import { cached, cachedWithStale } from "@/lib/cache";
@@ -28,28 +29,16 @@ function maskLeaderboardEntries(
   entries: LeaderboardEntryDTO[],
   viewerId?: string,
 ): LeaderboardEntryDTO[] {
-  return entries.map((entry) => ({
-    ...entry,
-    userId: resolveLeaderboardUserId(entry.userId, viewerId),
-  }));
-}
-
-async function signLeaderboardAvatars(
-  entries: LeaderboardEntryDTO[],
-): Promise<LeaderboardEntryDTO[]> {
-  const ownerByRef = new Map<string, string>();
-  for (const entry of entries) {
-    if (!entry.avatar || entry.avatar.startsWith("/")) continue;
-    ownerByRef.set(entry.avatar, entry.userId);
-  }
-  const signedMap = await createSignedAvatarUrlsBatch(
-    entries.map((e) => e.avatar),
-    ownerByRef,
-  );
   return entries.map((entry) => {
-    if (!entry.avatar || entry.avatar.startsWith("/")) return entry;
-    const signed = signedMap.get(entry.avatar);
-    return { ...entry, avatar: signed ?? "" };
+    const publicId = resolveLeaderboardUserId(entry.userId, viewerId);
+    const avatar = entry.avatar?.startsWith("/")
+      ? entry.avatar
+      : publicAvatarSrc(entry.userId);
+    return {
+      ...entry,
+      userId: publicId,
+      avatar,
+    };
   });
 }
 
@@ -60,8 +49,8 @@ async function loadGlobalLeaderboardEntries(
   const snapshot = await readGlobalSnapshotEntries(limit, offset);
   if (snapshot) return snapshot;
 
-  const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.rpc("get_global_leaderboard", {
+  const admin = createAdminSupabaseClient();
+  const { data, error } = await admin.rpc("get_global_leaderboard", {
     p_limit: limit,
     p_offset: offset,
   });
@@ -101,7 +90,7 @@ async function loadUserRank(viewerId: string): Promise<UserRankResult | null> {
   });
 }
 
-/** Public global leaderboard (anon-safe RPC). Used by legacy/demo routes. */
+/** Public global leaderboard via HTTP API (RPC is service_role only). */
 export async function getPublicGlobalLeaderboard(params: {
   limit: number;
 }): Promise<{
@@ -116,9 +105,7 @@ export async function getPublicGlobalLeaderboard(params: {
   );
 
   return {
-    leaderboard: maskLeaderboardEntries(
-      await signLeaderboardAvatars(entries),
-    ),
+    leaderboard: maskLeaderboardEntries(entries),
     totalUsers: entries.length,
   };
 }
@@ -146,10 +133,7 @@ export async function getGlobalLeaderboard(params: {
   ]);
 
   return {
-    leaderboard: maskLeaderboardEntries(
-      await signLeaderboardAvatars(listEntries),
-      params.viewerId,
-    ),
+    leaderboard: maskLeaderboardEntries(listEntries, params.viewerId),
     myRank: rank?.rank ?? null,
     myStreak: rank?.current_streak ?? 0,
     totalRanked: rank?.total_ranked ?? 0,

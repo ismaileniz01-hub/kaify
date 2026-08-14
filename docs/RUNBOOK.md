@@ -1,6 +1,6 @@
-# Kaify — Operations Runbook
+# Kaify Ai — Operations Runbook
 
-Operational reference for running Kaify in production. Audience: whoever is on
+Operational reference for running Kaify Ai in production. Audience: whoever is on
 call. Keep this file up to date when infra changes.
 
 **Pre-deploy / return checklist:** see [`docs/DEPLOY_CHECKLIST.md`](./DEPLOY_CHECKLIST.md).

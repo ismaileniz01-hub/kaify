@@ -15,22 +15,43 @@
 alter type public.gem_transaction_type add value if not exists 'welcome_bonus';
 
 -- ---------------------------------------------------------------------------
--- 1b. Backfill missing welcome bonus (+300) — run AFTER 1a in a NEW query
+-- 1b. Backfill missing welcome bonus (+300)
+-- Production gem_ledger may use `transaction_type`; clean migrations use `type`.
 -- ---------------------------------------------------------------------------
-insert into public.gem_ledger (user_id, amount, transaction_type, description, idempotency_key)
-select
-  p.id,
-  300,
-  'welcome_bonus'::public.gem_transaction_type,
-  'Welcome bonus +300',
-  'welcome_bonus:' || p.id::text
-from public.profiles p
-where not exists (
-  select 1
-  from public.gem_ledger g
-  where g.user_id = p.id
-    and g.idempotency_key = 'welcome_bonus:' || p.id::text
-);
+do $$
+declare
+  type_col text;
+  sql text;
+begin
+  select case
+    when exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'gem_ledger'
+        and column_name = 'transaction_type'
+    ) then 'transaction_type'
+    else 'type'
+  end into type_col;
+
+  sql := format($f$
+    insert into public.gem_ledger (user_id, amount, %I, description, idempotency_key)
+    select
+      p.id,
+      300,
+      'welcome_bonus'::public.gem_transaction_type,
+      'Welcome bonus +300',
+      'welcome_bonus:' || p.id::text
+    from public.profiles p
+    where not exists (
+      select 1
+      from public.gem_ledger g
+      where g.user_id = p.id
+        and g.idempotency_key = 'welcome_bonus:' || p.id::text
+    )
+  $f$, type_col);
+
+  execute sql;
+end $$;
 
 -- ---------------------------------------------------------------------------
 -- 2. Country leaderboard: include all countries with registered users

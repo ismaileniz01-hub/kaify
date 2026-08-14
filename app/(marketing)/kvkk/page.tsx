@@ -1,10 +1,13 @@
 import { LegalPageShell } from "@/components/legal/LegalPageShell";
 import { KvkkDisclosureContent } from "@/components/legal/KvkkDisclosureContent";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 
-export const metadata = {
-  title: "KVKK Aydınlatma Metni — Kaify",
-  description: "6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında aydınlatma metni.",
-};
+export const metadata = publicPageMetadata({
+  title: "KVKK Aydınlatma Metni — Kaify Ai",
+  description:
+    "6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında aydınlatma metni.",
+  path: "/kvkk",
+});
 
 export default function KvkkPage() {
   return (

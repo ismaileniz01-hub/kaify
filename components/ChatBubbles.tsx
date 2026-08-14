@@ -120,8 +120,17 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
             {[...(a.categories || []), ...(a.extraCategories || [])].map((cat: AnalysisCategory, i: number) => (
               <div key={i} className="flex items-center gap-2">
                 <span className="w-24 text-[11px] text-zinc-400">{t(cat.key)}</span>
-                <div className="flex-1 h-1.5 rounded-full bg-zinc-800 overflow-hidden"><div className="h-full rounded-full transition-all duration-700" style={{ width: `${(cat.score / cat.maxScore) * 100}%`, backgroundColor: cat.color, boxShadow: `0 0 6px ${cat.color}` }} /></div>
-                <span className="w-10 text-right text-[11px] font-bold" style={{ color: cat.color }}>{cat.score}</span>
+                <div
+                  className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={cat.maxScore}
+                  aria-valuenow={cat.score}
+                  aria-label={t(cat.key)}
+                >
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${(cat.score / cat.maxScore) * 100}%`, backgroundColor: cat.color, boxShadow: `0 0 6px ${cat.color}` }} />
+                </div>
+                <span className="w-10 text-end text-[11px] font-bold" style={{ color: cat.color }}>{cat.score}</span>
               </div>
             ))}
           </div>
@@ -155,8 +164,17 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
             {macros.map((m, i) => (
               <div key={i} className="flex items-center gap-2">
                 <span className="w-16 text-[11px] text-zinc-400">{t(m.key)}</span>
-                <div className="flex-1 h-1.5 rounded-full bg-zinc-800 overflow-hidden"><div className="h-full rounded-full transition-all duration-700" style={{ width: `${(m.data.current / m.data.target) * 100}%`, backgroundColor: m.color, boxShadow: `0 0 6px ${m.color}` }} /></div>
-                <span className="w-20 text-right text-[11px]" style={{ color: m.color }}>{m.data.current}g / {m.data.target}g</span>
+                <div
+                  className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={m.data.target}
+                  aria-valuenow={m.data.current}
+                  aria-label={t(m.key)}
+                >
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${(m.data.current / m.data.target) * 100}%`, backgroundColor: m.color, boxShadow: `0 0 6px ${m.color}` }} />
+                </div>
+                <span className="w-20 text-end text-[11px]" style={{ color: m.color }}>{m.data.current}g / {m.data.target}g</span>
               </div>
             ))}
           </div>
@@ -164,7 +182,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
             <p className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400"><TrendingUp className="h-3.5 w-3.5" />{t("meal.meals")}</p>
             {mp.meals.map((meal: MealPlanData["meals"][number], i: number) => (
               <div key={i}><p className="text-[11px] font-bold text-zinc-300 mb-1">{t(meal.labelKey)}</p>{meal.items.map((item, j: number) => (
-                <div key={j} className="flex items-center justify-between pl-3"><span className="text-[11px] text-zinc-400">{item.name}</span><span className="text-[11px] text-zinc-500">{item.calories} kcal</span></div>
+                <div key={j} className="flex items-center justify-between ps-3"><span className="text-[11px] text-zinc-400">{item.name}</span><span className="text-[11px] text-zinc-500">{item.calories} kcal</span></div>
               ))}</div>
             ))}
           </div>
@@ -223,19 +241,45 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
             <p className="text-sm font-bold text-white">{ds.greeting}</p>
           </div>
           <div className="p-3" style={{ borderBottom: `1px solid ${ring}` }}>
-            <p className="text-xs font-bold text-zinc-400 flex items-center gap-1.5"><Dumbbell className="h-3 w-3" /> ANTRENMAN</p>
-            <p className="text-xs text-zinc-300 mt-1">✅ Tamamlanan: <span className="text-white">{ds.workout.completed}</span></p>
-            <p className="text-xs text-zinc-300">⏭️ Sıradaki: <span className="text-white">{ds.workout.next}</span></p>
+            <p className="text-xs font-bold text-zinc-400 flex items-center gap-1.5"><Dumbbell className="h-3 w-3" /> {t("chat.rich.workout")}</p>
+            <p className="text-xs text-zinc-300 mt-1">✅ {t("chat.rich.completed")}: <span className="text-white">{ds.workout.completed}</span></p>
+            <p className="text-xs text-zinc-300">⏭️ {t("chat.rich.next")}: <span className="text-white">{ds.workout.next}</span></p>
             <p className="text-xs text-green-400 mt-1">{ds.workout.status}</p>
           </div>
           <div className="p-3" style={{ borderBottom: `1px solid ${ring}` }}>
-            <p className="text-xs font-bold text-zinc-400 flex items-center gap-1.5"><TrendingUp className="h-3 w-3" /> BESLENME</p>
-            <div className="flex items-center gap-2 mt-1"><span className="text-[10px] text-zinc-400">Kalori</span><div className="flex-1 h-1.5 rounded-full bg-zinc-800 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${calPct}%`, backgroundColor: primary }} /></div><span className="text-[10px] text-zinc-400">{ds.nutrition.calories.current}/{ds.nutrition.calories.target}</span></div>
-            <div className="flex items-center gap-2 mt-1"><span className="text-[10px] text-zinc-400">Protein</span><div className="flex-1 h-1.5 rounded-full bg-zinc-800 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${protPct}%`, backgroundColor: "#ef4444" }} /></div><span className="text-[10px] text-zinc-400">{ds.nutrition.protein.current}g/{ds.nutrition.protein.target}g</span></div>
+            <p className="text-xs font-bold text-zinc-400 flex items-center gap-1.5"><TrendingUp className="h-3 w-3" /> {t("chat.rich.nutrition")}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[10px] text-zinc-400">{t("meal.calories")}</span>
+              <div
+                className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={calPct}
+                aria-label={t("meal.calories")}
+              >
+                <div className="h-full rounded-full" style={{ width: `${calPct}%`, backgroundColor: primary }} />
+              </div>
+              <span className="text-[10px] text-zinc-400">{ds.nutrition.calories.current}/{ds.nutrition.calories.target}</span>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[10px] text-zinc-400">{t("meal.protein")}</span>
+              <div
+                className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={protPct}
+                aria-label={t("meal.protein")}
+              >
+                <div className="h-full rounded-full" style={{ width: `${protPct}%`, backgroundColor: "#ef4444" }} />
+              </div>
+              <span className="text-[10px] text-zinc-400">{ds.nutrition.protein.current}g/{ds.nutrition.protein.target}g</span>
+            </div>
             <p className="text-[10px] text-zinc-300 mt-1">{ds.nutrition.highlight}</p>
           </div>
           <div className="p-3" style={{ borderBottom: `1px solid ${ring}` }}>
-            <p className="text-xs font-bold text-zinc-400 flex items-center gap-1.5"><Target className="h-3 w-3" /> VÜCUT ANALİZİ</p>
+            <p className="text-xs font-bold text-zinc-400 flex items-center gap-1.5"><Target className="h-3 w-3" /> {t("chat.rich.body")}</p>
             <p className="text-xs text-zinc-300 mt-1">{ds.bodyScore.focus}</p>
           </div>
           <div className="p-3"><p className="text-xs leading-relaxed text-zinc-200">{ds.motivation}</p></div>
@@ -247,6 +291,9 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-36 pt-4">
+      <p className="mb-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-center text-[11px] text-amber-200/90" role="note">
+        {t("chat.demo.notice")}
+      </p>
       <div className="mt-auto flex flex-col gap-3">
         {allMessages.map((msg) => (
           <div key={msg.id}>
@@ -277,7 +324,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
                     <div className="flex flex-col gap-1">
                       <div className="chat-message-bubble animate-message px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}>{msg.text}</div>
                       {renderCard(msg)}
-                      <span className="chat-message-time pl-1 text-zinc-600">{msg.time}</span>
+                      <span className="chat-message-time ps-1 text-zinc-600">{msg.time}</span>
                     </div>
                   </div>
                 ) : (
@@ -285,16 +332,16 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
                     <div className="relative h-8 w-8 shrink-0"><Image src={contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain" /></div>
                     <div className="flex flex-col gap-1">
                       <div className="chat-message-bubble animate-message px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}>{msg.text}</div>
-                      <span className="chat-message-time pl-1 text-zinc-600">{msg.time}</span>
+                      <span className="chat-message-time ps-1 text-zinc-600">{msg.time}</span>
                     </div>
                   </div>
                 )
               ) : (
-                <div className="ml-auto flex max-w-[82%] flex-col items-end gap-1">
+                <div className="ms-auto flex max-w-[82%] flex-col items-end gap-1">
                   <div className="flex items-end gap-2">
                     <div className="flex flex-col items-end gap-1">
                       <div className="chat-message-bubble animate-message px-4 py-2.5 text-sm leading-relaxed text-white" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})`, borderRadius: "18px 18px 4px 18px", boxShadow: `0 8px 22px ${shadow}` }}>{msg.text}</div>
-                      <span className="chat-message-time pr-1 text-zinc-600">{msg.time}</span>
+                      <span className="chat-message-time pe-1 text-zinc-600">{msg.time}</span>
                     </div>
                     <div className="relative h-8 w-8 shrink-0"><Image src={DEMO_USER_PROFILE.avatar} alt={DEMO_USER_PROFILE.name} width={32} height={32} className="h-full w-full rounded-full object-cover" /></div>
                   </div>

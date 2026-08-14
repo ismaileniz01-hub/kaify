@@ -22,6 +22,14 @@ const KNOWN_CODES = [
   "RATE_LIMITED",
   "INTERNAL_ERROR",
   "SERVICE_UNAVAILABLE",
+  "NETWORK",
+  "SESSION_EXPIRED",
+  "UPLOAD_TOO_LARGE",
+  "UNSUPPORTED_IMAGE",
+  "ANALYSIS_UNAVAILABLE",
+  "SAVE_FAILED",
+  "PROVIDER_UNAVAILABLE",
+  "STREAM_ERROR",
 ] as const;
 
 /** Translates an API error code into a localized, user-facing message. */

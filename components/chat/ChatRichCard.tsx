@@ -100,7 +100,7 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
                   style={{ width: `${(m.grams / totalG) * 100}%`, backgroundColor: m.color }}
                 />
               </div>
-              <span className="w-10 text-right text-[11px] font-bold" style={{ color: m.color }}>
+              <span className="w-10 text-end text-[11px] font-bold" style={{ color: m.color }}>
                 {m.grams}g
               </span>
             </div>
@@ -148,7 +148,7 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
                   }}
                 />
               </div>
-              <span className="w-10 text-right text-[11px] font-bold" style={{ color: cat.color }}>
+              <span className="w-10 text-end text-[11px] font-bold" style={{ color: cat.color }}>
                 {cat.score}
               </span>
             </div>
@@ -278,11 +278,11 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
       >
         <div className="flex items-center gap-3 p-3" style={{ borderBottom: `1px solid ${ring}` }}>
           <Activity className="h-6 w-6" style={{ color: primary }} />
-          <p className="text-sm font-bold text-white">{ds.greeting ?? "Günlük Özet"}</p>
+          <p className="text-sm font-bold text-white">{ds.greeting ?? t("chat.rich.daily_summary")}</p>
         </div>
         {ds.workout && (
           <div className="p-3 text-xs text-zinc-300" style={{ borderBottom: `1px solid ${ring}` }}>
-            <p className="font-bold text-zinc-400">ANTRENMAN</p>
+            <p className="font-bold text-zinc-400">{t("chat.rich.workout")}</p>
             <p>✅ {ds.workout.completed}</p>
             <p>⏭️ {ds.workout.next}</p>
             <p className="text-green-400">{ds.workout.status}</p>
@@ -290,8 +290,15 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
         )}
         {ds.nutrition && (
           <div className="p-3 text-xs" style={{ borderBottom: `1px solid ${ring}` }}>
-            <p className="font-bold text-zinc-400">BESLENME</p>
-            <div className="mt-1 h-1.5 rounded-full bg-zinc-800">
+            <p className="font-bold text-zinc-400">{t("chat.rich.nutrition")}</p>
+            <div
+              className="mt-1 h-1.5 rounded-full bg-zinc-800"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={calPct}
+              aria-label={t("chat.rich.nutrition")}
+            >
               <div className="h-full rounded-full" style={{ width: `${calPct}%`, backgroundColor: primary }} />
             </div>
             <p className="mt-1 text-zinc-300">{ds.nutrition.highlight}</p>
@@ -300,7 +307,7 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
         {ds.bodyScore?.focus && (
           <div className="p-3 text-xs text-zinc-300" style={{ borderBottom: `1px solid ${ring}` }}>
             <p className="flex items-center gap-1 font-bold text-zinc-400">
-              <Target className="h-3 w-3" /> VÜCUT
+              <Target className="h-3 w-3" /> {t("chat.rich.body")}
             </p>
             <p>{ds.bodyScore.focus}</p>
           </div>

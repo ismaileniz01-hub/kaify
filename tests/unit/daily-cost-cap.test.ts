@@ -27,14 +27,12 @@ import {
   userDailyTokenHardCap,
 } from "@/lib/ai/daily-cost-cap";
 
-function mockLedger(totalTokens: number[]) {
+function mockDailyUsage(totalTokens: number | null) {
   const chain = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
-    gte: vi.fn().mockReturnThis(),
-    lt: vi.fn().mockReturnThis(),
-    range: vi.fn().mockResolvedValue({
-      data: totalTokens.map((t) => ({ total_tokens: t })),
+    maybeSingle: vi.fn().mockResolvedValue({
+      data: totalTokens === null ? null : { total_tokens: totalTokens },
       error: null,
     }),
   };
@@ -59,13 +57,13 @@ describe("daily-cost-cap", () => {
   });
 
   it("allows usage below the cap", async () => {
-    mockLedger([10_000, 20_000]);
+    mockDailyUsage(30_000);
     await expect(assertUserDailyAiBudget("u1")).resolves.toBeUndefined();
   });
 
   it("blocks usage at or above the cap", async () => {
     process.env.AI_COST_USER_DAILY_TOKENS_CAP = "50000";
-    mockLedger([30_000, 25_000]);
+    mockDailyUsage(55_000);
 
     await expect(assertUserDailyAiBudget("u1")).rejects.toMatchObject({
       code: "FORBIDDEN",
@@ -77,9 +75,7 @@ describe("daily-cost-cap", () => {
     from.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      gte: vi.fn().mockReturnThis(),
-      lt: vi.fn().mockReturnThis(),
-      range: vi.fn().mockResolvedValue({ data: null, error: { message: "db down" } }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: { message: "db down" } }),
     });
     await expect(assertUserDailyAiBudget("u1")).rejects.toMatchObject({
       code: "SERVICE_UNAVAILABLE",
@@ -92,9 +88,7 @@ describe("daily-cost-cap", () => {
     from.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      gte: vi.fn().mockReturnThis(),
-      lt: vi.fn().mockReturnThis(),
-      range: vi.fn().mockResolvedValue({ data: null, error: { message: "db down" } }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: { message: "db down" } }),
     });
     await expect(assertUserDailyAiBudget("u1")).resolves.toBeUndefined();
     vi.unstubAllEnvs();
@@ -103,11 +97,13 @@ describe("daily-cost-cap", () => {
   it("platform hard cap enters degraded mode and blocks AI", async () => {
     process.env.AI_COST_PLATFORM_DAILY_USD_CAP = "10";
     cacheGet.mockResolvedValue(null);
-    getCronCostSnapshot.mockResolvedValue({
-      todayUsd: 12,
-      todayTokens: 1_000_000,
-      avgDailyUsd: 5,
-      topUsersToday: [],
+    from.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { estimated_usd_micro: 12_000_000, total_tokens: 1_000_000 },
+        error: null,
+      }),
     });
 
     await expect(assertPlatformDailyAiBudget()).rejects.toMatchObject({

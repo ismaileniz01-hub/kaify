@@ -142,7 +142,7 @@ export function LandingAbout() {
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
               </div>
 
-              {/* Kaify fiyatı — Kazanan Kartı */}
+              {/* Kaify Ai fiyatı — Kazanan Kartı */}
               <div className="group relative overflow-hidden rounded-2xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-green-600/5 to-transparent p-6 transition-all duration-500 hover:border-emerald-400/50 hover:shadow-[0_0_50px_rgba(16,185,129,0.2)]">
                 {/* Animasyonlu yeşil parıltı */}
                 <div className="pointer-events-none absolute -inset-20 opacity-0 transition-opacity duration-700 group-hover:opacity-100">
@@ -160,13 +160,13 @@ export function LandingAbout() {
                       ✓
                     </span>
                     <div>
-                      <p className="text-lg font-bold text-white">Kaify</p>
+                      <p className="text-lg font-bold text-white">Kaify Ai</p>
                       <p className="text-xs text-emerald-400/70">
                         {t("landing.value.all_in_one")}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-end">
                     <p className="text-3xl font-extrabold text-white">
                       $14.99
                     </p>
@@ -189,7 +189,7 @@ export function LandingAbout() {
                       $1,500+/{t("pricing.unit.year")}
                     </span>
                   </span>
-                  <span className="ml-auto text-[10px] font-medium text-emerald-400/60">
+                  <span className="ms-auto text-[10px] font-medium text-emerald-400/60">
                     {t("landing.value.comparison_note")}
                   </span>
                 </div>

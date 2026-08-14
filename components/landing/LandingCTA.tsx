@@ -18,7 +18,7 @@ export function LandingCTA() {
 
             <Image
               src="/kaify-logo.png"
-              alt="K.AIFY"
+              alt="Kaify Ai"
               width={80}
               height={80}
               className="mx-auto h-20 w-20 rounded-2xl object-cover shadow-[0_0_48px_rgba(168,85,247,0.5)]"
@@ -65,7 +65,7 @@ export function LandingCTA() {
                 </a>{" "}
                 &{" "}
                 <a
-                  href="/terms&conditions"
+                  href="/terms"
                   className="underline transition hover:text-zinc-300"
                 >
                   {t("legal.terms")}

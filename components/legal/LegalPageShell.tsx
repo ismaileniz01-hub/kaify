@@ -25,7 +25,7 @@ export function LegalPageShell({
       <header className="border-b border-white/10 bg-zinc-950/90 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-4">
           <Link href="/" className="text-sm text-zinc-400 hover:text-white">
-            ← Kaify
+            ← Kaify Ai
           </Link>
           <div className="flex gap-4 text-xs text-zinc-500">
             <Link href="/terms" className="hover:text-zinc-300">

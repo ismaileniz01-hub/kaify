@@ -2,7 +2,11 @@ import { cached, cachedWithStale } from "@/lib/cache";
 import { CacheKeys, CacheTTL } from "@/lib/cache/keys";
 import { resolveIsHubAdmin } from "@/lib/auth/admin-access";
 import { getGemBalance } from "@/lib/services/gem-balance.service";
-import { getHomeData, type HomeDTO } from "@/lib/services/home.service";
+import {
+  getHomeCoreData,
+  localizeHomeData,
+  type HomeDTO,
+} from "@/lib/services/home.service";
 import { getKaiState, type KaiStateDTO } from "@/lib/services/kai-state.service";
 import { getOwnProfile } from "@/lib/services/profile.service";
 import { getReferralSummary } from "@/lib/services/referral.service";
@@ -43,12 +47,13 @@ export async function getSessionBundle(userId: string): Promise<SessionBundleDTO
     resolveIsHubAdmin(userId),
   ]);
 
-  const home = await cachedWithStale(
+  const homeCore = await cachedWithStale(
     CacheKeys.homeBundle(userId),
     CacheTTL.homeBundle,
     CacheTTL.homeBundleStale,
-    () => getHomeData(userId, undefined, { profile, streakStatus: streak }),
+    () => getHomeCoreData(userId, { profile, streakStatus: streak }),
   );
+  const home = await localizeHomeData(homeCore, profile.locale);
 
   return {
     profile,

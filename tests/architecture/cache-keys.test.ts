@@ -28,12 +28,9 @@ describe("cache keys registry", () => {
     expect(CacheTTL.coachesCatalog).toBeGreaterThan(CacheTTL.homeBundle);
   });
 
-  it("scopes home bundle per user and day", () => {
+  it("scopes home bundle per user and day (locale-free v3)", () => {
     expect(CacheKeys.homeBundle("u1", "2026-07-05")).toBe(
-      "home:bundle:v2:u1:2026-07-05:default",
-    );
-    expect(CacheKeys.homeBundle("u1", "2026-07-05", "tr")).toBe(
-      "home:bundle:v2:u1:2026-07-05:tr",
+      "home:bundle:v3:u1:2026-07-05",
     );
   });
 });

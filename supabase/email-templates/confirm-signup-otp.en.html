@@ -1,7 +1,7 @@
 <!--
   Paste into Supabase Dashboard → Authentication → Email Templates → Confirm signup
 
-  Subject: Your KAIFY verification code
+  Subject: Your Kaify Ai verification code
 
   New signups can use this template when "Confirm email" is enabled.
   Must include {{ .Token }} and must NOT include {{ .ConfirmationURL }}.
@@ -9,12 +9,12 @@
 {{ if eq .Data.language "tr" }}
 <h2 style="margin:0 0 16px;font-family:system-ui,sans-serif;color:#111;">Doğrulama kodun</h2>
 <p style="margin:0 0 20px;font-family:system-ui,sans-serif;color:#444;line-height:1.5;">
-  Hesabını oluşturmayı tamamlamak için bu tek kullanımlık kodu K.AIFY&apos;da gir.
+  Hesabını oluşturmayı tamamlamak için bu tek kullanımlık kodu Kaify Ai&apos;da gir.
 </p>
 {{ else }}
 <h2 style="margin:0 0 16px;font-family:system-ui,sans-serif;color:#111;">Your verification code</h2>
 <p style="margin:0 0 20px;font-family:system-ui,sans-serif;color:#444;line-height:1.5;">
-  Enter this one-time code in K.AIFY to finish creating your account.
+  Enter this one-time code in Kaify Ai to finish creating your account.
 </p>
 {{ end }}
 <p style="margin:0 0 24px;font-family:ui-monospace,monospace;font-size:32px;font-weight:700;letter-spacing:0.35em;color:#7c3aed;">

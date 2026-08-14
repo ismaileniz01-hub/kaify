@@ -1,5 +1,3 @@
-"use client";
-
 import dynamic from "next/dynamic";
 import { LandingNav } from "./LandingNav";
 import { LandingHero } from "./LandingHero";
@@ -27,6 +25,7 @@ const LandingPricingCTA = dynamic(
   { ssr: true },
 );
 
+/** Server page: only above-the-fold islands hydrate with the initial JS. */
 export function LandingPage() {
   return (
     <div className="landing-site">

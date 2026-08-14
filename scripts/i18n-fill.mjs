@@ -109,7 +109,7 @@ async function translateChunk(entries, langName) {
     "- Translate values naturally for a friendly fitness app UI; keep it concise.",
     "- Keep ALL placeholders like {name}, {level}, {days}, {streak}, {percent} EXACTLY as-is.",
     "- Keep emojis, numbers, and Markdown/newline characters (\\n) intact.",
-    "- Do NOT translate brand/proper names: K.AIFY, Kai, Alex, Maya, Leo.",
+    "- Do NOT translate brand/proper names: Kaify Ai, Kai, Alex, Maya, Leo.",
     "- Preserve leading/trailing spaces if present.",
     "",
     "JSON to translate:",

@@ -38,6 +38,7 @@ export const CASCADE_ON_DELETE_TABLES: readonly DeletionTableSpec[] = [
   { table: "daily_chest_claims", column: "user_id", behavior: "cascade", notes: "" },
   { table: "idempotency_keys", column: "user_id", behavior: "cascade", notes: "" },
   { table: "ai_usage_ledger", column: "user_id", behavior: "cascade", notes: "Faz 2 — was SET NULL" },
+  { table: "ai_daily_usage", column: "user_id", behavior: "cascade", notes: "Daily AI token aggregate" },
   { table: "data_export_logs", column: "user_id", behavior: "cascade", notes: "" },
 ] as const;
 
@@ -47,7 +48,7 @@ export const RETAINED_AFTER_DELETE: readonly DeletionTableSpec[] = [
     table: "billing_events",
     column: "user_id",
     behavior: "set_null",
-    notes: "Financial audit; customer_email may remain — legal retention 7y",
+    notes: "Financial audit row retained (SET NULL); payload is minimized at insert. Row TTL: RETENTION.billingEventsMonths (policy 7y).",
   },
   {
     table: "paddle_customers",
@@ -76,6 +77,12 @@ export const EXPLICIT_CLEANUP: readonly DeletionTableSpec[] = [
     column: "user_id",
     behavior: "explicit_cleanup",
     notes: "Supabase Storage bucket — not covered by FK cascade",
+  },
+  {
+    table: "cache:user",
+    column: "user_id",
+    behavior: "explicit_cleanup",
+    notes: "Upstash/Redis user-derived keys via purgeUserCaches()",
   },
   {
     table: "auth.users",

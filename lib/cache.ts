@@ -20,6 +20,10 @@ function isConfigured(): boolean {
   );
 }
 
+export function isCacheConfigured(): boolean {
+  return isConfigured();
+}
+
 async function redisCommand<T>(command: (string | number)[]): Promise<T | null> {
   const base = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -70,6 +74,52 @@ export async function cacheSet(
   }
 }
 
+/**
+ * SET key NX EX — returns true when this caller created the key.
+ * Redis/cache outage returns false (fail-closed for lock acquisition).
+ */
+export async function cacheSetNx(
+  key: string,
+  value: unknown,
+  ttlSeconds: number,
+): Promise<boolean> {
+  if (!isConfigured()) return false;
+  try {
+    const result = await redisCommand<string | null>([
+      "SET",
+      key,
+      JSON.stringify(value),
+      "EX",
+      String(ttlSeconds),
+      "NX",
+    ]);
+    return result === "OK";
+  } catch (error) {
+    logger.warn("cache setnx failed", {
+      key,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+    return false;
+  }
+}
+
+/** INCR with TTL refresh. Returns null when Redis is unavailable. */
+export async function cacheIncr(key: string, ttlSeconds: number): Promise<number | null> {
+  if (!isConfigured()) return null;
+  try {
+    const next = await redisCommand<number>(["INCR", key]);
+    if (next === null) return null;
+    await redisCommand(["EXPIRE", key, String(ttlSeconds)]);
+    return Number(next);
+  } catch (error) {
+    logger.warn("cache incr failed", {
+      key,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+    return null;
+  }
+}
+
 export async function cacheDelete(key: string): Promise<void> {
   if (!isConfigured()) return;
   try {
@@ -77,6 +127,46 @@ export async function cacheDelete(key: string): Promise<void> {
   } catch {
     // best-effort invalidation
   }
+}
+
+/** Stale companion key written by `cachedWithStale`. */
+export function staleCompanionKey(key: string): string {
+  return `${key}:stale`;
+}
+
+/**
+ * Deletes every key matching a Redis MATCH pattern (SCAN + DEL).
+ * Used for user-scoped purge and home-bundle invalidation across legacy variants.
+ */
+export async function cacheDeleteByPattern(pattern: string): Promise<number> {
+  if (!isConfigured()) return 0;
+  let cursor = "0";
+  let deleted = 0;
+  try {
+    do {
+      const result = await redisCommand<[string, string[]]>([
+        "SCAN",
+        cursor,
+        "MATCH",
+        pattern,
+        "COUNT",
+        100,
+      ]);
+      if (!result) break;
+      const [nextCursor, keys] = result;
+      cursor = String(nextCursor);
+      if (keys.length > 0) {
+        const count = await redisCommand<number>(["DEL", ...keys]);
+        deleted += Number(count ?? keys.length);
+      }
+    } while (cursor !== "0");
+  } catch (error) {
+    logger.warn("cache pattern delete failed", {
+      pattern,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+  }
+  return deleted;
 }
 
 /**
@@ -121,6 +211,9 @@ export async function cached<T>(
 /**
  * Read-through cache with stale fallback: if `producer` throws, serve the last
  * good value from a longer-lived stale key instead of failing the request.
+ *
+ * Fresh hits do not rewrite the stale companion (PERF-006). Misses write both
+ * keys once after the producer succeeds.
  */
 export async function cachedWithStale<T>(
   key: string,
@@ -128,18 +221,34 @@ export async function cachedWithStale<T>(
   staleTtlSeconds: number,
   producer: () => Promise<T>,
 ): Promise<T> {
-  const staleKey = `${key}:stale`;
+  const staleKey = staleCompanionKey(key);
+  const hit = await cacheGet<T>(key);
+  if (hit !== null) return hit;
 
-  try {
-    const fresh = await cached(key, ttlSeconds, producer);
-    await cacheSet(staleKey, fresh, staleTtlSeconds);
-    return fresh;
-  } catch (error) {
-    const stale = await cacheGet<T>(staleKey);
-    if (stale !== null) {
-      logger.warn("cache stale fallback served", { key });
-      return stale;
+  const existing = inflightProducers.get(key);
+  if (existing) return existing as Promise<T>;
+
+  const pending = (async () => {
+    try {
+      const again = await cacheGet<T>(key);
+      if (again !== null) return again;
+
+      const fresh = await producer();
+      await cacheSet(key, fresh, ttlSeconds);
+      await cacheSet(staleKey, fresh, staleTtlSeconds);
+      return fresh;
+    } catch (error) {
+      const stale = await cacheGet<T>(staleKey);
+      if (stale !== null) {
+        logger.warn("cache stale fallback served", { key });
+        return stale;
+      }
+      throw error;
+    } finally {
+      inflightProducers.delete(key);
     }
-    throw error;
-  }
+  })();
+
+  inflightProducers.set(key, pending);
+  return pending as Promise<T>;
 }

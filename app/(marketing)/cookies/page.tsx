@@ -1,14 +1,12 @@
 import { LegalPageShell } from "@/components/legal/LegalPageShell";
 import { CookiePolicyContent } from "@/components/legal/CookiePolicyContent";
-import type { Metadata } from "next";
-import { cookies } from "next/headers";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const isTurkish = (await cookies()).get("kaify-lang")?.value === "tr";
-  return {
-    title: isTurkish ? "Çerez Politikası — Kaify" : "Cookie Policy — Kaify",
-  };
-}
+export const metadata = publicPageMetadata({
+  title: "Cookie Policy — Kaify Ai",
+  description: "How Kaify Ai uses essential and optional cookies on the website and app.",
+  path: "/cookies",
+});
 
 export default function CookiesPage() {
   return (

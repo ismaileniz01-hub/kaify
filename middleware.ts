@@ -1,10 +1,17 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getClientIP, isLikelyBot, isAllowedOrigin } from "@/lib/api-security";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { buildContentSecurityPolicy, generateCspNonce, isLegalContentPath } from "@/lib/security/csp";
+import {
+  buildContentSecurityPolicy,
+  buildCspReportingEndpoints,
+  generateCspNonce,
+  isLegalContentPath,
+} from "@/lib/security/csp";
+import { CSP_REPORT_PATH } from "@/lib/security/csp-report";
 import { attachCsrfCookie } from "@/lib/security/csrf-crypto";
 import { logger } from "@/lib/logger";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
+import { isMarketingPath, isProtectedProductPath } from "@/lib/seo/policy";
 import {
   isLegacyPublicApi,
   legacyApiDeprecationHeaders,
@@ -30,27 +37,6 @@ const SUSPICIOUS_PATHS = [
   "/server-status", "/server-info",
   "/cgi-bin", "/cpanel", "/webmail",
 ];
-
-const MARKETING_EXACT = new Set([
-  "/",
-  "/privacy",
-  "/terms",
-  "/terms&conditions",
-  "/cookies",
-  "/kvkk",
-  "/sitemap.xml",
-  "/robots.txt",
-]);
-
-function isMarketingPath(pathname: string): boolean {
-  if (MARKETING_EXACT.has(pathname)) return true;
-  return (
-    pathname.startsWith("/privacy/") ||
-    pathname.startsWith("/terms/") ||
-    pathname.startsWith("/cookies/") ||
-    pathname.startsWith("/kvkk/")
-  );
-}
 
 function hasSupabaseAuthCookie(request: NextRequest): boolean {
   return request.cookies
@@ -97,8 +83,12 @@ async function finalizeResponse(
 
   response.headers.set(
     "Content-Security-Policy",
-    buildContentSecurityPolicy(nonce, { legalEmbed: isLegalContentPath(pathname) }),
+    buildContentSecurityPolicy(nonce, {
+      legalEmbed: isLegalContentPath(pathname),
+      staticHtml: isMarketingPath(pathname),
+    }),
   );
+  response.headers.set("Reporting-Endpoints", buildCspReportingEndpoints());
   response.headers.set("X-Request-ID", requestId);
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
@@ -145,6 +135,7 @@ export async function middleware(request: NextRequest) {
     !pathname.startsWith("/api/webhooks/") &&
     !pathname.startsWith("/api/cron/") &&
     pathname !== "/api/health" &&
+    pathname !== CSP_REPORT_PATH &&
     isLikelyBot(request)
   ) {
     logger.warn("middleware blocked bot request", { requestId, pathname, ip });
@@ -157,6 +148,7 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/api/") &&
     !pathname.startsWith("/api/webhooks/") &&
+    pathname !== CSP_REPORT_PATH &&
     ["POST", "PUT", "DELETE", "PATCH"].includes(request.method) &&
     !isAllowedOrigin(request)
   ) {
@@ -176,6 +168,12 @@ export async function middleware(request: NextRequest) {
     return finalizeResponse(forwardedRequest, nonce, requestId, pathname);
   }
 
+  if (pathname === CSP_REPORT_PATH) {
+    return finalizeResponse(forwardedRequest, nonce, requestId, pathname, undefined, {
+      skipSessionRefresh: true,
+    });
+  }
+
   if (pathname.startsWith("/api/cron/") || pathname.startsWith("/api/webhooks/")) {
     return finalizeResponse(forwardedRequest, nonce, requestId, pathname);
   }
@@ -185,6 +183,19 @@ export async function middleware(request: NextRequest) {
     return finalizeResponse(forwardedRequest, nonce, requestId, pathname, undefined, {
       skipSessionRefresh: true,
     });
+  }
+
+  // Guest product routes: send to login (cookie presence only — not a security check).
+  if (
+    isProtectedProductPath(pathname) &&
+    !pathname.startsWith("/api/") &&
+    !hasSupabaseAuthCookie(request)
+  ) {
+    const login = request.nextUrl.clone();
+    login.pathname = "/login";
+    login.search = "";
+    login.searchParams.set("next", pathname);
+    return NextResponse.redirect(login);
   }
 
   const bucket = getRateLimitBucket(pathname);

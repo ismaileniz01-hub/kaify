@@ -6,8 +6,12 @@ export type ReviewedLangOption = {
 };
 
 /**
- * Locales exposed in the language picker after Phase 3 MT QA.
+ * Locales exposed in the language picker.
+ * Only ship locales with substantial non-English coverage on product surfaces.
  * Dictionaries for other codes still ship for parity / future unlock.
+ *
+ * Wave 1 (UX-001): removed pt/nl/pl/ru/ko/zh-CN (~25% translated) and ja (~55%).
+ * Kept TR + EN + DE/FR/ES(+variants)/IT/AR (~70%+ translated).
  */
 export const REVIEWED_LANG_OPTIONS: ReviewedLangOption[] = [
   { code: "tr", label: "🇹🇷 Türkçe" },
@@ -17,30 +21,27 @@ export const REVIEWED_LANG_OPTIONS: ReviewedLangOption[] = [
   { code: "es", label: "🇪🇸 Español" },
   { code: "es-mx", label: "🇲🇽 Español (México)" },
   { code: "es-ar", label: "🇦🇷 Español (Argentina)" },
-  { code: "pt", label: "🇵🇹 Português" },
   { code: "it", label: "🇮🇹 Italiano" },
-  { code: "nl", label: "🇳🇱 Nederlands" },
-  { code: "pl", label: "🇵🇱 Polski" },
-  { code: "ru", label: "🇷🇺 Русский" },
   { code: "ar", label: "🇸🇦 العربية" },
-  { code: "ja", label: "🇯🇵 日本語" },
-  { code: "ko", label: "🇰🇷 한국어" },
-  { code: "zh-CN", label: "🇨🇳 简体中文" },
 ];
 
 export const REVIEWED_LANG_CODES = REVIEWED_LANG_OPTIONS.map((o) => o.code);
 
+/** Locales that must pass the corpus-quality gate when listed as reviewed. */
 export const PRIORITY_QUALITY_LOCALES = [
   "de",
   "fr",
   "es",
-  "pt",
-  "ar",
-  "ru",
-  "ja",
-  "zh-CN",
   "it",
-  "nl",
-  "pl",
-  "ko",
+  "ar",
 ] as const;
+
+/** Minimum share of non-admin keys that must differ from English. */
+export const REVIEWED_LOCALE_MIN_TRANSLATED_RATIO = 0.58;
+
+/**
+ * Public HTML is not locale-prefixed. Crawlers index English canonical URLs.
+ * Product UI locales (picker) are independent of SEO_INDEXABLE.
+ */
+export const SEO_PUBLIC_HTML_LANG = "en" as const;
+export const SEO_HREFLANG_STRATEGY = "single_canonical_public_language" as const;

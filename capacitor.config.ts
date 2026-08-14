@@ -3,7 +3,7 @@ import { KeyboardResize, KeyboardStyle } from "@capacitor/keyboard";
 import { resolveNativeServerUrl } from "./lib/native/app-entry";
 
 /**
- * Capacitor native shell for K.AIFY.
+ * Capacitor native shell for Kaify Ai.
  *
  * **Remote URL mode** — WebView loads the deployed Next.js app (Vercel).
  * Web and native share one codebase; Vercel deploy updates the app UI without
@@ -20,7 +20,7 @@ const isLocal = serverUrl.startsWith("http://");
 
 const config: CapacitorConfig = {
   appId: "org.kaify.app",
-  appName: "K.AIFY",
+  appName: "Kaify Ai",
   webDir: "public",
   loggingBehavior: isLocal ? "debug" : "none",
   server: {

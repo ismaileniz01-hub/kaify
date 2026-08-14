@@ -1,4 +1,4 @@
-# Kaify
+# Kaify Ai
 
 AI fitness coach (Kai) — Next.js 15, Supabase, Vercel.
 

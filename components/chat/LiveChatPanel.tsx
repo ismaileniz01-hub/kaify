@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { streamChatMessage, apiGet, apiPost, ApiClientError } from "@/lib/api/client";
+import {
+  streamChatMessage,
+  apiGet,
+  apiPost,
+  createIdempotencyKey,
+} from "@/lib/api/client";
 import type { ChatMessageDTO } from "@/lib/types/domain.types";
 import type { MessageType } from "@/lib/types/database.types";
 import type { ContactId } from "@/lib/contacts";
@@ -22,6 +27,12 @@ import { ChatComposer } from "@/components/chat/ChatComposer";
 import { apiErrorMessage, errorToMessage } from "@/lib/i18n/api-error";
 import { MessageCircle } from "lucide-react";
 import { prefersReducedMotion } from "@/lib/motion/perf-guards";
+import {
+  markMessageDelivered,
+  markMessageFailed,
+  shouldReuseIdempotencyKeyOnRetry,
+  type MessageDeliveryStatus,
+} from "@/lib/chat/message-lifecycle";
 
 /** Keep DOM light when long threads accumulate locally after send. */
 const MESSAGE_RENDER_WINDOW = 48;
@@ -34,6 +45,10 @@ type LiveMessage = {
   streaming?: boolean;
   messageType?: MessageType;
   payload?: unknown;
+  status?: MessageDeliveryStatus;
+  idempotencyKey?: string;
+  /** Local-only: photo upload that can be retried. */
+  photoRetry?: boolean;
 };
 
 type LiveChatPanelProps = {
@@ -67,6 +82,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const [hasPhotoConsent, setHasPhotoConsent] = useState<boolean | null>(null);
   const [photoConsentOpen, setPhotoConsentOpen] = useState(false);
   const pendingPhotoRef = useRef<File | null>(null);
+  const photoFileByMsgIdRef = useRef<Map<string, File>>(new Map());
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -98,6 +114,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             time: formatMessageTime(row.createdAt, lang),
             messageType: row.messageType,
             payload: row.payload ?? undefined,
+            status: "delivered" as const,
           })),
         );
       })
@@ -133,32 +150,78 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     });
   }, [messages, sending]);
 
-  const handleSend = async () => {
-    const text = input.trim();
+  const sendTextMessage = async (
+    text: string,
+    options?: {
+      existingUserMsgId?: string;
+      idempotencyKey?: string;
+    },
+  ) => {
     if (!text || sending) return;
 
-    setInput("");
     setSending(true);
     setError(null);
     setQuotaWarning(null);
 
-    const userMsg: LiveMessage = {
-      id: `local-user-${Date.now()}`,
-      from: "user",
-      text,
-      time: formatMessageTime(undefined, lang),
-    };
+    const idempotencyKey =
+      options?.idempotencyKey &&
+      shouldReuseIdempotencyKeyOnRetry("failed", options.idempotencyKey)
+        ? options.idempotencyKey
+        : createIdempotencyKey();
+
+    const userMsgId = options?.existingUserMsgId ?? `local-user-${Date.now()}`;
     const coachMsgId = `local-coach-${Date.now()}`;
-    setMessages((prev) => [
-      ...prev,
-      userMsg,
-      { id: coachMsgId, from: "coach", text: "", time: formatMessageTime(undefined, lang), streaming: true },
-    ]);
+
+    if (options?.existingUserMsgId) {
+      setMessages((prev) => [
+        ...prev.map((msg) =>
+          msg.id === userMsgId
+            ? { ...msg, status: "sending" as const, idempotencyKey }
+            : msg,
+        ),
+        {
+          id: coachMsgId,
+          from: "coach",
+          text: "",
+          time: formatMessageTime(undefined, lang),
+          streaming: true,
+        },
+      ]);
+    } else {
+      const userMsg: LiveMessage = {
+        id: userMsgId,
+        from: "user",
+        text,
+        time: formatMessageTime(undefined, lang),
+        status: "sending",
+        idempotencyKey,
+      };
+      setMessages((prev) => [
+        ...prev,
+        userMsg,
+        {
+          id: coachMsgId,
+          from: "coach",
+          text: "",
+          time: formatMessageTime(undefined, lang),
+          streaming: true,
+        },
+      ]);
+    }
 
     abortRef.current?.abort();
     abortRef.current = new AbortController();
     onCoachTyping?.(true);
     streamTextRef.current = "";
+
+    const failUserMessage = () => {
+      setMessages((prev) =>
+        markMessageFailed(
+          prev.filter((msg) => msg.id !== coachMsgId),
+          userMsgId,
+        ),
+      );
+    };
 
     try {
       await streamChatMessage(
@@ -185,16 +248,19 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
               setQuotaWarning(data.warning_trigger);
             }
             setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === coachMsgId
-                  ? {
-                      ...msg,
-                      id: data.messageId ?? msg.id,
-                      streaming: false,
-                      messageType: data.messageType as MessageType | undefined,
-                      payload: data.payload,
-                    }
-                  : msg,
+              markMessageDelivered(
+                prev.map((msg) =>
+                  msg.id === coachMsgId
+                    ? {
+                        ...msg,
+                        id: data.messageId ?? msg.id,
+                        streaming: false,
+                        messageType: data.messageType as MessageType | undefined,
+                        payload: data.payload,
+                      }
+                    : msg,
+                ),
+                userMsgId,
               ),
             );
             onCoachTyping?.(false);
@@ -220,21 +286,49 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           onError: (code) => {
             setError(apiErrorMessage(code, t));
             onCoachTyping?.(false);
-            setMessages((prev) => prev.filter((msg) => msg.id !== coachMsgId));
+            failUserMessage();
           },
         },
         abortRef.current.signal,
+        idempotencyKey,
       );
     } catch {
       setError(t("chat.error.send"));
       onCoachTyping?.(false);
-      setMessages((prev) => prev.filter((msg) => msg.id !== coachMsgId));
+      failUserMessage();
     } finally {
       setSending(false);
     }
   };
 
-  const uploadPhoto = async (file: File) => {
+  const handleSend = async () => {
+    const text = input.trim();
+    if (!text || sending) return;
+    setInput("");
+    await sendTextMessage(text);
+  };
+
+  const handleRetry = (msg: LiveMessage) => {
+    if (sending || msg.from !== "user" || msg.status !== "failed") return;
+    if (msg.photoRetry) {
+      const file = photoFileByMsgIdRef.current.get(msg.id);
+      if (file) void uploadPhoto(file, { existingUserMsgId: msg.id });
+      return;
+    }
+    if (
+      shouldReuseIdempotencyKeyOnRetry(msg.status, msg.idempotencyKey)
+    ) {
+      void sendTextMessage(msg.text, {
+        existingUserMsgId: msg.id,
+        idempotencyKey: msg.idempotencyKey,
+      });
+    }
+  };
+
+  const uploadPhoto = async (
+    file: File,
+    options?: { existingUserMsgId?: string },
+  ) => {
     if (!VISION_COACHES.has(coachId) || sending) return;
 
     const allowed = ["image/jpeg", "image/png", "image/webp"];
@@ -252,36 +346,66 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     setQuotaWarning(null);
     onCoachTyping?.(true);
 
-    // Optimistic feedback: show the photo bubble + a typing placeholder
-    // immediately so the upload never looks "stuck" during the AI pipeline.
-    const photoUserId = `photo-user-${Date.now()}`;
+    const photoUserId = options?.existingUserMsgId ?? `photo-user-${Date.now()}`;
     const coachPlaceholderId = `photo-coach-${Date.now()}`;
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: photoUserId,
-        from: "user",
-        text: t("chat.photo.sent"),
-        time: formatMessageTime(undefined, lang),
-      },
-      {
-        id: coachPlaceholderId,
-        from: "coach",
-        text: "",
-        time: formatMessageTime(undefined, lang),
-        streaming: true,
-      },
-    ]);
+    photoFileByMsgIdRef.current.set(photoUserId, file);
+
+    if (options?.existingUserMsgId) {
+      setMessages((prev) => [
+        ...prev.map((msg) =>
+          msg.id === photoUserId
+            ? { ...msg, status: "sending" as const, photoRetry: true }
+            : msg,
+        ),
+        {
+          id: coachPlaceholderId,
+          from: "coach",
+          text: "",
+          time: formatMessageTime(undefined, lang),
+          streaming: true,
+        },
+      ]);
+    } else {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: photoUserId,
+          from: "user",
+          text: t("chat.photo.sent"),
+          time: formatMessageTime(undefined, lang),
+          status: "sending",
+          photoRetry: true,
+        },
+        {
+          id: coachPlaceholderId,
+          from: "coach",
+          text: "",
+          time: formatMessageTime(undefined, lang),
+          streaming: true,
+        },
+      ]);
+    }
 
     const clearTyping = () => {
       onCoachTyping?.(false);
       setSending(false);
     };
 
+    const failPhotoMessage = () => {
+      setMessages((prev) =>
+        markMessageFailed(
+          prev.filter((msg) => msg.id !== coachPlaceholderId),
+          photoUserId,
+        ).map((msg) =>
+          msg.id === photoUserId ? { ...msg, photoRetry: true } : msg,
+        ),
+      );
+    };
+
     const reader = new FileReader();
     reader.onerror = () => {
       setError(t("chat.error.photo"));
-      setMessages((prev) => prev.filter((msg) => msg.id !== coachPlaceholderId));
+      failPhotoMessage();
       clearTyping();
     };
     reader.onload = async () => {
@@ -305,44 +429,39 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           mimeType,
         });
 
+        photoFileByMsgIdRef.current.delete(photoUserId);
         setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === coachPlaceholderId
-              ? {
-                  ...msg,
-                  id: analysis.messageId ?? coachPlaceholderId,
-                  text: analysis.summary,
-                  streaming: false,
-                  messageType: coachId === "leo" ? "score" : "analysis",
-                  payload: {
-                    analysis: analysis.analysis,
-                    ...(analysis.confirmation
-                      ? {
-                          confirmation: {
-                            pendingId: analysis.confirmation.pendingId,
-                            summary: analysis.confirmation.summary,
-                          },
-                        }
-                      : {}),
-                  },
-                }
-              : msg,
+          markMessageDelivered(
+            prev.map((msg) =>
+              msg.id === coachPlaceholderId
+                ? {
+                    ...msg,
+                    id: analysis.messageId ?? coachPlaceholderId,
+                    text: analysis.summary,
+                    streaming: false,
+                    messageType: coachId === "leo" ? "score" : "analysis",
+                    payload: {
+                      analysis: analysis.analysis,
+                      ...(analysis.confirmation
+                        ? {
+                            confirmation: {
+                              pendingId: analysis.confirmation.pendingId,
+                              summary: analysis.confirmation.summary,
+                            },
+                          }
+                        : {}),
+                    },
+                  }
+                : msg.id === photoUserId
+                  ? { ...msg, photoRetry: undefined }
+                  : msg,
+            ),
+            photoUserId,
           ),
         );
       } catch (err) {
-        // Photo-analysis server messages (e.g. "photo not clear enough, try
-        // these tips", quota limits) are already localized and actionable, so
-        // surface them verbatim. Fall back to the generic code map otherwise.
-        const friendly =
-          err instanceof ApiClientError &&
-          (err.code === "VALIDATION_ERROR" || err.code === "FORBIDDEN") &&
-          err.message.trim().length > 0
-            ? err.message
-            : errorToMessage(err, t);
-        setError(friendly);
-        setMessages((prev) =>
-          prev.filter((msg) => msg.id !== coachPlaceholderId),
-        );
+        setError(errorToMessage(err, t));
+        failPhotoMessage();
       } finally {
         clearTyping();
       }
@@ -363,6 +482,8 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     }
     void uploadPhoto(file);
   };
+
+  const youLabel = t("chat.a11y.you");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -416,98 +537,147 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             tone="info"
           />
         )}
-        {messages.slice(-MESSAGE_RENDER_WINDOW).map((msg) => {
-          const isCoach = msg.from === "coach";
-          const isTyping = isCoach && msg.streaming && msg.text === "";
-          return (
-            <div
-              key={msg.id}
-              className={`flex items-end gap-2 ${isCoach ? "justify-start" : "justify-end"}`}
-            >
-              {isCoach && (
-                <div className="relative h-8 w-8 shrink-0">
-                  <Image
-                    src={publicAssetUrl(coachAvatar)}
-                    alt={contact.name}
-                    width={32}
-                    height={32}
-                    unoptimized
-                    className="h-full w-full object-contain"
-                  />
-                </div>
-              )}
-              <div className="max-w-[82%]">
-                {isTyping ? (
-                  <div
-                    className="flex items-center gap-1.5 px-5 py-3.5"
-                    style={{
-                      backgroundColor: `${primary}22`,
-                      borderRadius: "18px 18px 18px 4px",
-                      boxShadow: `0 0 20px ${ring}`,
-                    }}
-                  >
-                    <span className="typing-dot" style={{ backgroundColor: primaryLight }} />
-                    <span className="typing-dot" style={{ backgroundColor: primaryLight }} />
-                    <span className="typing-dot" style={{ backgroundColor: primaryLight }} />
-                  </div>
-                ) : (
-                  <>
-                    <div
-                      className="chat-message-bubble animate-message rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed"
-                      style={
-                        isCoach
-                          ? {
-                              backgroundColor: `${primary}18`,
-                              border: `1px solid ${ring}`,
-                              color: "#fff",
-                              boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`,
-                            }
-                          : {
-                              background: `linear-gradient(135deg, ${primary}, ${secondary})`,
-                              color: "#fff",
-                              boxShadow: `0 8px 22px ${shadow}`,
-                            }
-                      }
-                    >
-                      <ChatMessageText text={msg.text} />
-                      <p className="chat-message-time mt-1 opacity-60">{msg.time}</p>
+        <div
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions"
+          aria-label={t("chat.a11y.log")}
+        >
+          <div role="list" className="flex flex-col gap-3">
+            {messages.slice(-MESSAGE_RENDER_WINDOW).map((msg) => {
+              const isCoach = msg.from === "coach";
+              const isTyping = isCoach && msg.streaming && msg.text === "";
+              const isStreamingText = isCoach && msg.streaming && msg.text !== "";
+              const isFailed = msg.status === "failed";
+              const authorLabel = isCoach ? contact.name : youLabel;
+              const bubbleAriaLabel = isFailed
+                ? `${authorLabel}: ${msg.text}. ${t("chat.message.failed")}`
+                : `${authorLabel}: ${msg.text}`;
+
+              return (
+                <div
+                  key={msg.id}
+                  role="listitem"
+                  className={`flex items-end gap-2 ${isCoach ? "justify-start" : "justify-end"}`}
+                >
+                  {isCoach && (
+                    <div className="relative h-8 w-8 shrink-0" aria-hidden>
+                      <Image
+                        src={publicAssetUrl(coachAvatar)}
+                        alt=""
+                        width={32}
+                        height={32}
+                        unoptimized
+                        className="h-full w-full object-contain"
+                      />
                     </div>
-                    {isCoach &&
-                    msg.payload &&
-                    typeof msg.payload === "object" &&
-                    "confirmation" in (msg.payload as object) ? (
-                      <AnalyticsConfirmationCard
-                        payload={
-                          (msg.payload as { confirmation: { pendingId: string; summary: string } })
-                            .confirmation
-                        }
+                  )}
+                  <div className="max-w-[82%]">
+                    {isTyping ? (
+                      <>
+                        <div
+                          className="flex items-center gap-1.5 px-5 py-3.5"
+                          aria-hidden
+                          style={{
+                            backgroundColor: `${primary}22`,
+                            borderRadius: "18px 18px 18px 4px",
+                            boxShadow: `0 0 20px ${ring}`,
+                          }}
+                        >
+                          <span className="typing-dot" style={{ backgroundColor: primaryLight }} />
+                          <span className="typing-dot" style={{ backgroundColor: primaryLight }} />
+                          <span className="typing-dot" style={{ backgroundColor: primaryLight }} />
+                        </div>
+                        <p className="sr-only" aria-live="polite">
+                          {t("chat.a11y.typing", { name: contact.name })}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div
+                          className={`chat-message-bubble animate-message rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                            isFailed ? "opacity-80 ring-1 ring-red-400/50" : ""
+                          }`}
+                          aria-label={bubbleAriaLabel}
+                          aria-busy={isStreamingText || undefined}
+                          aria-invalid={isFailed || undefined}
+                          style={
+                            isCoach
+                              ? {
+                                  backgroundColor: `${primary}18`,
+                                  border: `1px solid ${ring}`,
+                                  color: "#fff",
+                                  boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`,
+                                }
+                              : {
+                                  background: `linear-gradient(135deg, ${primary}, ${secondary})`,
+                                  color: "#fff",
+                                  boxShadow: `0 8px 22px ${shadow}`,
+                                  ...(isFailed
+                                    ? { border: "1px solid rgba(248,113,113,0.55)" }
+                                    : {}),
+                                }
+                          }
+                        >
+                          <ChatMessageText text={msg.text} />
+                          <p className="chat-message-time mt-1 opacity-60">{msg.time}</p>
+                        </div>
+                        {isFailed && (
+                          <div
+                            role="status"
+                            className="mt-1.5 flex items-center justify-end gap-2"
+                          >
+                            <span className="text-[11px] text-red-300/90">
+                              {t("chat.message.failed")}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRetry(msg)}
+                              disabled={sending}
+                              className="rounded-md px-2 py-0.5 text-[11px] font-medium text-red-200 underline-offset-2 hover:underline disabled:opacity-50"
+                            >
+                              {t("chat.message.retry")}
+                            </button>
+                          </div>
+                        )}
+                        {isCoach &&
+                        msg.payload &&
+                        typeof msg.payload === "object" &&
+                        "confirmation" in (msg.payload as object) ? (
+                          <AnalyticsConfirmationCard
+                            payload={
+                              (msg.payload as { confirmation: { pendingId: string; summary: string } })
+                                .confirmation
+                            }
+                          />
+                        ) : null}
+                        {isCoach && msg.messageType && msg.payload != null ? (
+                          <ChatRichCard
+                            contactId={coachId}
+                            messageType={msg.messageType}
+                            payload={msg.payload}
+                          />
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                  {!isCoach && (
+                    <div className="relative h-8 w-8 shrink-0" aria-hidden>
+                      <Image
+                        src={publicAssetUrl(userAvatar)}
+                        alt=""
+                        width={32}
+                        height={32}
+                        unoptimized
+                        className="h-full w-full rounded-full object-cover"
                       />
-                    ) : null}
-                    {isCoach && msg.messageType && msg.payload != null ? (
-                      <ChatRichCard
-                        contactId={coachId}
-                        messageType={msg.messageType}
-                        payload={msg.payload}
-                      />
-                    ) : null}
-                  </>
-                )}
-              </div>
-              {!isCoach && (
-                <div className="relative h-8 w-8 shrink-0">
-                  <Image
-                    src={publicAssetUrl(userAvatar)}
-                    alt={userProfile?.name ?? "Me"}
-                    width={32}
-                    height={32}
-                    unoptimized
-                    className="h-full w-full rounded-full object-cover"
-                  />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        </div>
         <div ref={bottomRef} />
       </div>
 

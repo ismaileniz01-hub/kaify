@@ -56,9 +56,18 @@ describe("rpc privilege matrix (static)", () => {
     );
   });
 
-  it("preserves public leaderboard reads", () => {
-    expect(faz0).toMatch(
-      /grant execute on function public\.get_global_leaderboard\(integer, integer\)[\s\S]*to anon, authenticated, service_role/i,
+  it("preserves country leaderboard as a public catalog RPC", () => {
+    expect(sql).toMatch(
+      /grant execute on function public\.get_country_leaderboard\(integer\)[\s\S]*to anon, authenticated/i,
+    );
+  });
+
+  it("locks get_global_leaderboard to service_role (SEC-009 UUID surface)", () => {
+    expect(sql).toMatch(
+      /revoke all on function public\.get_global_leaderboard\(integer, integer\)\s+from public, anon, authenticated/i,
+    );
+    expect(sql).toMatch(
+      /grant execute on function public\.get_global_leaderboard\(integer, integer\)\s+to service_role/i,
     );
   });
 

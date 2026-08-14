@@ -31,13 +31,14 @@ export const USER_EXPORT_TABLES: readonly ExportTableSpec[] = [
   { table: "daily_chest_claims", column: "user_id", description: "Daily reward chest claims" },
   { table: "idempotency_keys", column: "user_id", description: "Server idempotency keys for your requests" },
   { table: "ai_usage_ledger", column: "user_id", description: "AI API usage and cost estimates" },
+  { table: "ai_daily_usage", column: "user_id", description: "Daily AI token and cost counters" },
   { table: "billing_events", column: "user_id", description: "Subscription and payment webhook events" },
   { table: "paddle_customers", column: "user_id", description: "Linked Paddle customer billing identity" },
   { table: "paddle_subscriptions", column: "user_id", description: "Mirrored Paddle subscription status" },
   { table: "data_export_logs", column: "user_id", description: "History of your data export requests" },
 ] as const;
 
-export const EXPORT_SCHEMA_VERSION = "2026-07-06";
+export const EXPORT_SCHEMA_VERSION = "2026-08-14";
 
 export function exportSchemaReadme(): Record<string, string> {
   return Object.fromEntries(

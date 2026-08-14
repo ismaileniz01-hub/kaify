@@ -1,14 +1,20 @@
 "use client";
 
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
+import {
+  SessionAuthContext,
+  SessionContext,
+  SessionDataContext,
+  type SessionAuthValue,
+  type SessionContextValue,
+  type SessionDataValue,
+} from "@/lib/session-contexts";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
   apiGet,
@@ -32,37 +38,11 @@ import type { SessionBundleDTO } from "@/lib/services/session.service";
 import type { ProfileUpdateInput } from "@/lib/validations/profile.schema";
 import { syncFreezieBalanceFromServer } from "@/lib/freezie";
 import { clearAuthLocalState, signOutUser } from "@/lib/auth/logout";
-
-type SessionAuthValue = {
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  isPreviewMode: boolean;
-  isAdmin: boolean;
-  sessionError: boolean;
-  clearSessionError: () => void;
-  refreshSession: () => Promise<void>;
-  signOut: () => Promise<boolean>;
-};
-
-type SessionDataValue = {
-  profile: ProfileDTO | null;
-  userProfile: UserProfile;
-  displayName: string;
-  gemBalance: GemBalanceDTO;
-  streak: StreakStatusDTO;
-  home: HomeDTO | null;
-  kai: KaiStateDTO | null;
-  referralCode: string;
-  refreshHome: (locale?: string) => Promise<void>;
-  applyChestClaim: (balances: { gemBalance: number; freezieBalance: number }) => void;
-  updateProfile: (form: UserProfile) => Promise<void>;
-  checkIn: () => Promise<CheckInDTO>;
-};
-
-type SessionContextValue = SessionAuthValue & SessionDataValue;
+import { hasBrowserAuthCookie } from "@/lib/auth/browser-auth-hint";
+import { alreadyCheckedInOnLocalDay } from "@/lib/check-in-gate";
 
 const DEFAULT_GEMS: GemBalanceDTO = {
-  balance: 1000,
+  balance: 0,
   totalEarned: 0,
   totalSpent: 0,
 };
@@ -75,15 +55,11 @@ const DEFAULT_STREAK: StreakStatusDTO = {
   kaiUnlockedLevel: 1,
 };
 
-const SessionContext = createContext<SessionContextValue | null>(null);
-const SessionAuthContext = createContext<SessionAuthValue | null>(null);
-const SessionDataContext = createContext<SessionDataValue | null>(null);
-
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isPreviewMode, setIsPreviewMode] = useState(true);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [profile, setProfile] = useState<ProfileDTO | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile>(DEMO_USER_PROFILE);
   const [gemBalance, setGemBalance] = useState<GemBalanceDTO>(DEFAULT_GEMS);
@@ -130,20 +106,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setHome(bundle.home);
       setKai(bundle.kai);
 
-      void apiPost<CheckInDTO>("/api/check-in")
-        .then((result) => {
-          setGemBalance((prev) => ({ ...prev, balance: result.gemBalance }));
-          setStreak((prev) => ({
-            ...prev,
-            currentStreak: result.currentStreak,
-            longestStreak: result.longestStreak,
-            freezieBalance: result.freezieBalance,
-            lastCheckInDate: result.checkedInDate,
-            kaiUnlockedLevel: result.kaiUnlockedLevel,
-          }));
-          syncFreezieBalanceFromServer(result.freezieBalance);
-        })
-        .catch(() => undefined);
+      if (
+        !alreadyCheckedInOnLocalDay(
+          bundle.streak.lastCheckInDate,
+          bundle.profile.timezone ?? "UTC",
+        )
+      ) {
+        void apiPost<CheckInDTO>("/api/check-in")
+          .then((result) => {
+            setGemBalance((prev) => ({ ...prev, balance: result.gemBalance }));
+            setStreak((prev) => ({
+              ...prev,
+              currentStreak: result.currentStreak,
+              longestStreak: result.longestStreak,
+              freezieBalance: result.freezieBalance,
+              lastCheckInDate: result.checkedInDate,
+              kaiUnlockedLevel: result.kaiUnlockedLevel,
+            }));
+            syncFreezieBalanceFromServer(result.freezieBalance);
+          })
+          .catch(() => undefined);
+      }
     } catch (error) {
       if (error instanceof ApiClientError && error.code === "UNAUTHORIZED") {
         applyGuestState();
@@ -168,7 +151,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const supabase = tryCreateBrowserSupabaseClient();
 
     if (!supabase) {
-      void refreshSession();
+      if (hasBrowserAuthCookie()) {
+        void refreshSession();
+      } else {
+        applyGuestState();
+        setIsLoading(false);
+        setHasHydrated(true);
+      }
       return;
     }
 
@@ -186,7 +175,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    void refreshSession();
+    if (hasBrowserAuthCookie()) {
+      void refreshSession();
+    } else {
+      applyGuestState();
+      setIsLoading(false);
+      setHasHydrated(true);
+    }
 
     return () => subscription.unsubscribe();
   }, [applyGuestState, refreshSession]);
@@ -336,32 +331,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useSession(): SessionContextValue {
-  const ctx = useContext(SessionContext);
-  if (!ctx) {
-    throw new Error("useSession must be used within SessionProvider");
-  }
-  return ctx;
-}
-
-/** Auth flags only — avoids re-render when gems/streak/home change. */
-export function useSessionAuth(): SessionAuthValue {
-  const ctx = useContext(SessionAuthContext);
-  if (!ctx) {
-    throw new Error("useSessionAuth must be used within SessionProvider");
-  }
-  return ctx;
-}
-
-export function useSessionData(): SessionDataValue {
-  const ctx = useContext(SessionDataContext);
-  if (!ctx) {
-    throw new Error("useSessionData must be used within SessionProvider");
-  }
-  return ctx;
-}
-
-/** Safe on marketing routes that omit SessionProvider (guest defaults). */
-export function useSessionOptional(): SessionContextValue | null {
-  return useContext(SessionContext);
-}
+export {
+  useSession,
+  useSessionAuth,
+  useSessionData,
+  useSessionOptional,
+} from "@/lib/session-contexts";

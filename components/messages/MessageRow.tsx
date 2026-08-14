@@ -95,7 +95,7 @@ export function MessageRow({
           </span>
         )}
         <ChevronRight
-          className="mt-0.5 h-3.5 w-3.5 text-zinc-400 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-300"
+          className="mt-0.5 h-3.5 w-3.5 text-zinc-400 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-300 rtl:rotate-180 rtl:group-hover:-translate-x-0.5"
           aria-hidden
         />
       </div>

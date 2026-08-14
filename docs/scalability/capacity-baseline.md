@@ -1,4 +1,4 @@
-# Capacity Baseline — Kaify
+# Capacity Baseline — Kaify Ai
 
 Last updated: 2026-07-05 · Scalability Faz 1
 

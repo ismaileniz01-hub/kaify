@@ -36,6 +36,7 @@ create policy "coaching_memory_select_own" on public.coaching_memory
   using ((select auth.uid()) = user_id);
 
 drop policy if exists "Kullanıcılar kendi elmas geçmişlerini görebilir" on public.gem_ledger;
+drop policy if exists "gem_ledger_select_own" on public.gem_ledger;
 create policy "gem_ledger_select_own" on public.gem_ledger
   for select to authenticated
   using ((select auth.uid()) = user_id);
@@ -101,6 +102,7 @@ create policy "admin_audit_select_admin" on public.admin_audit_log
 
 -- profiles SELECT: own OR admin
 drop policy if exists "Kullanıcılar kendi profillerini görebilir" on public.profiles;
+drop policy if exists "profiles_select_own" on public.profiles;
 drop policy if exists "profiles_select_admin" on public.profiles;
 create policy "profiles_select_own_or_admin" on public.profiles
   for select to authenticated
@@ -108,6 +110,7 @@ create policy "profiles_select_own_or_admin" on public.profiles
 
 -- profiles UPDATE: own only (re-create optimized)
 drop policy if exists "Kullanıcılar kendi profillerini güncelleyebilir" on public.profiles;
+drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own" on public.profiles
   for update to authenticated
   using ((select auth.uid()) = id)

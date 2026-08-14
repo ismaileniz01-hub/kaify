@@ -1,4 +1,4 @@
-# Kaify Sustainability (Sürdürülebilirlik)
+# Kaify Ai Sustainability (Sürdürülebilirlik)
 
 Last updated: 2026-07-05 · Score target track: **62 → 70 → 78 → 88 → 92+**
 

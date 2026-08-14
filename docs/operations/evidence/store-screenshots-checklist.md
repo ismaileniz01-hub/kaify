@@ -12,7 +12,7 @@ Capture on a physical device or high-res simulator (phone + optional tablet).
 6. Leaderboard  
 7. Trophy road / market  
 8. Settings (privacy + terms links visible)  
-9. Website checkout success with “Open K.AIFY app” return action (web evidence; not an App Store screenshot)  
+9. Website checkout success with “Open Kaify Ai app” return action (web evidence; not an App Store screenshot)  
 
 ## Listing URLs
 

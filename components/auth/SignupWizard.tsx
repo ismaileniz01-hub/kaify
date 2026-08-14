@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -136,6 +136,9 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
   const router = useRouter();
   const { isAuthenticated, isLoading, profile, refreshSession } = useSession();
   const safeRedirect = sanitizeAuthRedirect(redirectTo, "/pricing");
+  const idPrefix = useId();
+  const errorId = `${idPrefix}-error`;
+  const fid = (name: string) => `${idPrefix}-${name}`;
 
   const alreadyAuthedNeedsProfile =
     isAuthenticated && !isLoading && profile?.onboardingStatus === "PAID";
@@ -482,8 +485,12 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                 {currentStep === "email" && (
                   <div className="flex flex-col gap-4">
                     <div className="signup-wizard-input-wrap">
-                      <Mail className="signup-wizard-input-icon" />
+                      <label htmlFor={fid("email")} className="sr-only">
+                        {t("login.email_placeholder")}
+                      </label>
+                      <Mail className="signup-wizard-input-icon" aria-hidden />
                       <input
+                        id={fid("email")}
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -492,6 +499,8 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                         autoComplete="email"
                         autoFocus
                         className="signup-wizard-input"
+                        aria-invalid={error ? true : undefined}
+                        aria-describedby={error ? errorId : undefined}
                       />
                     </div>
                     <LegalConsentCheckbox checked={legalAccepted} onChange={setLegalAccepted} />
@@ -500,8 +509,12 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
 
                 {currentStep === "name" && (
                   <div className="signup-wizard-input-wrap">
-                    <User className="signup-wizard-input-icon" />
+                    <label htmlFor={fid("name")} className="sr-only">
+                      {t("onboarding.name")}
+                    </label>
+                    <User className="signup-wizard-input-icon" aria-hidden />
                     <input
+                      id={fid("name")}
                       type="text"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
@@ -511,6 +524,8 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                       maxLength={80}
                       autoFocus
                       className="signup-wizard-input signup-wizard-input--lg"
+                      aria-invalid={error ? true : undefined}
+                      aria-describedby={error ? errorId : undefined}
                     />
                   </div>
                 )}
@@ -533,22 +548,30 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                 )}
 
                 {currentStep === "birth" && (
-                  <input
-                    type="date"
-                    value={birthDate}
-                    max={maximumBirthDateForMinimumAge()}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setBirthDate(value);
-                      if (value && !meetsMinimumAge(value)) {
-                        setError(t("signup.wizard.birth.underage"));
-                      } else {
-                        setError(null);
-                      }
-                    }}
-                    autoFocus
-                    className="signup-wizard-field signup-wizard-field--center text-lg"
-                  />
+                  <>
+                    <label htmlFor={fid("birth")} className="sr-only">
+                      {t("onboarding.birth_date")}
+                    </label>
+                    <input
+                      id={fid("birth")}
+                      type="date"
+                      value={birthDate}
+                      max={maximumBirthDateForMinimumAge()}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setBirthDate(value);
+                        if (value && !meetsMinimumAge(value)) {
+                          setError(t("signup.wizard.birth.underage"));
+                        } else {
+                          setError(null);
+                        }
+                      }}
+                      autoFocus
+                      className="signup-wizard-field signup-wizard-field--center text-lg"
+                      aria-invalid={error ? true : undefined}
+                      aria-describedby={error ? errorId : undefined}
+                    />
+                  </>
                 )}
 
                 {currentStep === "body" && (
@@ -577,10 +600,11 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                     {unitSystem === "metric" ? (
                       <div className="grid grid-cols-2 gap-3">
                         <div className="flex flex-col gap-2">
-                          <label className="signup-field-label text-center">
+                          <label htmlFor={fid("height-cm")} className="signup-field-label text-center">
                             {t("signup.wizard.height_cm")}
                           </label>
                           <input
+                            id={fid("height-cm")}
                             type="number"
                             inputMode="numeric"
                             value={heightCm}
@@ -588,19 +612,24 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                             placeholder={t("onboarding.height_placeholder")}
                             autoFocus
                             className="signup-wizard-field signup-wizard-field--center text-lg"
+                            aria-invalid={error ? true : undefined}
+                            aria-describedby={error ? errorId : undefined}
                           />
                         </div>
                         <div className="flex flex-col gap-2">
-                          <label className="signup-field-label text-center">
+                          <label htmlFor={fid("weight-kg")} className="signup-field-label text-center">
                             {t("signup.wizard.weight_kg")}
                           </label>
                           <input
+                            id={fid("weight-kg")}
                             type="number"
                             inputMode="decimal"
                             value={weightKg}
                             onChange={(e) => setWeightKg(e.target.value)}
                             placeholder={t("onboarding.weight_placeholder")}
                             className="signup-wizard-field signup-wizard-field--center text-lg"
+                            aria-invalid={error ? true : undefined}
+                            aria-describedby={error ? errorId : undefined}
                           />
                         </div>
                       </div>
@@ -608,10 +637,11 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                       <div className="flex flex-col gap-3">
                         <div className="grid grid-cols-2 gap-3">
                           <div className="flex flex-col gap-2">
-                            <label className="signup-field-label text-center">
+                            <label htmlFor={fid("height-ft")} className="signup-field-label text-center">
                               {t("signup.wizard.height_ft")}
                             </label>
                             <input
+                              id={fid("height-ft")}
                               type="number"
                               inputMode="numeric"
                               min={1}
@@ -621,13 +651,16 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                               placeholder="5"
                               autoFocus
                               className="signup-wizard-field signup-wizard-field--center text-lg"
+                              aria-invalid={error ? true : undefined}
+                              aria-describedby={error ? errorId : undefined}
                             />
                           </div>
                           <div className="flex flex-col gap-2">
-                            <label className="signup-field-label text-center">
+                            <label htmlFor={fid("height-in")} className="signup-field-label text-center">
                               {t("signup.wizard.height_in")}
                             </label>
                             <input
+                              id={fid("height-in")}
                               type="number"
                               inputMode="numeric"
                               min={0}
@@ -636,20 +669,25 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                               onChange={(e) => setHeightIn(e.target.value)}
                               placeholder="10"
                               className="signup-wizard-field signup-wizard-field--center text-lg"
+                              aria-invalid={error ? true : undefined}
+                              aria-describedby={error ? errorId : undefined}
                             />
                           </div>
                         </div>
                         <div className="flex flex-col gap-2">
-                          <label className="signup-field-label text-center">
+                          <label htmlFor={fid("weight-lbs")} className="signup-field-label text-center">
                             {t("signup.wizard.weight_lbs")}
                           </label>
                           <input
+                            id={fid("weight-lbs")}
                             type="number"
                             inputMode="decimal"
                             value={weightLbs}
                             onChange={(e) => setWeightLbs(e.target.value)}
                             placeholder="165"
                             className="signup-wizard-field signup-wizard-field--center text-lg"
+                            aria-invalid={error ? true : undefined}
+                            aria-describedby={error ? errorId : undefined}
                           />
                         </div>
                       </div>
@@ -691,15 +729,20 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                       ))}
                     </div>
                     <div className="flex flex-col gap-2">
-                      <label className="signup-field-label text-center">
+                      <label id={fid("training-label")} className="signup-field-label text-center">
                         {t("signup.wizard.training_days")}
                       </label>
-                      <div className="grid grid-cols-4 gap-2">
+                      <div
+                        className="grid grid-cols-4 gap-2"
+                        role="group"
+                        aria-labelledby={fid("training-label")}
+                      >
                         {TRAINING_DAY_OPTIONS.map((days) => (
                           <button
                             key={days}
                             type="button"
                             onClick={() => setTrainingDaysPerWeek(days)}
+                            aria-pressed={trainingDaysPerWeek === days}
                             className={`signup-wizard-option ${
                               trainingDaysPerWeek === days
                                 ? "signup-wizard-option--active"
@@ -710,7 +753,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                           </button>
                         ))}
                       </div>
-                      <p className="text-center text-[11px] text-zinc-500">
+                      <p id={fid("training-hint")} className="text-center text-[11px] text-zinc-500">
                         {t("signup.wizard.training_days_hint")}
                       </p>
                     </div>
@@ -785,10 +828,11 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                       </div>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="signup-field-label">
+                      <label htmlFor={fid("allergies")} className="signup-field-label">
                         {t("signup.wizard.allergies")}
                       </label>
                       <textarea
+                        id={fid("allergies")}
                         value={allergies}
                         onChange={(e) => setAllergies(e.target.value)}
                         rows={2}
@@ -798,10 +842,11 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="signup-field-label">
+                      <label htmlFor={fid("disliked")} className="signup-field-label">
                         {t("signup.wizard.disliked_foods")}
                       </label>
                       <textarea
+                        id={fid("disliked")}
                         value={dislikedFoods}
                         onChange={(e) => setDislikedFoods(e.target.value)}
                         rows={2}
@@ -811,10 +856,11 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="signup-field-label">
+                      <label htmlFor={fid("health")} className="signup-field-label">
                         {t("signup.wizard.health_conditions")}
                       </label>
                       <textarea
+                        id={fid("health")}
                         value={healthConditions}
                         onChange={(e) => setHealthConditions(e.target.value)}
                         rows={2}
@@ -827,33 +873,49 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                 )}
 
                 {currentStep === "country" && (
-                  <select
-                    value={countryCode}
-                    onChange={(e) => setCountryCode(e.target.value)}
-                    autoFocus
-                    className="signup-wizard-field text-base"
-                  >
-                    <option value="" className="bg-zinc-900">
-                      {t("signup.wizard.country_placeholder")}
-                    </option>
-                    {COUNTRY_OPTIONS.map((country) => (
-                      <option key={country.code} value={country.code} className="bg-zinc-900">
-                        {country.name}
+                  <>
+                    <label htmlFor={fid("country")} className="sr-only">
+                      {t("onboarding.country")}
+                    </label>
+                    <select
+                      id={fid("country")}
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      autoFocus
+                      className="signup-wizard-field text-base"
+                      aria-invalid={error ? true : undefined}
+                      aria-describedby={error ? errorId : undefined}
+                    >
+                      <option value="" className="bg-zinc-900">
+                        {t("signup.wizard.country_placeholder")}
                       </option>
-                    ))}
-                  </select>
+                      {COUNTRY_OPTIONS.map((country) => (
+                        <option key={country.code} value={country.code} className="bg-zinc-900">
+                          {country.name}
+                        </option>
+                      ))}
+                    </select>
+                  </>
                 )}
 
                 {currentStep === "bio" && (
-                  <textarea
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    rows={4}
-                    maxLength={1000}
-                    placeholder={t("onboarding.bio_placeholder")}
-                    autoFocus
-                    className="signup-wizard-field resize-none text-base"
-                  />
+                  <>
+                    <label htmlFor={fid("bio")} className="sr-only">
+                      {t("onboarding.bio")}
+                    </label>
+                    <textarea
+                      id={fid("bio")}
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      rows={4}
+                      maxLength={1000}
+                      placeholder={t("onboarding.bio_placeholder")}
+                      autoFocus
+                      className="signup-wizard-field resize-none text-base"
+                      aria-invalid={error ? true : undefined}
+                      aria-describedby={error ? errorId : undefined}
+                    />
+                  </>
                 )}
 
                 {currentStep === "verify" && (
@@ -873,7 +935,11 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
             </div>
 
             {error && (
-              <p className="mt-4 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-center text-xs text-red-200">
+              <p
+                id={errorId}
+                role="alert"
+                className="mt-4 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-center text-xs text-red-200"
+              >
                 {error}
               </p>
             )}
@@ -893,7 +959,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                         ? t("signup.profile.submit")
                         : t("signup.wizard.send_code")
                       : t("signup.wizard.continue")}
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4 rtl:rotate-180" />
                 </button>
 
                 {currentStep === "lifestyle" && (

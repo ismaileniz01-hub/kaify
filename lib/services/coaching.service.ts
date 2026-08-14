@@ -28,7 +28,7 @@ export async function syncAgents(params: {
   }
 
   const teamPrompt = [
-    `You are part of the Kaify coaching team alongside ${teammates.join(", ")}.`,
+    `You are part of the Kaify Ai coaching team alongside ${teammates.join(", ")}.`,
     "You all share the same memory about this user, so stay consistent with what teammates know.",
     "When a question falls under a teammate's expertise, briefly reference them and what they would advise, instead of overstepping your own domain.",
   ].join(" ");

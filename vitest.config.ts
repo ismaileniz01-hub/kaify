@@ -1,56 +1,48 @@
 import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
 
+/**
+ * Coverage philosophy (TEST-001 / Wave 2):
+ * Report coverage over the critical application surface (lib + API routes),
+ * not a cherry-picked 5% subset. Thresholds are an honest regression floor —
+ * ratchet upward over time; do not exclude critical untested files to inflate %.
+ */
 export default defineConfig({
   test: {
     environment: "node",
+    // Live RLS/RPC suites skip unless KAIFY_DB_TESTS=1 (see vitest.db.config.ts).
+    // Static migration-reproducibility checks in tests/db always run.
     include: ["tests/**/*.test.ts"],
+    exclude: [
+      "tests/db/rls-authorization.test.ts",
+      "tests/db/rpc-authorization.test.ts",
+    ],
     globals: true,
     coverage: {
       provider: "v8",
-      // Gate the pure, unit-testable core. DB-bound services and AI clients
-      // require integration infra and are intentionally out of this gate.
-      include: [
-        "lib/api/response.ts",
-        "lib/api/errors.ts",
-        "lib/api/rate-guard.ts",
-        "lib/ai/quota-guard.ts",
-        "lib/ai/prompt-safety.ts",
-        "lib/resilience/error-taxonomy.ts",
-        "lib/resilience/retry.ts",
-        "lib/resilience/circuit.ts",
-        "lib/resilience/index.ts",
-        "lib/api/cron-auth.ts",
-        "lib/supabase/profile-compat.ts",
-        "lib/ai/cost.ts",
-        "lib/logger.ts",
-        "lib/api-security.ts",
-        "lib/security/body-limit.ts",
-        "lib/security/csp.ts",
-        "lib/push/messages.ts",
-        "lib/i18n/dictionary.ts",
-        "lib/notifications/config.ts",
-        "lib/marketing/sender.ts",
-        "lib/validations/profile.schema.ts",
-        "lib/validations/pagination.schema.ts",
-        "lib/billing/paddle-period.ts",
-        "lib/team/meeting-week.ts",
-        "lib/security/csrf-client.ts",
-        "lib/ai/count-consecutive-rest-days.ts",
-        "lib/api/resolve-api-path.ts",
-        "lib/observability/to-span-attributes.ts",
-        "lib/supabase/rpc-errors.ts",
-        "lib/services/gem.service.ts",
-        "lib/compliance/retention-config.ts",
-        "lib/compliance/export-tables.ts",
-        "lib/compliance/deletion-config.ts",
-        "lib/compliance/age.ts",
+      include: ["lib/**/*.ts", "app/api/**/*.ts"],
+      exclude: [
+        "lib/types/**",
+        "lib/**/*.d.ts",
+        "lib/lang/**",
+        // Heavy Next/server entry glue with little unit-testable logic:
+        "lib/supabase/client.ts",
+        "lib/supabase/server.ts",
+        "lib/supabase/middleware.ts",
+        "lib/supabase/admin.ts",
+        "lib/supabase/route-handler.ts",
+        // Capacitor / native bridges — not exercised in node vitest:
+        "lib/native/**",
+        "lib/capacitor/**",
       ],
+      // Honest regression floor measured 2026-08-12 after expanding scope
+      // (statements ~25%, branches ~23%, functions ~29%, lines ~26%).
+      // Buffer below measured values prevents flaky CI; ratchet upward later.
       thresholds: {
-        statements: 75,
-        branches: 70,
-        functions: 80,
-        lines: 75,
+        statements: 22,
+        branches: 18,
+        functions: 24,
+        lines: 22,
       },
     },
   },

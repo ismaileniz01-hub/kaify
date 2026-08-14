@@ -19,10 +19,10 @@ Hosted Supabase often installs `pg_net` in `public`. Relocating can break
 `net.http_get` used by pg_cron jobs. Kept in place; extension comment documents
 ops review. Revisit only with Supabase support confirmation.
 
-## Intentional: public leaderboard DEFINER RPCs (WARN)
+## Intentional: country leaderboard DEFINER RPC (WARN)
 
-`get_global_leaderboard` / `get_country_leaderboard` remain executable by `anon`
-(product requirement). All economy/admin mint RPCs are service_role-only (Faz 0).
+`get_country_leaderboard` remains executable by `anon` (aggregate country stats; no user ids).
+`get_global_leaderboard` is **service_role only** (SEC-009) — raw `user_id` must not reach PostgREST clients; the HTTP API maps identifiers. All economy/admin mint RPCs are service_role-only (Faz 0).
 
 ## Intentional: authenticated DEFINER user RPCs (WARN)
 

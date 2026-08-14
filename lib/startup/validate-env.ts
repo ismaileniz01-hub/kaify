@@ -9,6 +9,9 @@ import { getSupabasePublicEnv, getSupabaseServerEnv } from "@/lib/supabase/env";
  * Deliberately does NOT throw: on serverless a throw would take down every
  * request, so we log loudly and let per-dependency getters enforce hard
  * failures where they matter.
+ *
+ * Critical production checks MUST be collected before the critical-error log
+ * so missing secrets are never silently downgraded to soft warnings.
  */
 export function validateEnvAtBoot(): void {
   const problems: string[] = [];
@@ -44,54 +47,58 @@ export function validateEnvAtBoot(): void {
     .filter(([, v]) => !v || v.includes("your_"))
     .map(([k]) => k);
 
-  if (problems.length > 0) {
-    logger.error("env validation failed (critical)", { problems });
-  }
-  if (missingSoft.length > 0) {
-    const isProd =
-      process.env.NODE_ENV === "production" ||
-      process.env.VERCEL_ENV === "production" ||
-      process.env.VERCEL_ENV === "preview";
-    const hasUpstash =
-      process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
-    if (isProd && !hasUpstash) {
-      problems.push("UPSTASH_REDIS_REST_URL/TOKEN missing in production (rate limits fail-closed)");
-    }
-    if (isProd && (!process.env.CRON_SECRET || process.env.CRON_SECRET.includes("your_"))) {
-      problems.push("CRON_SECRET missing or placeholder in production");
-    }
-    if (isProd && (!process.env.CSRF_SECRET || process.env.CSRF_SECRET.includes("your_"))) {
-      problems.push("CSRF_SECRET missing or placeholder in production/preview");
-    }
-    if (isProd && !process.env.ADMIN_HUB_PASSWORD?.trim()) {
-      problems.push("ADMIN_HUB_PASSWORD missing in production/preview");
-    }
-    if (
-      isProd &&
-      (!process.env.ADMIN_HUB_SECRET?.trim() ||
-        process.env.ADMIN_HUB_SECRET.includes("your_"))
-    ) {
-      problems.push("ADMIN_HUB_SECRET missing in production/preview");
-    }
-    if (
-      isProd &&
-      (!process.env.PADDLE_NOTIFICATION_WEBHOOK_SECRET ||
-        process.env.PADDLE_NOTIFICATION_WEBHOOK_SECRET.includes("your_"))
-    ) {
-      problems.push("PADDLE_NOTIFICATION_WEBHOOK_SECRET missing in production/preview");
-    }
-    logger.warn("env validation: optional vars missing/placeholder", {
-      missing: missingSoft,
-    });
-  }
+  const isProd =
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL_ENV === "production" ||
+    process.env.VERCEL_ENV === "preview";
+  const hasUpstash =
+    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
 
+  // Production-critical checks — collect BEFORE any critical log.
+  if (isProd && !hasUpstash) {
+    problems.push(
+      "UPSTASH_REDIS_REST_URL/TOKEN missing in production (rate limits fail-closed)",
+    );
+  }
+  if (isProd && (!process.env.CRON_SECRET || process.env.CRON_SECRET.includes("your_"))) {
+    problems.push("CRON_SECRET missing or placeholder in production");
+  }
+  if (isProd && (!process.env.CSRF_SECRET || process.env.CSRF_SECRET.includes("your_"))) {
+    problems.push("CSRF_SECRET missing or placeholder in production/preview");
+  }
+  if (isProd && !process.env.ADMIN_HUB_PASSWORD?.trim()) {
+    problems.push("ADMIN_HUB_PASSWORD missing in production/preview");
+  }
+  if (
+    isProd &&
+    (!process.env.ADMIN_HUB_SECRET?.trim() ||
+      process.env.ADMIN_HUB_SECRET.includes("your_"))
+  ) {
+    problems.push("ADMIN_HUB_SECRET missing in production/preview");
+  }
+  if (
+    isProd &&
+    (!process.env.PADDLE_NOTIFICATION_WEBHOOK_SECRET ||
+      process.env.PADDLE_NOTIFICATION_WEBHOOK_SECRET.includes("your_"))
+  ) {
+    problems.push(
+      "PADDLE_NOTIFICATION_WEBHOOK_SECRET missing in production/preview",
+    );
+  }
   if (
     process.env.NODE_ENV === "production" &&
     process.env.DAILY_CHEST_LIMIT_ENABLED === "false"
   ) {
-    problems.push(
-      "DAILY_CHEST_LIMIT_ENABLED=false is forbidden in production",
-    );
+    problems.push("DAILY_CHEST_LIMIT_ENABLED=false is forbidden in production");
+  }
+
+  if (problems.length > 0) {
+    logger.error("env validation failed (critical)", { problems });
+  }
+  if (missingSoft.length > 0) {
+    logger.warn("env validation: optional vars missing/placeholder", {
+      missing: missingSoft,
+    });
   }
 
   if (problems.length === 0 && missingSoft.length === 0) {

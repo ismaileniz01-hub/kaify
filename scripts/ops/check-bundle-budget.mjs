@@ -3,8 +3,9 @@
  * Post-build bundle budget gate (Faz 4).
  * Fails CI when core shared / largest chunk exceed budgets.
  *
- * Budgets are intentionally above current HEAD so small regressions trip the gate
- * without being brittle to chunk hash renames.
+ * Budgets sit slightly above the Wave 5 closure baseline so regressions trip
+ * the gate without being brittle to chunk hash renames. Never raise these.
+ * landing-first-load-js-gzip tracks Next `/` First Load (measured 240 KB).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -17,12 +18,12 @@ const CHUNKS = path.join(ROOT, ".next", "static", "chunks");
 const BUDGETS = [
   {
     name: "largest-client-chunk-gzip",
-    maxKb: 150,
+    maxKb: 135,
     getKb: (files) => Math.max(0, ...files.map((f) => f.gzKb)),
   },
   {
     name: "core-shared-gzip (framework+polyfills+main+top shared)",
-    maxKb: 360,
+    maxKb: 350,
     getKb: (files) => {
       const sorted = [...files].sort((a, b) => b.gzKb - a.gzKb);
       const named = sorted.filter(
@@ -38,14 +39,46 @@ const BUDGETS = [
   },
   {
     name: "middleware-edge-gzip",
-    maxKb: 140,
+    maxKb: 125,
     getKb: () => {
       const mw = path.join(ROOT, ".next", "server", "middleware.js");
       if (!fs.existsSync(mw)) return 0;
       return Math.round(zlib.gzipSync(fs.readFileSync(mw)).length / 1024);
     },
   },
+  {
+    name: "landing-first-load-js-gzip",
+    maxKb: 250,
+    getKb: () => landingFirstLoadGzKb(),
+  },
 ];
+
+function landingFirstLoadGzKb() {
+  const manifestPath = path.join(ROOT, ".next", "app-build-manifest.json");
+  if (!fs.existsSync(manifestPath)) return 0;
+  const pages = JSON.parse(fs.readFileSync(manifestPath, "utf8")).pages ?? {};
+  const keys = Object.keys(pages).filter(
+    (k) =>
+      k.includes("(marketing)/page") ||
+      k === "/page" ||
+      k.endsWith("/(marketing)/page"),
+  );
+  const layoutKeys = Object.keys(pages).filter(
+    (k) => k === "/layout" || k.includes("(marketing)/layout"),
+  );
+  const files = new Set();
+  for (const k of [...keys, ...layoutKeys]) {
+    for (const f of pages[k] || []) files.add(f);
+  }
+  let bytes = 0;
+  for (const rel of files) {
+    if (!String(rel).endsWith(".js")) continue;
+    const full = path.join(ROOT, ".next", rel);
+    if (!fs.existsSync(full)) continue;
+    bytes += zlib.gzipSync(fs.readFileSync(full)).length;
+  }
+  return Math.round(bytes / 1024);
+}
 
 /**
  * @typedef {{ name: string; rawKb: number; gzKb: number }} FileStat

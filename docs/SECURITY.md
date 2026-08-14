@@ -1,4 +1,4 @@
-# Kaify Security Architecture
+# Kaify Ai Security Architecture
 
 Last updated: 2026-08-04
 

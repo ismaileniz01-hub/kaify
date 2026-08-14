@@ -1,4 +1,4 @@
-# Kaify Scalability
+# Kaify Ai Scalability
 
 Last updated: 2026-07-05 · Score target track: **55 → 65 → 75 → 85 → 90+**
 

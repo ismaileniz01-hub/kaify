@@ -4,7 +4,7 @@
 
 ## Context
 
-Kaify needs auth, realtime-ready DB, RLS, and fast iteration for a solo/small team.
+Kaify Ai needs auth, realtime-ready DB, RLS, and fast iteration for a solo/small team.
 
 ## Decision
 

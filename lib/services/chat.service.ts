@@ -185,6 +185,8 @@ export type StreamReplyParams = {
   message: string;
   /** Tokens already reserved by the route before streaming starts. */
   tokensReserved?: number;
+  /** Client Idempotency-Key — unique per user so retries do not insert twice. */
+  clientIdempotencyKey?: string | null;
 };
 
 /**
@@ -305,12 +307,42 @@ export async function* streamCoachReply(
       message_type: "text",
       content: cleanMessage,
       locale,
+      client_idempotency_key: params.clientIdempotencyKey ?? null,
     });
     if (userInsertError) {
-      logger.error("[chat.service] persist user message error", {
-        error: userInsertError.message,
-      });
-      throw new ApiError("INTERNAL_ERROR", "Mesaj kaydedilemedi.");
+      if (userInsertError.code === "23505" && params.clientIdempotencyKey) {
+        const { data: existingCoach } = await admin
+          .from("chat_messages")
+          .select("id, content, message_type, payload")
+          .eq("user_id", params.userId)
+          .eq("coach_id", params.coachId)
+          .eq("sender", "coach")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (existingCoach?.content) {
+          yield {
+            event: "delta",
+            data: { content: existingCoach.content },
+          };
+          yield {
+            event: "done",
+            data: {
+              messageId: existingCoach.id,
+              messageType: existingCoach.message_type,
+              payload: existingCoach.payload,
+              warning_trigger: null,
+              replayed: true,
+            },
+          };
+          return;
+        }
+      } else {
+        logger.error("[chat.service] persist user message error", {
+          error: userInsertError.message,
+        });
+        throw new ApiError("INTERNAL_ERROR", "Mesaj kaydedilemedi.");
+      }
     }
 
     let totalTokens = 0;

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Kaify daily motivation — FITNESS, TRAINING & GRIT ONLY.
+ * Kaify Ai daily motivation — FITNESS, TRAINING & GRIT ONLY.
  * Quotes from champions & coaches; no sport-branch names or arena jargon.
  * Max 2 quotes per person.
  */

@@ -90,9 +90,10 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  async rewrites() {
+  async redirects() {
     return [
-      { source: "/terms&conditions", destination: "/terms" },
+      { source: "/terms&conditions", destination: "/terms", permanent: true },
+      { source: "/index.html", destination: "/", permanent: true },
     ];
   },
   serverExternalPackages: ["@upstash/redis", "firebase-admin"],

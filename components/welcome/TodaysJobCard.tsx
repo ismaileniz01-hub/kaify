@@ -38,7 +38,7 @@ export function TodaysJobCard({ job, onGoalsClick }: Props) {
         <p className="mt-1 text-xs leading-relaxed text-zinc-300">{body}</p>
         <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-300">
           {cta}
-          <ArrowRight className="h-3.5 w-3.5" />
+          <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
         </span>
       </div>
     </>

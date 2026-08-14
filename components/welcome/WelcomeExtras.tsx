@@ -98,7 +98,7 @@ export function WelcomeExtras() {
           </p>
           <p className="text-sm font-semibold text-white">{t("home.chat_with_kai")}</p>
         </div>
-        <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400 rtl:rotate-180" />
       </Link>
 
       <Link
@@ -112,7 +112,7 @@ export function WelcomeExtras() {
           <p className="type-caption type-muted">{t("home.exercise_library")}</p>
           <p className="text-sm font-semibold text-white">{t("home.explore_exercises")}</p>
         </div>
-        <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400 rtl:rotate-180" />
       </Link>
     </div>
   );

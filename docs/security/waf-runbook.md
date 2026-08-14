@@ -1,6 +1,6 @@
 # WAF Runbook (Faz 3.4)
 
-Kaify application-layer controls (CSP, CSRF, rate limits, RLS) are necessary but not sufficient for DDoS and automated scanning. Deploy one edge WAF before production launch.
+Kaify Ai application-layer controls (CSP, CSRF, rate limits, RLS) are necessary but not sufficient for DDoS and automated scanning. Deploy one edge WAF before production launch.
 
 ## Option A — Cloudflare (recommended free tier)
 

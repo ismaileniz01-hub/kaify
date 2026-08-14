@@ -1,4 +1,4 @@
-# Kaify Architecture
+# Kaify Ai Architecture
 
 Last updated: 2026-07-05 · Score target track: **65 → 72 → 80 → 88 → 92+**
 

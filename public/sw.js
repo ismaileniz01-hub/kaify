@@ -1,4 +1,44 @@
-/* K.AIFY service worker — Web Push notifications. */
+/* Kaify Ai service worker — Web Push notifications. */
+
+/* Keep in sync with lib/security/safe-notification-url.ts */
+var SAFE_NOTIFICATION_FALLBACK = "/welcome";
+
+function resolveSafeNotificationUrl(candidate) {
+  if (candidate == null) return SAFE_NOTIFICATION_FALLBACK;
+  if (typeof candidate !== "string") return SAFE_NOTIFICATION_FALLBACK;
+
+  var trimmed = candidate.trim();
+  if (!trimmed) return SAFE_NOTIFICATION_FALLBACK;
+
+  var lower = trimmed.toLowerCase();
+  if (
+    lower.indexOf("javascript:") === 0 ||
+    lower.indexOf("data:") === 0 ||
+    lower.indexOf("vbscript:") === 0 ||
+    lower.indexOf("blob:") === 0
+  ) {
+    return SAFE_NOTIFICATION_FALLBACK;
+  }
+
+  try {
+    var base = self.location.origin + "/";
+    var resolved = trimmed.indexOf("/") === 0
+      ? new URL(trimmed, base)
+      : new URL(trimmed, base);
+
+    if (resolved.protocol !== "http:" && resolved.protocol !== "https:") {
+      return SAFE_NOTIFICATION_FALLBACK;
+    }
+
+    if (resolved.origin !== self.location.origin) {
+      return SAFE_NOTIFICATION_FALLBACK;
+    }
+
+    return (resolved.pathname + resolved.search + resolved.hash) || SAFE_NOTIFICATION_FALLBACK;
+  } catch (e) {
+    return SAFE_NOTIFICATION_FALLBACK;
+  }
+}
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -13,10 +53,10 @@ self.addEventListener("push", (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch {
-    payload = { title: "K.AIFY", body: event.data ? event.data.text() : "" };
+    payload = { title: "Kaify Ai", body: event.data ? event.data.text() : "" };
   }
 
-  const title = payload.title || "K.AIFY";
+  const title = payload.title || "Kaify Ai";
   const options = {
     body: payload.body || "",
     icon: payload.icon || "/kai-mascot-v2.png",
@@ -24,7 +64,7 @@ self.addEventListener("push", (event) => {
     image: payload.image || undefined,
     tag: payload.tag || undefined,
     renotify: payload.tag ? true : undefined,
-    data: { url: payload.url || "/welcome" },
+    data: { url: resolveSafeNotificationUrl(payload.url || "/welcome") },
     vibrate: [80, 40, 80],
   };
 
@@ -33,7 +73,9 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) || "/welcome";
+  const raw =
+    (event.notification.data && event.notification.data.url) || "/welcome";
+  const targetUrl = resolveSafeNotificationUrl(raw);
 
   event.waitUntil(
     self.clients

@@ -1,5 +1,6 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
+import { sanitizeAnalyticsPatch, sanitizeMealMacros } from "@/lib/analytics/bounds";
 import { logger } from "@/lib/logger";
 import { invalidateUserReadCaches } from "@/lib/cache/invalidate";
 import type { Json } from "@/lib/types/database.types";
@@ -10,10 +11,13 @@ export async function writeAnalyticsDailyPatch(
   patch: Json,
 ): Promise<void> {
   const admin = createAdminSupabaseClient();
+  const sanitized = sanitizeAnalyticsPatch(
+    (patch ?? {}) as Record<string, unknown>,
+  );
   const { error } = await admin.rpc("upsert_analytics_daily", {
     p_user_id: userId,
     p_entry_date: entryDate,
-    p_patch: patch,
+    p_patch: sanitized as unknown as Json,
   });
 
   if (error) {
@@ -26,8 +30,9 @@ export async function writeAnalyticsDailyPatch(
 export async function writeAnalyticsMealIncrement(
   userId: string,
   entryDate: string,
-  meal: { calories: number; protein: number; carbs: number; fat: number },
+  mealInput: { calories: number; protein: number; carbs: number; fat: number },
 ): Promise<void> {
+  const meal = sanitizeMealMacros(mealInput);
   const admin = createAdminSupabaseClient();
   const { error } = await admin.rpc("increment_analytics_meals", {
     p_user_id: userId,

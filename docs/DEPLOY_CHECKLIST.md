@@ -1,4 +1,4 @@
-# Kaify — Dönüş Checklist (senin tarafın)
+# Kaify Ai — Dönüş Checklist (senin tarafın)
 
 Bu liste, kod tarafında tamamlanan işlerden sonra **senin yapman gereken** adımları içerir.
 Geldikten sonra yukarıdan aşağı işaretle.

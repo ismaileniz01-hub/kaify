@@ -2,8 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import enFallback from "@/lib/lang/en.json";
-import trFallback from "@/lib/lang/tr.json";
-import { apiPatch } from "@/lib/api/client";
 import {
   REVIEWED_LANG_OPTIONS,
   type ReviewedLangOption,
@@ -40,9 +38,13 @@ export function isRtlLang(code: LangCode): boolean {
  */
 function persistLocaleToProfile(code: LangCode): void {
   if (typeof window === "undefined") return;
-  void apiPatch("/api/profile", { locale: code }).catch(() => {
-    // Non-fatal: language still applies locally via localStorage.
-  });
+  void import("@/lib/api/client")
+    .then(({ apiPatch }) =>
+      apiPatch("/api/profile", { locale: code }).catch(() => {
+        // Non-fatal: language still applies locally via localStorage.
+      }),
+    )
+    .catch(() => {});
 }
 
 interface LangContextType {
@@ -158,7 +160,7 @@ export function LangProvider({
   children: ReactNode;
   initialLang?: LangCode;
 }) {
-  const initialDictionary = initialLang === "tr" ? trFallback : enFallback;
+  const initialDictionary = enFallback;
   const [lang, setLangState] = useState<LangCode>(initialLang);
   const [unit, setUnitState] = useState<UnitSystem>("metric");
   const [dict, setDict] = useState<LangDict>(initialDictionary);

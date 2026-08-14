@@ -20,8 +20,8 @@ const sections: LegalSection[] = [
     title: "1. Introduction",
     body: (
       <p>
-        {LEGAL_ENTITY} (&quot;Kaify&quot;, &quot;we&quot;, &quot;us&quot;) operates {LEGAL_URL} and
-        the Kaify mobile web application. This Privacy Policy explains what personal data we
+        {LEGAL_ENTITY} (&quot;Kaify Ai&quot;, &quot;we&quot;, &quot;us&quot;) operates {LEGAL_URL} and
+        the Kaify Ai mobile web application. This Privacy Policy explains what personal data we
         collect, why we use it, who we share it with, and your rights under GDPR, UK GDPR, and
         KVKK (Turkey).
       </p>
@@ -81,10 +81,10 @@ const sections: LegalSection[] = [
     title: "4. AI & Automated Processing",
     body: (
       <p>
-        Kaify uses third-party AI providers (Google Gemini, DeepSeek) to generate coaching
+        Kaify Ai uses third-party AI providers (Google Gemini, DeepSeek) to generate coaching
         responses and analyze photos. Prompts are sanitized; images are processed transiently
         for analysis. Outputs are not medical advice. See our{" "}
-        <Link href="/terms&conditions" className="text-emerald-400 underline">
+        <Link href="/terms" className="text-emerald-400 underline">
           Terms of Service
         </Link>{" "}
         for disclaimers.
@@ -96,7 +96,7 @@ const sections: LegalSection[] = [
     title: "5. Subprocessors & Sharing",
     body: (
       <>
-        <p>We share data only with service providers needed to run Kaify:</p>
+        <p>We share data only with service providers needed to run Kaify Ai:</p>
         <ul>
           <li>Supabase (database, auth, storage) — EU (Frankfurt)</li>
           <li>Vercel (hosting)</li>
@@ -168,7 +168,7 @@ const sections: LegalSection[] = [
     title: "9. Children",
     body: (
       <p>
-        Kaify is for users aged <strong>16 and over</strong>. We do not knowingly collect data
+        Kaify Ai is for users aged <strong>16 and over</strong>. We do not knowingly collect data
         from children under 16. Contact us to request deletion if you believe a minor registered.
       </p>
     ),
@@ -219,7 +219,7 @@ export function PrivacyPolicyContent() {
       {sections.map((s) => (
         <section key={s.id} id={s.id} className="mb-10">
           <h2>{s.title}</h2>
-          <div className="text-zinc-300 [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5">
+          <div className="text-zinc-300 [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:ps-5">
             {s.body}
           </div>
         </section>

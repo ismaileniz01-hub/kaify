@@ -2,19 +2,21 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "cursor/**"]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
+  # Do not cancel in-progress database verification mid-suite.
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   verify:
     name: Lint · Typecheck · Test · Build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     env:
       # Build-safe placeholders: the app must compile without live secrets.
@@ -26,6 +28,7 @@ jobs:
       ADMIN_HUB_SECRET: placeholder-hub-hmac-for-ci-only
       CRON_SECRET: placeholder-cron-secret-for-ci-only
       NEXT_TELEMETRY_DISABLED: "1"
+      NODE_OPTIONS: "--max-old-space-size=4096"
 
     steps:
       - name: Checkout
@@ -101,6 +104,281 @@ jobs:
           BASE_URL: http://127.0.0.1:3000
           K6_VUS: "5"
           K6_DURATION: "10s"
+
+  database:
+    name: Supabase DB · RLS · RPC
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      checks: write
+      actions: read
+
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      SUPABASE_INTERNAL_NO_LINKED: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.113.0
+
+      - name: Docker preflight
+        run: |
+          set -euo pipefail
+          docker version
+          docker info
+
+      # Full local stack first (Auth + API + DB). Migrations now apply cleanly.
+      - name: Start local Supabase
+        run: |
+          set -euo pipefail
+          supabase --version
+          supabase start \
+            --exclude studio,edge-runtime,logflare,vector \
+            2>&1 | tee /tmp/supabase-start.log
+          supabase status | tee /tmp/supabase-status-pretty.txt
+          docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | tee /tmp/docker-ps.txt
+          # Require Kong/API — DB-only status is not enough for JWT RLS tests.
+          curl -sf "http://127.0.0.1:54321/auth/v1/health" || curl -sf "http://127.0.0.1:54321/" || {
+            echo "API gateway not reachable on :54321"
+            exit 1
+          }
+
+      - name: Reset database from migrations (pass 1)
+        run: supabase db reset --local --yes 2>&1 | tee /tmp/supabase-db-reset-1.log
+
+      - name: Reset database from migrations (pass 2)
+        run: supabase db reset --local --yes 2>&1 | tee /tmp/supabase-db-reset-2.log
+
+      - name: Export local Supabase keys
+        run: |
+          set -euo pipefail
+          supabase status -o env | tee /tmp/supabase-status.env
+          supabase status -o json | tee /tmp/supabase-status.json >/dev/null
+          # Parse KEY=value lines without eval (JWTs can break shell eval).
+          node <<'NODE'
+          const fs = require("fs");
+          const envText = fs.readFileSync("/tmp/supabase-status.env", "utf8");
+          const fromEnv = {};
+          for (const line of envText.split(/\r?\n/)) {
+            const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+            if (!m) continue;
+            let v = m[2];
+            if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+              v = v.slice(1, -1);
+            }
+            fromEnv[m[1]] = v;
+          }
+          let status = {};
+          try { status = JSON.parse(fs.readFileSync("/tmp/supabase-status.json", "utf8")); } catch {}
+          const pick = (...keys) => {
+            for (const k of keys) {
+              const v = fromEnv[k] || status[k];
+              if (typeof v === "string" && v.length > 0) return v;
+            }
+            return "";
+          };
+          // Official local demo JWTs (supabase start defaults) as last resort when API is up.
+          const DEMO_ANON =
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
+          const DEMO_SERVICE =
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
+          const apiUrl = pick("API_URL", "SUPABASE_URL") || "http://127.0.0.1:54321";
+          const anon = pick("ANON_KEY", "SUPABASE_ANON_KEY") || DEMO_ANON;
+          const service = pick("SERVICE_ROLE_KEY", "SUPABASE_SERVICE_ROLE_KEY") || DEMO_SERVICE;
+          const dbUrl = pick("DB_URL", "DATABASE_URL");
+          if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:|\/|$)/i.test(apiUrl)) {
+            console.error("Refusing non-local API URL:", apiUrl);
+            process.exit(1);
+          }
+          const lines = [
+            `SUPABASE_URL=${apiUrl}`,
+            `SUPABASE_ANON_KEY=${anon}`,
+            `SUPABASE_SERVICE_ROLE_KEY=${service}`,
+            `NEXT_PUBLIC_SUPABASE_URL=${apiUrl}`,
+            `NEXT_PUBLIC_SUPABASE_ANON_KEY=${anon}`,
+          ];
+          if (dbUrl) lines.push(`DATABASE_URL=${dbUrl}`);
+          fs.appendFileSync(process.env.GITHUB_ENV, lines.join("\n") + "\n");
+          console.log("Exported", { apiUrl, hasAnon: !!anon, hasService: !!service, hasDb: !!dbUrl });
+          NODE
+
+      - name: Auth smoke before DB suite
+        run: |
+          set -euo pipefail
+          curl -sf "http://127.0.0.1:54321/auth/v1/health" || curl -sf "http://127.0.0.1:54321/" || {
+            echo "API not healthy"; docker ps -a; exit 1
+          }
+          node <<'NODE'
+          const { createClient } = require("@supabase/supabase-js");
+          const url = process.env.SUPABASE_URL;
+          const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          const anon = process.env.SUPABASE_ANON_KEY;
+          if (!url || !service || !anon) {
+            console.error("missing env", { url: !!url, service: !!service, anon: !!anon });
+            process.exit(1);
+          }
+          (async () => {
+            const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
+            const email = `smoke-${Date.now()}@example.com`;
+            const password = "Smoke-Test-1a!";
+            const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+            if (created.error) throw new Error("createUser: " + created.error.message);
+            const client = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false } });
+            const signed = await client.auth.signInWithPassword({ email, password });
+            if (signed.error) throw new Error("signIn: " + signed.error.message);
+            await admin.auth.admin.deleteUser(created.data.user.id);
+            console.log("auth smoke OK", created.data.user.id);
+          })().catch((e) => { console.error(e); process.exit(1); });
+          NODE
+
+      - name: Run database authorization suite
+        run: |
+          set -euo pipefail
+          set +e
+          NO_COLOR=1 npm run test:db 2>&1 | tee /tmp/supabase-test-db.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            grep -E "FAIL|Error: seed |SQL inventory failed|AssertionError" /tmp/supabase-test-db.log \
+              | head -n 20 \
+              | while IFS= read -r line; do
+                  echo "::error::${line}"
+                done || true
+            exit "$status"
+          fi
+        env:
+          KAIFY_DB_TESTS: "1"
+          NO_COLOR: "1"
+          FORCE_COLOR: "0"
+
+      - name: Record test:db counts
+        if: success()
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("fs");
+          const p = "audit/remediation/_vitest-db-last.json";
+          if (!fs.existsSync(p)) {
+            console.log("No vitest JSON reporter output");
+            process.exit(0);
+          }
+          const j = JSON.parse(fs.readFileSync(p, "utf8"));
+          const executed = j.numTotalTests ?? 0;
+          const passed = j.numPassedTests ?? 0;
+          const failed = j.numFailedTests ?? 0;
+          const skipped = (j.numPendingTests ?? 0) + (j.numTodoTests ?? 0);
+          const files = (j.testResults || []).length;
+          const lines = [
+            `DATABASE_TEST_FILES: ${files}`,
+            `DATABASE_TESTS_EXECUTED: ${executed}`,
+            `DATABASE_TESTS_PASSED: ${passed}`,
+            `DATABASE_TESTS_FAILED: ${failed}`,
+            `DATABASE_TESTS_SKIPPED: ${skipped}`,
+          ];
+          console.log(lines.join("\n"));
+          const summary = process.env.GITHUB_STEP_SUMMARY;
+          if (summary) fs.appendFileSync(summary, "## test:db counts\n\n" + lines.map((l) => `- ${l}`).join("\n") + "\n");
+          NODE
+
+      - name: Publish test:db failure to check run
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = '/tmp/supabase-test-db.log';
+            let body = '(no /tmp/supabase-test-db.log)';
+            if (fs.existsSync(path)) {
+              body = fs.readFileSync(path, 'utf8')
+                .replace(/\u001b\[[0-9;]*m/g, '')
+                .replace(/postgresql:\/\/[^@\s]+@/g, 'postgresql://***:***@')
+                .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '***JWT***');
+              if (body.length > 60000) body = body.slice(-60000);
+            }
+            const failHint = (body.match(/Error: seed [^\n]+|SQL inventory failed:[^\n]+|FAIL[^\n]+/) || ['(see text)'])[0];
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'wave2-test-db-log',
+              head_sha: context.sha,
+              status: 'completed',
+              conclusion: 'failure',
+              output: {
+                title: failHint.slice(0, 80),
+                summary: 'Sanitized Vitest DB suite output (truncated).',
+                text: '```\n' + body + '\n```',
+              },
+            });
+
+      - name: Commit failure diagnostics to branch
+        if: failure()
+        run: |
+          set -euo pipefail
+          mkdir -p audit/remediation
+          {
+            echo "# CI DB failure ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+            echo "sha: ${GITHUB_SHA}"
+            echo "run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "attempt: ${GITHUB_RUN_ATTEMPT}"
+            for f in /tmp/supabase-start.log /tmp/supabase-db-reset-1.log /tmp/supabase-db-reset-2.log /tmp/supabase-status.env /tmp/supabase-status.json /tmp/docker-ps.txt /tmp/supabase-test-db.log; do
+              if [ -f "$f" ]; then
+                echo "## $(basename "$f")"
+                echo '```'
+                tail -n 800 "$f" \
+                  | sed -E 's#postgresql://[^@[:space:]]+@#postgresql://***:***@#g' \
+                  | sed -E 's#(ANON_KEY|SERVICE_ROLE_KEY|SUPABASE_ANON_KEY|SUPABASE_SERVICE_ROLE_KEY)=.*#\1=***REDACTED***#g' \
+                  | sed -E 's#eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+#***JWT***#g'
+                echo '```'
+              else
+                echo "## $(basename "$f")"
+                echo "_missing_"
+              fi
+            done
+          } > audit/remediation/_CI_DB_FAILURE_LOG.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "${GITHUB_REF_NAME}"
+          git add audit/remediation/_CI_DB_FAILURE_LOG.md
+          if git diff --cached --quiet; then
+            echo "No diagnostic diff to commit"
+          else
+            git commit -m "ci: capture Wave 2 DB failure diagnostics [skip ci]"
+            git pull --rebase origin "${GITHUB_REF_NAME}" || true
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Upload supabase logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-db-logs
+          path: |
+            /tmp/supabase-start.log
+            /tmp/supabase-db-reset-1.log
+            /tmp/supabase-db-reset-2.log
+            /tmp/supabase-status.env
+            /tmp/supabase-status.json
+            /tmp/supabase-test-db.log
+          if-no-files-found: ignore
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup || supabase stop || true
 
   audit:
     name: Supply-chain audit

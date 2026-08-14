@@ -11,7 +11,7 @@
 
 ## Subject matter
 
-Processor provides the Kaify AI fitness coaching platform on behalf of Controller.
+Processor provides the Kaify Ai AI fitness coaching platform on behalf of Controller.
 
 ## Duration
 
@@ -23,7 +23,7 @@ Hosting user profiles, AI coaching, analytics, notifications as configured by Co
 
 ## Categories of data
 
-As defined in Controller's Kaify deployment (typically: email, profile, health/fitness metrics, chat).
+As defined in Controller's Kaify Ai deployment (typically: email, profile, health/fitness metrics, chat).
 
 ## Processor obligations
 

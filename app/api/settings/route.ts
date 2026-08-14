@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { ApiError } from "@/lib/api/errors";
 import { defineRoute } from "@/lib/api/route-handler";
+import { getOptionalIdempotencyKey } from "@/lib/api/idempotency";
+import { withIdempotency } from "@/lib/api/idempotency-store";
 import {
   getUserSettings,
   upsertUserSettings,
@@ -41,6 +43,12 @@ export const PATCH = defineRoute(
     if (!parsed.success) {
       throw new ApiError("VALIDATION_ERROR", "Geçersiz ayar.", parsed.error.issues);
     }
-    return upsertUserSettings(user.id, parsed.data);
+    return withIdempotency({
+      userId: user.id,
+      endpoint: "PATCH /api/settings",
+      key: getOptionalIdempotencyKey(request),
+      requestBody: parsed.data,
+      handler: () => upsertUserSettings(user.id, parsed.data),
+    });
   },
 );

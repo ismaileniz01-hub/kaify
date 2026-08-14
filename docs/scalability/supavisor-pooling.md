@@ -22,7 +22,7 @@ Last updated: 2026-07-05 · Scalability Faz 3
 
 ## Vercel + Supabase JS (current architecture)
 
-Kaify uses **PostgREST over HTTPS**, not persistent Postgres connections from serverless functions. Pooling benefit is mainly for:
+Kaify Ai uses **PostgREST over HTTPS**, not persistent Postgres connections from serverless functions. Pooling benefit is mainly for:
 
 - Future raw SQL / Prisma / Drizzle adoption
 - pg_cron jobs that open many connections

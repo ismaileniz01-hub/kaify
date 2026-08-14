@@ -17,7 +17,7 @@ Last updated: 2026-07-05 · **Draft**
 ## DeepSeek — supplementary measures
 
 - Prompt sanitization and PII redaction before API calls
-- No persistent storage of raw prompts in DeepSeek-facing logs on Kaify side beyond `ai_usage_ledger` metadata
+- No persistent storage of raw prompts in DeepSeek-facing logs on Kaify Ai side beyond `ai_usage_ledger` metadata
 - User explicit AI consent (Art. 9)
 - Monitor regulatory guidance on CN transfers
 
