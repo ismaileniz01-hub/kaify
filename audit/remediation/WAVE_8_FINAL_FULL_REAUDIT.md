@@ -230,10 +230,10 @@ No production secrets printed. Gitleaks unavailable.
 | W8-017 | Test | P2 | **CLOSED** | 12 local timeouts | **PASS_ON_STABLE_ENV** `https://kaifyai.org` 38 passed / 16 skipped OTP | No |
 | W8-018 | Ops | P2 | OPEN | live DB reset + RLS not re-run (no Docker) | owner CI/hosted | Evidence |
 | W8-019 | Ops | P3 | OPEN | Gitleaks not installed | optional CI | No |
-| W8-020 | Ops | — | OPEN | notification pg_cron Vault | OWNER_VERIFY | Evidence |
+| W8-020 | Ops | — | **CLOSED** | notification hourly heartbeat | **PASS** `cron_job_runs.notifications` ok @ 2026-08-14T19:00:03Z | Evidence |
 
 **P0_OPEN: 0**  
-**P1_OPEN: 0** (implementation; hosted migration must be applied)  
+**P1_OPEN: 0** (owner reported Wave 8 SQL applied)  
 **P2_OPEN: 3** (W8-011, 012, 018)  
 **P3_OPEN: 5** (W8-013–016, 019)
 
@@ -319,11 +319,11 @@ VISION_MODEL_CONFIG: **gemini-3.5-flash-lite** + `thinkingLevel=medium`
 MODEL_CONFIG_DRIFT: **NONE** (runtime adapters use env helpers; i18n/quote scripts are TEST_ONLY hardcoded IDs)  
 MODEL_CONFIG_CONTRACT: **PASS**
 
-DB_MIGRATION_STATE: **OWNER_ACTION_REQUIRED** (`20260814180000_wave8_admin_aal2_avatar_writes.sql` — hosted not inspectable here)  
+DB_MIGRATION_STATE: **OWNER_REPORTED_APPLIED** (`20260814180000_wave8_admin_aal2_avatar_writes.sql` — catalog not re-queried; no `DATABASE_URL`)  
 RLS_RPC_AFTER_MIGRATION: **NOT_EXECUTABLE_HERE**  
 ADMIN_EMAIL_CONTRACT: **PASS** (fail-closed in prod/preview)  
 ADMIN_EMAIL_CONFIGURED: **YES** (Vercel preview+production; value not printed)  
-NOTIFICATION_HOURLY_CRON: **OWNER_VERIFY** (code: pg_cron `kaify-notifications-hourly` `0 * * * *` → `/api/cron/notifications`; Vercel `0 6 * * *` backup)  
+NOTIFICATION_HOURLY_CRON: **PASS** (`cron_job_runs.notifications` ok, last_run 2026-08-14T19:00:03Z, age 0h; Vercel daily is backup)  
 PUBLIC_PLAYWRIGHT: **PASS**  
 UNEXPLAINED_PUBLIC_E2E_FAILURES: **0**  
 LIGHTHOUSE: **PASS** (SEO 1.0 all six; a11y ≥0.93; perf warn-band 0.53–0.66 simulated mobile)  
@@ -332,6 +332,8 @@ ROLLBACK_READY: **PASS**
 AUTOMATIC_FALLBACK: **NONE**
 
 Lighthouse mobile simulated (`kaifyai.org`): `/` 0.60/0.97/1.00 · `/pricing` 0.53/0.93/1.00 · `/privacy` 0.66/1.00/1.00 · `/terms` 0.59/1.00/1.00 · `/cookies` 0.61/1.00/1.00 · `/kvkk` 0.55/0.96/1.00 (perf/a11y/seo). Bundle budgets still PASS. No architecture change.
+
+LIVE_API_CANARY: **PASS** (2026-08-14; DeepSeek 20/20 one-call, Gemini vision 11/11 on repaired synthetic JPEGs). UI / dual-user Maya confirm / entitled Council session **not** run.
 
 PRE_CANARY_CLOSURE: **PASS_WITH_EXTERNAL_ACTIONS**
 
@@ -346,10 +348,10 @@ LEGACY_REMOVAL_READY: **NO**
 P0_OPEN: **0**  
 P1_OPEN: **0**  
 RELEASE_CRITICAL_IMPLEMENTATION_DEFECTS: **0**  
-EXTERNAL_EVIDENCE_GAPS: **5** (authenticated axe, VoiceOver, live AI during canary, hourly cron verify, hosted Wave 8 SQL / live RLS)  
+EXTERNAL_EVIDENCE_GAPS: **4** (authenticated axe, VoiceOver, Preview UI canary, live dual-user RLS)  
 OVERALL_SCORE: **93/100**  
 OVERALL_CONFIDENCE: **MEDIUM**  
-MANUAL_CANARY_REQUIRED: **YES**  
+MANUAL_CANARY_REQUIRED: **PARTIAL**  
 PRODUCTION_DEPLOYED: **NO**  
 KAIOS_ROLLBACK_RETAINED: **YES**  
-EXTERNAL_ACTION_REQUIRED: Apply Wave 8 SQL if not applied; confirm hourly pg_cron; run ~25 min AI canary on Preview (Gemini+DeepSeek keys present). Do not remove `KAIOS_RUNTIME=false`.
+EXTERNAL_ACTION_REQUIRED: Finish Preview UI canary. Do not remove `KAIOS_RUNTIME=false`.

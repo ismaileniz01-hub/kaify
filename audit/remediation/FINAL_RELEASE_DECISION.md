@@ -5,14 +5,14 @@
 **BRANCH:** `cursor/signup-onboarding-lifestyle-fields`  
 **PRODUCTION_DEPLOYED:** NO  
 
-Authority: Wave 8 full-product re-audit of **current HEAD**, plus targeted closures. Live AI canary remains **owner-only**.
+Authority: Wave 8 full-product re-audit of **current HEAD**, plus targeted closures. Live provider canary (API) ran 2026-08-14; remaining UI canary is owner-only on Preview.
 
 ---
 
 ## EXECUTIVE
 
 P0_OPEN: **0**  
-P1_OPEN: **0** (hosted DB must still **apply** Wave 8 migration)  
+P1_OPEN: **0** (owner reported Wave 8 SQL applied on hosted DB)  
 P2_OPEN: **3**  
 P3_OPEN: **5**  
 
@@ -71,9 +71,9 @@ BROKEN_PUBLIC_LINKS: **0** (Playwright public-links **PASS** on `kaifyai.org`)
 
 PRE_CANARY_CLOSURE: **PASS_WITH_EXTERNAL_ACTIONS**  
 MODEL_CONFIG_CONTRACT: **PASS** (no drift; approved `deepseek-chat` / `gemini-3.5-flash-lite` + thinking **medium** retained)  
-DB_MIGRATION_STATE: **OWNER_ACTION_REQUIRED**  
+DB_MIGRATION_STATE: **OWNER_REPORTED_APPLIED** (SQL not re-read from `cron.job` / pg catalog; no `DATABASE_URL`)  
 ADMIN_EMAIL: **CONFIGURED** (Vercel prod+preview; fail-closed if missing)  
-NOTIFICATION_HOURLY_CRON: **OWNER_VERIFY** (`0 * * * *` pg_cron; Vercel `0 6 * * *` backup)  
+NOTIFICATION_HOURLY_CRON: **PASS** (`cron_job_runs.notifications` **ok**, `last_run_at=2026-08-14T19:00:03Z`, age **0h**; sibling hourly jobs also on `:00`. `cron.job` row itself not readable without Postgres URL. Vercel `0 6 * * *` is backup only.)  
 PUBLIC_PLAYWRIGHT: **PASS** (38 passed / 16 skipped OTP on `https://kaifyai.org`; unexplained failures **0**)  
 LIGHTHOUSE: **PASS** SEO+a11y; performance warn-band on simulated mobile (not a canary NO_GO)  
 KAIOS_CONTRACT: **PASS**  
@@ -114,13 +114,13 @@ LEGACY_REMOVAL_READY: **NO**
 P0_OPEN: **0**  
 P1_OPEN: **0**  
 RELEASE_CRITICAL_IMPLEMENTATION_DEFECTS: **0**  
-EXTERNAL_EVIDENCE_GAPS: **5**  
+EXTERNAL_EVIDENCE_GAPS: **4** (authenticated axe, VoiceOver, Preview UI canary, live dual-user RLS)  
 OVERALL_SCORE: **93/100**  
 OVERALL_CONFIDENCE: **MEDIUM**  
-MANUAL_CANARY_REQUIRED: **YES**  
+MANUAL_CANARY_REQUIRED: **PARTIAL** (live API **PASS**; UI checklist still owner)  
 PRODUCTION_DEPLOYED: **NO**  
 KAIOS_ROLLBACK_RETAINED: **YES**  
-EXTERNAL_ACTION_REQUIRED: Apply Wave 8 hosted SQL if not applied; verify hourly Supabase notification cron; run ~25 min AI canary. Do not remove `KAIOS_RUNTIME=false`.
+EXTERNAL_ACTION_REQUIRED: Finish Preview UI canary (login / Deployment Protection). Do not remove `KAIOS_RUNTIME=false`.
 
 Wave 9 was **not** started.
 
@@ -164,10 +164,18 @@ Wave 9 was **not** started.
 - Disconnect mid-stream → no `done` persist.  
 - Wrong voice / fake saved / verbosity / duplicate calls → **rollback trigger**.
 
-### Ops before canary
-- Apply Wave 8 SQL on hosted DB if not already applied.  
+### Live API canary (2026-08-14, agent)
+
+LIVE_API_CANARY: **PASS** (Vitest `tests/kaios/live`, 5 tests / 4 files, ~79s wall; DeepSeek+Gemini via Vercel **Development** keys after local DeepSeek **401**)  
+DEEPSEEK_SAMPLES: **20/20** · `modelCallCount=1` · malformed **0** · p50 **2449ms** · p95 **4542ms** · coaches kai/alex/maya/leo/council  
+GEMINI_VISION: **11/11** on **new synthetic JPEGs** (prior fixture files were BOM-corrupted, not decodable)  
+MAYA_CONFIRM_E2E / RLS_DUAL_USER / COUNCIL_ENTITLED_SESSION: **SKIPPED** (no `KAIOS_LIVE_USER_*` / council user in env)  
+UI_CANARY: **NOT_RUN** (Preview Deployment Protection; production still old deploy)
+
+### Ops before remaining UI canary
+- Wave 8 SQL: **owner reported applied**.  
 - `ADMIN_EMAIL` is present on Vercel (confirm it is the intended mailbox).  
-- **OWNER_VERIFY_NOTIFICATION_CRON:** pg_cron job `kaify-notifications-hourly` schedule `0 * * * *` hitting `/api/cron/notifications` with Vault `kaify_cron_secret`. Daily Vercel `0 6 * * *` is backup only.
+- Hourly notifications: **PASS** via `cron_job_runs` (see PRE-CANARY CLOSURE).
 
 Rollback triggers (repeated/material): wrong coach; fake saved; RLS; silent KAIOS→legacy; stream hangs; provider-call explosion; locale drift; duplicate writes; billing corruption; widespread 5xx; Maya save/confirm lies; Leo accepting malformed quality; Council turn-state break. One transient network error is not automatic rollback.
 

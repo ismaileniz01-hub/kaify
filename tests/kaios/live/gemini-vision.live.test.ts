@@ -174,8 +174,8 @@ describe("LIVE Gemini vision validation", () => {
     for (const c of cases) {
       const row = await runVision(c.label, c.kind, c.prompt, c.fixture);
       results.push(row);
+      expect(row.ok, row.error ?? row.label).toBe(true);
       expect(row.noCoachPersona).toBe(true);
-      if (!row.ok) expect(row.preview).toBe("");
     }
 
     const evidence = {
