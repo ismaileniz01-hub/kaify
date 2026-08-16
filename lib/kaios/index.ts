@@ -91,6 +91,33 @@ export {
 } from "@/lib/kaios/exercises";
 
 export {
+  executeTool,
+  validateProgramExerciseIds,
+  type ToolName,
+  type ToolRequest,
+  type ToolResult,
+} from "@/lib/kaios/tools";
+
+export {
+  toolsAllowedForCoach,
+  isToolAllowedForCoach,
+  mapActionTypeToTool,
+} from "@/lib/kaios/tools/allowlist";
+
+export {
+  enforceActionTruthOnPayload,
+  scrubFalseSuccessClaims,
+  type ActionLifecycle,
+  type ActionTruthRecord,
+} from "@/lib/kaios/tools/action-truth";
+
+export { resolveActiveLocale, isNonSwitchingExpression } from "@/lib/kaios/localization/resolve";
+
+export { resolveKaiFamiliarityStage } from "@/lib/kaios/kai/familiarity";
+
+export { splitSafetyAndGeneralState } from "@/lib/kaios/context/safety-state";
+
+export {
   orchestrateCoachChat,
   type OrchestrateChatInput,
   type OrchestrateResultMeta,

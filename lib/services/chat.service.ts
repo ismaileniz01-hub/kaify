@@ -21,6 +21,9 @@ import {
   type OrchestrateResultMeta,
 } from "@/lib/kaios/orchestrator";
 import { prepareMemoriesForContext } from "@/lib/kaios/memory";
+import { resolveActiveLocale } from "@/lib/kaios/localization/resolve";
+import { resolveKaiFamiliarityStage } from "@/lib/kaios/kai/familiarity";
+import { linkPendingConfirmationToMessage } from "@/lib/services/analytics-confirmation.service";
 import {
   resolveIntent,
   type CoachId,
@@ -69,16 +72,36 @@ function trimHistoryContent(
 // Helpers
 // ---------------------------------------------------------------------------
 
+async function getProfileLocaleAndSafety(
+  admin: ReturnType<typeof createAdminSupabaseClient>,
+  userId: string,
+): Promise<{
+  savedLocale: string;
+  allergies: string | null;
+  createdAt: string | null;
+}> {
+  const { data } = await admin
+    .from("profiles")
+    .select("locale, allergies, created_at")
+    .eq("id", userId)
+    .maybeSingle();
+  return {
+    savedLocale: resolveLocale(data?.locale),
+    allergies:
+      typeof data?.allergies === "string" && data.allergies.trim()
+        ? data.allergies.trim()
+        : null,
+    createdAt:
+      typeof data?.created_at === "string" ? data.created_at : null,
+  };
+}
+
 async function getLocale(
   admin: ReturnType<typeof createAdminSupabaseClient>,
   userId: string,
 ): Promise<string> {
-  const { data } = await admin
-    .from("profiles")
-    .select("locale")
-    .eq("id", userId)
-    .maybeSingle();
-  return resolveLocale(data?.locale);
+  const { savedLocale } = await getProfileLocaleAndSafety(admin, userId);
+  return savedLocale;
 }
 
 async function getCoachingState(
@@ -96,14 +119,24 @@ async function getCoachingState(
 function buildStateSummary(
   state: CoachingStateRow | null,
   fitnessContext?: string,
+  extras?: {
+    allergies?: string | null;
+    familiarityStage?: string | null;
+  },
 ): string {
   const parts: string[] = [];
+  if (extras?.allergies) parts.push(`allergies: ${extras.allergies}`);
   if (state?.motivation_style) parts.push(`motivation style: ${state.motivation_style}`);
   if (state && state.training_focus.length > 0)
     parts.push(`training focus: ${state.training_focus.join(", ")}`);
   if (state?.last_workout_summary)
     parts.push(`last workout: ${state.last_workout_summary}`);
   if (state?.injury_notes) parts.push(`injuries/limitations: ${state.injury_notes}`);
+  if (extras?.familiarityStage && extras.familiarityStage !== "unknown") {
+    parts.push(`familiarity_stage: ${extras.familiarityStage}`);
+  } else if (extras?.familiarityStage === "unknown") {
+    parts.push("familiarity_stage: unknown");
+  }
   if (fitnessContext && fitnessContext.trim().length > 0) {
     parts.push(fitnessContext);
   }
@@ -292,15 +325,39 @@ async function* streamKaiosCoachReply(
       }
     }
 
-    const [resolvedLocale, state, memories, fitnessContext, history] =
+    const [profileMeta, state, memories, fitnessContext, history, msgCountRow] =
       await Promise.all([
-        getLocale(admin, params.userId),
+        getProfileLocaleAndSafety(admin, params.userId),
         getCoachingState(admin, params.userId),
         getRecentMemories(params.userId, 24),
         buildFitnessContextSummary(params.userId).catch(() => ""),
         fetchRecentTurns(admin, params.userId, params.coachId),
+        admin
+          .from("chat_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", params.userId)
+          .eq("coach_id", "kai")
+          .eq("thread_type", "direct"),
       ]);
-    locale = resolvedLocale;
+
+    const messageLocale = detectMessageLocale(
+      cleanMessage,
+      profileMeta.savedLocale,
+    );
+    locale = resolveActiveLocale({
+      message: cleanMessage,
+      messageLocale,
+      savedLocale: profileMeta.savedLocale,
+      fallbackLocale: "en",
+    });
+
+    const familiarityStage =
+      coachId === "kai"
+        ? resolveKaiFamiliarityStage({
+            accountCreatedAt: profileMeta.createdAt,
+            directMessageCount: msgCountRow.count ?? history.length,
+          })
+        : null;
 
     const intent = resolveIntent({ coach: coachId, message: cleanMessage });
     const memoryItems = prepareMemoriesForContext(
@@ -315,6 +372,11 @@ async function* streamKaiosCoachReply(
     )
       .map((m) => m.text)
       .filter((text): text is string => typeof text === "string" && text.length > 0);
+
+    const userState = buildStateSummary(state, fitnessContext, {
+      allergies: profileMeta.allergies,
+      familiarityStage,
+    });
 
     const { error: userInsertError } = await admin.from("chat_messages").insert({
       user_id: params.userId,
@@ -370,7 +432,7 @@ async function* streamKaiosCoachReply(
         coachId,
         message: cleanMessage,
         locale,
-        userState: buildStateSummary(state, fitnessContext),
+        userState,
         memoryItems,
         teamFacts: compactTeamFacts(coachId),
         conversationTurns: history,
@@ -434,6 +496,18 @@ async function* streamKaiosCoachReply(
         error: insertError.message,
       });
       throw new ApiError("INTERNAL_ERROR", aiCopy(locale, "reply_not_saved"));
+    }
+
+    if (inserted?.id && meta.confirmation?.pendingId) {
+      await linkPendingConfirmationToMessage({
+        userId: params.userId,
+        pendingId: meta.confirmation.pendingId,
+        messageId: inserted.id,
+      }).catch((err) => {
+        logger.warn("[chat.service] link pending confirmation failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
     }
 
     const usage = await settleChatQuota({

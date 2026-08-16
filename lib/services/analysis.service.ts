@@ -17,6 +17,9 @@ import {
   selectReusableVisionRow,
   type StoredVisionRow,
 } from "@/lib/kaios/vision/fingerprint";
+import { resolveLocale } from "@/lib/i18n/dictionary";
+import { detectMessageLocale } from "@/lib/i18n/detect-message-locale";
+import { resolveActiveLocale } from "@/lib/kaios/localization/resolve";
 import type { ScoreDrift } from "@/lib/ai/consistency";
 import type {
   AnalysisMimeType,
@@ -103,13 +106,24 @@ function extractQuality(payload: Json | null): ImageQuality | null {
   };
 }
 
-async function getLocale(admin: AdminClient, userId: string): Promise<string> {
+async function getLocale(
+  admin: AdminClient,
+  userId: string,
+  note?: string,
+): Promise<string> {
   const { data } = await admin
     .from("profiles")
     .select("locale")
     .eq("id", userId)
     .maybeSingle();
-  return data?.locale ?? "en";
+  const saved = resolveLocale(data?.locale);
+  const message = note?.trim() ?? "";
+  return resolveActiveLocale({
+    message,
+    messageLocale: message ? detectMessageLocale(message, saved) : null,
+    savedLocale: saved,
+    fallbackLocale: "en",
+  });
 }
 
 async function getPreviousScores(
@@ -197,7 +211,7 @@ export async function analyzePhoto(
   const fingerprint = fingerprintVisionImage(vision.base64, vision.mimeType);
 
   const [locale, previousScores, priorRows] = await Promise.all([
-    getLocale(admin, params.userId),
+    getLocale(admin, params.userId, params.note),
     persona.kind === "body"
       ? getPreviousScores(admin, params.userId, params.coachId)
       : Promise.resolve(null),

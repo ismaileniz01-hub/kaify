@@ -10,14 +10,14 @@
 
 ```
 SOURCE_REQUIREMENTS_TOTAL: 475
-SOURCE_REQUIREMENTS_COVERED: 326
-SOURCE_REQUIREMENTS_PARTIAL: 111
-SOURCE_REQUIREMENTS_MISSING: 25
-KAI_BEHAVIOR_COVERAGE: 90% strict / 100% COVERED+PARTIAL (50 applicable)
-ALEX_BEHAVIOR_COVERAGE: 86.4% strict / 93.2% COVERED+PARTIAL (44 applicable)
-MAYA_BEHAVIOR_COVERAGE: 71.8% strict / 94.9% COVERED+PARTIAL (39 applicable)
-LEO_BEHAVIOR_COVERAGE: 71.1% strict / 94.7% COVERED+PARTIAL (38 applicable)
-CORE_KAIOS_COVERAGE: 64.6% strict / 93.8% COVERED+PARTIAL (291 applicable)
+SOURCE_REQUIREMENTS_COVERED: 360
+SOURCE_REQUIREMENTS_PARTIAL: 87
+SOURCE_REQUIREMENTS_MISSING: 15
+KAI_BEHAVIOR_COVERAGE: 94.4% strict / 100% COVERED+PARTIAL (54 applicable)
+ALEX_BEHAVIOR_COVERAGE: 89.6% strict / 97.9% COVERED+PARTIAL (48 applicable)
+MAYA_BEHAVIOR_COVERAGE: 81.4% strict / 100% COVERED+PARTIAL (43 applicable)
+LEO_BEHAVIOR_COVERAGE: 76.2% strict / 95.2% COVERED+PARTIAL (42 applicable)
+CORE_KAIOS_COVERAGE: 72.4% strict / 95.6% COVERED+PARTIAL (275 applicable)
 FULL_SOURCE_MARKDOWN_AT_RUNTIME: NO
 ONE_ACTIVE_COACH: PASS
 AUTOMATIC_LEGACY_FALLBACK: NONE
@@ -25,12 +25,11 @@ SECOND_PERSONALITY_LLM: NONE
 KAI_CASUAL_PROVIDER_CALLS: 1
 PERSONALITY_PROMPT_FIDELITY: PASS
 PRODUCT_FEATURE_GAPS:
-  - Chat orchestrator still does not call most tools (exercise search/validate, save meal, nutrition state, physique history)
+  - Event engine still skeletal (meal_saved/workout_completed/physique_scored handlers, durable store, weekly aggregates)
+  - Progressive/compressed memory retrieval not implemented (90-day continuity unmet)
   - Nutrition provider remains model_estimate-only (no trusted food DB)
-  - Event engine still skeletal (most meal_saved/workout_completed/physique_scored handlers missing)
-  - Progressive/compressed memory retrieval not implemented
-  - Locale resolver not fully wired on all KAIOS chat paths
-  - Cross-coach structured Leo→Alex handoff incomplete
+  - Leo physique history not wired on analysis path; no structured Leo→Alex handoff
+  - Alex exercise search only on substitute-intent prefetch (not all programming paths)
 TESTS: PASS
 TYPECHECK: PASS
 LINT: PASS
@@ -42,7 +41,7 @@ MANUAL_PERSONALITY_CANARY_REQUIRED: YES
 Counts come from the explicit registry `kaios/registry/requirements.json` (not invented).  
 Full audit: `kaios/audit/SOURCE_RUNTIME_COVERAGE.md`.
 
-**Interpretation:** Strict COVERED ≈ **70.6%** of applicable rows. COVERED+PARTIAL ≈ **94.6%**. Many MODEL_BEHAVIOR rows are now enforced via layered prompt capsules; remaining MISSING rows are mostly APPLICATION_BEHAVIOR (tools/events/DB).
+**Interpretation:** Strict COVERED ≈ **77.9%** of applicable rows. COVERED+PARTIAL ≈ **96.8%**. Runtime integrity closure wired bounded tool dispatch, action-truth, locale resolution, safety-state injection, Leo synthesis capsules, Council Kai mode, and Kai familiarity — without marking event engine, 90-day memory, or nutrition DB as COVERED.
 
 ---
 

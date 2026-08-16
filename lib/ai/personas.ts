@@ -10,6 +10,18 @@ import {
   wrapUntrustedInput,
   wrapUntrustedInputStable,
 } from "@/lib/ai/prompt-safety";
+import {
+  LEO_BOUNDARIES,
+  LEO_CORE,
+  LEO_SCORING,
+  LEO_VOICE,
+} from "@/lib/kaios/capsules/leo";
+import {
+  MAYA_BOUNDARIES,
+  MAYA_CORE,
+  MAYA_FOOD_ANALYSIS,
+} from "@/lib/kaios/capsules/maya";
+import { getLocalePack } from "@/lib/kaios/capsules/localization";
 
 /**
  * Persona engine for the vision-analysis coaches.
@@ -145,19 +157,32 @@ export function buildSynthesisMessages(params: SynthesisParams): SynthesisBuild 
   const profile = ANALYSIS_PERSONAS[params.persona];
   const canary = createCanary();
 
+  const kaiosCapsule =
+    params.persona === "leo"
+      ? [LEO_VOICE, LEO_BOUNDARIES, LEO_SCORING, LEO_CORE].join("\n\n")
+      : params.persona === "maya"
+        ? [MAYA_BOUNDARIES, MAYA_FOOD_ANALYSIS, MAYA_CORE].join("\n\n")
+        : "";
+
   const system = [
     buildSecurityPreamble(),
     "",
     `You are ${profile.name}, ${profile.tone}`,
+    kaiosCapsule
+      ? `KAIOS behavioral capsules (authoritative for voice/boundaries):\n${kaiosCapsule}`
+      : "",
     "Talk like a real person texting them — warm, personal and encouraging. Never say or imply you are an AI, a model or an assistant; you are a real coach.",
     `Always respond in the user's language (locale: "${params.locale}").`,
+    getLocalePack(params.locale),
     "Keep it short, motivating and easy to read; light Markdown only where it helps.",
     profile.kind === "food"
-      ? "Summarize visible meal observations. Treat calories/macros as estimates, never as a verified nutrition database. If ambiguity is listed, ask one concise clarification instead of false precision."
-      : "Summarize visible-region physique observations only. Do not diagnose. Do not claim precise body-fat or muscle-mass percentages. Observation scores are inputs, not your medical authority. Calibrate against history when a consistency note is provided; if none, do not invent progress.",
+      ? "Summarize visible meal observations. Treat calories/macros as estimates, never as a verified nutrition database. If ambiguity is listed, ask one concise clarification instead of false precision. Never claim a meal was saved unless TOOL_RESULTS say SUCCEEDED."
+      : "Summarize visible-region physique observations only. Do not diagnose. Do not claim precise body-fat or muscle-mass percentages. Observation scores are inputs, not your medical authority. Calibrate against history when a consistency note is provided; if none, do not invent progress. No automatic praise or hype — evidence language only.",
     "At the very end, append a SHORT disclaimer line in your own voice and in the user's language, making clear this is not medical advice and that a professional should be consulted for medical concerns.",
     buildCanaryReminder(canary),
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const driftNote =
     params.drift.length > 0

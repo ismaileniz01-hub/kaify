@@ -33,6 +33,16 @@ import {
   createTokenTelemetryRecord,
   withProviderUsage,
 } from "@/lib/kaios/telemetry/tokens";
+import {
+  dispatchPostModelTools,
+  prefetchToolKnowledge,
+} from "@/lib/kaios/tools/dispatch";
+import {
+  actionTruthHintForPrompt,
+  enforceActionTruthOnPayload,
+  scrubFalseSuccessClaims,
+  type ActionTruthRecord,
+} from "@/lib/kaios/tools/action-truth";
 import { logger } from "@/lib/logger";
 import type { SseChunk } from "@/lib/api/sse";
 import type { MessageType } from "@/lib/types/database.types";
@@ -62,6 +72,9 @@ export type OrchestrateResultMeta = {
   awaitUser?: boolean;
   assistantText: string;
   aborted?: boolean;
+  actionTruth?: ActionTruthRecord[];
+  /** Pending Maya meal confirmation for chat.service UI wiring. */
+  confirmation?: { pendingId: string; summary: string };
 };
 
 function messageTypeForIntent(
@@ -120,11 +133,19 @@ function structuredSystemHint(intent: Intent): string {
       SCHEMA_VERSION +
       '", "coach":"<id>", "message":"<user-facing>", "intent":"' +
       intent +
-      '", "data":{}, "ui":{} }',
+      '", "data":{}, "ui":{}, "actions":[] }',
     "Omit unused fields. message is localized natural coach speech.",
     "Do not duplicate structured numbers already in data/ui inside message.",
     "No generic closing. Answer directly.",
-  ].join(" ");
+    actionTruthHintForPrompt(),
+    intent === "tool_action"
+      ? 'For tool requests use actions:[{ "type":"<allowlistedTool>", "payload":{...} }]. Never invent tool success in message.'
+      : intent === "programming"
+        ? 'Program changes are PROPOSED only. data.status must be "proposed". Never claim applied. Use only exercise_ids present in DATA/library candidates.'
+        : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 /**
@@ -140,6 +161,18 @@ export async function* orchestrateCoachChat(
     hasImage: input.hasImage,
   });
 
+  // Bounded read prefetch (0–1) before model — never writes.
+  const prefetch = await prefetchToolKnowledge({
+    userId: input.userId,
+    coach: input.coachId,
+    intent,
+    message: input.message,
+  });
+  const knowledge = [
+    ...(input.knowledge ?? []),
+    ...prefetch.knowledgeLines,
+  ];
+
   const ctx = buildRuntimeContext({
     coach: input.coachId,
     message: input.message,
@@ -147,12 +180,19 @@ export async function* orchestrateCoachChat(
     userState: input.userState,
     memoryItems: input.memoryItems,
     teamFacts: input.teamFacts,
-    knowledge: input.knowledge,
+    knowledge: knowledge.length ? knowledge : undefined,
     conversationTurns: input.conversationTurns,
     hasImage: input.hasImage,
   });
 
   const compiled = compilePrompt(ctx);
+  // Inject action-truth reminder into system for casual path too.
+  if (compiled.messages[0]?.role === "system") {
+    compiled.messages[0] = {
+      role: "system",
+      content: `${compiled.messages[0].content}\n\n${actionTruthHintForPrompt()}`,
+    };
+  }
   const startedAt = Date.now();
   let telemetry = createTokenTelemetryRecord({
     coach: input.coachId,
@@ -169,6 +209,8 @@ export async function* orchestrateCoachChat(
   let assistantText = "";
   let envelope: BaseEnvelope;
   let awaitUser = false;
+  let actionTruth: ActionTruthRecord[] = [...prefetch.truths];
+  let confirmation: { pendingId: string; summary: string } | undefined;
 
   if (!needsStructuredOutput(intent)) {
     modelCallCount = 1;
@@ -307,6 +349,42 @@ export async function* orchestrateCoachChat(
     awaitUser = Boolean(data?.await_user);
   }
 
+  // Bounded post-model tool/validate (max 1) — server-owned userId.
+  const post = await dispatchPostModelTools({
+    userId: input.userId,
+    coach: input.coachId,
+    intent,
+    envelope,
+  });
+  actionTruth = [...actionTruth, ...post.truths];
+  if (post.confirmation) confirmation = post.confirmation;
+
+  // Downgrade invalid Alex program cards.
+  const idValidationFailed = post.truths.some(
+    (t) =>
+      t.tool === "validateExerciseIds" && t.status === "FAILED",
+  );
+  if (idValidationFailed) {
+    envelope = {
+      ...envelope,
+      message:
+        scrubFalseSuccessClaims(envelope.message, actionTruth) ||
+        envelope.message,
+      data: {
+        ...(typeof envelope.data === "object" && envelope.data
+          ? envelope.data
+          : {}),
+        status: "proposed",
+        exercise_validation: "failed",
+      },
+      ui: undefined,
+    };
+    assistantText = envelope.message;
+  }
+
+  assistantText = scrubFalseSuccessClaims(assistantText, actionTruth);
+  envelope = { ...envelope, message: assistantText };
+
   if (usageTokens <= 0) {
     const promptChars = compiled.messages.reduce(
       (n, m) => n + m.content.length,
@@ -321,9 +399,22 @@ export async function* orchestrateCoachChat(
     latencyMs: Date.now() - startedAt,
   });
 
-  const messageType = messageTypeForIntent(intent, envelope);
+  let messageType = messageTypeForIntent(intent, envelope);
+  if (idValidationFailed) messageType = "text";
+
+  // Programming without apply backend is never an applied workout_plan claim.
+  if (intent === "programming" && envelope.data) {
+    const data =
+      typeof envelope.data === "object" && envelope.data
+        ? { ...(envelope.data as Record<string, unknown>) }
+        : {};
+    if (!data.status) data.status = "proposed";
+    if (data.status === "applied") data.status = "proposed";
+    envelope = { ...envelope, data };
+  }
+
   let payload: Record<string, unknown> | null =
-    messageType === "text" && !envelope.data && !envelope.ui
+    messageType === "text" && !envelope.data && !envelope.ui && !confirmation
       ? {
           schema_version: envelope.schema_version,
           coach: envelope.coach,
@@ -341,6 +432,19 @@ export async function* orchestrateCoachChat(
     payload = { ...payload, ui: envelope.data };
   }
 
+  if (confirmation && payload) {
+    payload = {
+      ...payload,
+      confirmation: {
+        pendingId: confirmation.pendingId,
+        summary: confirmation.summary,
+      },
+      saved: false,
+    };
+  }
+
+  payload = enforceActionTruthOnPayload(payload, actionTruth);
+
   out.meta = {
     intent,
     envelope,
@@ -351,5 +455,7 @@ export async function* orchestrateCoachChat(
     telemetry,
     awaitUser,
     assistantText,
+    actionTruth,
+    confirmation,
   };
 }

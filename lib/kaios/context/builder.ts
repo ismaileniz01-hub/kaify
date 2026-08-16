@@ -9,6 +9,7 @@ import {
   estimateCharsToTokens,
   estimateTextTokens,
 } from "@/lib/kaios/telemetry/tokens";
+import { splitSafetyAndGeneralState } from "@/lib/kaios/context/safety-state";
 import type {
   BuildRuntimeContextInput,
   ContextTier,
@@ -127,10 +128,19 @@ export function buildRuntimeContext(
   const capsules = selectActiveCapsules(input.coach, intent, input.message);
   const maxTokens = outputBudgetFor(intent, input.message);
 
+  const { safetyState, generalState } = splitSafetyAndGeneralState(
+    input.userState,
+  );
+
+  // Canonical safety state always survives tier-0 pruning.
+  const userStateParts: string[] = [];
+  if (safetyState) userStateParts.push(safetyState);
+  if (tier >= 1 && generalState) userStateParts.push(generalState);
+  else if (tier >= 1 && input.userState?.trim() && !safetyState && !generalState) {
+    userStateParts.push(input.userState.trim());
+  }
   const userState =
-    tier >= 1 && input.userState?.trim()
-      ? input.userState.trim()
-      : undefined;
+    userStateParts.length > 0 ? userStateParts.join("; ") : undefined;
 
   const memoryItems =
     tier >= 2 && input.memoryItems && input.memoryItems.length > 0
@@ -148,9 +158,13 @@ export function buildRuntimeContext(
   const teamFacts =
     tier >= 3 ? compactTeamFacts(input.teamFacts) : undefined;
 
+  // Knowledge from tool prefetch may appear at tier < 3 for nutrition/read tools.
   const knowledge =
-    tier >= 3 && input.knowledge && input.knowledge.length > 0
-      ? input.knowledge.map((k) => k.trim()).filter(Boolean).slice(0, 8)
+    input.knowledge && input.knowledge.length > 0
+      ? input.knowledge
+          .map((k) => k.trim())
+          .filter(Boolean)
+          .slice(0, tier >= 3 ? 8 : 4)
       : undefined;
 
   const outputSchemaName =

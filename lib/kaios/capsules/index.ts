@@ -51,6 +51,7 @@ export {
   KAI_MOTIVATION,
   KAI_EMOTIONAL,
   KAI_CELEBRATION,
+  KAI_MODE_COUNCIL,
   selectKaiCapsules,
 } from "@/lib/kaios/capsules/kai";
 export {

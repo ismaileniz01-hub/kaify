@@ -26,6 +26,9 @@ import { getAnalyticsBundle } from "@/lib/services/analytics.service";
 import { getStreakStatus } from "@/lib/services/streak-status.service";
 import { teamMeetingWeekKey } from "@/lib/team/meeting-week";
 import { COUNCIL_CORE, COUNCIL_ROLE_DIGESTS } from "@/lib/kaios/capsules/council";
+import { KAI_MODE_COUNCIL } from "@/lib/kaios/capsules/kai";
+import { resolveActiveLocale } from "@/lib/kaios/localization/resolve";
+import { detectMessageLocale } from "@/lib/i18n/detect-message-locale";
 import { CORE_CAPSULE, SAFETY_CAPSULE } from "@/lib/kaios/capsules";
 import {
   SCHEMA_VERSION,
@@ -239,7 +242,15 @@ export async function runCouncilTurn(params: {
     admin.from("profiles").select("display_name, locale").eq("id", params.userId).single(),
   ]);
 
-  const locale = resolveLocale(profile?.locale);
+  const savedLocale = resolveLocale(profile?.locale);
+  const locale = resolveActiveLocale({
+    message: params.userMessage ?? "",
+    messageLocale: params.userMessage
+      ? detectMessageLocale(params.userMessage, savedLocale)
+      : null,
+    savedLocale,
+    fallbackLocale: "en",
+  });
   const name = sanitizeUserText(profile?.display_name ?? "User", 60) || "User";
   const snapshot = weeklySnapshot({
     name,
@@ -271,6 +282,7 @@ export async function runCouncilTurn(params: {
     SAFETY_CAPSULE,
     COUNCIL_CORE,
     COUNCIL_ROLE_DIGESTS,
+    KAI_MODE_COUNCIL,
     phase,
     `Locale: ${locale}. Generate user-facing text in that locale.`,
     `Return ONLY JSON: { "schema_version":"${SCHEMA_VERSION}", "coach":"council", "message":"<short kai transition or summary>", "intent":"council_turn", "data": { "await_user": true|false, "speakers":[{ "coach":"kai"|"alex"|"maya"|"leo", "message":"..." }], "decision": null|object } }`,
