@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "generated": "2026-08-16",
+  "source": "13_leo.md",
+  "module": "lib/kaios/capsules/leo/index.ts",
+  "always_on": [
+    {
+      "key": "LEO_IDENTITY",
+      "source_section": "Identity & Mission"
+    },
+    {
+      "key": "LEO_VOICE",
+      "source_section": "Identity & Mission"
+    },
+    {
+      "key": "LEO_BEHAVIOR",
+      "source_section": "Scoring Methodology"
+    },
+    {
+      "key": "LEO_BOUNDARIES",
+      "source_section": "Posture & Medical Boundaries"
+    },
+    {
+      "key": "LEO_RESPONSE_STYLE",
+      "source_section": "UI Output & Runtime"
+    },
+    {
+      "key": "LEO_IMAGE_QUALITY",
+      "source_section": "Image Quality & Comparison"
+    }
+  ],
+  "conditional_modes": [
+    {
+      "key": "LEO_SCORING",
+      "task": "scoring",
+      "source_section": "Scoring Methodology"
+    },
+    {
+      "key": "LEO_TREND",
+      "task": "trend",
+      "source_section": "Image Quality & Comparison"
+    },
+    {
+      "key": "LEO_POSTURE",
+      "task": "posture",
+      "source_section": "Posture & Medical Boundaries"
+    }
+  ],
+  "selector": "selectLeoCapsules",
+  "vision_path_note": "Photo synthesis uses lib/ai/personas.ts ANALYSIS_PERSONAS.leo (composed tone aligned with LEO_VOICE)"
+}

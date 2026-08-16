@@ -28,7 +28,16 @@ import {
 } from "@/lib/kaios/capsules";
 
 const FORBIDDEN_TITLE = "Kaify AI Operating System —";
-const MAX_CHARS = 2500;
+/** Per-layer budget; joined *\_CORE aliases may be larger. */
+const MAX_LAYER_CHARS = 2500;
+const MAX_JOINED_CORE_CHARS = 4500;
+
+const JOINED_CORE_NAMES = new Set([
+  "ALEX_CORE",
+  "MAYA_CORE",
+  "LEO_CORE",
+  "KAI_CORE",
+]);
 
 const ALL_CAPSULES: Array<[string, string]> = [
   ["CORE_CAPSULE", CORE_CAPSULE],
@@ -63,10 +72,13 @@ describe("KAIOS capsules", () => {
     }
   });
 
-  it("keeps each capsule under ~2500 characters", () => {
+  it("keeps capsules compact (layers ≤2500, joined cores ≤4500)", () => {
     for (const [name, value] of ALL_CAPSULES) {
+      const limit = JOINED_CORE_NAMES.has(name)
+        ? MAX_JOINED_CORE_CHARS
+        : MAX_LAYER_CHARS;
       expect(value.length, `${name} is ${value.length} chars`).toBeLessThanOrEqual(
-        MAX_CHARS,
+        limit,
       );
     }
   });
@@ -82,7 +94,7 @@ describe("KAIOS capsules", () => {
     expect(alex).toContain(SAFETY_CAPSULE);
     expect(alex).toContain(CORE_CAPSULE);
     expect(alex).toContain(LOCALIZATION_CAPSULE);
-    expect(alex).toContain(ALEX_CORE);
+    expect(alex.join("\n\n")).toContain(ALEX_CORE);
     expect(alex).toContain(ALEX_FORM);
     expect(alex.some((c) => c.includes("locale.en"))).toBe(true);
 
@@ -98,6 +110,7 @@ describe("KAIOS capsules", () => {
 
     const council = loadCoachCapsules("council", "turn");
     expect(council).toContain(COUNCIL_CORE);
+    expect(council.join("\n")).toMatch(/council\.roles|alex:.*training/i);
   });
 
   it("preserves critical coach rules from source-recommended runtime YAML", () => {
@@ -106,7 +119,7 @@ describe("KAIOS capsules", () => {
     expect(MAYA_CORE).toContain("photo_vision_identifies_food_not_final_macros");
     expect(LEO_CORE).toContain("validate_image_before_scoring");
     expect(LEO_CORE).toContain("do_not_inflate_scores_for_motivation");
-    expect(KAI_CORE).toContain("do_not_invent_product_actions_or_dragon_features");
+    expect(KAI_CORE).toMatch(/never_fake_product_actions|do_not_invent_product_actions/i);
     expect(COUNCIL_CORE).toContain("user_is_participant");
     expect(COUNCIL_CORE).toContain("do_not_generate_past_user_turn");
     expect(LOCALIZATION_CAPSULE).toContain("short_expressions_do_not_switch");

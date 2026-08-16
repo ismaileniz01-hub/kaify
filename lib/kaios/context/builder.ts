@@ -17,6 +17,51 @@ import type {
 
 const MAX_MEMORY_ITEMS = 5;
 
+/** Pure greetings that do not need relationship continuity. */
+const BARE_GREETING_RE =
+  /^(?:hi|hello|hey|yo|sup|selam|merhaba|sa|naber|günaydın|iyi akşamlar|iyi geceler|what's up|whats up|nasılsın|nasilsin|how are you|how're you)(?:[\s,]+(?:hi|hello|hey|yo|sup|selam|merhaba|naber|nasılsın|nasilsin|what's up|whats up|how are you|how're you|naber|iyi misin|iyi misin))?(?:[\s!.?]*)?$/i;
+
+/**
+ * Short messages that still need history/memory (not "zero continuity").
+ * Intent alone must not strip continuity for contextual casual wording.
+ */
+const CONTINUITY_CUE_RE =
+  /\b(hatırlıyor|hatirliyor|remember|yine|same|yine olmadı|yine olmadi|boktan|same shit|dün|dun|geçen|gecen|last (?:time|week|night)|you said|demiştin|demistin|again|hala|hâlâ|still)\b/i;
+
+function isGreetingLike(message: string): boolean {
+  const msg = message.trim();
+  if (msg.length === 0) return true;
+  if (BARE_GREETING_RE.test(msg)) return true;
+  // Short social ping without continuity cues.
+  if (msg.length <= 48 && !CONTINUITY_CUE_RE.test(msg)) {
+    return /^(hi|hello|hey|yo|sup|selam|merhaba|naber|sa|nasılsın|nasilsin)\b/i.test(
+      msg,
+    );
+  }
+  return false;
+}
+
+function needsContinuity(
+  intent: Intent,
+  message: string,
+  input: BuildRuntimeContextInput,
+): boolean {
+  const msg = message.trim();
+  if (CONTINUITY_CUE_RE.test(msg)) return true;
+  if (/\b(remember|hatır)\b/i.test(msg)) return true;
+  if (intent === "unknown") return true;
+  if (intent === "motivation" || intent === "hydration") return true;
+  // Casual greetings stay zero-continuity; other casual wording may keep thread.
+  if (intent === "casual") {
+    if (isGreetingLike(msg)) return false;
+    return (
+      (input.conversationTurns?.length ?? 0) > 0 ||
+      (input.memoryItems?.length ?? 0) > 0
+    );
+  }
+  return false;
+}
+
 function resolveTier(
   intent: Intent,
   input: BuildRuntimeContextInput,
@@ -31,17 +76,23 @@ function resolveTier(
     return 3;
   }
 
-  if (intent === "casual") return 0;
-
+  const continuity = needsContinuity(intent, input.message, input);
   const hasMemory = (input.memoryItems?.length ?? 0) > 0;
   const hasHistory = (input.conversationTurns?.length ?? 0) > 0;
+
+  // Bare greetings stay tier 0 (no history/memory).
+  if (intent === "casual" && !continuity) return 0;
+
+  if (continuity && (hasMemory || hasHistory)) return 2;
   if (hasMemory || hasHistory) return 2;
 
   if (input.userState?.trim()) return 1;
 
   if (intent === "motivation" || intent === "hydration") return 1;
 
-  return 0;
+  if (intent === "casual" && continuity && input.userState?.trim()) return 1;
+
+  return continuity ? 1 : 0;
 }
 
 function compactTeamFacts(facts: string[] | undefined): string[] | undefined {
@@ -73,8 +124,8 @@ export function buildRuntimeContext(
 
   const tier = resolveTier(intent, input);
   const locale = input.locale?.trim() || "en";
-  const capsules = selectActiveCapsules(input.coach, intent);
-  const maxTokens = outputBudgetFor(intent);
+  const capsules = selectActiveCapsules(input.coach, intent, input.message);
+  const maxTokens = outputBudgetFor(intent, input.message);
 
   const userState =
     tier >= 1 && input.userState?.trim()

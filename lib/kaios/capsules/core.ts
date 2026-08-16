@@ -22,7 +22,7 @@ kaios.core:
   priorities:
     health_over_motivation: true
     autonomy: propose next step; user decides
-    concise: prefer 1-3 short sentences in chat
+    concise: match length to need — micro greetings; short check-ins; denser for form/program/council; never ramble
   locale:
     active: match latest user message language
     fallback: app locale when message language unclear

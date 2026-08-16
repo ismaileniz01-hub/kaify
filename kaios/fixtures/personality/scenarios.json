@@ -1,0 +1,306 @@
+{
+  "version": 1,
+  "description": "Deterministic prompt-contract fixtures for coach personality fidelity tests.",
+  "scenarios": [
+    {
+      "id": "kai-greeting-tr",
+      "coach": "kai",
+      "message": "Selam, nasılsın?",
+      "locale": "tr",
+      "mustIncludeInPrompt": ["kai.mode.casual", "permanent motivation mode"],
+      "mustNotIncludeInPrompt": ["kai.mode.motivation"],
+      "notes": "Bare TR greeting → casual mode, no motivation capsule"
+    },
+    {
+      "id": "kai-greeting-en",
+      "coach": "kai",
+      "message": "Hey, what's up?",
+      "locale": "en",
+      "mustIncludeInPrompt": ["kai.mode.casual", "friend first"],
+      "mustNotIncludeInPrompt": ["kai.mode.motivation"],
+      "notes": "Bare EN greeting"
+    },
+    {
+      "id": "kai-greeting-de",
+      "coach": "kai",
+      "message": "Hallo, wie geht's?",
+      "locale": "de",
+      "mustIncludeInPrompt": ["kai.mode.casual", "kai.voice"],
+      "mustNotIncludeInPrompt": ["kai.mode.motivation"],
+      "notes": "DE greeting with de locale pack"
+    },
+    {
+      "id": "kai-greeting-ar",
+      "coach": "kai",
+      "message": "مرحبا، كيف حالك؟",
+      "locale": "ar",
+      "mustIncludeInPrompt": ["kai.mode.casual", "kai.identity"],
+      "mustNotIncludeInPrompt": ["kai.mode.motivation"],
+      "notes": "AR greeting"
+    },
+    {
+      "id": "kai-laziness-tr",
+      "coach": "kai",
+      "message": "Bugün salona gidesim yok, çok tembelim.",
+      "locale": "tr",
+      "mustIncludeInPrompt": ["kai.mode.motivation", "kai.mode.health_safety", "minimum-action"],
+      "notes": "Ordinary laziness → motivation + health classification"
+    },
+    {
+      "id": "kai-laziness-en",
+      "coach": "kai",
+      "message": "I'm too lazy to go to the gym today.",
+      "locale": "en",
+      "mustIncludeInPrompt": ["kai.mode.motivation", "ordinary_laziness"],
+      "notes": "EN laziness"
+    },
+    {
+      "id": "kai-fever-tr",
+      "coach": "kai",
+      "message": "Ateşim var, yine antrenman mı?",
+      "locale": "tr",
+      "mustIncludeInPrompt": ["kai.mode.health_safety", "no gym pressure"],
+      "notes": "Fever → health_safety, stop pressure"
+    },
+    {
+      "id": "kai-fever-en",
+      "coach": "kai",
+      "message": "I have a fever but should I still train?",
+      "locale": "en",
+      "mustIncludeInPrompt": ["kai.mode.health_safety", "fever"],
+      "notes": "EN fever"
+    },
+    {
+      "id": "kai-injury-de",
+      "coach": "kai",
+      "message": "Ich bin verletzt und kann nicht trainieren.",
+      "locale": "de",
+      "mustIncludeInPrompt": ["kai.mode.health_safety", "injury"],
+      "notes": "DE injury cue triggers health mode"
+    },
+    {
+      "id": "kai-memory-tr",
+      "coach": "kai",
+      "message": "Geçen hafta ne demiştin hatırlıyor musun?",
+      "locale": "tr",
+      "memoryItems": ["promised lighter week after exam"],
+      "mustIncludeInPrompt": ["kai.mode.memory_continuity", "never_fake_memory"],
+      "notes": "Memory reference → memory_continuity capsule"
+    },
+    {
+      "id": "kai-memory-en",
+      "coach": "kai",
+      "message": "Do you remember what we talked about last week?",
+      "locale": "en",
+      "mustIncludeInPrompt": ["kai.mode.memory_continuity"],
+      "notes": "EN memory reference"
+    },
+    {
+      "id": "kai-just-talk-tr",
+      "coach": "kai",
+      "message": "Sadece konuşalım, koçluk yapma.",
+      "locale": "tr",
+      "mustIncludeInPrompt": ["kai.mode.casual", "friend first", "just talk"],
+      "notes": "Explicit just-talk → casual friend-first"
+    },
+    {
+      "id": "kai-just-talk-en",
+      "coach": "kai",
+      "message": "Let's just talk, don't coach me.",
+      "locale": "en",
+      "mustIncludeInPrompt": ["kai.mode.casual", "just talk"],
+      "notes": "EN just talk"
+    },
+    {
+      "id": "kai-slang-always-on",
+      "coach": "kai",
+      "message": "Naber reis",
+      "locale": "tr",
+      "mustIncludeInPrompt": ["slang", "never force universal nicknames"],
+      "notes": "Slang markers always-on in KAI_VOICE"
+    },
+    {
+      "id": "kai-self-criticism",
+      "coach": "kai",
+      "message": "I'm such a failure at this fitness thing.",
+      "locale": "en",
+      "mustIncludeInPrompt": ["never_shame_or_dependency", "kai.voice"],
+      "notes": "Self-criticism → boundaries present in always-on kai"
+    },
+    {
+      "id": "kai-emotional-tr",
+      "coach": "kai",
+      "message": "Kendimi çok kötü hissediyorum bugün.",
+      "locale": "tr",
+      "mustIncludeInPrompt": ["kai.mode.emotional", "do not force fitness topic"],
+      "notes": "Emotional support mode"
+    },
+    {
+      "id": "kai-celebration-en",
+      "coach": "kai",
+      "message": "I hit a new PR on deadlift!",
+      "locale": "en",
+      "mustIncludeInPrompt": ["kai.mode.celebration"],
+      "notes": "Celebration mode"
+    },
+    {
+      "id": "kai-continuity-cue-tr",
+      "coach": "kai",
+      "message": "Yine olmadı, aynı boktan durum.",
+      "locale": "tr",
+      "memoryItems": ["missed two sessions"],
+      "conversationTurns": [{ "role": "assistant", "content": "Let's try a lighter session." }],
+      "mustIncludeInPrompt": ["kai.mode.casual", "setbacks"],
+      "notes": "Continuity cue keeps thread context at tier 2"
+    },
+    {
+      "id": "kai-handoff-en",
+      "coach": "kai",
+      "message": "Can you write me a meal plan?",
+      "locale": "en",
+      "mustIncludeInPrompt": ["handoffs", "Alex/Maya/Leo"],
+      "notes": "Specialist handoff markers in always-on behavior"
+    },
+    {
+      "id": "kai-no-fake-actions",
+      "coach": "kai",
+      "message": "Did you save my workout to the diary?",
+      "locale": "en",
+      "mustIncludeInPrompt": ["never_fake_product_actions"],
+      "notes": "Product action honesty in boundaries"
+    },
+    {
+      "id": "kai-ar-casual",
+      "coach": "kai",
+      "message": "فقط أريد الدردشة",
+      "locale": "ar",
+      "mustIncludeInPrompt": ["kai.mode.casual", "locale.ar"],
+      "notes": "AR casual with locale pack"
+    },
+    {
+      "id": "alex-form-en",
+      "coach": "alex",
+      "message": "How do I squat with good form?",
+      "locale": "en",
+      "mustIncludeInPrompt": ["alex.mode.form", "technique_before_load"],
+      "notes": "Form mode capsule"
+    },
+    {
+      "id": "alex-programming-en",
+      "coach": "alex",
+      "message": "Build me a 4-day hypertrophy program.",
+      "locale": "en",
+      "mustIncludeInPrompt": ["alex.mode.programming", "RIR/RPE", "never_invent_exercise_ids"],
+      "notes": "Programming + RIR markers"
+    },
+    {
+      "id": "alex-pain-tr",
+      "coach": "alex",
+      "message": "Bench yaparken omzum ağrıyor, devam edeyim mi?",
+      "locale": "tr",
+      "mustIncludeInPrompt": ["alex.mode.training_safety", "avoid diagnosis"],
+      "notes": "Pain → safety capsule"
+    },
+    {
+      "id": "alex-substitution-en",
+      "coach": "alex",
+      "message": "I don't have a barbell — what can I substitute for rows?",
+      "locale": "en",
+      "mustIncludeInPrompt": ["substitutions", "preserve training objective"],
+      "notes": "Substitution markers in behavior"
+    },
+    {
+      "id": "maya-no-shame-en",
+      "coach": "maya",
+      "message": "I ate way too much pizza and feel disgusting.",
+      "locale": "en",
+      "mustIncludeInPrompt": ["food shaming", "adherence_over_perfection"],
+      "notes": "No food shame voice anti-pattern"
+    },
+    {
+      "id": "maya-model-estimate-en",
+      "coach": "maya",
+      "message": "What is on my plate?",
+      "locale": "en",
+      "hasImage": true,
+      "mustIncludeInPrompt": ["provenance=model_estimate", "photo_vision_identifies_food_not_final_macros"],
+      "notes": "Food photo → model_estimate provenance"
+    },
+    {
+      "id": "maya-confirm-save-tr",
+      "coach": "maya",
+      "message": "Bunu kaydet",
+      "locale": "tr",
+      "mustIncludeInPrompt": ["ask_before_saving", "never_claim_save_without_tool_success"],
+      "notes": "Confirm-before-save contract"
+    },
+    {
+      "id": "maya-four-macros-en",
+      "coach": "maya",
+      "message": "How much protein and carbs in this meal?",
+      "locale": "en",
+      "mustIncludeInPrompt": ["calories, protein, carbs, fat", "primary_fields"],
+      "notes": "Four macro fields in behavior"
+    },
+    {
+      "id": "leo-composed-en",
+      "coach": "leo",
+      "message": "Score my physique from this photo",
+      "locale": "en",
+      "hasImage": true,
+      "mustIncludeInPrompt": ["composed: true", "energetic hype-coach persona"],
+      "notes": "Composed not hype in LEO_VOICE"
+    },
+    {
+      "id": "leo-no-bf-en",
+      "coach": "leo",
+      "message": "What's my body fat percentage from this photo?",
+      "locale": "en",
+      "hasImage": true,
+      "mustIncludeInPrompt": ["precise visual body-fat", "do_not_inflate_scores_for_motivation"],
+      "notes": "No BF% certainty"
+    },
+    {
+      "id": "leo-validate-image-en",
+      "coach": "leo",
+      "message": "Analyze my progress photo",
+      "locale": "en",
+      "hasImage": true,
+      "mustIncludeInPrompt": ["validate_image_before_scoring", "leo.mode.image_quality"],
+      "notes": "Image quality validation always-on"
+    },
+    {
+      "id": "leo-no-diagnosis-tr",
+      "coach": "leo",
+      "message": "Skolyoz var mı fotoğraftan?",
+      "locale": "tr",
+      "mustIncludeInPrompt": ["do_not_diagnose_medical_conditions"],
+      "notes": "No diagnosis from photos"
+    },
+    {
+      "id": "council-turn-en",
+      "coach": "council",
+      "message": "What should we focus on this week?",
+      "locale": "en",
+      "teamFacts": ["Alex owns strength programming"],
+      "mustIncludeInPrompt": ["user_is_participant", "council.roles", "wait_when_user_input_needed"],
+      "notes": "Council turn via compiler path includes role digests"
+    },
+    {
+      "id": "council-await-user-en",
+      "coach": "council",
+      "message": "I want to add that I'm traveling next week.",
+      "locale": "en",
+      "mustIncludeInPrompt": ["user_is_participant", "do_not_generate_past_user_turn"],
+      "notes": "User as participant; no synthetic user turns"
+    },
+    {
+      "id": "council-role-digests-en",
+      "coach": "council",
+      "message": "Team, help me plan recovery.",
+      "locale": "en",
+      "mustIncludeInPrompt": ["council.roles:", "alex:", "maya:", "leo:", "kai:"],
+      "notes": "Role digests for bounded coach character"
+    }
+  ]
+}

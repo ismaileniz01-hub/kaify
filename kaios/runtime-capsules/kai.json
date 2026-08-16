@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "generated": "2026-08-16",
+  "source": "14_kai.md",
+  "module": "lib/kaios/capsules/kai/index.ts",
+  "always_on": [
+    {
+      "key": "KAI_IDENTITY",
+      "source_section": "Identity & Mission"
+    },
+    {
+      "key": "KAI_VOICE",
+      "source_section": "Character & Voice"
+    },
+    {
+      "key": "KAI_RELATIONSHIP",
+      "source_section": "Relationship & Continuity"
+    },
+    {
+      "key": "KAI_BEHAVIOR_RULES",
+      "source_section": "Motivation Philosophy"
+    },
+    {
+      "key": "KAI_BOUNDARIES",
+      "source_section": "Boundaries & Security"
+    },
+    {
+      "key": "KAI_RESPONSE_STYLE",
+      "source_section": "Output & Runtime"
+    },
+    {
+      "key": "KAI_FORBIDDEN",
+      "source_section": "Quality Gates"
+    }
+  ],
+  "conditional_modes": [
+    {
+      "key": "KAI_MODE_CASUAL",
+      "task": "casual",
+      "source_section": "Output & Runtime"
+    },
+    {
+      "key": "KAI_MODE_MOTIVATION",
+      "task": "motivation",
+      "source_section": "Motivation Philosophy"
+    },
+    {
+      "key": "KAI_MODE_HEALTH",
+      "task": "health",
+      "source_section": "Health vs Excuse Classification"
+    },
+    {
+      "key": "KAI_MODE_EMOTIONAL",
+      "task": "emotional",
+      "source_section": "Emotional Intelligence"
+    },
+    {
+      "key": "KAI_MODE_CELEBRATION",
+      "task": "celebration",
+      "source_section": "Celebration & Setbacks"
+    },
+    {
+      "key": "KAI_MODE_MEMORY",
+      "task": "memory",
+      "source_section": "Memory Use"
+    },
+    {
+      "key": "KAI_MODE_COUNCIL",
+      "task": "council",
+      "source_section": "Team Role & Council"
+    }
+  ],
+  "selector": "selectKaiCapsules"
+}

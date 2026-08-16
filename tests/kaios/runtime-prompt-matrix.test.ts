@@ -134,7 +134,9 @@ describe("runtime prompt matrix", () => {
     it(`${scenario.name}: lean prompt + budget + single identity`, () => {
       const ctx = buildRuntimeContext(scenario.input);
       expect(ctx.intent).toBe(scenario.expectedIntent);
-      expect(ctx.maxTokens).toBe(outputBudgetFor(scenario.expectedIntent));
+      expect(ctx.maxTokens).toBe(
+        outputBudgetFor(scenario.expectedIntent, scenario.input.message),
+      );
 
       if (scenario.expectMemoryDropped) {
         expect(ctx.tier).toBe(0);

@@ -207,7 +207,8 @@ describe("schema + exercise adversarial rejects", () => {
 
   it("keeps casual outputBudgetFor far below legacy ~900 chat caps", () => {
     expect(outputBudgetFor("casual")).toBeLessThan(900);
-    expect(outputBudgetFor("casual")).toBeLessThanOrEqual(100);
-    expect(outputBudgetFor("casual")).toBe(80);
+    expect(outputBudgetFor("casual")).toBeLessThanOrEqual(160);
+    expect(outputBudgetFor("casual")).toBe(120);
+    expect(outputBudgetFor("casual", "selam")).toBeLessThanOrEqual(80);
   });
 });

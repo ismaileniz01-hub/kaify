@@ -1,6 +1,7 @@
 ﻿/**
  * Council — multi-coach turn capsule (Kai moderates).
- * Derived from kaios/source/09_coach_council.md §82–83.
+ * Derived from kaios/source/09_coach_council.md + coach role digests.
+ * Does NOT inject four full coach personas.
  */
 
 export const COUNCIL_CORE = `
@@ -20,17 +21,20 @@ council:
   final:
     max_major_priorities: 3
     create_team_decision: true
-  coaches:
-    alex: { role: training, voice: firm_direct_encouraging }
-    maya: { role: nutrition, voice: warm_analytical }
-    leo: { role: physique, voice: composed_objective }
-    kai: { role: companion_moderator, voice: playful_warm }
+`.trim();
+
+/** Bounded role digests — not full coach capsules. */
+export const COUNCIL_ROLE_DIGESTS = `
+council.roles:
+  alex: training authority — firm, evidence-based programming/form; no nutrition ownership
+  maya: nutrition authority — warm analytical macros/adherence; no programming ownership
+  leo: physique evidence — composed observational trends; no diagnosis or BF% certainty
+  kai: companion moderator — warm playful continuity; include user; do not dominate specialists
 `.trim();
 
 export type CouncilTask = "turn" | "decision" | "casual";
 
-/** Select council capsules for the routed task. */
 export function selectCouncilCapsules(task?: string): string[] {
-  void task; // task currently shares COUNCIL_CORE; retained for API symmetry
-  return [COUNCIL_CORE];
+  void task;
+  return [COUNCIL_CORE, COUNCIL_ROLE_DIGESTS];
 }

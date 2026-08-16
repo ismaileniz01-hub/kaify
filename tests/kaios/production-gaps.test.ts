@@ -97,8 +97,8 @@ describe("no second LLM structured-card call under KAIOS", () => {
 
 describe("intent output ceilings", () => {
   it("keeps routine ceilings far below legacy ~900–1800 chat caps", () => {
-    expect(outputBudgetFor("casual")).toBeLessThanOrEqual(100);
-    expect(outputBudgetFor("motivation")).toBeLessThanOrEqual(160);
+    expect(outputBudgetFor("casual")).toBeLessThanOrEqual(160);
+    expect(outputBudgetFor("motivation")).toBeLessThanOrEqual(180);
     expect(outputBudgetFor("nutrition_question")).toBeLessThanOrEqual(250);
     expect(outputBudgetFor("programming")).toBeLessThanOrEqual(450);
     // Analysis intents may be higher but still below legacy dual-call stacks.

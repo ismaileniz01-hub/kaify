@@ -263,11 +263,14 @@ describe("needsStructuredOutput / outputBudgetFor", () => {
     expect(needsStructuredOutput("motivation")).toBe(false);
   });
 
-  it("maps budgets to casual/quick/standard/detailed/deep bands", () => {
-    expect(outputBudgetFor("casual")).toBe(80);
-    expect(outputBudgetFor("motivation")).toBe(140);
+  it("maps budgets to casual/support/detailed bands", () => {
+    expect(outputBudgetFor("casual")).toBe(120);
+    expect(outputBudgetFor("motivation")).toBe(160);
     expect(outputBudgetFor("nutrition_question")).toBe(220);
     expect(outputBudgetFor("meal_plan")).toBe(400);
     expect(outputBudgetFor("meal_analysis")).toBe(650);
+    expect(outputBudgetFor("casual", "hi")).toBe(80);
+    expect(outputBudgetFor("casual", "bugün de aynı boktan gün")).toBe(120);
+    expect(outputBudgetFor("unknown", "hatırlıyor musun geçen hafta")).toBe(180);
   });
 });

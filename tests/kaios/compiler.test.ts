@@ -33,12 +33,12 @@ describe("compilePrompt (casual kai)", () => {
     const blob = compiled.messages.map((m) => m.content).join("\n");
     expect(blob).not.toContain("Kaify AI Operating System —");
 
-    // Exactly one active coach identity (Kai), not the full roster.
+    // Exactly one active coach identity (Kai layered capsules), not the full roster.
     expect(blob).toContain(KAI_CORE);
-    expect(blob).toMatch(/^kai:\s*$/m);
-    expect(blob).not.toMatch(/^alex:\s*$/m);
-    expect(blob).not.toMatch(/^maya:\s*$/m);
-    expect(blob).not.toMatch(/^leo:\s*$/m);
+    expect(blob).toMatch(/^kai\.identity:\s*$/m);
+    expect(blob).not.toMatch(/^alex\.identity:\s*$/m);
+    expect(blob).not.toMatch(/^maya\.identity:\s*$/m);
+    expect(blob).not.toMatch(/^leo\.identity:\s*$/m);
 
     expect(compiled.breakdown.total).toBeLessThan(4000);
     expect(compiled.canary).toMatch(/^KFY-/);
@@ -52,7 +52,7 @@ describe("compilePrompt (casual kai)", () => {
     const sys = system!.content;
     const coreIdx = sys.indexOf(CORE_CAPSULE.slice(0, 20));
     const safetyIdx = sys.indexOf(SAFETY_CAPSULE.slice(0, 20));
-    const coachIdx = sys.indexOf("role: dragon_companion_team_connector");
+    const coachIdx = sys.indexOf("kai.identity:");
     const localeIdx = sys.indexOf("kaios.localization:");
     expect(safetyIdx).toBeGreaterThanOrEqual(0);
     expect(coreIdx).toBeGreaterThan(safetyIdx);

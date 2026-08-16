@@ -37,14 +37,17 @@ const STRUCTURED_INTENTS: ReadonlySet<Intent> = new Set([
   "tool_action",
 ]);
 
-/** Output token budgets by intent class. */
+/**
+ * Output token budgets by conversational need (not a hard 1–3 sentence rule).
+ * MICRO ~20–80 · CASUAL ~40–120 · SUPPORT ~60–160 · MEMORY ~60–180 · TASK denser.
+ */
 const OUTPUT_BUDGET: Record<Intent, number> = {
-  casual: 80,
-  motivation: 140,
+  casual: 120,
+  motivation: 160,
   hydration: 140,
   nutrition_question: 220,
-  exercise_form: 220,
-  unknown: 220,
+  exercise_form: 240,
+  unknown: 180,
   meal_plan: 400,
   programming: 400,
   council_turn: 400,
@@ -52,6 +55,55 @@ const OUTPUT_BUDGET: Record<Intent, number> = {
   physique_analysis: 650,
   council_decision: 650,
   tool_action: 650,
+};
+
+/** Finer budgets when message shape is known (used by context builder). */
+export type OutputBudgetClass =
+  | "micro"
+  | "casual"
+  | "support"
+  | "memory"
+  | "detailed";
+
+export function classifyOutputBudget(
+  intent: Intent,
+  message: string,
+): OutputBudgetClass {
+  const msg = message.trim();
+  if (
+    intent === "meal_analysis" ||
+    intent === "physique_analysis" ||
+    intent === "programming" ||
+    intent === "meal_plan" ||
+    intent === "council_decision" ||
+    intent === "tool_action"
+  ) {
+    return "detailed";
+  }
+  if (/\b(hatırlıyor|hatirliyor|remember|geçen|gecen|last week)\b/i.test(msg)) {
+    return "memory";
+  }
+  if (intent === "motivation" || intent === "hydration") return "support";
+  if (
+    intent === "casual" &&
+    msg.length <= 24 &&
+    /^(hi|hello|hey|yo|sup|selam|merhaba|sa|naber)/i.test(msg)
+  ) {
+    return "micro";
+  }
+  if (intent === "casual" || intent === "unknown") return "casual";
+  if (intent === "exercise_form" || intent === "nutrition_question") {
+    return "detailed";
+  }
+  return "casual";
+}
+
+const CLASS_BUDGET: Record<OutputBudgetClass, number> = {
+  micro: 80,
+  casual: 120,
+  support: 160,
+  memory: 180,
+  detailed: 400,
 };
 
 const CASUAL_RE =
@@ -237,6 +289,26 @@ export function needsStructuredOutput(intent: Intent): boolean {
   return STRUCTURED_INTENTS.has(intent);
 }
 
-export function outputBudgetFor(intent: Intent): number {
+export function outputBudgetFor(intent: Intent, message?: string): number {
+  if (message != null && message.length > 0) {
+    const cls = classifyOutputBudget(intent, message);
+    // Structured intents keep their higher ceiling.
+    if (
+      intent === "meal_analysis" ||
+      intent === "physique_analysis" ||
+      intent === "council_decision" ||
+      intent === "tool_action"
+    ) {
+      return OUTPUT_BUDGET[intent];
+    }
+    if (
+      intent === "programming" ||
+      intent === "meal_plan" ||
+      intent === "council_turn"
+    ) {
+      return Math.max(CLASS_BUDGET[cls], OUTPUT_BUDGET[intent]);
+    }
+    return CLASS_BUDGET[cls];
+  }
   return OUTPUT_BUDGET[intent] ?? 220;
 }

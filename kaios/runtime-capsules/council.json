@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "generated": "2026-08-16",
+  "source": "09_coach_council.md",
+  "module": "lib/kaios/capsules/council/index.ts",
+  "layers": [
+    {
+      "key": "COUNCIL_CORE",
+      "source_section": "Meeting Structure"
+    },
+    {
+      "key": "COUNCIL_ROLE_DIGESTS",
+      "source_section": "Discussion & Disagreement"
+    }
+  ],
+  "selector": "selectCouncilCapsules",
+  "runtime_note": "selectCouncilCapsules includes COUNCIL_ROLE_DIGESTS; runCouncilTurn still injects COUNCIL_CORE only"
+}

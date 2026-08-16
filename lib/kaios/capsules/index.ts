@@ -55,6 +55,7 @@ export {
 } from "@/lib/kaios/capsules/kai";
 export {
   COUNCIL_CORE,
+  COUNCIL_ROLE_DIGESTS,
   selectCouncilCapsules,
 } from "@/lib/kaios/capsules/council";
 
@@ -86,12 +87,50 @@ export function intentToCapsuleTask(intent: Intent): string {
 
 /**
  * Active coach + task capsules only (CORE / SAFETY / locale applied in compiler).
+ * Optional message selects conditional modes (memory continuity, health).
  */
 export function selectActiveCapsules(
   coach: CoachId,
   intent: Intent,
+  message?: string,
 ): string[] {
-  const task = intentToCapsuleTask(intent);
+  let task = intentToCapsuleTask(intent);
+  const msg = message ?? "";
+  if (
+    /\b(hatırlıyor|hatirliyor|remember|geçen hafta|gecen hafta|last week|demiştin|demistin)\b/i.test(
+      msg,
+    )
+  ) {
+    task = `${task}+memory`;
+  }
+  if (
+    /\b(fever|ateş|ates|hasta|hastayım|hastayim|injured|injury|sakat|verletzt)\b/i.test(
+      msg,
+    )
+  ) {
+    task = `${task}+health`;
+  }
+  if (
+    /\b(feel|feeling|hissediyorum|üzgün|mutsuz|emotional|kendimi kötü)\b/i.test(
+      msg,
+    )
+  ) {
+    task = `${task}+emotional`;
+  }
+  if (
+    /\b(celebrat|personal record|\bpr\b|milestone|başardım|basardim)\b/i.test(
+      msg,
+    )
+  ) {
+    task = `${task}+celebration`;
+  }
+  if (
+    /\b(sadece konuş|just talk|don't coach|dont coach|koçluk yapma|kocluk yapma)\b/i.test(
+      msg,
+    )
+  ) {
+    task = `${task}+casual`;
+  }
   switch (coach) {
     case "alex":
       return selectAlexCapsules(task);

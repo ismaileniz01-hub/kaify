@@ -23,9 +23,11 @@ export {
   resolveIntent,
   needsStructuredOutput,
   outputBudgetFor,
+  classifyOutputBudget,
   type CoachId,
   type Intent,
   type ResolveIntentInput,
+  type OutputBudgetClass,
 } from "@/lib/kaios/routing/intent";
 
 export type {

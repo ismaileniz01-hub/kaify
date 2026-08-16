@@ -25,7 +25,7 @@ import { resolveLocale } from "@/lib/i18n/dictionary";
 import { getAnalyticsBundle } from "@/lib/services/analytics.service";
 import { getStreakStatus } from "@/lib/services/streak-status.service";
 import { teamMeetingWeekKey } from "@/lib/team/meeting-week";
-import { COUNCIL_CORE } from "@/lib/kaios/capsules/council";
+import { COUNCIL_CORE, COUNCIL_ROLE_DIGESTS } from "@/lib/kaios/capsules/council";
 import { CORE_CAPSULE, SAFETY_CAPSULE } from "@/lib/kaios/capsules";
 import {
   SCHEMA_VERSION,
@@ -270,6 +270,7 @@ export async function runCouncilTurn(params: {
     CORE_CAPSULE,
     SAFETY_CAPSULE,
     COUNCIL_CORE,
+    COUNCIL_ROLE_DIGESTS,
     phase,
     `Locale: ${locale}. Generate user-facing text in that locale.`,
     `Return ONLY JSON: { "schema_version":"${SCHEMA_VERSION}", "coach":"council", "message":"<short kai transition or summary>", "intent":"council_turn", "data": { "await_user": true|false, "speakers":[{ "coach":"kai"|"alex"|"maya"|"leo", "message":"..." }], "decision": null|object } }`,
