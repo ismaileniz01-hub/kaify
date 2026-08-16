@@ -10,6 +10,11 @@ import {
   estimateTextTokens,
 } from "@/lib/kaios/telemetry/tokens";
 import { splitSafetyAndGeneralState } from "@/lib/kaios/context/safety-state";
+import {
+  classifyShortTurn,
+  continuationHint,
+  lastAssistantMessage,
+} from "@/lib/kaios/context/short-turn";
 import type {
   BuildRuntimeContextInput,
   ContextTier,
@@ -20,12 +25,8 @@ const MAX_MEMORY_ITEMS = 5;
 
 /** Pure greetings that do not need relationship continuity. */
 const BARE_GREETING_RE =
-  /^(?:hi|hello|hey|yo|sup|selam|merhaba|sa|naber|günaydın|iyi akşamlar|iyi geceler|what's up|whats up|nasılsın|nasilsin|how are you|how're you)(?:[\s,]+(?:hi|hello|hey|yo|sup|selam|merhaba|naber|nasılsın|nasilsin|what's up|whats up|how are you|how're you|naber|iyi misin|iyi misin))?(?:[\s!.?]*)?$/i;
+  /^(?:hi|hello|hey|yo|sup|selam|merhaba|sa|naber|günaydın|iyi akşamlar|iyi geceler|what's up|whats up|nasılsın|nasilsin|how are you|how're you|hallo|salut|hola|ciao|مرحبا)(?:[\s,]+(?:hi|hello|hey|yo|sup|selam|merhaba|naber|nasılsın|nasilsin|what's up|whats up|how are you|how're you|naber|iyi misin))?(?:[\s!.?]*)?$/i;
 
-/**
- * Short messages that still need history/memory (not "zero continuity").
- * Intent alone must not strip continuity for contextual casual wording.
- */
 const CONTINUITY_CUE_RE =
   /\b(hatırlıyor|hatirliyor|remember|yine|same|yine olmadı|yine olmadi|boktan|same shit|dün|dun|geçen|gecen|last (?:time|week|night)|you said|demiştin|demistin|again|hala|hâlâ|still)\b/i;
 
@@ -33,9 +34,8 @@ function isGreetingLike(message: string): boolean {
   const msg = message.trim();
   if (msg.length === 0) return true;
   if (BARE_GREETING_RE.test(msg)) return true;
-  // Short social ping without continuity cues.
   if (msg.length <= 48 && !CONTINUITY_CUE_RE.test(msg)) {
-    return /^(hi|hello|hey|yo|sup|selam|merhaba|naber|sa|nasılsın|nasilsin)\b/i.test(
+    return /^(hi|hello|hey|yo|sup|selam|merhaba|naber|sa|nasılsın|nasilsin|hallo|hola|salut|ciao)\b/i.test(
       msg,
     );
   }
@@ -46,13 +46,14 @@ function needsContinuity(
   intent: Intent,
   message: string,
   input: BuildRuntimeContextInput,
+  shortTurnNeedsContinuation: boolean,
 ): boolean {
+  if (shortTurnNeedsContinuation) return true;
   const msg = message.trim();
   if (CONTINUITY_CUE_RE.test(msg)) return true;
   if (/\b(remember|hatır)\b/i.test(msg)) return true;
   if (intent === "unknown") return true;
   if (intent === "motivation" || intent === "hydration") return true;
-  // Casual greetings stay zero-continuity; other casual wording may keep thread.
   if (intent === "casual") {
     if (isGreetingLike(msg)) return false;
     return (
@@ -66,6 +67,7 @@ function needsContinuity(
 function resolveTier(
   intent: Intent,
   input: BuildRuntimeContextInput,
+  shortTurnNeedsContinuation: boolean,
 ): ContextTier {
   if (
     intent === "programming" ||
@@ -77,13 +79,21 @@ function resolveTier(
     return 3;
   }
 
-  const continuity = needsContinuity(intent, input.message, input);
+  const continuity = needsContinuity(
+    intent,
+    input.message,
+    input,
+    shortTurnNeedsContinuation,
+  );
   const hasMemory = (input.memoryItems?.length ?? 0) > 0;
   const hasHistory = (input.conversationTurns?.length ?? 0) > 0;
 
-  // Bare greetings stay tier 0 (no history/memory).
-  if (intent === "casual" && !continuity) return 0;
+  // Bare greetings stay tier 0 only when short-turn says no continuation.
+  if (intent === "casual" && !continuity && !shortTurnNeedsContinuation) {
+    return 0;
+  }
 
+  if (shortTurnNeedsContinuation && hasHistory) return 2;
   if (continuity && (hasMemory || hasHistory)) return 2;
   if (hasMemory || hasHistory) return 2;
 
@@ -98,7 +108,6 @@ function resolveTier(
 
 function compactTeamFacts(facts: string[] | undefined): string[] | undefined {
   if (!facts || facts.length === 0) return undefined;
-  // Keep short structured lines only; drop anything that looks like a full persona dump.
   const compact = facts
     .map((f) => f.trim())
     .filter((f) => f.length > 0 && f.length <= 180)
@@ -113,6 +122,13 @@ function compactTeamFacts(facts: string[] | undefined): string[] | undefined {
 export function buildRuntimeContext(
   input: BuildRuntimeContextInput,
 ): RuntimeContext {
+  const previousAssistant = lastAssistantMessage(input.conversationTurns);
+  const shortTurn = classifyShortTurn({
+    message: input.message,
+    previousAssistantMessage: previousAssistant,
+    hasRecentHistory: (input.conversationTurns?.length ?? 0) > 0,
+  });
+
   const intent =
     input.intent ??
     resolveIntent({
@@ -121,22 +137,38 @@ export function buildRuntimeContext(
       route: input.route,
       hasImage: input.hasImage,
       workflow: input.workflow,
+      previousAssistantMessage: previousAssistant ?? undefined,
+      hasRecentHistory: (input.conversationTurns?.length ?? 0) > 0,
     });
 
-  const tier = resolveTier(intent, input);
+  const tier = resolveTier(intent, input, shortTurn.needsContinuation);
   const locale = input.locale?.trim() || "en";
-  const capsules = selectActiveCapsules(input.coach, intent, input.message);
+
+  let capsuleTaskMessage = input.message;
+  if (shortTurn.needsContinuation && input.coach === "kai") {
+    capsuleTaskMessage = `${input.message} +continuation`;
+  }
+  const capsules = [
+    ...selectActiveCapsules(input.coach, intent, capsuleTaskMessage),
+  ];
+  const contHint = continuationHint(shortTurn);
+  if (contHint) capsules.push(contHint);
+
   const maxTokens = outputBudgetFor(intent, input.message);
 
   const { safetyState, generalState } = splitSafetyAndGeneralState(
     input.userState,
   );
 
-  // Canonical safety state always survives tier-0 pruning.
   const userStateParts: string[] = [];
   if (safetyState) userStateParts.push(safetyState);
   if (tier >= 1 && generalState) userStateParts.push(generalState);
-  else if (tier >= 1 && input.userState?.trim() && !safetyState && !generalState) {
+  else if (
+    tier >= 1 &&
+    input.userState?.trim() &&
+    !safetyState &&
+    !generalState
+  ) {
     userStateParts.push(input.userState.trim());
   }
   const userState =
@@ -150,15 +182,24 @@ export function buildRuntimeContext(
           .slice(0, MAX_MEMORY_ITEMS)
       : undefined;
 
-  const conversationTurns =
+  let conversationTurns =
     tier >= 2 && input.conversationTurns && input.conversationTurns.length > 0
       ? input.conversationTurns
       : undefined;
 
+  // Short-turn continuation: keep only the minimum recent turns (1–3).
+  if (
+    shortTurn.needsContinuation &&
+    input.conversationTurns &&
+    input.conversationTurns.length > 0
+  ) {
+    const budget = Math.max(1, Math.min(3, shortTurn.recentTurnBudget || 2));
+    conversationTurns = input.conversationTurns.slice(-budget);
+  }
+
   const teamFacts =
     tier >= 3 ? compactTeamFacts(input.teamFacts) : undefined;
 
-  // Knowledge from tool prefetch may appear at tier < 3 for nutrition/read tools.
   const knowledge =
     input.knowledge && input.knowledge.length > 0
       ? input.knowledge
@@ -179,7 +220,6 @@ export function buildRuntimeContext(
             ? "tool_action"
             : undefined);
 
-  // Rough section estimates for telemetry (compiler refines after wrapping).
   const capsuleText = capsules.join("\n\n");
   const trustedText = [
     userState ?? "",
@@ -198,7 +238,6 @@ export function buildRuntimeContext(
     : "";
 
   const breakdown = buildTokenBreakdown({
-    // Pre-compile heuristics; compilePrompt measures real CORE/SAFETY strings.
     core: estimateCharsToTokens(480),
     safety: estimateCharsToTokens(880),
     capsules: estimateTextTokens(capsuleText),

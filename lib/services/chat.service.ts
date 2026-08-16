@@ -28,6 +28,7 @@ import {
   resolveIntent,
   type CoachId,
 } from "@/lib/kaios/routing/intent";
+import { isStreamCompletionSuspicious } from "@/lib/kaios/stream/unicode";
 import { aiCopy } from "@/lib/ai/ai-copy";
 import {
   buildCanaryReminder,
@@ -464,6 +465,20 @@ async function* streamKaiosCoachReply(
       throw new ApiError("INTERNAL_ERROR", aiCopy(locale, "chat_failed"));
     }
     assistantText = meta.assistantText || assistantText;
+    if (
+      isStreamCompletionSuspicious({
+        text: assistantText,
+        aborted: false,
+        sawDelta: true,
+      })
+    ) {
+      logger.error("[chat.service] kaios stream completion suspicious; skip persist", {
+        userId: params.userId,
+        coachId: params.coachId,
+        length: assistantText.length,
+      });
+      return;
+    }
     const totalTokens = meta.usageTokens;
 
     logger.info("kaios chat telemetry", {
@@ -814,6 +829,20 @@ export async function* streamCoachReply(
 
     // Backstop: strip any leaked scaffolding before persisting.
     assistantText = scrubModelOutput(assistantText, canary);
+    if (
+      isStreamCompletionSuspicious({
+        text: assistantText,
+        aborted: Boolean(params.signal?.aborted),
+        sawDelta: true,
+      })
+    ) {
+      logger.error("[chat.service] legacy stream completion suspicious; skip persist", {
+        userId: params.userId,
+        coachId: params.coachId,
+        length: assistantText.length,
+      });
+      return;
+    }
 
     // Fallback estimate when the provider omits usage.
     if (totalTokens <= 0) {

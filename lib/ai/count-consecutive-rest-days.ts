@@ -47,7 +47,9 @@ export function gymSkipFacts(
   const everGym = workoutRows.some((r) => Number(r.workouts_completed) >= 1);
   if (!everGym) return [];
 
-  const parts = [`consecutive days without gym: ${restDays}`];
+  const parts = [
+    `canonical: consecutive days without gym: ${restDays} (source: TRUSTED_ANALYTICS)`,
+  ];
   if (restDays >= 5) {
     parts.push(
       "accountability flag: user has skipped gym 5+ days — motivate them to go today",

@@ -118,6 +118,19 @@ export { resolveKaiFamiliarityStage } from "@/lib/kaios/kai/familiarity";
 export { splitSafetyAndGeneralState } from "@/lib/kaios/context/safety-state";
 
 export {
+  classifyShortTurn,
+  continuationHint,
+  lastAssistantMessage,
+  type ShortTurnFunction,
+  type ShortTurnClassification,
+} from "@/lib/kaios/context/short-turn";
+
+export {
+  hasBrokenUtf16,
+  isStreamCompletionSuspicious,
+} from "@/lib/kaios/stream/unicode";
+
+export {
   orchestrateCoachChat,
   type OrchestrateChatInput,
   type OrchestrateResultMeta,

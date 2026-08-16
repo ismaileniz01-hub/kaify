@@ -1,4 +1,8 @@
-﻿/**
+﻿import {
+  classifyShortTurn,
+} from "@/lib/kaios/context/short-turn";
+
+/**
  * Deterministic intent routing for KAIOS (no LLM).
  * Heuristics use coach, route/workflow hints, image flag, and keyword/regex cues.
  */
@@ -26,6 +30,9 @@ export type ResolveIntentInput = {
   route?: string;
   hasImage?: boolean;
   workflow?: string;
+  /** Last assistant turn — enables elliptical continuation classification. */
+  previousAssistantMessage?: string;
+  hasRecentHistory?: boolean;
 };
 
 const STRUCTURED_INTENTS: ReadonlySet<Intent> = new Set([
@@ -207,6 +214,16 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
   }
 
   if (msg.length === 0) return "unknown";
+
+  // Elliptical replies after a prior proposal are NOT standalone casual.
+  const shortTurn = classifyShortTurn({
+    message: msg,
+    previousAssistantMessage: input.previousAssistantMessage,
+    hasRecentHistory: input.hasRecentHistory,
+  });
+  if (shortTurn.needsContinuation && shortTurn.continuePreviousTopic) {
+    return "unknown";
+  }
 
   if (looksCasual(msg)) {
     return "casual";

@@ -52,6 +52,8 @@ export {
   KAI_EMOTIONAL,
   KAI_CELEBRATION,
   KAI_MODE_COUNCIL,
+  KAI_MODE_CONTINUATION,
+  KAI_MODE_RESISTANCE,
   selectKaiCapsules,
 } from "@/lib/kaios/capsules/kai";
 export {
@@ -131,6 +133,9 @@ export function selectActiveCapsules(
     )
   ) {
     task = `${task}+casual`;
+  }
+  if (/\+continuation\b/i.test(msg)) {
+    task = `${task}+continuation`;
   }
   switch (coach) {
     case "alex":
