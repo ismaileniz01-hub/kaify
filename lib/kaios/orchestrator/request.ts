@@ -139,7 +139,9 @@ function structuredSystemHint(intent: Intent): string {
       intent +
       '", "data":{}, "ui":{}, "actions":[] }',
     "Omit unused fields. message is localized natural coach speech.",
-    "Do not duplicate structured numbers already in data/ui inside message.",
+    intent === "programming"
+      ? "Sets/reps live in data/ui. message MUST coach every listed lift: how to do it, how not to (common mistakes), what to watch. Put a short cue in exercise.notes when present."
+      : "Do not duplicate structured numbers already in data/ui inside message.",
     "No generic closing. Answer directly.",
     actionTruthHintForPrompt(),
     intent === "tool_action"

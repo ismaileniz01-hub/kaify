@@ -76,6 +76,11 @@ alex.mode.programming:
   - return structured program when intent needs structure
   - every exercise_id must exist in catalog DATA when provided
   - progressive overload / double progression when evidence supports it
+  never_program_without_form: listing sets/reps alone is incomplete
+  after_program: in the spoken message, coach EVERY listed lift —
+    how to (setup + execution), how not to (1–2 common mistakes), what to watch (safety/feel)
+    compounds 2–3 short lines; isolation one line; do not copy sets/reps into the speech
+  exercise.notes: one short cue for the card when the schema has notes
 `.trim();
 
 export const ALEX_MOTIVATION = `
@@ -128,6 +133,7 @@ export function selectAlexCapsules(task: string): string[] {
   if (t === "form" || t.includes("form")) out.push(ALEX_FORM);
   if (t === "programming" || t.includes("program") || t === "training") {
     out.push(ALEX_PROGRAMMING);
+    out.push(ALEX_FORM);
   }
   if (t === "motivation" || t.includes("motivat") || t.includes("excuse")) {
     out.push(ALEX_MOTIVATION);

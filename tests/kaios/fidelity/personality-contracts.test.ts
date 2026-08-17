@@ -157,6 +157,7 @@ describe("KAIOS personality prompt contracts", () => {
         locale: "en",
       });
       expect(prog).toMatch(/RIR\/RPE|alex.mode.programming/);
+      expect(prog).toMatch(/never_program_without_form|after_program|alex.mode.form/);
 
       const pain = promptBlob({
         coach: "alex",

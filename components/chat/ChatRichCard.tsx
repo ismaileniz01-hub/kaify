@@ -262,9 +262,16 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
               {t(day.dayKey)} — {t(day.focusKey)}
             </p>
             {day.exercises.map((ex, ei) => (
-              <p key={ei} className="mt-1 text-[11px] text-zinc-400">
-                • {ex.name} ({ex.sets}x{ex.reps})
-              </p>
+              <div key={ei} className="mt-1">
+                <p className="text-[11px] text-zinc-400">
+                  • {ex.name} ({ex.sets}x{ex.reps})
+                </p>
+                {ex.notes ? (
+                  <p className="pl-3 text-[11px] leading-snug text-zinc-500">
+                    {ex.notes}
+                  </p>
+                ) : null}
+              </div>
             ))}
           </div>
         ))}

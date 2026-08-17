@@ -100,7 +100,7 @@ describe("intent output ceilings", () => {
     expect(outputBudgetFor("casual")).toBeLessThanOrEqual(160);
     expect(outputBudgetFor("motivation")).toBeLessThanOrEqual(180);
     expect(outputBudgetFor("nutrition_question")).toBeLessThanOrEqual(250);
-    expect(outputBudgetFor("programming")).toBeLessThanOrEqual(450);
+    expect(outputBudgetFor("programming")).toBeLessThanOrEqual(750);
     // Analysis intents may be higher but still below legacy dual-call stacks.
     expect(outputBudgetFor("meal_analysis")).toBeLessThan(900);
   });
