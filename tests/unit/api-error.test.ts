@@ -23,4 +23,16 @@ describe("api error taxonomy (UX-004)", () => {
       "L:errors.FORBIDDEN",
     );
   });
+
+  it("maps quota exhaustion to the specific limit copy, not generic FORBIDDEN", () => {
+    expect(
+      errorToMessage(
+        {
+          code: "FORBIDDEN",
+          details: { warning_trigger: "LIMIT_100", resource: "maya_photo" },
+        },
+        t,
+      ),
+    ).toBe("L:errors.QUOTA_MAYA_PHOTO");
+  });
 });

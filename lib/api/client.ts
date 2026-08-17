@@ -195,7 +195,7 @@ export type ChatStreamHandlers = {
     payload?: unknown;
   }) => void;
   /** Receives a stable API error CODE (translate on the UI via apiErrorMessage). */
-  onError: (code: string) => void;
+  onError: (code: string, details?: unknown) => void;
 };
 
 /** POST /api/chat/[coachId] — consumes SSE stream. */
@@ -223,7 +223,7 @@ export async function streamChatMessage(
     try {
       const json = (await response.json()) as ApiResponseBody<never>;
       if (!json.success) {
-        handlers.onError(json.error.code ?? "INTERNAL_ERROR");
+        handlers.onError(json.error.code ?? "INTERNAL_ERROR", json.error.details);
         return;
       }
     } catch {

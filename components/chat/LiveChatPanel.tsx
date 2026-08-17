@@ -24,7 +24,7 @@ import { formatTime } from "@/lib/i18n/format";
 import { useKai } from "@/lib/kai-context";
 import { useSession } from "@/lib/session-context";
 import { ChatComposer } from "@/components/chat/ChatComposer";
-import { apiErrorMessage, errorToMessage } from "@/lib/i18n/api-error";
+import { errorToMessage, quotaResourceFromError } from "@/lib/i18n/api-error";
 import { MessageCircle } from "lucide-react";
 import { prefersReducedMotion } from "@/lib/motion/perf-guards";
 import {
@@ -78,6 +78,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorUpgrade, setErrorUpgrade] = useState(false);
   const [quotaWarning, setQuotaWarning] = useState<"LIMIT_80" | "LIMIT_100" | null>(null);
   const [hasPhotoConsent, setHasPhotoConsent] = useState<boolean | null>(null);
   const [photoConsentOpen, setPhotoConsentOpen] = useState(false);
@@ -173,6 +174,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
 
     setSending(true);
     setError(null);
+    setErrorUpgrade(false);
     setQuotaWarning(null);
 
     const idempotencyKey =
@@ -304,8 +306,11 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
               }),
             );
           },
-          onError: (code) => {
-            setError(apiErrorMessage(code, t));
+          onError: (code, details) => {
+            const err = { code, details };
+            const quota = quotaResourceFromError(err);
+            setErrorUpgrade(Boolean(quota));
+            setError(errorToMessage(err, t));
             onCoachTyping?.(false);
             failUserMessage();
           },
@@ -377,6 +382,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
 
     setSending(true);
     setError(null);
+    setErrorUpgrade(false);
     setQuotaWarning(null);
     onCoachTyping?.(true);
 
@@ -496,6 +502,8 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           ),
         );
       } catch (err) {
+        const quota = quotaResourceFromError(err);
+        setErrorUpgrade(Boolean(quota));
         setError(errorToMessage(err, t));
         failPhotoMessage();
       } finally {
@@ -516,6 +524,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
       return;
     }
     setError(null);
+    setErrorUpgrade(false);
     setComposerPhoto({ file, url: URL.createObjectURL(file) });
   };
 
@@ -576,7 +585,12 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           <InlineAlert
             message={error}
             dismissLabel={t("common.dismiss")}
-            onDismiss={() => setError(null)}
+            actionHref={errorUpgrade ? "/pricing" : undefined}
+            actionLabel={errorUpgrade ? t("usage.upgrade") : undefined}
+            onDismiss={() => {
+              setError(null);
+              setErrorUpgrade(false);
+            }}
           />
         )}
         {!loadingHistory && messages.length === 0 && !error && (
