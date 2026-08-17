@@ -442,9 +442,10 @@ describe("buddy nicknames per locale pack", () => {
     expect(pack).toMatch(/champ/);
   });
 
-  it("compiled TR prompt includes buddy_address without dumping EN nicknames as the TR set", () => {
+  it("compiled TR prompt includes buddy_address cadence ~3 messages", () => {
     const { blob } = promptInspection("tr", "bilmiyorum");
     expect(blob).toMatch(/buddy_address/);
+    expect(blob).toMatch(/3 mesaj|every 3|nickname_cadence/i);
     expect(blob).toMatch(/reis/);
   });
 });
