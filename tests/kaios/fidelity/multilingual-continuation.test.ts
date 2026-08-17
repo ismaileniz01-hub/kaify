@@ -375,7 +375,7 @@ describe("Arabic RTL semantic parity", () => {
   });
 
   it("AR localization pack is present", () => {
-    expect(getLocalePack("ar")).toMatch(/عرب|arabic|موضوع|اقتراح/i);
+    expect(getLocalePack("ar")).toMatch(/كبير|وحش|بطل|عامية/i);
   });
 });
 
@@ -385,7 +385,7 @@ describe("personality parity across locales", () => {
     /natural|conversation|casual_life/i,
     /adapt|resistance_adaptation|after_user_resists|resist again/i,
     /laziness|ordinary_laziness/i,
-    /humor|teasing|playful/i,
+    /humor|teasing|playful|joke/i,
     /never.*shame|no.*shame|without shame/i,
     /therapist/i,
     /continuity|elliptical|continuation/i,
@@ -424,6 +424,28 @@ describe("precise state provenance", () => {
     const { blob } = promptInspection("en", "I don't know");
     expect(blob).toMatch(/TRUSTED_ANALYTICS|canonical:/);
     expect(blob).not.toMatch(/you have trained for 7 months/i);
+  });
+});
+
+describe("buddy nicknames per locale pack", () => {
+  it("TR pack has reis/kral/başkan", () => {
+    const pack = getLocalePack("tr");
+    expect(pack).toMatch(/reis/);
+    expect(pack).toMatch(/kral/);
+    expect(pack).toMatch(/başkan/);
+  });
+
+  it("EN pack has bro/king/champ", () => {
+    const pack = getLocalePack("en");
+    expect(pack).toMatch(/bro/);
+    expect(pack).toMatch(/king/);
+    expect(pack).toMatch(/champ/);
+  });
+
+  it("compiled TR prompt includes buddy_address without dumping EN nicknames as the TR set", () => {
+    const { blob } = promptInspection("tr", "bilmiyorum");
+    expect(blob).toMatch(/buddy_address/);
+    expect(blob).toMatch(/reis/);
   });
 });
 

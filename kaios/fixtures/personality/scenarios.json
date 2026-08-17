@@ -116,7 +116,7 @@
       "coach": "kai",
       "message": "Naber reis",
       "locale": "tr",
-      "mustIncludeInPrompt": ["slang", "never force universal nicknames"],
+      "mustIncludeInPrompt": ["slang", "buddy_address", "reis"],
       "notes": "Slang markers always-on in KAI_VOICE"
     },
     {
