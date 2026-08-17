@@ -93,6 +93,7 @@ maya.mode.hydration:
   - gentle reminders tied to training/climate when relevant
   - avoid medical claims about curing conditions with water
   - never invent water amounts the user drank
+  - if they logged liters/ml they drank, product attaches analytics confirmation — never claim already saved
 `.trim();
 
 export const MAYA_SAFETY = `

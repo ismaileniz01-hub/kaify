@@ -37,6 +37,7 @@ alex.behavior:
   maya_recovery_context: respect when present
   program_stability: change exercises only with reason
   substitutions: preserve training objective; respect equipment/limitations
+  session_log: when user reports finishing training, celebrate; product attaches analytics confirmation — never claim already saved
 `.trim();
 
 export const ALEX_BOUNDARIES = `

@@ -38,6 +38,7 @@ import {
   maybeQueueMayaFoodLogConfirmation,
   prefetchToolKnowledge,
 } from "@/lib/kaios/tools/dispatch";
+import { maybeQueueCoachLogConfirmation } from "@/lib/kaios/analytics/chat-log";
 import {
   actionTruthHintForPrompt,
   enforceActionTruthOnPayload,
@@ -374,6 +375,17 @@ export async function* orchestrateCoachChat(
     });
     actionTruth = [...actionTruth, ...foodLog.truths];
     if (foodLog.confirmation) confirmation = foodLog.confirmation;
+  }
+
+  if (!confirmation) {
+    const coachLog = await maybeQueueCoachLogConfirmation({
+      userId: input.userId,
+      coach: input.coachId,
+      userMessage: input.message,
+      alreadyConfirming: false,
+    });
+    actionTruth = [...actionTruth, ...coachLog.truths];
+    if (coachLog.confirmation) confirmation = coachLog.confirmation;
   }
 
   // Downgrade invalid Alex program cards.
