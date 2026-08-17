@@ -10,6 +10,7 @@ import {
 } from "@/lib/domains/ai";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /** GET /api/chat/team — team chat history (Pro / Premium only) */
 export const GET = defineRoute(

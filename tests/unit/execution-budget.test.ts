@@ -86,8 +86,11 @@ describe("cron execution budget (REL-003)", () => {
       functions: Record<string, { maxDuration: number }>;
     };
     expect(vercel.functions["app/api/cron/**/route.ts"].maxDuration).toBe(60);
+    expect(vercel.functions["app/api/chat/**/route.ts"].maxDuration).toBe(60);
+    expect(vercel.functions["app/api/v1/chat/**/route.ts"].maxDuration).toBe(60);
     expect(vercel.functions["app/api/profile/export/route.ts"].maxDuration).toBe(
       60,
     );
+    expect(vercel.functions["app/api/**/route.ts"].maxDuration).toBe(10);
   });
 });

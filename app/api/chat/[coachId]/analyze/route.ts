@@ -12,6 +12,7 @@ import { visionCoachIdSchema } from "@/lib/validations/chat.schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * POST /api/chat/[coachId]/analyze — image analysis pipeline (Maya/Leo only).
