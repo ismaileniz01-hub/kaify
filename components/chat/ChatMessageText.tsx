@@ -1,4 +1,5 @@
 import { splitChatInlineBold } from "@/lib/chat/inline-bold";
+import { coachVisibleMessage } from "@/lib/kaios/envelope-text";
 
 export { splitChatInlineBold };
 
@@ -22,5 +23,7 @@ export function ChatMessageText({
   text: string;
   className?: string;
 }) {
-  return <p className={className}>{parseChatInlineBold(text)}</p>;
+  const visible = coachVisibleMessage(text);
+  if (!visible.trim()) return null;
+  return <p className={className}>{parseChatInlineBold(visible)}</p>;
 }

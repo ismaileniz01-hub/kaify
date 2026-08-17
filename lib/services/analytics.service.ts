@@ -45,6 +45,13 @@ export type WeeklyStepsDTO = {
   steps: number;
 }[];
 
+export type CalorieDayDTO = {
+  date: string;
+  caloriesConsumed: number;
+  caloriesBurned: number;
+  workoutsCompleted: number;
+};
+
 export type WeeklyFitnessScoreDTO = {
   foodScore: number;
   bodyScore: number;
@@ -57,6 +64,7 @@ export type WeeklyFitnessScoreDTO = {
 export type AnalyticsBundleDTO = {
   today: AnalyticsDailyDTO;
   weeklySteps: WeeklyStepsDTO;
+  calorieHistory: CalorieDayDTO[];
   weightTrendKg: number | null;
   weeklyScore: WeeklyFitnessScoreDTO;
 };
@@ -345,10 +353,11 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
   weekAgo.setUTCDate(weekAgo.getUTCDate() - 6);
   const weekStart = weekAgo.toISOString().slice(0, 10);
 
-  const [todayRow, weekRows, prevWeightKg] = await Promise.all([
+  const [todayRow, weekRows, prevWeightKg, weekNutrition] = await Promise.all([
     readAnalyticsDailyRow(readClient, userId, today),
     readHealthStepsRange(readClient, userId, weekStart, today),
     readPreviousWeightKg(readClient, userId, today),
+    readWeeklyAnalyticsSummary(readClient, userId, weekStart, today),
   ]);
 
   const storedDto = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today);
@@ -378,9 +387,29 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
     weightTrendKg = Math.abs(delta) < 0.05 ? 0 : delta;
   }
 
+  const calorieHistory: CalorieDayDTO[] = [];
+  for (let i = 6; i >= 0; i -= 1) {
+    const d = new Date(`${today}T12:00:00.000Z`);
+    d.setUTCDate(d.getUTCDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const found = weekNutrition.find((r) => r.entry_date === key) as
+      | {
+          calories_consumed?: number;
+          calories_burned?: number;
+          workouts_completed?: number;
+        }
+      | undefined;
+    calorieHistory.push({
+      date: key,
+      caloriesConsumed: Number(found?.calories_consumed) || 0,
+      caloriesBurned: Number(found?.calories_burned) || 0,
+      workoutsCompleted: Number(found?.workouts_completed) || 0,
+    });
+  }
+
   const weeklyScore = await computeWeeklyScore(userId, weekStart, today);
 
-  return { today: todayDto, weeklySteps, weightTrendKg, weeklyScore };
+  return { today: todayDto, weeklySteps, calorieHistory, weightTrendKg, weeklyScore };
 }
 
 export async function patchAnalyticsDaily(

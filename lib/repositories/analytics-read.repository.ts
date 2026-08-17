@@ -100,7 +100,7 @@ export async function readWeeklyAnalyticsSummary(
   const { data } = await client
     .from("analytics_daily")
     .select(
-      "entry_date, calories_consumed, calorie_goal, protein_g, protein_goal_g, workouts_completed",
+      "entry_date, calories_consumed, calories_burned, calorie_goal, protein_g, protein_goal_g, workouts_completed",
     )
     .eq("user_id", userId)
     .gte("entry_date", weekStart)

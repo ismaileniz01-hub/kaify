@@ -116,6 +116,39 @@ export function extractJsonObject(
   return { ok: true, value: extracted.value as Record<string, unknown> };
 }
 
+/**
+ * First JSON object only — allows leading prose and trailing junk.
+ * Used to salvage a leaked KAIOS envelope, not for production structured parse.
+ */
+export function extractFirstJsonObjectLenient(
+  text: string,
+): { ok: true; value: Record<string, unknown> } | JsonExtractFail {
+  const raw = stripBom(text);
+  if (!raw) return { ok: false, reason: "empty" };
+  const fenced = raw.match(FENCE_RE);
+  let candidate = (fenced ? fenced[1]! : raw).trim();
+  if (!candidate.startsWith("{")) {
+    const idx = candidate.indexOf("{");
+    if (idx < 0) return { ok: false, reason: "not_json" };
+    candidate = candidate.slice(idx);
+  }
+  const end = firstValueEnd(candidate);
+  if (end < 0) return { ok: false, reason: "malformed" };
+  try {
+    const value = JSON.parse(candidate.slice(0, end + 1)) as unknown;
+    if (
+      value === null ||
+      typeof value !== "object" ||
+      Array.isArray(value)
+    ) {
+      return { ok: false, reason: "not_json" };
+    }
+    return { ok: true, value: value as Record<string, unknown> };
+  } catch {
+    return { ok: false, reason: "malformed" };
+  }
+}
+
 export function extractJsonArray(
   text: string,
 ): { ok: true; value: unknown[] } | JsonExtractFail {

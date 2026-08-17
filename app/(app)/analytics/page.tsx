@@ -6,6 +6,7 @@ import { MacroRing } from "@/components/analytics/MacroRing";
 import { StatCard } from "@/components/analytics/StatCard";
 import { WeeklyChart } from "@/components/analytics/WeeklyChart";
 import { WeeklyScoreCard } from "@/components/analytics/WeeklyScoreCard";
+import { CalorieHistorySheet } from "@/components/analytics/CalorieHistorySheet";
 import { GoalsEditor } from "@/components/goals/GoalsEditor";
 import { readAnalyticsCache, writeAnalyticsCache } from "@/lib/analytics-client-cache";
 import { useLang } from "@/lib/lang-context";
@@ -25,6 +26,7 @@ export default function AnalyticsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [goalsOpen, setGoalsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const loadAnalytics = useCallback(() => {
     if (!isAuthenticated) return;
@@ -70,8 +72,18 @@ export default function AnalyticsPage() {
         : `${data.weightTrendKg > 0 ? "▲" : "▼"} ${Math.abs(data.weightTrendKg).toFixed(1)} kg`
       : t("analytics.no_trend");
 
+  const remaining = today
+    ? Math.round(today.calorieGoal - today.caloriesConsumed + today.caloriesBurned)
+    : 0;
   const calPct = today
-    ? Math.min(100, Math.round((today.caloriesConsumed / today.calorieGoal) * 100))
+    ? Math.min(
+        100,
+        Math.round(
+          (today.caloriesConsumed /
+            Math.max(1, today.calorieGoal + today.caloriesBurned)) *
+            100,
+        ),
+      )
     : 0;
   const workoutPct = today
     ? Math.min(100, Math.round((today.workoutsCompleted / today.workoutsTarget) * 100))
@@ -165,16 +177,20 @@ export default function AnalyticsPage() {
             icon={Flame}
             label={t("analytics.calories")}
             value={today ? "" : "—"}
-            numericValue={today ? Math.round(today.caloriesConsumed) : undefined}
+            numericValue={today ? remaining : undefined}
             unitSuffix="kcal"
             trend={
               today
-                ? `▲ ${calPct}% ${t("home.completed")}`
+                ? t("analytics.calories_io", {
+                    eaten: Math.round(today.caloriesConsumed),
+                    burned: Math.round(today.caloriesBurned),
+                  })
                 : t("analytics.no_trend")
             }
             barColor="#f97316"
             barPercent={calPct}
             gradient="orange"
+            onClick={today ? () => setHistoryOpen(true) : undefined}
           />
           <StatCard
             icon={Dumbbell}
@@ -188,6 +204,7 @@ export default function AnalyticsPage() {
             barColor="#22c55e"
             barPercent={workoutPct}
             gradient="green"
+            onClick={today ? () => setHistoryOpen(true) : undefined}
           />
           <StatCard
             icon={Droplets}
@@ -240,6 +257,12 @@ export default function AnalyticsPage() {
           />
         </div>
       </main>
+      {historyOpen ? (
+        <CalorieHistorySheet
+          days={data?.calorieHistory ?? []}
+          onClose={() => setHistoryOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

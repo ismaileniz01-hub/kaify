@@ -8,7 +8,7 @@ import {
 
 describe("Alex workout completion → analytics patch", () => {
   it("detects Turkish and English session logs", () => {
-    expect(looksLikeWorkoutCompletion("antrenmanı bitirdim")).toBe(true);
+    expect(looksLikeWorkoutCompletion("antrenman bitti")).toBe(true);
     expect(looksLikeWorkoutCompletion("bugün spor yaptım")).toBe(true);
     expect(looksLikeWorkoutCompletion("I finished my workout")).toBe(true);
     expect(looksLikeWorkoutCompletion("workout done")).toBe(true);
@@ -36,8 +36,17 @@ describe("Alex workout completion → analytics patch", () => {
     expect(
       patchForCoachChatLog("alex", "I finished my workout"),
     ).toMatchObject({
-      patch: { workoutsCompleted: 1 },
+      patch: { workoutsCompleted: 1, caloriesBurned: 350 },
       tool: "logWorkout",
+    });
+    expect(
+      patchForCoachChatLog("alex", "antrenman bitti", {
+        goal: "recomposition",
+        currentWorkouts: 0,
+        currentBurned: 0,
+      }),
+    ).toMatchObject({
+      patch: { workoutsCompleted: 1, caloriesBurned: 400 },
     });
     expect(patchForCoachChatLog("kai", "antrenmanı bitirdim")).toBeNull();
     expect(patchForCoachChatLog("leo", "antrenmanı bitirdim")).toBeNull();

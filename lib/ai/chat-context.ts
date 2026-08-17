@@ -15,7 +15,7 @@ export async function buildFitnessContextSummary(userId: string): Promise<string
   const admin = createAdminSupabaseClient();
   const today = new Date().toISOString().slice(0, 10);
 
-  const [streak, { data: rows }] = await Promise.all([
+  const [streak, { data: rows }, { data: settings }] = await Promise.all([
     getStreakStatus(userId).catch(() => null),
     admin
       .from("analytics_daily")
@@ -28,6 +28,11 @@ export async function buildFitnessContextSummary(userId: string): Promise<string
       })())
       .lte("entry_date", today)
       .order("entry_date", { ascending: false }),
+    admin
+      .from("user_settings")
+      .select("primary_goal")
+      .eq("user_id", userId)
+      .maybeSingle(),
   ]);
 
   const workoutRows = (rows ?? []) as WorkoutRow[];
@@ -43,6 +48,9 @@ export async function buildFitnessContextSummary(userId: string): Promise<string
     );
   }
   parts.push(`today workouts logged: ${todayWorkouts}/${todayTarget}`);
+  if (typeof settings?.primary_goal === "string" && settings.primary_goal) {
+    parts.push(`primary_goal: ${settings.primary_goal}`);
+  }
 
   const weekWorkouts = workoutRows.reduce(
     (sum, r) => sum + (Number(r.workouts_completed) >= 1 ? 1 : 0),

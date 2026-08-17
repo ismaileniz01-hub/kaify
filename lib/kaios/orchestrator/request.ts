@@ -16,6 +16,10 @@ import {
   scrubModelOutput,
   visibleStreamDelta,
 } from "@/lib/ai/prompt-safety";
+import {
+  coachVisibleMessage,
+  looksLikeJsonStreamPrefix,
+} from "@/lib/kaios/envelope-text";
 import type { ChatTurn, TokenUsage } from "@/lib/ai/types";
 import { buildRuntimeContext } from "@/lib/kaios/context/builder";
 import { compilePrompt } from "@/lib/kaios/compiler/prompt";
@@ -215,6 +219,7 @@ export async function* orchestrateCoachChat(
   let providerUsage: TokenUsage | null = null;
   let assistantText = "";
   let streamFinishReason: string | null = null;
+  let holdJsonStream = false;
   let envelope: BaseEnvelope;
   let awaitUser = false;
   let actionTruth: ActionTruthRecord[] = [...prefetch.truths];
@@ -297,6 +302,10 @@ export async function* orchestrateCoachChat(
           return;
         }
         assistantText = next;
+        if (looksLikeJsonStreamPrefix(next)) {
+          holdJsonStream = true;
+          continue;
+        }
         const visible = visibleStreamDelta(previous, next);
         if (visible) {
           yield { event: "delta", data: { content: visible } };
@@ -307,7 +316,18 @@ export async function* orchestrateCoachChat(
         if (event.finishReason) streamFinishReason = event.finishReason;
       }
     }
-    assistantText = scrubModelOutput(assistantText, compiled.canary);
+    assistantText = coachVisibleMessage(
+      scrubModelOutput(assistantText, compiled.canary),
+    );
+    if (holdJsonStream && assistantText.length > 0) {
+      const chunkSize = 48;
+      for (let i = 0; i < assistantText.length; i += chunkSize) {
+        yield {
+          event: "delta",
+          data: { content: assistantText.slice(i, i + chunkSize) },
+        };
+      }
+    }
     envelope = casualEnvelope(input.coachId, assistantText, intent);
   } else {
     modelCallCount = 1;
@@ -339,8 +359,7 @@ export async function* orchestrateCoachChat(
       envelope = envelopeResult.data;
       assistantText = envelope.message;
     } else {
-      // Schema failure recovery: never invent structured success — text-only.
-      assistantText = scrubbed;
+      assistantText = coachVisibleMessage(scrubbed);
       envelope = casualEnvelope(input.coachId, assistantText, intent);
       logger.warn("kaios: structured parse failed; text fallback", {
         coachId: input.coachId,
@@ -418,7 +437,9 @@ export async function* orchestrateCoachChat(
     assistantText = envelope.message;
   }
 
-  assistantText = scrubFalseSuccessClaims(assistantText, actionTruth);
+  assistantText = coachVisibleMessage(
+    scrubFalseSuccessClaims(assistantText, actionTruth),
+  );
   envelope = { ...envelope, message: assistantText };
 
   if (usageTokens <= 0) {

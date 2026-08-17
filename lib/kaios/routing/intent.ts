@@ -1,6 +1,7 @@
 ﻿import {
   classifyShortTurn,
 } from "@/lib/kaios/context/short-turn";
+import { looksLikeWorkoutCompletion } from "@/lib/kaios/analytics/workout-log";
 
 /**
  * Deterministic intent routing for KAIOS (no LLM).
@@ -222,6 +223,11 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
   }
 
   if (msg.length === 0) return "unknown";
+
+  // Finished-session logs are celebration + analytics, never a new program JSON.
+  if (input.coach === "alex" && looksLikeWorkoutCompletion(msg)) {
+    return "motivation";
+  }
 
   // Elliptical replies after a prior proposal are NOT standalone casual.
   const shortTurn = classifyShortTurn({

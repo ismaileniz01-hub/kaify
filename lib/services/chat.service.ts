@@ -42,6 +42,7 @@ import {
   wrapUntrustedInput,
   wrapUntrustedInputStable,
 } from "@/lib/ai/prompt-safety";
+import { coachVisibleMessage } from "@/lib/kaios/envelope-text";
 import {
   mapChatMessageRow,
   type ChatMessageDTO,
@@ -231,7 +232,12 @@ export async function getHistory(
 
   return (data ?? []).slice().reverse().map((row) => {
     const dto = mapChatMessageRow(row);
-    return { ...dto, content: stripSpotlightScaffolding(dto.content ?? "", true) };
+    return {
+      ...dto,
+      content: coachVisibleMessage(
+        stripSpotlightScaffolding(dto.content ?? "", true),
+      ),
+    };
   });
 }
 
@@ -417,7 +423,9 @@ async function* streamKaiosCoachReply(
           .limit(1)
           .maybeSingle();
         if (existingCoach?.content) {
-          const replay = stripSpotlightScaffolding(existingCoach.content, true);
+          const replay = coachVisibleMessage(
+            stripSpotlightScaffolding(existingCoach.content, true),
+          );
           yield {
             event: "delta",
             data: { content: replay },
@@ -786,7 +794,9 @@ export async function* streamCoachReply(
           .limit(1)
           .maybeSingle();
         if (existingCoach?.content) {
-          const replay = stripSpotlightScaffolding(existingCoach.content, true);
+          const replay = coachVisibleMessage(
+            stripSpotlightScaffolding(existingCoach.content, true),
+          );
           yield {
             event: "delta",
             data: { content: replay },
@@ -862,7 +872,7 @@ export async function* streamCoachReply(
     }
 
     // Backstop: strip any leaked scaffolding before persisting.
-    assistantText = scrubModelOutput(assistantText, canary);
+    assistantText = coachVisibleMessage(scrubModelOutput(assistantText, canary));
     if (
       isStreamCompletionSuspicious({
         text: assistantText,

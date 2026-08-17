@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   extractJsonArray,
   extractJsonObject,
+  extractFirstJsonObjectLenient,
   extractSingleJsonValue,
 } from "@/lib/ai/extract-json";
 
@@ -58,5 +59,15 @@ describe("extractSingleJsonValue", () => {
   it("parses a JSON array without greedy last-bracket matching of junk", () => {
     const r = extractJsonArray('[{"coachId":"kai","text":"hi"}]');
     expect(r.ok).toBe(true);
+  });
+});
+
+describe("extractFirstJsonObjectLenient", () => {
+  it("keeps the first envelope when trailing junk is present", () => {
+    const r = extractFirstJsonObjectLenient(
+      '{"schema_version":"kaios.envelope.v1","coach":"alex","message":"ok","intent":"programming"}\nthanks',
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.message).toBe("ok");
   });
 });

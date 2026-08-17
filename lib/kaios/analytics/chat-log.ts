@@ -4,9 +4,16 @@
  * analytics LLM, so reported workouts/water never reached the analysis page.
  */
 
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { localTodayDate } from "@/lib/date-utils";
 import { createPendingAnalyticsConfirmation } from "@/lib/services/analytics-confirmation.service";
 import type { CoachId } from "@/lib/kaios/routing/intent";
 import type { ActionTruthRecord } from "@/lib/kaios/tools/action-truth";
+import {
+  estimateSessionCaloriesBurned,
+  looksLikeWorkoutCompletion,
+  parseWorkoutCompletion,
+} from "@/lib/kaios/analytics/workout-log";
 
 export type ChatLogPatch = {
   summary: string;
@@ -14,42 +21,15 @@ export type ChatLogPatch = {
   tool: string;
 };
 
+export {
+  looksLikeWorkoutCompletion,
+  parseWorkoutCompletion,
+  estimateSessionCaloriesBurned,
+} from "@/lib/kaios/analytics/workout-log";
+
 function parseNum(raw: string): number | null {
   const n = Number.parseFloat(raw.replace(",", "."));
   return Number.isFinite(n) ? n : null;
-}
-
-const WORKOUT_DONE_RE =
-  /(?:antrenman(?:[ıi])?|workout|session|gym|spor(?:u)?|salon(?:u)?)\s*(?:mı\s+)?(?:bitirdim|tamamladım|tamamladim|yaptım|yaptim|bitti)|(?:bitirdim|tamamladım|tamamladim|finished|completed)\s+(?:(?:the|my|a)\s+)?(?:antrenman|workout|session|gym|spor)|(?:i(?:['’]ve| have)?\s+)?(?:just\s+)?(?:finished|completed|done)\s+(?:(?:a|my|the)\s+)?(?:workout|session|gym)|workout\s+done|log(?:ged)?(?:\s+my)?\s+workout|salondan\s+ç[ıi]kt[ıi]m/i;
-
-export function looksLikeWorkoutCompletion(message: string): boolean {
-  return WORKOUT_DONE_RE.test(message.trim());
-}
-
-export function parseWorkoutCompletion(
-  message: string,
-): { workoutsCompleted: number; caloriesBurned?: number } | null {
-  if (!looksLikeWorkoutCompletion(message)) return null;
-  const count = message.match(
-    /(\d+)\s*(?:antrenman|workouts?|sessions?|seans)/i,
-  );
-  let workoutsCompleted = 1;
-  if (count?.[1]) {
-    const n = Number.parseInt(count[1], 10);
-    if (n >= 1 && n <= 5) workoutsCompleted = n;
-  }
-  const burned = message.match(
-    /(\d{2,4})\s*(?:kcal|kalori).{0,16}(?:yak|burn)|(?:yak|burn).{0,16}(\d{2,4})\s*(?:kcal|kalori)/i,
-  );
-  const caloriesBurned = burned
-    ? Number.parseInt(burned[1] || burned[2] || "", 10)
-    : NaN;
-  return {
-    workoutsCompleted,
-    ...(Number.isFinite(caloriesBurned) && caloriesBurned >= 20
-      ? { caloriesBurned }
-      : {}),
-  };
 }
 
 const DRINK_VERB_RE = /\b(içtim|ictim|i\s+drank|drank|i\s+had)\b/i;
@@ -75,6 +55,11 @@ export function parseHydrationLiters(message: string): number | null {
 export function patchForCoachChatLog(
   coach: CoachId,
   userMessage: string,
+  opts?: {
+    goal?: string | null;
+    currentWorkouts?: number;
+    currentBurned?: number;
+  },
 ): ChatLogPatch | null {
   if (coach === "maya") {
     const liters = parseHydrationLiters(userMessage);
@@ -88,19 +73,57 @@ export function patchForCoachChatLog(
   if (coach === "alex") {
     const workout = parseWorkoutCompletion(userMessage);
     if (!workout) return null;
-    const patch: Record<string, number> = {
-      workoutsCompleted: workout.workoutsCompleted,
-    };
-    if (workout.caloriesBurned != null) {
-      patch.caloriesBurned = workout.caloriesBurned;
-    }
+    const sessionKcal =
+      workout.caloriesBurned ??
+      estimateSessionCaloriesBurned(opts?.goal) * workout.workoutsCompleted;
+    const currentWorkouts = Math.max(0, opts?.currentWorkouts ?? 0);
+    const currentBurned = Math.max(0, opts?.currentBurned ?? 0);
+    const workoutsCompleted = currentWorkouts + workout.workoutsCompleted;
+    const caloriesBurned = currentBurned + sessionKcal;
     const summary =
-      workout.caloriesBurned != null
-        ? `${workout.workoutsCompleted} workout(s), ${workout.caloriesBurned} kcal burned`
-        : `${workout.workoutsCompleted} workout(s)`;
-    return { tool: "logWorkout", summary, patch };
+      workout.workoutsCompleted > 1
+        ? `${workout.workoutsCompleted} workout(s), ${sessionKcal} kcal burned`
+        : `1 workout · ${sessionKcal} kcal`;
+    return {
+      tool: "logWorkout",
+      summary,
+      patch: { workoutsCompleted, caloriesBurned },
+    };
   }
   return null;
+}
+
+async function loadWorkoutLogBaseline(userId: string): Promise<{
+  goal: string | null;
+  currentWorkouts: number;
+  currentBurned: number;
+}> {
+  const admin = createAdminSupabaseClient();
+  const [{ data: settings }, { data: profile }] = await Promise.all([
+    admin
+      .from("user_settings")
+      .select("primary_goal")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    admin.from("profiles").select("timezone").eq("id", userId).maybeSingle(),
+  ]);
+  const timezone =
+    typeof profile?.timezone === "string" && profile.timezone.trim()
+      ? profile.timezone
+      : "UTC";
+  const today = localTodayDate(timezone);
+  const { data: row } = await admin
+    .from("analytics_daily")
+    .select("workouts_completed, calories_burned")
+    .eq("user_id", userId)
+    .eq("entry_date", today)
+    .maybeSingle();
+  return {
+    goal:
+      typeof settings?.primary_goal === "string" ? settings.primary_goal : null,
+    currentWorkouts: Number(row?.workouts_completed) || 0,
+    currentBurned: Number(row?.calories_burned) || 0,
+  };
 }
 
 export async function maybeQueueCoachLogConfirmation(input: {
@@ -113,7 +136,30 @@ export async function maybeQueueCoachLogConfirmation(input: {
   truths: ActionTruthRecord[];
 }> {
   if (input.alreadyConfirming) return { truths: [] };
-  const spec = patchForCoachChatLog(input.coach, input.userMessage);
+  if (input.coach !== "alex" && input.coach !== "maya") return { truths: [] };
+  if (
+    input.coach === "alex" &&
+    !looksLikeWorkoutCompletion(input.userMessage)
+  ) {
+    return { truths: [] };
+  }
+
+  let baseline:
+    | { goal: string | null; currentWorkouts: number; currentBurned: number }
+    | undefined;
+  if (input.coach === "alex") {
+    try {
+      baseline = await loadWorkoutLogBaseline(input.userId);
+    } catch {
+      baseline = {
+        goal: null,
+        currentWorkouts: 0,
+        currentBurned: 0,
+      };
+    }
+  }
+
+  const spec = patchForCoachChatLog(input.coach, input.userMessage, baseline);
   if (!spec) return { truths: [] };
 
   const pendingId = await createPendingAnalyticsConfirmation({

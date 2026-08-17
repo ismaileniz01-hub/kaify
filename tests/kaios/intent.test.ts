@@ -56,6 +56,12 @@ describe("resolveIntent", () => {
         message: "Can you build me a 4-day workout program?",
       }),
     ).toBe("programming");
+    expect(
+      resolveIntent({ coach: "alex", message: "antrenman bitti" }),
+    ).toBe("motivation");
+    expect(
+      resolveIntent({ coach: "alex", message: "antrenmanı bitirdim" }),
+    ).toBe("motivation");
   });
 
   it("routes nutrition and meal analysis for maya", () => {
