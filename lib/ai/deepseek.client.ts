@@ -207,6 +207,7 @@ export async function* streamChatCompletion(
   const decoder = new TextDecoder();
   let buffer = "";
   let usage: TokenUsage | null = null;
+  let finishReason: string | null = null;
 
   try {
     while (true) {
@@ -231,16 +232,20 @@ export async function* streamChatCompletion(
           continue; // skip malformed/partial SSE frames
         }
 
-        const delta = chunk.choices?.[0]?.delta?.content;
+        const choice = chunk.choices?.[0];
+        const delta = choice?.delta?.content;
         if (delta) {
           yield { type: "delta", content: delta };
+        }
+        if (choice?.finish_reason) {
+          finishReason = choice.finish_reason;
         }
         if (chunk.usage) {
           usage = chunk.usage;
         }
       }
     }
-    yield { type: "done", usage };
+    yield { type: "done", usage, finishReason };
     if (options.usageContext && usage) {
       recordAiUsage({
         provider: "deepseek",

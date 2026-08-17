@@ -72,6 +72,8 @@ export type OrchestrateResultMeta = {
   awaitUser?: boolean;
   assistantText: string;
   aborted?: boolean;
+  /** Provider finish_reason when streaming (e.g. length = truncated at max_tokens). */
+  finishReason?: string | null;
   actionTruth?: ActionTruthRecord[];
   /** Pending Maya meal confirmation for chat.service UI wiring. */
   confirmation?: { pendingId: string; summary: string };
@@ -207,6 +209,7 @@ export async function* orchestrateCoachChat(
   let usageTokens = 0;
   let providerUsage: TokenUsage | null = null;
   let assistantText = "";
+  let streamFinishReason: string | null = null;
   let envelope: BaseEnvelope;
   let awaitUser = false;
   let actionTruth: ActionTruthRecord[] = [...prefetch.truths];
@@ -292,6 +295,7 @@ export async function* orchestrateCoachChat(
       } else if (event.type === "done") {
         providerUsage = event.usage;
         usageTokens = event.usage?.total_tokens ?? 0;
+        if (event.finishReason) streamFinishReason = event.finishReason;
       }
     }
     assistantText = scrubModelOutput(assistantText, compiled.canary);
@@ -455,6 +459,7 @@ export async function* orchestrateCoachChat(
     telemetry,
     awaitUser,
     assistantText,
+    finishReason: streamFinishReason,
     actionTruth,
     confirmation,
   };

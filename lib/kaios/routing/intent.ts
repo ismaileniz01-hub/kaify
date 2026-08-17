@@ -146,6 +146,14 @@ const PROGRAM_RE =
 const NUTRITION_Q_RE =
   /\b(protein|carbs?|calories?|macro|kalori|besin|nutrition|diet|diyet|kilo|bulk|cut|surplus|deficit|ne yesem|kaç kalori|kac kalori)\b/i;
 
+/** User reporting food they ate (slang / short logs) — needs macro headroom, not casual. */
+const FOOD_CONSUMPTION_RE =
+  /\b(yedim|yuttum|gomdum|gömdüm|gom|i ate|i had|just ate|had a|devoured|scoffed|ate a|ate an|doner|döner|durum|dürüm|wrap|burger|pizza|kebab|lahmacun|pide|tost|sandwich|breakfast|lunch|dinner|brunch|snack|öğün|ogun|yemek yedim|meal i|food log)\b/i;
+
+export function looksLikeFoodConsumption(message: string): boolean {
+  return FOOD_CONSUMPTION_RE.test(normalizeMessage(message));
+}
+
 const MEAL_PLAN_RE =
   /\b(meal\s*plan|yemek plan|öğün plan|ogun plan|weekly meals|dinners?\s+for\s+the\s+week|weekly\s+dinners?|menu for|hazırla.*plan|hazirla.*plan|plan my (?:dinners?|meals?|lunches?))\b/i;
 
@@ -259,13 +267,17 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
   if (
     input.coach === "maya" &&
     (NUTRITION_Q_RE.test(msg) ||
+      looksLikeFoodConsumption(msg) ||
       /\bnutrition\b/.test(hints) ||
       /\b(meal|plate|yemek|öğün|ogun)\b/i.test(msg))
   ) {
     return "nutrition_question";
   }
 
-  if (NUTRITION_Q_RE.test(msg) && (input.coach === "maya" || input.coach === "kai")) {
+  if (
+    (NUTRITION_Q_RE.test(msg) || looksLikeFoodConsumption(msg)) &&
+    (input.coach === "maya" || input.coach === "kai")
+  ) {
     return "nutrition_question";
   }
 

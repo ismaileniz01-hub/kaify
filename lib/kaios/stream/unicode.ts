@@ -26,9 +26,12 @@ export function isStreamCompletionSuspicious(input: {
   text: string;
   aborted?: boolean;
   sawDelta?: boolean;
+  /** Provider finish_reason — "length" means output was cut at max_tokens. */
+  finishReason?: string | null;
 }): boolean {
   if (input.aborted) return true;
   if (hasBrokenUtf16(input.text)) return true;
   if (input.sawDelta && input.text.trim().length === 0) return true;
+  if (input.finishReason === "length") return true;
   return false;
 }

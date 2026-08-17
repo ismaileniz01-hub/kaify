@@ -224,6 +224,17 @@ describe("KAIOS personality prompt contracts", () => {
       });
       expect(femaleBlob).toMatch(/female_user|güzelim|queen/i);
     });
+
+    it("food log slang gets macro headroom + no greeting reset capsule", () => {
+      const blob = promptBlob({
+        coach: "maya",
+        message: "1 hatay doner gomdum",
+        locale: "tr",
+        userState: "user_gender: male",
+      });
+      expect(blob).toMatch(/maya\.mode\.food_log|no greeting reset/i);
+      expect(blob).toMatch(/feminine_coach|male_user/i);
+    });
   });
 
   describe("Leo markers", () => {

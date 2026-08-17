@@ -474,6 +474,13 @@ describe("Unicode stream completion", () => {
     expect(
       isStreamCompletionSuspicious({ text: "Beş dakika", sawDelta: true }),
     ).toBe(false);
+    expect(
+      isStreamCompletionSuspicious({
+        text: "Kalori: 600 — ya da daha net bir hesap istersen dürümdeki ana malzemeleri sö",
+        sawDelta: true,
+        finishReason: "length",
+      }),
+    ).toBe(true);
   });
 });
 

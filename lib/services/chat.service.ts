@@ -481,6 +481,7 @@ async function* streamKaiosCoachReply(
         text: assistantText,
         aborted: false,
         sawDelta: true,
+        finishReason: meta.finishReason,
       })
     ) {
       logger.error("[chat.service] kaios stream completion suspicious; skip persist", {
@@ -801,6 +802,7 @@ export async function* streamCoachReply(
     }
 
     let totalTokens = 0;
+    let streamFinishReason: string | null = null;
 
     for await (const event of ModelRouter.streamText(messages, {
       temperature: params.coachId === "kai" ? 0.85 : 0.7,
@@ -829,6 +831,7 @@ export async function* streamCoachReply(
         yield { event: "delta", data: { content: event.content } };
       } else if (event.type === "done") {
         totalTokens = event.usage?.total_tokens ?? 0;
+        if (event.finishReason) streamFinishReason = event.finishReason;
         const cacheHit = event.usage?.prompt_cache_hit_tokens ?? 0;
         if (cacheHit > 0 && event.usage?.prompt_tokens) {
           const ratio = Math.round((cacheHit / event.usage.prompt_tokens) * 100);
@@ -850,6 +853,7 @@ export async function* streamCoachReply(
         text: assistantText,
         aborted: Boolean(params.signal?.aborted),
         sawDelta: true,
+        finishReason: streamFinishReason,
       })
     ) {
       logger.error("[chat.service] legacy stream completion suspicious; skip persist", {

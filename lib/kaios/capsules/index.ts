@@ -14,7 +14,11 @@ import { selectMayaCapsules } from "@/lib/kaios/capsules/maya";
 import { selectLeoCapsules } from "@/lib/kaios/capsules/leo";
 import { selectKaiCapsules } from "@/lib/kaios/capsules/kai";
 import { selectCouncilCapsules } from "@/lib/kaios/capsules/council";
-import type { CoachId, Intent } from "@/lib/kaios/routing/intent";
+import {
+  looksLikeFoodConsumption,
+  type CoachId,
+  type Intent,
+} from "@/lib/kaios/routing/intent";
 
 export { CORE_CAPSULE } from "@/lib/kaios/capsules/core";
 export { SAFETY_CAPSULE } from "@/lib/kaios/capsules/safety";
@@ -139,6 +143,9 @@ export function selectActiveCapsules(
   }
   if (/\+motivation\b/i.test(msg)) {
     task = `${task}+motivation`;
+  }
+  if (coach === "maya" && looksLikeFoodConsumption(msg)) {
+    task = `${task}+food_log`;
   }
   switch (coach) {
     case "alex":

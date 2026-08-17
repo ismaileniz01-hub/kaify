@@ -19,7 +19,11 @@ export type TokenUsage = {
 /** Events emitted by the streaming text generator. */
 export type StreamEvent =
   | { type: "delta"; content: string }
-  | { type: "done"; usage: TokenUsage | null };
+  | {
+      type: "done";
+      usage: TokenUsage | null;
+      finishReason?: string | null;
+    };
 
 /** Inline image payload handed to the vision model. */
 export type ImageInput = {

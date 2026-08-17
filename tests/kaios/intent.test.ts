@@ -68,6 +68,12 @@ describe("resolveIntent", () => {
     expect(
       resolveIntent({
         coach: "maya",
+        message: "1 hatay doner gomdum",
+      }),
+    ).toBe("nutrition_question");
+    expect(
+      resolveIntent({
+        coach: "maya",
         message: "What is on my plate?",
         hasImage: true,
       }),
@@ -267,6 +273,9 @@ describe("needsStructuredOutput / outputBudgetFor", () => {
     expect(outputBudgetFor("casual")).toBe(120);
     expect(outputBudgetFor("motivation")).toBe(160);
     expect(outputBudgetFor("nutrition_question")).toBe(220);
+    expect(outputBudgetFor("nutrition_question", "1 hatay doner gomdum")).toBe(
+      400,
+    );
     expect(outputBudgetFor("meal_plan")).toBe(400);
     expect(outputBudgetFor("meal_analysis")).toBe(650);
     expect(outputBudgetFor("casual", "hi")).toBe(80);
