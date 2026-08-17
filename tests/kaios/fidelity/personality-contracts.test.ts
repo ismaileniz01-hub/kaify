@@ -205,6 +205,25 @@ describe("KAIOS personality prompt contracts", () => {
       });
       expect(macros).toMatch(/calories, protein, carbs, fat|primary_fields/);
     });
+
+    it("feminine coach voice + gender-aware address rules", () => {
+      const blob = promptBlob({
+        coach: "maya",
+        message: "What should I eat for lunch?",
+        locale: "tr",
+        userState: "user_gender: male",
+      });
+      expect(blob).toMatch(/feminine_coach|not_kai_bro/i);
+      expect(blob).toMatch(/user_gender|male_user|yakışıklı|terminator/i);
+
+      const femaleBlob = promptBlob({
+        coach: "maya",
+        message: "Protein hedefim ne?",
+        locale: "tr",
+        userState: "user_gender: female",
+      });
+      expect(femaleBlob).toMatch(/female_user|güzelim|queen/i);
+    });
   });
 
   describe("Leo markers", () => {

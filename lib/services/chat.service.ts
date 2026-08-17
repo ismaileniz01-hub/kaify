@@ -47,6 +47,8 @@ import {
 import { CHAT_MESSAGE_LIST_COLUMNS } from "@/lib/services/chat-message-columns";
 import type { ChatTurn } from "@/lib/ai/types";
 import type { SseChunk } from "@/lib/api/sse";
+import type { ProfileGenderValue } from "@/lib/profile-mapper";
+import { parseGenderInput } from "@/lib/profile-mapper";
 import type { Database, Json } from "@/lib/types/database.types";
 
 type CoachingStateRow =
@@ -80,12 +82,16 @@ async function getProfileLocaleAndSafety(
   savedLocale: string;
   allergies: string | null;
   createdAt: string | null;
+  userGender: ProfileGenderValue | null;
 }> {
   const { data } = await admin
     .from("profiles")
-    .select("locale, allergies, created_at")
+    .select("locale, allergies, created_at, gender")
     .eq("id", userId)
     .maybeSingle();
+  const parsed = data?.gender ? parseGenderInput(data.gender) : null;
+  const userGender =
+    parsed === "male" || parsed === "female" ? parsed : null;
   return {
     savedLocale: resolveLocale(data?.locale),
     allergies:
@@ -94,6 +100,7 @@ async function getProfileLocaleAndSafety(
         : null,
     createdAt:
       typeof data?.created_at === "string" ? data.created_at : null,
+    userGender,
   };
 }
 
@@ -123,10 +130,13 @@ function buildStateSummary(
   extras?: {
     allergies?: string | null;
     familiarityStage?: string | null;
+    userGender?: ProfileGenderValue | null;
   },
 ): string {
   const parts: string[] = [];
   if (extras?.allergies) parts.push(`allergies: ${extras.allergies}`);
+  if (extras?.userGender === "male") parts.push("user_gender: male");
+  if (extras?.userGender === "female") parts.push("user_gender: female");
   if (state?.motivation_style) parts.push(`motivation style: ${state.motivation_style}`);
   if (state && state.training_focus.length > 0)
     parts.push(`training focus: ${state.training_focus.join(", ")}`);
@@ -377,6 +387,7 @@ async function* streamKaiosCoachReply(
     const userState = buildStateSummary(state, fitnessContext, {
       allergies: profileMeta.allergies,
       familiarityStage,
+      userGender: profileMeta.userGender,
     });
 
     const { error: userInsertError } = await admin.from("chat_messages").insert({
@@ -657,13 +668,15 @@ export async function* streamCoachReply(
     }
     const canary = createCanary();
 
-    const [locale, state, sync, memories, fitnessContext] = await Promise.all([
-      getLocale(admin, params.userId),
+    const [profileMeta, state, sync, memories, fitnessContext] = await Promise.all([
+      getProfileLocaleAndSafety(admin, params.userId),
       getCoachingState(admin, params.userId),
       syncAgents({ activeCoachId: params.coachId }),
       getRecentMemories(params.userId, 3),
       buildFitnessContextSummary(params.userId).catch(() => ""),
     ]);
+
+    const locale = profileMeta.savedLocale;
 
     const history = await fetchRecentTurns(admin, params.userId, params.coachId);
 
@@ -672,7 +685,10 @@ export async function* streamCoachReply(
       coachName: coach.name,
       coachPersonality: coach.personality,
       locale,
-      stateSummary: buildStateSummary(state, fitnessContext),
+      stateSummary: buildStateSummary(state, fitnessContext, {
+        allergies: profileMeta.allergies,
+        userGender: profileMeta.userGender,
+      }),
     });
     // Condensed memory is derived from prior user messages -> untrusted data.
     // Stable wrap so the memory block stays byte-identical between condensations
