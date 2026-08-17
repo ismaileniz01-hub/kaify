@@ -231,7 +231,7 @@ export async function getHistory(
 
   return (data ?? []).slice().reverse().map((row) => {
     const dto = mapChatMessageRow(row);
-    return { ...dto, content: stripSpotlightScaffolding(dto.content, true) };
+    return { ...dto, content: stripSpotlightScaffolding(dto.content ?? "", true) };
   });
 }
 
