@@ -226,7 +226,8 @@ export async function analyzePhoto(
     messageType,
   });
 
-  if (reusedRow) {
+  const hasCaption = Boolean(params.note?.trim());
+  if (reusedRow && !hasCaption) {
     const analysis = extractAnalysisFromPayload(reusedRow.payload);
     const quality = extractQuality(reusedRow.payload);
     if (analysis && quality) {

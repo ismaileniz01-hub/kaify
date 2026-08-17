@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useCallback } from "react";
-import { Camera, Mic, Send } from "lucide-react";
+import { Camera, Mic, Send, X } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
 import { speechLocaleForLang } from "@/lib/speech-locale";
@@ -17,6 +17,9 @@ type ChatComposerProps = {
   onVoiceError?: (message: string) => void;
   /** Demo / icon-only send button */
   compactSend?: boolean;
+  /** Pending photo attached to the composer (not yet sent). */
+  attachmentPreviewUrl?: string | null;
+  onRemoveAttachment?: () => void;
 };
 
 export function ChatComposer({
@@ -28,6 +31,8 @@ export function ChatComposer({
   onCameraClick,
   onVoiceError,
   compactSend = false,
+  attachmentPreviewUrl = null,
+  onRemoveAttachment,
 }: ChatComposerProps) {
   const { t, lang } = useLang();
 
@@ -83,15 +88,19 @@ export function ChatComposer({
 
   const placeholder = isListening
     ? interimTranscript || t("chat.voice.listening")
-    : t("chat.placeholder.chat");
+    : attachmentPreviewUrl
+      ? t("chat.photo.caption_placeholder")
+      : t("chat.placeholder.chat");
 
   const displayValue =
     isListening && interimTranscript
       ? [input, interimTranscript].filter(Boolean).join(input ? " " : "")
       : input;
 
+  const canSend = !sending && (Boolean(input.trim()) || Boolean(attachmentPreviewUrl));
+
   const fireSend = () => {
-    if (sending || !input.trim()) return;
+    if (!canSend) return;
     void hapticImpact("light");
     onSend();
   };
@@ -101,6 +110,28 @@ export function ChatComposer({
       className="chat-composer shrink-0 border-t border-white/[0.07] bg-[#0a0812]/95 px-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl"
       aria-busy={sending}
     >
+      {attachmentPreviewUrl ? (
+        <div className="mb-2 flex items-center gap-2 rounded-2xl border border-white/10 bg-black/35 p-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={attachmentPreviewUrl}
+            alt=""
+            className="h-14 w-14 shrink-0 rounded-xl object-cover"
+          />
+          <p className="min-w-0 flex-1 text-xs leading-snug text-zinc-400">
+            {t("chat.photo.attached")}
+          </p>
+          <button
+            type="button"
+            onClick={onRemoveAttachment}
+            disabled={sending}
+            className="touch-44 flex shrink-0 items-center justify-center rounded-xl text-zinc-400 hover:bg-white/10 hover:text-white disabled:opacity-40"
+            aria-label={t("chat.photo.remove")}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
       <div className="glass-input chat-composer__surface flex items-center gap-1.5 rounded-[1.35rem] px-1.5 py-1.5 sm:gap-2">
         {showCamera && (
           <button
@@ -121,8 +152,8 @@ export function ChatComposer({
             if (isListening) return;
             onInputChange(e.target.value);
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !sending) fireSend();
+            onKeyDown={(e) => {
+            if (e.key === "Enter" && canSend) fireSend();
           }}
           placeholder={placeholder}
           disabled={sending}
@@ -151,7 +182,7 @@ export function ChatComposer({
           <button
             type="button"
             onClick={fireSend}
-            disabled={sending || !input.trim()}
+            disabled={!canSend}
             className="touch-44 flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 text-white shadow-lg shadow-purple-950/40 active:scale-95 disabled:shadow-none disabled:opacity-35"
             aria-label={t("chat.aria.send")}
           >
@@ -161,7 +192,7 @@ export function ChatComposer({
           <button
             type="button"
             onClick={fireSend}
-            disabled={sending || !input.trim()}
+            disabled={!canSend}
             className="touch-44 shrink-0 rounded-2xl bg-gradient-to-r from-purple-500 to-violet-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-purple-950/30 active:scale-[0.97] disabled:shadow-none disabled:opacity-35"
           >
             {t("chat.send")}

@@ -82,7 +82,13 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const [hasPhotoConsent, setHasPhotoConsent] = useState<boolean | null>(null);
   const [photoConsentOpen, setPhotoConsentOpen] = useState(false);
   const pendingPhotoRef = useRef<File | null>(null);
-  const photoFileByMsgIdRef = useRef<Map<string, File>>(new Map());
+  const photoFileByMsgIdRef = useRef<Map<string, { file: File; note: string }>>(
+    new Map(),
+  );
+  const [composerPhoto, setComposerPhoto] = useState<{
+    file: File;
+    url: string;
+  } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -99,6 +105,12 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
       }
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (composerPhoto?.url) URL.revokeObjectURL(composerPhoto.url);
+    };
+  }, [composerPhoto?.url]);
 
   useEffect(() => {
     let cancelled = false;
@@ -310,8 +322,16 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   };
 
   const handleSend = async () => {
+    if (sending) return;
     const text = input.trim();
-    if (!text || sending) return;
+    if (composerPhoto) {
+      const file = composerPhoto.file;
+      setComposerPhoto(null);
+      setInput("");
+      await uploadPhoto(file, { note: text });
+      return;
+    }
+    if (!text) return;
     setInput("");
     await sendTextMessage(text);
   };
@@ -319,8 +339,13 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const handleRetry = (msg: LiveMessage) => {
     if (sending || msg.from !== "user" || msg.status !== "failed") return;
     if (msg.photoRetry) {
-      const file = photoFileByMsgIdRef.current.get(msg.id);
-      if (file) void uploadPhoto(file, { existingUserMsgId: msg.id });
+      const pending = photoFileByMsgIdRef.current.get(msg.id);
+      if (pending) {
+        void uploadPhoto(pending.file, {
+          existingUserMsgId: msg.id,
+          note: pending.note,
+        });
+      }
       return;
     }
     if (
@@ -335,7 +360,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
 
   const uploadPhoto = async (
     file: File,
-    options?: { existingUserMsgId?: string },
+    options?: { existingUserMsgId?: string; note?: string },
   ) => {
     if (!VISION_COACHES.has(coachId) || sending) return;
 
@@ -354,9 +379,10 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     setQuotaWarning(null);
     onCoachTyping?.(true);
 
+    const caption = options?.note?.trim() ?? "";
     const photoUserId = options?.existingUserMsgId ?? `photo-user-${Date.now()}`;
     const coachPlaceholderId = `photo-coach-${Date.now()}`;
-    photoFileByMsgIdRef.current.set(photoUserId, file);
+    photoFileByMsgIdRef.current.set(photoUserId, { file, note: caption });
 
     if (options?.existingUserMsgId) {
       setMessages((prev) => [
@@ -379,7 +405,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         {
           id: photoUserId,
           from: "user",
-          text: t("chat.photo.sent"),
+          text: caption || t("chat.photo.sent"),
           time: formatMessageTime(undefined, lang),
           status: "sending",
           photoRetry: true,
@@ -435,6 +461,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         }>(`/api/chat/${coachId}/analyze`, {
           imageBase64: base64,
           mimeType,
+          ...(caption ? { note: caption.slice(0, 500) } : {}),
         });
 
         photoFileByMsgIdRef.current.delete(photoUserId);
@@ -477,6 +504,20 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     reader.readAsDataURL(file);
   };
 
+  const attachPhotoToComposer = (file: File) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      setError(t("chat.error.photoFormat"));
+      return;
+    }
+    if (file.size > 9 * 1024 * 1024) {
+      setError(t("chat.error.photoSize"));
+      return;
+    }
+    setError(null);
+    setComposerPhoto({ file, url: URL.createObjectURL(file) });
+  };
+
   const handlePhoto = (file: File) => {
     if (hasPhotoConsent === false) {
       pendingPhotoRef.current = file;
@@ -488,7 +529,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
       setPhotoConsentOpen(true);
       return;
     }
-    void uploadPhoto(file);
+    attachPhotoToComposer(file);
   };
 
   const youLabel = t("chat.a11y.you");
@@ -506,7 +547,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           setPhotoConsentOpen(false);
           const file = pendingPhotoRef.current;
           pendingPhotoRef.current = null;
-          if (file) void uploadPhoto(file);
+          if (file) attachPhotoToComposer(file);
         }}
       />
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 pb-36">
@@ -697,6 +738,8 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         showCamera={VISION_COACHES.has(coachId)}
         onCameraClick={() => fileRef.current?.click()}
         onVoiceError={setError}
+        attachmentPreviewUrl={composerPhoto?.url ?? null}
+        onRemoveAttachment={() => setComposerPhoto(null)}
       />
       <input
         ref={fileRef}

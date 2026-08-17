@@ -82,7 +82,7 @@ export const ModelRouter = {
     const profile = ANALYSIS_PERSONAS[params.persona];
 
     const raw = await generateGeminiJson({
-      prompt: buildVisionPrompt(profile.kind),
+      prompt: buildVisionPrompt(profile.kind, params.userNote),
       image: params.image,
       temperature: 0.2,
       signal: params.signal,
