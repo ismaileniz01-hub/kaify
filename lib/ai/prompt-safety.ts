@@ -138,6 +138,8 @@ export function sanitizeUserText(
     text = text.replace(pattern, " ");
   }
 
+  text = stripSpotlightScaffolding(text);
+
   text = redactPersonalIdentifiers(text);
 
   // Collapse runaway whitespace used to push instructions out of view.
@@ -221,7 +223,51 @@ export function buildCanaryReminder(canary: string): string {
 // 5. Output scrubbing / leak detection
 // ---------------------------------------------------------------------------
 
-/** True when the model output contains the secret canary (prompt leaked). */
+/** Spotlight / history wrappers the model must never echo. */
+const SPOTLIGHT_BARE_RE =
+  /\b(?:BEGIN|END)_(?:ASSISTANT_HISTORY|USER_MESSAGE|USER_CONTEXT|USER_NOTE|ANALYSIS_JSON)_[a-f0-9]{8,16}\b/gi;
+
+/**
+ * Strip leaked BEGIN/END delimiter scaffolding from model or history text.
+ * `trimEnds` only for final persist — streaming keeps interior whitespace.
+ */
+export function stripSpotlightScaffolding(
+  text: string,
+  trimEnds = false,
+): string {
+  let out = text
+    .replace(/<<<(?:BEGIN|END)_[A-Za-z0-9_]+>>>\n?/g, "")
+    .replace(SPOTLIGHT_BARE_RE, "");
+  if (trimEnds) {
+    out = out.replace(/^\s+/, "").replace(/\s+$/, "");
+  }
+  return out;
+}
+
+function holdIncompleteSpotlight(text: string): string {
+  const idx = text.lastIndexOf("<<<");
+  if (idx === -1) return text;
+  const tail = text.slice(idx);
+  if (tail.includes(">>>")) return text;
+  if (/^<<<(?:BEGIN|END)?_?[A-Za-z0-9_]*$/.test(tail)) {
+    return text.slice(0, idx);
+  }
+  return text;
+}
+
+/**
+ * Visible increment after stripping scaffolding, so leaked tags never stream.
+ */
+export function visibleStreamDelta(
+  previousRaw: string,
+  nextRaw: string,
+): string {
+  const prev = stripSpotlightScaffolding(holdIncompleteSpotlight(previousRaw));
+  const next = stripSpotlightScaffolding(holdIncompleteSpotlight(nextRaw));
+  if (next.startsWith(prev)) return next.slice(prev.length);
+  return "";
+}
+
 export function containsCanary(output: string, canary: string): boolean {
   if (!canary) return false;
   return output.includes(canary);
@@ -236,8 +282,7 @@ export function scrubModelOutput(output: string, canary?: string): string {
   if (canary) {
     text = text.split(canary).join("");
   }
-  text = text.replace(/<<<(?:BEGIN|END)_[A-Za-z0-9_]+>>>/g, "");
-  return text.trim();
+  return stripSpotlightScaffolding(text, true);
 }
 
 // ---------------------------------------------------------------------------

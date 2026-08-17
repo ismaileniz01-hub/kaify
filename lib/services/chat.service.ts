@@ -37,6 +37,8 @@ import {
   detectInjectionSignals,
   sanitizeUserText,
   scrubModelOutput,
+  stripSpotlightScaffolding,
+  visibleStreamDelta,
   wrapUntrustedInput,
   wrapUntrustedInputStable,
 } from "@/lib/ai/prompt-safety";
@@ -227,7 +229,10 @@ export async function getHistory(
     throw new ApiError("INTERNAL_ERROR", aiCopy(undefined, "history_failed"));
   }
 
-  return (data ?? []).slice().reverse().map(mapChatMessageRow);
+  return (data ?? []).slice().reverse().map((row) => {
+    const dto = mapChatMessageRow(row);
+    return { ...dto, content: stripSpotlightScaffolding(dto.content, true) };
+  });
 }
 
 export type StreamReplyParams = {
@@ -412,9 +417,10 @@ async function* streamKaiosCoachReply(
           .limit(1)
           .maybeSingle();
         if (existingCoach?.content) {
+          const replay = stripSpotlightScaffolding(existingCoach.content, true);
           yield {
             event: "delta",
-            data: { content: existingCoach.content },
+            data: { content: replay },
           };
           yield {
             event: "done",
@@ -424,7 +430,7 @@ async function* streamKaiosCoachReply(
               payload: existingCoach.payload,
               warning_trigger: null,
               replayed: true,
-              content: existingCoach.content,
+              content: replay,
             },
           };
           return;
@@ -780,9 +786,10 @@ export async function* streamCoachReply(
           .limit(1)
           .maybeSingle();
         if (existingCoach?.content) {
+          const replay = stripSpotlightScaffolding(existingCoach.content, true);
           yield {
             event: "delta",
-            data: { content: existingCoach.content },
+            data: { content: replay },
           };
           yield {
             event: "done",
@@ -792,7 +799,7 @@ export async function* streamCoachReply(
               payload: existingCoach.payload,
               warning_trigger: null,
               replayed: true,
-              content: existingCoach.content,
+              content: replay,
             },
           };
           return;
@@ -818,6 +825,7 @@ export async function* streamCoachReply(
         return;
       }
       if (event.type === "delta") {
+        const previous = assistantText;
         const next = assistantText + event.content;
         // Canary leak = the system prompt is being exfiltrated. Abort before
         // the delta reaches the client.
@@ -832,7 +840,10 @@ export async function* streamCoachReply(
           );
         }
         assistantText = next;
-        yield { event: "delta", data: { content: event.content } };
+        const visible = visibleStreamDelta(previous, next);
+        if (visible) {
+          yield { event: "delta", data: { content: visible } };
+        }
       } else if (event.type === "done") {
         totalTokens = event.usage?.total_tokens ?? 0;
         if (event.finishReason) streamFinishReason = event.finishReason;

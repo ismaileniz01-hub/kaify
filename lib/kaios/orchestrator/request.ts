@@ -14,6 +14,7 @@ import { extractJsonObject } from "@/lib/ai/extract-json";
 import {
   containsCanary,
   scrubModelOutput,
+  visibleStreamDelta,
 } from "@/lib/ai/prompt-safety";
 import type { ChatTurn, TokenUsage } from "@/lib/ai/types";
 import { buildRuntimeContext } from "@/lib/kaios/context/builder";
@@ -265,6 +266,7 @@ export async function* orchestrateCoachChat(
         return;
       }
       if (event.type === "delta") {
+        const previous = assistantText;
         const next = assistantText + event.content;
         if (containsCanary(next, compiled.canary)) {
           logger.error("kaios: canary leak blocked", {
@@ -295,7 +297,10 @@ export async function* orchestrateCoachChat(
           return;
         }
         assistantText = next;
-        yield { event: "delta", data: { content: event.content } };
+        const visible = visibleStreamDelta(previous, next);
+        if (visible) {
+          yield { event: "delta", data: { content: visible } };
+        }
       } else if (event.type === "done") {
         providerUsage = event.usage;
         usageTokens = event.usage?.total_tokens ?? 0;

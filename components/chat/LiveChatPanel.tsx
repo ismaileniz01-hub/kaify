@@ -261,8 +261,9 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
               streamRafRef.current = null;
             }
             const finalText =
-              streamTextRef.current ||
-              (typeof data.content === "string" ? data.content : "");
+              typeof data.content === "string" && data.content.trim().length > 0
+                ? data.content
+                : streamTextRef.current || "";
             if (data.warning_trigger === "LIMIT_80" || data.warning_trigger === "LIMIT_100") {
               setQuotaWarning(data.warning_trigger);
             }
