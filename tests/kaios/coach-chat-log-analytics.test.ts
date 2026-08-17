@@ -5,6 +5,10 @@ import {
   parseWorkoutCompletion,
   patchForCoachChatLog,
 } from "@/lib/kaios/analytics/chat-log";
+import {
+  estimateCaloriesFromWorkoutPlan,
+  parseCaloriesBurnedFromText,
+} from "@/lib/kaios/analytics/workout-log";
 
 describe("Alex workout completion → analytics patch", () => {
   it("detects Turkish and English session logs", () => {
@@ -36,17 +40,21 @@ describe("Alex workout completion → analytics patch", () => {
     expect(
       patchForCoachChatLog("alex", "I finished my workout"),
     ).toMatchObject({
-      patch: { workoutsCompleted: 1, caloriesBurned: 350 },
+      patch: { workoutsCompleted: 1 },
       tool: "logWorkout",
     });
     expect(
+      patchForCoachChatLog("alex", "I finished my workout")?.patch
+        .caloriesBurned,
+    ).toBeUndefined();
+    expect(
       patchForCoachChatLog("alex", "antrenman bitti", {
-        goal: "recomposition",
         currentWorkouts: 0,
         currentBurned: 0,
+        sessionKcal: 380,
       }),
     ).toMatchObject({
-      patch: { workoutsCompleted: 1, caloriesBurned: 400 },
+      patch: { workoutsCompleted: 1, caloriesBurned: 380 },
     });
     expect(patchForCoachChatLog("kai", "antrenmanı bitirdim")).toBeNull();
     expect(patchForCoachChatLog("leo", "antrenmanı bitirdim")).toBeNull();
@@ -73,5 +81,33 @@ describe("Maya hydration log → analytics patch", () => {
       patch: { waterLiters: 2 },
     });
     expect(patchForCoachChatLog("alex", "2 litre su içtim")).toBeNull();
+  });
+});
+
+describe("session burn without a stock 400", () => {
+  it("does not invent kcal from the goal", () => {
+    expect(parseCaloriesBurnedFromText("Güzel iş reis")).toBeNull();
+  });
+
+  it("reads a named burn from coach copy", () => {
+    expect(
+      parseCaloriesBurnedFromText("Bu seans yaklaşık 360 kcal yaktın."),
+    ).toBe(360);
+  });
+
+  it("estimates from the programmed session + bodyweight", () => {
+    const kcal = estimateCaloriesFromWorkoutPlan(
+      {
+        exercises: [
+          { name: "Bench Press", sets: 4, reps: "8" },
+          { name: "Row", sets: 4, reps: "10" },
+          { name: "Incline walk", sets: 1, reps: "15 min" },
+        ],
+      },
+      80,
+    );
+    expect(kcal).toBeGreaterThan(200);
+    expect(kcal).toBeLessThan(700);
+    expect(kcal).not.toBe(400);
   });
 });

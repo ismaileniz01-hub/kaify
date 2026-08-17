@@ -408,6 +408,7 @@ export async function* orchestrateCoachChat(
       userId: input.userId,
       coach: input.coachId,
       userMessage: input.message,
+      assistantText,
       alreadyConfirming: false,
     });
     actionTruth = [...actionTruth, ...coachLog.truths];
