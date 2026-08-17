@@ -24,7 +24,7 @@ import { formatTime } from "@/lib/i18n/format";
 import { useKai } from "@/lib/kai-context";
 import { useSession } from "@/lib/session-context";
 import { ChatComposer } from "@/components/chat/ChatComposer";
-import { errorToMessage, quotaResourceFromError } from "@/lib/i18n/api-error";
+import { errorToMessage, quotaErrorMessage, quotaResourceFromError, visionQuotaResourceFromError, isAnalyzeQuotaDenied } from "@/lib/i18n/api-error";
 import { MessageCircle } from "lucide-react";
 import { prefersReducedMotion } from "@/lib/motion/perf-guards";
 import {
@@ -455,21 +455,47 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         const base64 = result.split(",")[1] ?? "";
         const mimeType = file.type as "image/jpeg" | "image/png" | "image/webp";
 
-        const analysis = await apiPost<{
-          summary: string;
-          messageId: string | null;
-          analysis: unknown;
-          confirmation?: {
-            pendingId: string;
-            summary: string;
-            content: string;
-            messageId: string;
-          } | null;
-        }>(`/api/chat/${coachId}/analyze`, {
+        const analysis = await apiPost<
+          | {
+              quotaExceeded: true;
+              resource: "maya_photo" | "leo_photo" | "text_tokens";
+            }
+          | {
+              summary: string;
+              messageId: string | null;
+              analysis: unknown;
+              confirmation?: {
+                pendingId: string;
+                summary: string;
+                content: string;
+                messageId: string;
+              } | null;
+            }
+        >(`/api/chat/${coachId}/analyze`, {
           imageBase64: base64,
           mimeType,
           ...(caption ? { note: caption.slice(0, 500) } : {}),
         });
+
+        if (isAnalyzeQuotaDenied(analysis)) {
+          const text = quotaErrorMessage(analysis.resource, t);
+          setErrorUpgrade(true);
+          setError(text);
+          photoFileByMsgIdRef.current.delete(photoUserId);
+          setMessages((prev) =>
+            markMessageDelivered(
+              prev.map((msg) =>
+                msg.id === coachPlaceholderId
+                  ? { ...msg, text, streaming: false }
+                  : msg.id === photoUserId
+                    ? { ...msg, photoRetry: undefined }
+                    : msg,
+              ),
+              photoUserId,
+            ),
+          );
+          return;
+        }
 
         photoFileByMsgIdRef.current.delete(photoUserId);
         setMessages((prev) =>
@@ -502,10 +528,29 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           ),
         );
       } catch (err) {
-        const quota = quotaResourceFromError(err);
-        setErrorUpgrade(Boolean(quota));
-        setError(errorToMessage(err, t));
-        failPhotoMessage();
+        const quota = visionQuotaResourceFromError(coachId, err);
+        if (quota) {
+          const text = quotaErrorMessage(quota, t);
+          setErrorUpgrade(true);
+          setError(text);
+          photoFileByMsgIdRef.current.delete(photoUserId);
+          setMessages((prev) =>
+            markMessageDelivered(
+              prev.map((msg) =>
+                msg.id === coachPlaceholderId
+                  ? { ...msg, text, streaming: false }
+                  : msg.id === photoUserId
+                    ? { ...msg, photoRetry: undefined }
+                    : msg,
+              ),
+              photoUserId,
+            ),
+          );
+        } else {
+          setErrorUpgrade(false);
+          setError(errorToMessage(err, t));
+          failPhotoMessage();
+        }
       } finally {
         clearTyping();
       }
@@ -583,6 +628,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         )}
         {error && (
           <InlineAlert
+            variant={errorUpgrade ? "info" : "error"}
             message={error}
             dismissLabel={t("common.dismiss")}
             actionHref={errorUpgrade ? "/pricing" : undefined}

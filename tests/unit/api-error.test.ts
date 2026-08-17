@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { apiErrorMessage, errorToMessage } from "@/lib/i18n/api-error";
+import {
+  apiErrorMessage,
+  errorToMessage,
+  isAnalyzeQuotaDenied,
+  visionQuotaResourceFromError,
+} from "@/lib/i18n/api-error";
 
 const t = (key: string) => `L:${key}`;
 
@@ -34,5 +39,23 @@ describe("api error taxonomy (UX-004)", () => {
         t,
       ),
     ).toBe("L:errors.QUOTA_MAYA_PHOTO");
+    expect(
+      errorToMessage(
+        {
+          code: "QUOTA_EXCEEDED",
+          details: { resource: "maya_photo" },
+        },
+        t,
+      ),
+    ).toBe("L:errors.QUOTA_MAYA_PHOTO");
+  });
+
+  it("maps Maya analyze quota without details to the photo limit copy", () => {
+    expect(
+      visionQuotaResourceFromError("maya", { code: "QUOTA_EXCEEDED" }),
+    ).toBe("maya_photo");
+    expect(
+      isAnalyzeQuotaDenied({ quotaExceeded: true, resource: "maya_photo" }),
+    ).toBe(true);
   });
 });

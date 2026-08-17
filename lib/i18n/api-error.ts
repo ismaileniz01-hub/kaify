@@ -16,6 +16,7 @@ const KNOWN_CODES = [
   "VALIDATION_ERROR",
   "UNAUTHORIZED",
   "FORBIDDEN",
+  "QUOTA_EXCEEDED",
   "STEP_UP_REQUIRED",
   "NOT_FOUND",
   "CONFLICT",
@@ -34,6 +35,18 @@ const KNOWN_CODES = [
 
 export type QuotaResource = "maya_photo" | "leo_photo" | "text_tokens";
 
+export type AnalyzeQuotaDenied = {
+  quotaExceeded: true;
+  resource: QuotaResource;
+};
+
+function errorCode(error: unknown): string {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return "";
+  }
+  return String((error as { code?: unknown }).code);
+}
+
 function detailsRecord(error: unknown): Record<string, unknown> | null {
   if (typeof error !== "object" || error === null) return null;
   if (!("details" in error)) return null;
@@ -44,24 +57,50 @@ function detailsRecord(error: unknown): Record<string, unknown> | null {
   return details as Record<string, unknown>;
 }
 
-/** Quota exhaustion is FORBIDDEN + LIMIT_100, not a generic permission error. */
-export function quotaResourceFromError(error: unknown): QuotaResource | null {
-  if (typeof error !== "object" || error === null) return null;
-  const code =
-    "code" in error ? String((error as { code?: unknown }).code) : "";
-  if (code !== "FORBIDDEN") return null;
-  const details = detailsRecord(error);
-  if (!details) return null;
-  if (details.warning_trigger !== "LIMIT_100") return null;
-  const resource = details.resource;
+function asQuotaResource(value: unknown): QuotaResource | null {
   if (
-    resource === "maya_photo" ||
-    resource === "leo_photo" ||
-    resource === "text_tokens"
+    value === "maya_photo" ||
+    value === "leo_photo" ||
+    value === "text_tokens"
   ) {
-    return resource;
+    return value;
   }
   return null;
+}
+
+/** Photo-analyze success envelope when the daily/weekly photo quota is used up. */
+export function isAnalyzeQuotaDenied(value: unknown): value is AnalyzeQuotaDenied {
+  if (typeof value !== "object" || value === null) return false;
+  const record = value as { quotaExceeded?: unknown; resource?: unknown };
+  return record.quotaExceeded === true && asQuotaResource(record.resource) !== null;
+}
+
+/** Quota exhaustion is QUOTA_EXCEEDED (or legacy FORBIDDEN + resource), not a generic permission error. */
+export function quotaResourceFromError(error: unknown): QuotaResource | null {
+  const code = errorCode(error);
+  if (code !== "FORBIDDEN" && code !== "QUOTA_EXCEEDED") return null;
+  const details = detailsRecord(error);
+  const fromDetails = asQuotaResource(details?.resource);
+  if (fromDetails) return fromDetails;
+  if (code === "QUOTA_EXCEEDED") return "text_tokens";
+  return null;
+}
+
+/** Photo analyze quota without a resource still maps to that coach's photo limit. */
+export function visionQuotaResourceFromError(
+  coachId: string,
+  error: unknown,
+): QuotaResource | null {
+  const fromError = quotaResourceFromError(error);
+  if (fromError === "maya_photo" || fromError === "leo_photo") return fromError;
+  if (errorCode(error) !== "QUOTA_EXCEEDED") return fromError;
+  if (coachId === "maya") return "maya_photo";
+  if (coachId === "leo") return "leo_photo";
+  return fromError;
+}
+
+export function isQuotaExhaustedError(error: unknown): boolean {
+  return quotaResourceFromError(error) !== null;
 }
 
 function quotaMessageKey(resource: QuotaResource): string {
@@ -75,11 +114,16 @@ function quotaMessageKey(resource: QuotaResource): string {
   }
 }
 
+export function quotaErrorMessage(resource: QuotaResource, t: Translator): string {
+  return t(quotaMessageKey(resource));
+}
+
 /** Translates an API error code into a localized, user-facing message. */
 export function apiErrorMessage(
   code: string | null | undefined,
   t: Translator,
 ): string {
+  if (code === "QUOTA_EXCEEDED") return t("errors.QUOTA_TEXT");
   const normalized =
     code && (KNOWN_CODES as readonly string[]).includes(code)
       ? code
@@ -90,10 +134,7 @@ export function apiErrorMessage(
 /** Extracts a `code` from a thrown error (e.g. ApiClientError) and localizes it. */
 export function errorToMessage(error: unknown, t: Translator): string {
   const quota = quotaResourceFromError(error);
-  if (quota) return t(quotaMessageKey(quota));
-  const code =
-    typeof error === "object" && error !== null && "code" in error
-      ? String((error as { code?: unknown }).code)
-      : undefined;
+  if (quota) return quotaErrorMessage(quota, t);
+  const code = errorCode(error) || undefined;
   return apiErrorMessage(code, t);
 }

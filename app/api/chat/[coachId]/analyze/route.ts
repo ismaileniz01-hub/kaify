@@ -2,6 +2,11 @@ import { ApiError } from "@/lib/api/errors";
 import { defineDynamicRoute } from "@/lib/api/route-handler";
 import { analyzePhoto } from "@/lib/domains/ai";
 import {
+  isQuotaExhaustedError,
+  visionQuotaResourceFromError,
+  type AnalyzeQuotaDenied,
+} from "@/lib/i18n/api-error";
+import {
   MAX_JSON_BODY_ANALYZE,
   parseJsonWithLimit,
 } from "@/lib/security/body-limit";
@@ -58,15 +63,30 @@ export const POST = defineDynamicRoute<{ coachId: string }>(
         note: parsed.data.note ?? null,
         imageLen: parsed.data.imageBase64.length,
       },
-      handler: () =>
-        analyzePhoto({
-          userId: user.id,
-          coachId: coach.data,
-          imageBase64: parsed.data.imageBase64,
-          mimeType: parsed.data.mimeType,
-          note: parsed.data.note,
-          signal: request.signal,
-        }),
+      handler: async () => {
+        try {
+          return await analyzePhoto({
+            userId: user.id,
+            coachId: coach.data,
+            imageBase64: parsed.data.imageBase64,
+            mimeType: parsed.data.mimeType,
+            note: parsed.data.note,
+            signal: request.signal,
+          });
+        } catch (error) {
+          // HTTP 200 + flag: quota is a product state, not a failed resource.
+          if (isQuotaExhaustedError(error)) {
+            const denied: AnalyzeQuotaDenied = {
+              quotaExceeded: true,
+              resource:
+                visionQuotaResourceFromError(coach.data, error) ??
+                (coach.data === "leo" ? "leo_photo" : "maya_photo"),
+            };
+            return denied;
+          }
+          throw error;
+        }
+      },
     });
   },
 );

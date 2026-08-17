@@ -58,7 +58,7 @@ export async function checkAndIncrementUsage(
       // Null / unpaid tier has no tier_limits row — deny cleanly instead of 500.
       if (/tier limits not configured/i.test(error.message)) {
         throw new ApiError(
-          "FORBIDDEN",
+          "QUOTA_EXCEEDED",
           "Aktif bir planın yok. Devam etmek için abone ol.",
           {
             warning_trigger: "LIMIT_100",

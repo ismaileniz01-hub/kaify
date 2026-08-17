@@ -22,7 +22,6 @@ import {
   refundQuota,
   checkQuotaGuard,
 } from "@/lib/ai/quota-guard";
-import { ApiError } from "@/lib/api/errors";
 
 function allowResult(overrides: Record<string, unknown> = {}) {
   return {
@@ -57,13 +56,13 @@ describe("quota-guard integrity", () => {
     expect(result.allowed).toBe(true);
   });
 
-  it("reserveQuota throws FORBIDDEN when the limit is exhausted", async () => {
+  it("reserveQuota throws QUOTA_EXCEEDED when the limit is exhausted", async () => {
     checkAndIncrementUsage.mockResolvedValue(
       allowResult({ allowed: false, warning_trigger: "LIMIT_100", used: 100, remaining: 0 }),
     );
     await expect(
       reserveQuota({ userId: "u1", resource: "text_tokens", amount: 500 }),
-    ).rejects.toBeInstanceOf(ApiError);
+    ).rejects.toMatchObject({ code: "QUOTA_EXCEEDED" });
   });
 
   it("settleQuota is a no-op for a non-positive amount", async () => {
@@ -102,7 +101,7 @@ describe("quota-guard integrity", () => {
     checkAndIncrementUsage.mockResolvedValue(allowResult({ allowed: false }));
     await expect(
       checkQuotaGuard({ userId: "u1", resource: "maya_photo" }),
-    ).rejects.toBeInstanceOf(ApiError);
+    ).rejects.toMatchObject({ code: "QUOTA_EXCEEDED" });
     expect(checkAndIncrementUsage).toHaveBeenCalledWith({
       userId: "u1",
       resource: "maya_photo",

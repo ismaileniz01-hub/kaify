@@ -28,7 +28,7 @@ function assertAllowed(
   locale?: string,
 ): void {
   if (!result.allowed) {
-    throw new ApiError("FORBIDDEN", quotaMessage(resource, locale), {
+    throw new ApiError("QUOTA_EXCEEDED", quotaMessage(resource, locale), {
       warning_trigger: result.warning_trigger ?? "LIMIT_100",
       resource: result.resource,
       used: result.used,
