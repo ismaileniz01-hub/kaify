@@ -244,6 +244,7 @@ describe("KAIOS personality prompt contracts", () => {
       });
       expect(blob).toMatch(/maya\.mode\.food_log|no greeting reset/i);
       expect(blob).toMatch(/feminine_coach|male_user/i);
+      expect(blob).toMatch(/four labeled macros|confirmation/i);
     });
   });
 

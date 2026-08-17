@@ -563,7 +563,11 @@ async function* streamKaiosCoachReply(
       },
     };
 
-    if (inserted?.id && meta.messageType !== "text" && meta.payload != null) {
+    if (
+      inserted?.id &&
+      meta.payload != null &&
+      (meta.messageType !== "text" || meta.confirmation)
+    ) {
       yield {
         event: "card",
         data: {

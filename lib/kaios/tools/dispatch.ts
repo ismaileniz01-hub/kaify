@@ -3,7 +3,12 @@
  * Prefer 0 tools; at most one read prefetch + one write/validate sequence.
  */
 
-import type { CoachId, Intent } from "@/lib/kaios/routing/intent";
+import {
+  looksLikeFoodConsumption,
+  type CoachId,
+  type Intent,
+} from "@/lib/kaios/routing/intent";
+import { extractMealMacrosFromCoachText } from "@/lib/kaios/nutrition/parse-macros";
 import {
   executeTool,
   type ToolName,
@@ -319,5 +324,61 @@ export async function dispatchPostModelTools(input: {
     }
   }
 
+  return out;
+}
+
+/**
+ * True when Maya just estimated a logged meal and we should offer analytics save.
+ * Does not fire on general nutrition Q&A (protein targets, meal plans).
+ */
+export function macrosForMayaFoodLogConfirm(input: {
+  coach: CoachId;
+  userMessage: string;
+  assistantText: string;
+  alreadyConfirming?: boolean;
+}): ReturnType<typeof extractMealMacrosFromCoachText> {
+  if (input.alreadyConfirming) return null;
+  if (input.coach !== "maya") return null;
+  if (!looksLikeFoodConsumption(input.userMessage)) return null;
+  return extractMealMacrosFromCoachText(input.assistantText);
+}
+
+/**
+ * After an unstructured Maya food-log reply, queue pending meal confirmation
+ * from the numbers she already spoke — no second model call.
+ */
+export async function maybeQueueMayaFoodLogConfirmation(input: {
+  userId: string;
+  coach: CoachId;
+  userMessage: string;
+  assistantText: string;
+  alreadyConfirming?: boolean;
+}): Promise<DispatchResult> {
+  const out: DispatchResult = { truths: [], toolResults: [], knowledgeLines: [] };
+  const macros = macrosForMayaFoodLogConfirm(input);
+  if (!macros) return out;
+  if (!isToolAllowedForCoach(input.coach, "saveMealMacros")) return out;
+
+  const result = await executeTool(input.userId, {
+    name: "saveMealMacros",
+    args: macros,
+  });
+  out.toolResults.push({ name: "saveMealMacros", result });
+  const truth = resultToTruth("saveMealMacros", result);
+  out.truths.push(truth);
+  if (
+    truth.status === "PENDING_CONFIRMATION" &&
+    result.ok &&
+    result.data &&
+    typeof result.data === "object"
+  ) {
+    const data = result.data as { pendingId?: string; message?: string };
+    if (typeof data.pendingId === "string") {
+      out.confirmation = {
+        pendingId: data.pendingId,
+        summary: `${macros.calories} kcal · P${macros.protein} C${macros.carbs} F${macros.fat}`,
+      };
+    }
+  }
   return out;
 }

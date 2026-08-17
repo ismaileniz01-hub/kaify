@@ -35,6 +35,7 @@ import {
 } from "@/lib/kaios/telemetry/tokens";
 import {
   dispatchPostModelTools,
+  maybeQueueMayaFoodLogConfirmation,
   prefetchToolKnowledge,
 } from "@/lib/kaios/tools/dispatch";
 import {
@@ -362,6 +363,18 @@ export async function* orchestrateCoachChat(
   });
   actionTruth = [...actionTruth, ...post.truths];
   if (post.confirmation) confirmation = post.confirmation;
+
+  if (!confirmation && assistantText.trim().length > 0) {
+    const foodLog = await maybeQueueMayaFoodLogConfirmation({
+      userId: input.userId,
+      coach: input.coachId,
+      userMessage: input.message,
+      assistantText,
+      alreadyConfirming: false,
+    });
+    actionTruth = [...actionTruth, ...foodLog.truths];
+    if (foodLog.confirmation) confirmation = foodLog.confirmation;
+  }
 
   // Downgrade invalid Alex program cards.
   const idValidationFailed = post.truths.some(

@@ -22,6 +22,7 @@ export {
   isFiniteMacro,
   macrosFromObservationEstimate,
 } from "@/lib/kaios/nutrition/provider";
+export { extractMealMacrosFromCoachText } from "@/lib/kaios/nutrition/parse-macros";
 export {
   ModelEstimateProvider,
   createModelEstimateProvider,
