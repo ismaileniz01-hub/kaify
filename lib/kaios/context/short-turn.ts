@@ -59,6 +59,17 @@ export function looksLikePriorProposalOrQuestion(
   return prev.length <= 600;
 }
 
+/** Prior Kai turn was pushing gym / minimum workout / training action. */
+export function looksLikeFitnessCoachingProposal(
+  previousAssistant?: string | null,
+): boolean {
+  const prev = (previousAssistant ?? "").trim();
+  if (!prev) return false;
+  return /\b(gym|workout|train|spor|salon|antrenman|minutes?|dakika|minute|hareket|move|adım|step|push|git|go\b|minimum|deneme|try|versuch|essai|prueba|prova|جرّب|دقيقة)\b/iu.test(
+    prev,
+  );
+}
+
 function wordLikeCount(message: string): number {
   const parts = message
     .trim()
@@ -183,9 +194,20 @@ export function lastAssistantMessage(
 }
 
 /** Prompt hint injected when continuation is required (locale-neutral). */
-export function continuationHint(classification: ShortTurnClassification): string {
+export function continuationHint(
+  classification: ShortTurnClassification,
+  previousAssistant?: string | null,
+): string {
   if (!classification.needsContinuation) return "";
-  return [
+  const coachingCtx = looksLikeFitnessCoachingProposal(previousAssistant);
+  const ambivalent = [
+    "AMBIVALENCE",
+    "HESITATION",
+    "UNCERTAINTY",
+    "REJECTION",
+    "CONTINUATION",
+  ].includes(classification.function);
+  const lines = [
     "turn.continuation:",
     `  user_function: ${classification.function}`,
     "  continue_previous_topic: true",
@@ -194,5 +216,15 @@ export function continuationHint(classification: ShortTurnClassification): strin
     "  interpret_elliptical_reply_against_last_assistant_turn: true",
     "  if_previous_was_a_proposal: address hesitation/resistance about THAT proposal",
     "  do_not_ask_what_they_are_curious_about",
-  ].join("\n");
+    "  complete_sentences: true — never trail off mid-thought",
+  ];
+  if (coachingCtx && ambivalent) {
+    lines.push(
+      "  coaching_thread: fitness/minimum-action — user is NOT sick unless USER_CONTEXT says so",
+      "  on_first_hesitation: stay motivating — shrink the ask, light tease, remind real goals from USER_CONTEXT when present",
+      "  do_not_defer_sport_to_later: true unless illness/injury or user explicitly opts out of coaching",
+      "  do_not_switch_to_feelings_therapy_mode: acknowledge briefly then re-anchor to the proposed minimum action",
+    );
+  }
+  return lines.join("\n");
 }

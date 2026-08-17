@@ -10,7 +10,7 @@ import {
   classifyShortTurn,
   continuationHint,
 } from "@/lib/kaios/context/short-turn";
-import { resolveIntent } from "@/lib/kaios/routing/intent";
+import { resolveIntent, outputBudgetFor } from "@/lib/kaios/routing/intent";
 import {
   isNonSwitchingExpression,
   resolveActiveLocale,
@@ -470,11 +470,14 @@ describe("compiled prompt inspection (TR EN DE ES AR)", () => {
       expect(ctx.userState ?? "").toMatch(/canonical|TRUSTED/);
       expect(ctx.maxTokens).toBeGreaterThan(0);
       expect(estimatedInputTokens).toBeGreaterThan(0);
-      expect(continuationHint(classifyShortTurn({
-        message: AMBIVALENCE_MSG[locale],
-        previousAssistantMessage: FIVE_MIN_PROPOSALS[locale],
-        hasRecentHistory: true,
-      }))).toContain("continue_previous_topic");
+      expect(continuationHint(
+        classifyShortTurn({
+          message: AMBIVALENCE_MSG[locale],
+          previousAssistantMessage: FIVE_MIN_PROPOSALS[locale],
+          hasRecentHistory: true,
+        }),
+        FIVE_MIN_PROPOSALS[locale],
+      )).toContain("continue_previous_topic");
     });
   }
 });
@@ -488,6 +491,19 @@ describe("intent: elliptical after proposal is not bare casual", () => {
       hasRecentHistory: true,
     });
     expect(intent).not.toBe("casual");
+  });
+
+  it("bilmiyorum after workout proposal gets enough output budget", () => {
+    expect(
+      outputBudgetFor("unknown", "bilmiyorum", { needsContinuation: true }),
+    ).toBeGreaterThanOrEqual(200);
+  });
+
+  it("fitness hesitation prompt keeps motivation + coaching thread", () => {
+    const { blob } = promptInspection("tr", "bilmiyorum");
+    expect(blob).toContain("kai.mode.motivation");
+    expect(blob).toMatch(/coaching_thread|do_not_defer_sport|minimum-action/i);
+    expect(blob).toMatch(/ban_topic_reset|ne hakkında konuşmak/i);
   });
 
   it("paraphrase without keyword list still continues via structure", () => {

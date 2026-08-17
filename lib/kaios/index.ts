@@ -121,6 +121,8 @@ export {
   classifyShortTurn,
   continuationHint,
   lastAssistantMessage,
+  looksLikeFitnessCoachingProposal,
+  looksLikePriorProposalOrQuestion,
   type ShortTurnFunction,
   type ShortTurnClassification,
 } from "@/lib/kaios/context/short-turn";

@@ -14,6 +14,7 @@ import {
   classifyShortTurn,
   continuationHint,
   lastAssistantMessage,
+  looksLikeFitnessCoachingProposal,
 } from "@/lib/kaios/context/short-turn";
 import type {
   BuildRuntimeContextInput,
@@ -147,14 +148,19 @@ export function buildRuntimeContext(
   let capsuleTaskMessage = input.message;
   if (shortTurn.needsContinuation && input.coach === "kai") {
     capsuleTaskMessage = `${input.message} +continuation`;
+    if (looksLikeFitnessCoachingProposal(previousAssistant)) {
+      capsuleTaskMessage += "+motivation";
+    }
   }
   const capsules = [
     ...selectActiveCapsules(input.coach, intent, capsuleTaskMessage),
   ];
-  const contHint = continuationHint(shortTurn);
+  const contHint = continuationHint(shortTurn, previousAssistant);
   if (contHint) capsules.push(contHint);
 
-  const maxTokens = outputBudgetFor(intent, input.message);
+  const maxTokens = outputBudgetFor(intent, input.message, {
+    needsContinuation: shortTurn.needsContinuation,
+  });
 
   const { safetyState, generalState } = splitSafetyAndGeneralState(
     input.userState,

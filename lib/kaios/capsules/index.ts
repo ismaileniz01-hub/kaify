@@ -137,6 +137,9 @@ export function selectActiveCapsules(
   if (/\+continuation\b/i.test(msg)) {
     task = `${task}+continuation`;
   }
+  if (/\+motivation\b/i.test(msg)) {
+    task = `${task}+motivation`;
+  }
   switch (coach) {
     case "alex":
       return selectAlexCapsules(task);

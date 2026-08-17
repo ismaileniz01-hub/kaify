@@ -306,7 +306,12 @@ export function needsStructuredOutput(intent: Intent): boolean {
   return STRUCTURED_INTENTS.has(intent);
 }
 
-export function outputBudgetFor(intent: Intent, message?: string): number {
+export function outputBudgetFor(
+  intent: Intent,
+  message?: string,
+  options?: { needsContinuation?: boolean },
+): number {
+  let budget: number;
   if (message != null && message.length > 0) {
     const cls = classifyOutputBudget(intent, message);
     // Structured intents keep their higher ceiling.
@@ -316,16 +321,25 @@ export function outputBudgetFor(intent: Intent, message?: string): number {
       intent === "council_decision" ||
       intent === "tool_action"
     ) {
-      return OUTPUT_BUDGET[intent];
-    }
-    if (
+      budget = OUTPUT_BUDGET[intent];
+    } else if (
       intent === "programming" ||
       intent === "meal_plan" ||
       intent === "council_turn"
     ) {
-      return Math.max(CLASS_BUDGET[cls], OUTPUT_BUDGET[intent]);
+      budget = Math.max(CLASS_BUDGET[cls], OUTPUT_BUDGET[intent]);
+    } else {
+      budget = CLASS_BUDGET[cls];
     }
-    return CLASS_BUDGET[cls];
+  } else {
+    budget = OUTPUT_BUDGET[intent] ?? 220;
   }
-  return OUTPUT_BUDGET[intent] ?? 220;
+  // Short elliptical replies often need MORE completion room than long ones.
+  if (options?.needsContinuation) {
+    budget = Math.max(budget, CLASS_BUDGET.support);
+    if (intent === "unknown" || intent === "casual" || intent === "motivation") {
+      budget = Math.max(budget, 200);
+    }
+  }
+  return budget;
 }
