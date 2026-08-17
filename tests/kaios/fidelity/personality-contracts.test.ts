@@ -172,6 +172,16 @@ describe("KAIOS personality prompt contracts", () => {
       });
       expect(sub).toMatch(/substitutions/i);
     });
+
+    it("nickname cadence is every 2 messages, never every sentence", () => {
+      const blob = promptBlob({
+        coach: "alex",
+        message: "Squat form cues?",
+        locale: "tr",
+      });
+      expect(blob).toMatch(/every 2 Alex|never_every_sentence/i);
+      expect(blob).toMatch(/stuffing reis|never once per sentence/i);
+    });
   });
 
   describe("Maya markers", () => {
