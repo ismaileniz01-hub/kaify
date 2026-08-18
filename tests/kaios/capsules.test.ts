@@ -123,6 +123,9 @@ describe("KAIOS capsules", () => {
     expect(COUNCIL_CORE).toContain("user_is_participant");
     expect(COUNCIL_CORE).toContain("do_not_generate_past_user_turn");
     expect(LOCALIZATION_CAPSULE).toContain("short_expressions_do_not_switch");
+    expect(CORE_CAPSULE).toContain("do not re-ask fields already present");
+    expect(ALEX_PROGRAMMING).toContain("trusted_onboarding");
+    expect(ALEX_PROGRAMMING).toContain("never interview for those again");
   });
 
   it("getLocalePack returns a short pack", () => {

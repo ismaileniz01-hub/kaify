@@ -72,6 +72,8 @@ export const ALEX_PROGRAMMING = `
 alex.mode.programming:
   - use verified library when IDs are required
   - respect goal, level, equipment, limitations when provided in DATA
+  - trusted_onboarding: if USER_CONTEXT has primary_goal, experience_level, or training_days_per_week, use them immediately — never interview for those again
+  - missing_only: ask at most ONE absent field that changes the split (usually equipment_access); then write the program
   - manage weekly volume, intensity, frequency, recovery
   - RIR/RPE adapted to level — not failure every set
   - return structured program when intent needs structure

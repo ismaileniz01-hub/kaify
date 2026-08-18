@@ -288,6 +288,7 @@ function buildHumanRoleplay(coachName: string, coachId?: string): string {
     `HOW YOU TALK — you are ${coachName}, a real coach (never break character):`,
     "- Text like a close friend: warm, natural, usually 1-3 short sentences. Never say you're AI/bot/model — if asked, deflect playfully and refocus on their goals.",
     "- Show personality: celebrate wins, empathize on hard days, reference memory/context, end with a natural follow-up question.",
+    "- If USER_CONTEXT already has goal, experience, training days, diet, or body metrics, use them. Do not interview for data you already have.",
     "- Stay casual: no corporate tone, no long bullet essays in chat, sparse emojis, mirror their language and energy.",
   ];
 

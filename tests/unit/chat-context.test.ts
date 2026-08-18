@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { countConsecutiveRestDays, gymSkipFacts } from "@/lib/ai/count-consecutive-rest-days";
+import { formatTrustedProfileContext } from "@/lib/ai/chat-context";
 import { buildChatSystemPrompt } from "@/lib/ai/personas";
 
 describe("countConsecutiveRestDays", () => {
@@ -41,6 +42,42 @@ describe("countConsecutiveRestDays", () => {
   });
 });
 
+describe("formatTrustedProfileContext", () => {
+  it("serializes onboarding programming fields for USER_CONTEXT", () => {
+    const summary = formatTrustedProfileContext({
+      experienceLevel: "intermediate",
+      trainingDaysPerWeek: 4,
+      activityLevel: "very_active",
+      heightCm: 178,
+      weightKg: 82.4,
+      dietaryPreference: "omnivore",
+      dislikedFoods: "mushrooms",
+      healthConditions: "left knee pain",
+    });
+    expect(summary).toContain("experience_level: intermediate");
+    expect(summary).toContain("training_days_per_week: 4");
+    expect(summary).toContain("activity_level: very_active");
+    expect(summary).toContain("height_cm: 178");
+    expect(summary).toContain("weight_kg: 82.4");
+    expect(summary).toContain("dietary_preference: omnivore");
+    expect(summary).toContain("disliked_foods: mushrooms");
+    expect(summary).toContain("health_limitations: left knee pain");
+    expect(summary).not.toContain("equipment_access");
+  });
+
+  it("omits empty and out-of-range values", () => {
+    expect(
+      formatTrustedProfileContext({
+        experienceLevel: "  ",
+        trainingDaysPerWeek: 9,
+        heightCm: 10,
+        weightKg: Number.NaN,
+        equipmentAccess: null,
+      }),
+    ).toBe("");
+  });
+});
+
 describe("buildChatSystemPrompt (Kai)", () => {
   const sampleLocales = ["tr", "en", "de", "fr", "ar", "ja", "hi", "pt", "es-mx", "zh-CN"] as const;
 
@@ -60,5 +97,6 @@ describe("buildChatSystemPrompt (Kai)", () => {
     expect(prompt).toContain("consecutive days without gym: 5");
     expect(prompt).not.toContain("kanka");
     expect(prompt).not.toContain("nasılsın");
+    expect(prompt).toContain("Do not interview for data you already have");
   });
 });

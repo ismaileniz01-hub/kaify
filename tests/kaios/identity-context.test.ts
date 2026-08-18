@@ -112,6 +112,25 @@ describe("canonical state precedence over memory prose", () => {
     expect(blob).toMatch(/USER_CONTEXT/);
     expect(blob).toMatch(/protein_goal_g: 160/);
   });
+
+  it("programming prompts keep onboarding goal/days/experience and forbid re-asking", () => {
+    const ctx = buildRuntimeContext({
+      coach: "alex",
+      message: "bana haftalik program hazirlar misin",
+      locale: "tr",
+      userState:
+        "experience_level: intermediate; training_days_per_week: 4; primary_goal: build_muscle",
+    });
+    expect(ctx.intent).toBe("programming");
+    expect(ctx.userState).toContain("experience_level: intermediate");
+    expect(ctx.userState).toContain("training_days_per_week: 4");
+    expect(ctx.userState).toContain("primary_goal: build_muscle");
+    const blob = compilePrompt(ctx)
+      .messages.map((m) => m.content)
+      .join("\n");
+    expect(blob).toContain("never interview for those again");
+    expect(blob).toContain("do not re-ask fields already present");
+  });
 });
 
 describe("Maya confirmation-before-save contract in capsules", () => {

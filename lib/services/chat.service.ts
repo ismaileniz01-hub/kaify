@@ -7,7 +7,10 @@ import { resolveLocale } from "@/lib/i18n/dictionary";
 import { detectMessageLocale } from "@/lib/i18n/detect-message-locale";
 import { buildReplyLanguageDirective } from "@/lib/i18n/reply-language-directive";
 import { buildChatSystemPrompt } from "@/lib/ai/personas";
-import { buildFitnessContextSummary } from "@/lib/ai/chat-context";
+import {
+  buildFitnessContextSummary,
+  formatTrustedProfileContext,
+} from "@/lib/ai/chat-context";
 import { checkQuotaGuard, refundQuota, settleQuota } from "@/lib/ai/quota-guard";
 import { AiError, toApiError } from "@/lib/ai/errors";
 import { getCoachOrThrow } from "@/lib/services/coach.service";
@@ -86,15 +89,38 @@ async function getProfileLocaleAndSafety(
   allergies: string | null;
   createdAt: string | null;
   userGender: ProfileGenderValue | null;
+  experienceLevel: string | null;
+  trainingDaysPerWeek: number | null;
+  activityLevel: string | null;
+  heightCm: number | null;
+  weightKg: number | null;
+  dietaryPreference: string | null;
+  dislikedFoods: string | null;
+  healthConditions: string | null;
 }> {
   const { data } = await admin
     .from("profiles")
-    .select("locale, allergies, created_at, gender")
+    .select(
+      "locale, allergies, created_at, gender, experience_level, training_days_per_week, activity_level, height_cm, weight_kg, dietary_preference, disliked_foods, health_conditions",
+    )
     .eq("id", userId)
     .maybeSingle();
   const parsed = data?.gender ? parseGenderInput(data.gender) : null;
   const userGender =
     parsed === "male" || parsed === "female" ? parsed : null;
+  const experienceLevel =
+    typeof data?.experience_level === "string" && data.experience_level.trim()
+      ? data.experience_level.trim()
+      : null;
+  const activityLevel =
+    typeof data?.activity_level === "string" && data.activity_level.trim()
+      ? data.activity_level.trim()
+      : null;
+  const dietaryPreference =
+    typeof data?.dietary_preference === "string" &&
+    data.dietary_preference.trim()
+      ? data.dietary_preference.trim()
+      : null;
   return {
     savedLocale: resolveLocale(data?.locale),
     allergies:
@@ -104,6 +130,21 @@ async function getProfileLocaleAndSafety(
     createdAt:
       typeof data?.created_at === "string" ? data.created_at : null,
     userGender,
+    experienceLevel,
+    trainingDaysPerWeek:
+      typeof data?.training_days_per_week === "number"
+        ? data.training_days_per_week
+        : null,
+    activityLevel,
+    heightCm: typeof data?.height_cm === "number" ? data.height_cm : null,
+    weightKg: typeof data?.weight_kg === "number" ? data.weight_kg : null,
+    dietaryPreference,
+    dislikedFoods:
+      typeof data?.disliked_foods === "string" ? data.disliked_foods : null,
+    healthConditions:
+      typeof data?.health_conditions === "string"
+        ? data.health_conditions
+        : null,
   };
 }
 
@@ -134,9 +175,28 @@ function buildStateSummary(
     allergies?: string | null;
     familiarityStage?: string | null;
     userGender?: ProfileGenderValue | null;
+    experienceLevel?: string | null;
+    trainingDaysPerWeek?: number | null;
+    activityLevel?: string | null;
+    heightCm?: number | null;
+    weightKg?: number | null;
+    dietaryPreference?: string | null;
+    dislikedFoods?: string | null;
+    healthConditions?: string | null;
   },
 ): string {
   const parts: string[] = [];
+  const profileContext = formatTrustedProfileContext({
+    experienceLevel: extras?.experienceLevel,
+    trainingDaysPerWeek: extras?.trainingDaysPerWeek,
+    activityLevel: extras?.activityLevel,
+    heightCm: extras?.heightCm,
+    weightKg: extras?.weightKg,
+    dietaryPreference: extras?.dietaryPreference,
+    dislikedFoods: extras?.dislikedFoods,
+    healthConditions: extras?.healthConditions,
+  });
+  if (profileContext) parts.push(profileContext);
   if (extras?.allergies) parts.push(`allergies: ${extras.allergies}`);
   if (extras?.userGender === "male") parts.push("user_gender: male");
   if (extras?.userGender === "female") parts.push("user_gender: female");
@@ -430,6 +490,14 @@ async function* streamKaiosCoachReply(
       allergies: profileMeta.allergies,
       familiarityStage,
       userGender: profileMeta.userGender,
+      experienceLevel: profileMeta.experienceLevel,
+      trainingDaysPerWeek: profileMeta.trainingDaysPerWeek,
+      activityLevel: profileMeta.activityLevel,
+      heightCm: profileMeta.heightCm,
+      weightKg: profileMeta.weightKg,
+      dietaryPreference: profileMeta.dietaryPreference,
+      dislikedFoods: profileMeta.dislikedFoods,
+      healthConditions: profileMeta.healthConditions,
     });
 
     const { data: insertedUser, error: userInsertError } = await admin
@@ -747,6 +815,14 @@ export async function* streamCoachReply(
       stateSummary: buildStateSummary(state, fitnessContext, {
         allergies: profileMeta.allergies,
         userGender: profileMeta.userGender,
+        experienceLevel: profileMeta.experienceLevel,
+        trainingDaysPerWeek: profileMeta.trainingDaysPerWeek,
+        activityLevel: profileMeta.activityLevel,
+        heightCm: profileMeta.heightCm,
+        weightKg: profileMeta.weightKg,
+        dietaryPreference: profileMeta.dietaryPreference,
+        dislikedFoods: profileMeta.dislikedFoods,
+        healthConditions: profileMeta.healthConditions,
       }),
     });
     // Condensed memory is derived from prior user messages -> untrusted data.
