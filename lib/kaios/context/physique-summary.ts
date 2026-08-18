@@ -152,29 +152,81 @@ export function formatNutritionSnapshot(input: {
   return parts.join("; ");
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function daysFromPlanPayload(root: Record<string, unknown>): unknown[] {
+  const ui = asRecord(root.ui);
+  const data = asRecord(root.data);
+  const nestedUi = asRecord(data?.ui);
+  for (const candidate of [ui?.days, data?.days, nestedUi?.days, root.days]) {
+    if (Array.isArray(candidate) && candidate.length > 0) return candidate;
+  }
+  return [];
+}
+
+/** Compact a plan day label so coaches can read i18n keys like workout.chest_triceps. */
+export function humanizePlanDayLabel(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  return trimmed
+    .replace(/^workout\./i, "")
+    .replace(/_/g, " ")
+    .slice(0, 40);
+}
+
+function labelFromPlanDay(rec: Record<string, unknown>): string {
+  const candidates = [rec.focus, rec.name, rec.title, rec.focusKey, rec.dayKey];
+  for (const value of candidates) {
+    if (typeof value === "string" && value.trim()) {
+      return humanizePlanDayLabel(value);
+    }
+  }
+  return "";
+}
+
 export function extractAlexPlanFocus(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") return null;
   const root = payload as Record<string, unknown>;
-  const ui =
-    root.ui && typeof root.ui === "object"
-      ? (root.ui as Record<string, unknown>)
-      : root;
-  const daysRaw = Array.isArray(ui.days)
-    ? ui.days
-    : Array.isArray(root.days)
-      ? root.days
-      : [];
   const names: string[] = [];
-  for (const day of daysRaw) {
+  for (const day of daysFromPlanPayload(root)) {
     if (!day || typeof day !== "object") continue;
-    const rec = day as Record<string, unknown>;
-    const label =
-      (typeof rec.focus === "string" && rec.focus.trim()) ||
-      (typeof rec.name === "string" && rec.name.trim()) ||
-      (typeof rec.title === "string" && rec.title.trim()) ||
-      "";
-    if (label && names.length < 7) names.push(label.slice(0, 40));
+    const label = labelFromPlanDay(day as Record<string, unknown>);
+    if (label && names.length < 7) names.push(label);
   }
   if (names.length === 0) return null;
   return `alex_last_plan: ${names.join(" | ")}`;
+}
+
+const TEAM_FACT_KEEP =
+  /^(leo_|alex_last|calorie_goal|protein_goal|carbs_goal|fat_goal|calories_today|protein_today|primary_goal|experience_level|training_days|training_focus)/;
+
+function teamFactRank(line: string): number {
+  if (/^(leo_|alex_last)/.test(line)) return 0;
+  if (
+    /^(calorie_goal|protein_goal|calories_today|protein_today|primary_goal|training_days)/.test(
+      line,
+    )
+  ) {
+    return 1;
+  }
+  return 2;
+}
+
+/** TEAM_FACTS budget: keep Leo/Alex/Maya facts ahead of carbs/fat extras. */
+export function prioritizeTeamFactLines(
+  snapshot: string,
+  limit = 8,
+): string[] {
+  return snapshot
+    .split(/;\s*/)
+    .map((line) => line.trim())
+    .filter(
+      (line) =>
+        line.length > 0 && line.length <= 180 && TEAM_FACT_KEEP.test(line),
+    )
+    .sort((a, b) => teamFactRank(a) - teamFactRank(b) || a.localeCompare(b))
+    .slice(0, limit);
 }

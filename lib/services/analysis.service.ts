@@ -22,6 +22,7 @@ import { detectMessageLocale } from "@/lib/i18n/detect-message-locale";
 import { resolveActiveLocale } from "@/lib/kaios/localization/resolve";
 import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import { summarizePhysiqueScores } from "@/lib/kaios/context/physique-summary";
+import { loadCrossCoachSnapshot } from "@/lib/kaios/context/coach-snapshot";
 import type { ScoreDrift } from "@/lib/ai/consistency";
 import type {
   AnalysisMimeType,
@@ -214,12 +215,13 @@ export async function analyzePhoto(
   const vision = await prepareVisionImage(params.imageBase64);
   const fingerprint = fingerprintVisionImage(vision.base64, vision.mimeType);
 
-  const [locale, previousScores, priorRows] = await Promise.all([
+  const [locale, previousScores, priorRows, teammateState] = await Promise.all([
     getLocale(admin, params.userId, params.note),
     persona.kind === "body"
       ? getPreviousScores(admin, params.userId, params.coachId)
       : Promise.resolve(null),
     loadRecentVisionRows(admin, params.userId, params.coachId, messageType),
+    loadCrossCoachSnapshot(params.userId).catch(() => ""),
   ]);
 
   const reusedRow = selectReusableVisionRow({
@@ -262,6 +264,7 @@ export async function analyzePhoto(
       image: { base64: vision.base64, mimeType: vision.mimeType },
       previousScores,
       userNote: params.note,
+      userState: teammateState || undefined,
       signal: params.signal,
     });
   } catch (error) {

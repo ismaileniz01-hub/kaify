@@ -4,6 +4,7 @@ import {
   extractPhysiqueFromLeoPayload,
   formatNutritionSnapshot,
   pickAlexPlanFocus,
+  prioritizeTeamFactLines,
   summarizePhysiqueScores,
 } from "@/lib/kaios/context/coach-snapshot";
 
@@ -85,5 +86,50 @@ describe("extractAlexPlanFocus", () => {
         },
       ]),
     ).toBe("alex_last_plan: Push | Pull");
+  });
+
+  it("reads production dayKey/focusKey payloads, including i18n keys", () => {
+    expect(
+      extractAlexPlanFocus({
+        ui: {
+          cardType: "workout_plan",
+          days: [
+            { dayKey: "workout.day1", focusKey: "workout.chest_triceps" },
+            { dayKey: "workout.day2", focusKey: "workout.back_biceps" },
+            { dayKey: "Pazartesi", focusKey: "Pull" },
+          ],
+        },
+      }),
+    ).toBe("alex_last_plan: chest triceps | back biceps | Pull");
+  });
+
+  it("reads days nested under data when ui only has cardType", () => {
+    expect(
+      extractAlexPlanFocus({
+        ui: { cardType: "workout_plan" },
+        data: {
+          days: [{ focusKey: "Push" }, { focusKey: "Legs" }],
+        },
+      }),
+    ).toBe("alex_last_plan: Push | Legs");
+  });
+});
+
+describe("prioritizeTeamFactLines", () => {
+  it("keeps Leo and Alex facts when nutrition extras would overflow the budget", () => {
+    const snapshot = [
+      "calorie_goal: 2100",
+      "protein_goal_g: 150",
+      "carbs_goal_g: 200",
+      "fat_goal_g: 70",
+      "calories_today: 900/2100",
+      "protein_today_g: 80/150",
+      "leo_lagging: back,calves",
+      "alex_last_plan: Push | Pull | Legs",
+    ].join("; ");
+    const lines = prioritizeTeamFactLines(snapshot, 6);
+    expect(lines.join(" ")).toContain("leo_lagging: back,calves");
+    expect(lines.join(" ")).toContain("alex_last_plan: Push | Pull | Legs");
+    expect(lines.length).toBeLessThanOrEqual(6);
   });
 });

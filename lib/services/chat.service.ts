@@ -12,6 +12,7 @@ import {
   formatTrustedProfileContext,
 } from "@/lib/ai/chat-context";
 import { loadCrossCoachSnapshot } from "@/lib/kaios/context/coach-snapshot";
+import { prioritizeTeamFactLines } from "@/lib/kaios/context/physique-summary";
 import { checkQuotaGuard, refundQuota, settleQuota } from "@/lib/ai/quota-guard";
 import { AiError, toApiError } from "@/lib/ai/errors";
 import { getCoachOrThrow } from "@/lib/services/coach.service";
@@ -98,14 +99,22 @@ async function getProfileLocaleAndSafety(
   dietaryPreference: string | null;
   dislikedFoods: string | null;
   healthConditions: string | null;
+  primaryGoal: string | null;
 }> {
-  const { data } = await admin
-    .from("profiles")
-    .select(
-      "locale, allergies, created_at, gender, experience_level, training_days_per_week, activity_level, height_cm, weight_kg, dietary_preference, disliked_foods, health_conditions",
-    )
-    .eq("id", userId)
-    .maybeSingle();
+  const [{ data }, { data: settings }] = await Promise.all([
+    admin
+      .from("profiles")
+      .select(
+        "locale, allergies, created_at, gender, experience_level, training_days_per_week, activity_level, height_cm, weight_kg, dietary_preference, disliked_foods, health_conditions",
+      )
+      .eq("id", userId)
+      .maybeSingle(),
+    admin
+      .from("user_settings")
+      .select("primary_goal")
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
   const parsed = data?.gender ? parseGenderInput(data.gender) : null;
   const userGender =
     parsed === "male" || parsed === "female" ? parsed : null;
@@ -146,6 +155,10 @@ async function getProfileLocaleAndSafety(
       typeof data?.health_conditions === "string"
         ? data.health_conditions
         : null,
+    primaryGoal:
+      typeof settings?.primary_goal === "string" && settings.primary_goal.trim()
+        ? settings.primary_goal.trim()
+        : null,
   };
 }
 
@@ -184,11 +197,13 @@ function buildStateSummary(
     dietaryPreference?: string | null;
     dislikedFoods?: string | null;
     healthConditions?: string | null;
+    primaryGoal?: string | null;
     crossCoachSnapshot?: string | null;
   },
 ): string {
   const parts: string[] = [];
   const profileContext = formatTrustedProfileContext({
+    primaryGoal: extras?.primaryGoal,
     experienceLevel: extras?.experienceLevel,
     trainingDaysPerWeek: extras?.trainingDaysPerWeek,
     activityLevel: extras?.activityLevel,
@@ -363,13 +378,7 @@ function asCoachId(coachId: string): CoachId | null {
 
 /** Compact cross-coach facts — never ownership labels or teammate personality. */
 function compactTeamFacts(snapshot: string): string[] {
-  const keep =
-    /^(leo_|alex_last_plan|alex_last_workout|calorie_goal|protein_goal|carbs_goal|fat_goal|calories_today|protein_today|primary_goal|experience_level|training_days|training_focus)/;
-  return snapshot
-    .split(/;\s*/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && line.length <= 180 && keep.test(line))
-    .slice(0, 6);
+  return prioritizeTeamFactLines(snapshot, 8);
 }
 
 async function settleChatQuota(params: {
@@ -502,6 +511,7 @@ async function* streamKaiosCoachReply(
       dietaryPreference: profileMeta.dietaryPreference,
       dislikedFoods: profileMeta.dislikedFoods,
       healthConditions: profileMeta.healthConditions,
+      primaryGoal: profileMeta.primaryGoal,
       crossCoachSnapshot,
     });
 
@@ -829,6 +839,7 @@ export async function* streamCoachReply(
         dietaryPreference: profileMeta.dietaryPreference,
         dislikedFoods: profileMeta.dislikedFoods,
         healthConditions: profileMeta.healthConditions,
+        primaryGoal: profileMeta.primaryGoal,
         crossCoachSnapshot,
       }),
     });

@@ -16,6 +16,8 @@ export {
   extractAlexPlanFocus,
   extractPhysiqueFromLeoPayload,
   formatNutritionSnapshot,
+  humanizePlanDayLabel,
+  prioritizeTeamFactLines,
   summarizePhysiqueScores,
 } from "@/lib/kaios/context/physique-summary";
 

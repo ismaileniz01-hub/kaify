@@ -200,6 +200,27 @@ describe("Leo photo uses KAIOS capsules", () => {
     expect(system).toMatch(/no automatic praise|hype|evidence/i);
     expect(system).not.toMatch(/energetic.*hype coach/i);
   });
+
+  it("Leo photo synthesis receives teammate USER_CONTEXT", () => {
+    const built = buildSynthesisMessages({
+      persona: "leo",
+      locale: "tr",
+      analysis: {
+        visible_muscles: ["back"],
+        scores: { back: 42, chests: 78 },
+        overall_score: 60,
+        food_analysis: null,
+      } as never,
+      drift: [],
+      userState:
+        "alex_last_plan: Push | Pull | Legs; calorie_goal: 2100; leo_lagging: back",
+    });
+    const blob = built.messages.map((m) => m.content).join("\n");
+    expect(blob).toContain("USER_CONTEXT");
+    expect(blob).toContain("alex_last_plan: Push | Pull | Legs");
+    expect(blob).toContain("calorie_goal: 2100");
+    expect(blob).toMatch(/fold those teammate facts/i);
+  });
 });
 
 describe("Council Kai moderator mode", () => {

@@ -45,6 +45,7 @@ describe("countConsecutiveRestDays", () => {
 describe("formatTrustedProfileContext", () => {
   it("serializes onboarding programming fields for USER_CONTEXT", () => {
     const summary = formatTrustedProfileContext({
+      primaryGoal: "build_muscle",
       experienceLevel: "intermediate",
       trainingDaysPerWeek: 4,
       activityLevel: "very_active",
@@ -54,6 +55,7 @@ describe("formatTrustedProfileContext", () => {
       dislikedFoods: "mushrooms",
       healthConditions: "left knee pain",
     });
+    expect(summary).toContain("primary_goal: build_muscle");
     expect(summary).toContain("experience_level: intermediate");
     expect(summary).toContain("training_days_per_week: 4");
     expect(summary).toContain("activity_level: very_active");

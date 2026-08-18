@@ -44,6 +44,7 @@ export type ImagePipelineParams = {
   image: ImageInput;
   previousScores?: MuscleScores | null;
   userNote?: string;
+  userState?: string;
   signal?: AbortSignal;
 };
 
@@ -125,6 +126,7 @@ export const ModelRouter = {
       analysis,
       drift,
       userNote: params.userNote,
+      userState: params.userState,
     });
     const { content, usage } = await createChatCompletion(synth.messages, {
       temperature: 0.7,

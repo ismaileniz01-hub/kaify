@@ -33,12 +33,15 @@ export type TrustedProfileContextInput = {
   dislikedFoods?: string | null;
   healthConditions?: string | null;
   equipmentAccess?: string | null;
+  primaryGoal?: string | null;
 };
 
 export function formatTrustedProfileContext(
   input: TrustedProfileContextInput,
 ): string {
   const parts: string[] = [];
+  const goal = trimNote(input.primaryGoal, 32);
+  if (goal) parts.push(`primary_goal: ${goal}`);
   const experience = trimNote(input.experienceLevel, 32);
   if (experience) parts.push(`experience_level: ${experience}`);
 
