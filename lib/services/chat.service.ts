@@ -401,16 +401,20 @@ async function* streamKaiosCoachReply(
       userGender: profileMeta.userGender,
     });
 
-    const { error: userInsertError } = await admin.from("chat_messages").insert({
-      user_id: params.userId,
-      coach_id: params.coachId,
-      thread_type: "direct",
-      sender: "user",
-      message_type: "text",
-      content: cleanMessage,
-      locale,
-      client_idempotency_key: params.clientIdempotencyKey ?? null,
-    });
+    const { data: insertedUser, error: userInsertError } = await admin
+      .from("chat_messages")
+      .insert({
+        user_id: params.userId,
+        coach_id: params.coachId,
+        thread_type: "direct",
+        sender: "user",
+        message_type: "text",
+        content: cleanMessage,
+        locale,
+        client_idempotency_key: params.clientIdempotencyKey ?? null,
+      })
+      .select("id")
+      .single();
     if (userInsertError) {
       if (userInsertError.code === "23505" && params.clientIdempotencyKey) {
         const { data: existingCoach } = await admin
@@ -521,6 +525,7 @@ async function* streamKaiosCoachReply(
       .insert({
         user_id: params.userId,
         coach_id: params.coachId,
+        reply_to_message_id: insertedUser?.id ?? null,
         thread_type: "direct",
         sender: "coach",
         message_type: meta.messageType,
@@ -772,16 +777,20 @@ export async function* streamCoachReply(
     ];
 
     // Persist the sanitized user message before streaming.
-    const { error: userInsertError } = await admin.from("chat_messages").insert({
-      user_id: params.userId,
-      coach_id: params.coachId,
-      thread_type: "direct",
-      sender: "user",
-      message_type: "text",
-      content: cleanMessage,
-      locale,
-      client_idempotency_key: params.clientIdempotencyKey ?? null,
-    });
+    const { data: insertedUser, error: userInsertError } = await admin
+      .from("chat_messages")
+      .insert({
+        user_id: params.userId,
+        coach_id: params.coachId,
+        thread_type: "direct",
+        sender: "user",
+        message_type: "text",
+        content: cleanMessage,
+        locale,
+        client_idempotency_key: params.clientIdempotencyKey ?? null,
+      })
+      .select("id")
+      .single();
     if (userInsertError) {
       if (userInsertError.code === "23505" && params.clientIdempotencyKey) {
         const { data: existingCoach } = await admin
@@ -909,6 +918,7 @@ export async function* streamCoachReply(
       .insert({
         user_id: params.userId,
         coach_id: params.coachId,
+        reply_to_message_id: insertedUser?.id ?? null,
         thread_type: "direct",
         sender: "coach",
         message_type: "text",
@@ -1006,6 +1016,8 @@ export async function* streamCoachReply(
           coachId: params.coachId,
           userMessage: cleanMessage,
           coachReply: assistantText,
+          attachToMessageId: inserted.id,
+          sourceMessageId: inserted.id,
         });
       } catch (analyticsError) {
         logger.error("[chat.service] analytics extract error", {

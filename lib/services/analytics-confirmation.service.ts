@@ -30,6 +30,7 @@ export async function createPendingAnalyticsConfirmation(params: {
   source: "chat" | "photo";
   payload: PendingAnalyticsPayload;
   messageId?: string | null;
+  sourceMessageId?: string | null;
 }): Promise<string> {
   const admin = createAdminSupabaseClient() as SupabaseClient;
   const payload: PendingAnalyticsPayload = {
@@ -49,6 +50,7 @@ export async function createPendingAnalyticsConfirmation(params: {
       source: params.source,
       payload: payload as unknown as Json,
       message_id: params.messageId ?? null,
+      source_message_id: params.sourceMessageId ?? null,
       status: "pending",
     })
     .select("id")
@@ -97,7 +99,7 @@ export async function linkPendingConfirmationToMessage(params: {
   const admin = createAdminSupabaseClient() as SupabaseClient;
   const { data, error } = await admin
     .from("analytics_pending_confirmations")
-    .update({ message_id: params.messageId })
+    .update({ message_id: params.messageId, source_message_id: params.messageId })
     .eq("id", params.pendingId)
     .eq("user_id", params.userId)
     .select("id");

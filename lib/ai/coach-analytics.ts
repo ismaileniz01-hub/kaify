@@ -48,6 +48,7 @@ async function attachConfirmationToMessage(params: {
   summary: string;
   patch: Record<string, number>;
   attachToMessageId?: string | null;
+  sourceMessageId?: string | null;
 }): Promise<{ content: string; messageId: string }> {
   const admin = createAdminSupabaseClient();
   const { data: profile } = await admin
@@ -101,6 +102,7 @@ async function attachConfirmationToMessage(params: {
     .insert({
       user_id: params.userId,
       coach_id: params.coachId,
+      reply_to_message_id: params.sourceMessageId ?? null,
       thread_type: "direct",
       sender: "coach",
       message_type: "text",
@@ -119,6 +121,8 @@ export async function applyCoachAnalyticsFromChat(params: {
   coachId: string;
   userMessage: string;
   coachReply: string;
+  attachToMessageId?: string | null;
+  sourceMessageId?: string | null;
 }): Promise<void> {
   if (!AI_FEATURES.chatAnalytics) return;
   if (await isAiPressureMode()) return;
@@ -167,6 +171,7 @@ export async function applyCoachAnalyticsFromChat(params: {
       coachId: params.coachId,
       source: "chat",
       payload: { summary, patch },
+      sourceMessageId: params.sourceMessageId ?? params.attachToMessageId ?? null,
     });
 
     await attachConfirmationToMessage({
@@ -175,6 +180,8 @@ export async function applyCoachAnalyticsFromChat(params: {
       pendingId,
       summary,
       patch,
+      attachToMessageId: params.attachToMessageId,
+      sourceMessageId: params.sourceMessageId ?? params.attachToMessageId ?? null,
     });
   } catch {
     // Non-fatal
@@ -218,6 +225,7 @@ export async function requestPhotoAnalyticsConfirmation(params: {
       summary,
       ...(params.meal ? { meal: params.meal } : {}),
     },
+    sourceMessageId: params.attachToMessageId ?? null,
   });
 
   const { content, messageId } = await attachConfirmationToMessage({
@@ -234,6 +242,7 @@ export async function requestPhotoAnalyticsConfirmation(params: {
         }
       : {},
     attachToMessageId: params.attachToMessageId,
+    sourceMessageId: params.attachToMessageId ?? null,
   });
 
   return { pendingId, summary, content, messageId };

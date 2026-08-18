@@ -273,16 +273,20 @@ export async function analyzePhoto(
     score_authority: persona.kind === "body" ? "leo_eval" : null,
   } as unknown as Json;
 
-  const { error: userPhotoError } = await admin.from("chat_messages").insert({
-    user_id: params.userId,
-    coach_id: params.coachId,
-    thread_type: "direct",
-    sender: "user",
-    message_type: "photo_analysis",
-    content: params.note && params.note.length > 0 ? params.note : "[photo]",
-    payload: { mimeType: params.mimeType, image_fingerprint: fingerprint } as unknown as Json,
-    locale,
-  });
+  const { data: insertedUserPhoto, error: userPhotoError } = await admin
+    .from("chat_messages")
+    .insert({
+      user_id: params.userId,
+      coach_id: params.coachId,
+      thread_type: "direct",
+      sender: "user",
+      message_type: "photo_analysis",
+      content: params.note && params.note.length > 0 ? params.note : "[photo]",
+      payload: { mimeType: params.mimeType, image_fingerprint: fingerprint } as unknown as Json,
+      locale,
+    })
+    .select("id")
+    .single();
   if (userPhotoError) {
     logger.error("[analysis.service] persist user photo error", {
       error: userPhotoError.message,
@@ -296,6 +300,7 @@ export async function analyzePhoto(
     .insert({
       user_id: params.userId,
       coach_id: params.coachId,
+      reply_to_message_id: insertedUserPhoto?.id ?? null,
       thread_type: "direct",
       sender: "coach",
       message_type: messageType,

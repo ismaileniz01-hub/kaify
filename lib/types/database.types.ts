@@ -377,6 +377,7 @@ type ChatMessageRow = {
   id: string;
   user_id: string;
   coach_id: string | null;
+  reply_to_message_id: string | null;
   thread_type: ThreadType;
   sender: MessageSender;
   message_type: MessageType;
@@ -392,6 +393,7 @@ type ChatMessageInsert = {
   id?: string;
   user_id: string;
   coach_id?: string | null;
+  reply_to_message_id?: string | null;
   thread_type?: ThreadType;
   sender: MessageSender;
   message_type?: MessageType;
@@ -421,6 +423,7 @@ type CoachingMemoryRow = {
   id: string;
   user_id: string;
   coach_id: string | null;
+  source_message_id: string | null;
   summary: string;
   key_facts: Json;
   source_range: Json | null;
@@ -432,6 +435,7 @@ type CoachingMemoryInsert = {
   id?: string;
   user_id: string;
   coach_id?: string | null;
+  source_message_id?: string | null;
   summary: string;
   key_facts?: Json;
   source_range?: Json | null;

@@ -22,6 +22,7 @@ export const API_V1_ROUTES = [
   "/api/v1/profile/avatar",
   "/api/v1/chat/[coachId]",
   "/api/v1/chat/[coachId]/analyze",
+  "/api/v1/chat/messages/[messageId]",
   "/api/v1/chat/team",
   "/api/v1/streak",
   "/api/v1/streak/rewards",

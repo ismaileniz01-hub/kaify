@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   streamChatMessage,
   apiGet,
+  apiDelete,
   apiPost,
   createIdempotencyKey,
 } from "@/lib/api/client";
@@ -25,7 +26,7 @@ import { useKai } from "@/lib/kai-context";
 import { useSession } from "@/lib/session-context";
 import { ChatComposer } from "@/components/chat/ChatComposer";
 import { errorToMessage, quotaErrorMessage, quotaResourceFromError, visionQuotaResourceFromError, isAnalyzeQuotaDenied } from "@/lib/i18n/api-error";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, MoreVertical } from "lucide-react";
 import { prefersReducedMotion } from "@/lib/motion/perf-guards";
 import {
   markMessageDelivered,
@@ -65,6 +66,15 @@ function formatMessageTime(
 
 const VISION_COACHES = new Set<ContactId>(["maya", "leo"]);
 
+function canDeleteMessage(msg: LiveMessage): boolean {
+  return (
+    msg.from === "user" &&
+    !msg.streaming &&
+    msg.status !== "sending" &&
+    !msg.id.startsWith("local-")
+  );
+}
+
 export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const contact = CONTACTS[coachId];
   const { t, lang } = useLang();
@@ -80,6 +90,9 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [errorUpgrade, setErrorUpgrade] = useState(false);
   const [quotaWarning, setQuotaWarning] = useState<"LIMIT_80" | "LIMIT_100" | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const openMenuRef = useRef<HTMLDivElement>(null);
   const [hasPhotoConsent, setHasPhotoConsent] = useState<boolean | null>(null);
   const [photoConsentOpen, setPhotoConsentOpen] = useState(false);
   const pendingPhotoRef = useRef<File | null>(null);
@@ -112,6 +125,16 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
       if (composerPhoto?.url) URL.revokeObjectURL(composerPhoto.url);
     };
   }, [composerPhoto?.url]);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (openMenuRef.current?.contains(event.target as Node)) return;
+      setOpenMenuId(null);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [openMenuId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -361,6 +384,30 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         existingUserMsgId: msg.id,
         idempotencyKey: msg.idempotencyKey,
       });
+    }
+  };
+
+  const handleDelete = async (msg: LiveMessage) => {
+    if (msg.streaming || msg.status === "sending" || deletingId) return;
+    const confirmed =
+      typeof window === "undefined"
+        ? false
+        : window.confirm(
+            t("chat.delete.confirm"),
+          );
+    if (!confirmed) return;
+    setDeletingId(msg.id);
+    setError(null);
+    try {
+      const result = await apiDelete<{
+        deletedIds: string[];
+      }>(`/api/chat/messages/${msg.id}`);
+      const removed = new Set(result.deletedIds ?? [msg.id]);
+      setMessages((prev) => prev.filter((item) => !removed.has(item.id)));
+    } catch (err) {
+      setError(errorToMessage(err, t));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -771,6 +818,46 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                       </>
                     )}
                   </div>
+                  {!isCoach && canDeleteMessage(msg) && (
+                    <div
+                      ref={openMenuId === msg.id ? openMenuRef : undefined}
+                      className="relative shrink-0 self-center"
+                    >
+                      <button
+                        type="button"
+                        aria-label={t("chat.message.menu")}
+                        aria-haspopup="menu"
+                        aria-expanded={openMenuId === msg.id}
+                        onClick={() =>
+                          setOpenMenuId((current) => (current === msg.id ? null : msg.id))
+                        }
+                        className="rounded-full p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-zinc-200"
+                      >
+                        <MoreVertical className="h-4 w-4" aria-hidden />
+                      </button>
+                      {openMenuId === msg.id && (
+                        <div
+                          role="menu"
+                          className="absolute right-0 top-full z-20 mt-1 min-w-[9rem] overflow-hidden rounded-xl border border-white/10 bg-zinc-900/95 py-1 shadow-xl backdrop-blur-sm"
+                        >
+                          <button
+                            role="menuitem"
+                            type="button"
+                            onClick={() => {
+                              setOpenMenuId(null);
+                              void handleDelete(msg);
+                            }}
+                            disabled={deletingId != null}
+                            className="w-full px-3 py-2 text-left text-sm text-red-300 transition-colors hover:bg-white/5 disabled:opacity-50"
+                          >
+                            {deletingId === msg.id
+                              ? t("common.loading")
+                              : t("chat.delete.action")}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {!isCoach && (
                     <div className="relative h-8 w-8 shrink-0" aria-hidden>
                       <Image
