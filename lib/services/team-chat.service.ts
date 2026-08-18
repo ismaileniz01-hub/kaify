@@ -20,6 +20,7 @@ import { CHAT_MESSAGE_LIST_COLUMNS } from "@/lib/services/chat-message-columns";
 import { resolveLocale } from "@/lib/i18n/dictionary";
 import { getAnalyticsBundle } from "@/lib/services/analytics.service";
 import { getStreakStatus } from "@/lib/services/streak-status.service";
+import { loadCrossCoachSnapshot } from "@/lib/kaios/context/coach-snapshot";
 import { teamMeetingWeekKey } from "@/lib/team/meeting-week";
 
 export { teamMeetingWeekKey } from "@/lib/team/meeting-week";
@@ -114,17 +115,18 @@ export async function generateWeeklyTeamMeeting(
     throw new ApiError("CONFLICT", aiCopy(undefined, "team_week_exists"));
   }
 
-  const [analytics, streak, { data: profile }] = await Promise.all([
+  const [analytics, streak, { data: profile }, teammate] = await Promise.all([
     getAnalyticsBundle(userId),
     getStreakStatus(userId),
     admin.from("profiles").select("display_name, locale").eq("id", userId).single(),
+    loadCrossCoachSnapshot(userId).catch(() => ""),
   ]);
 
   const locale = resolveLocale(profile?.locale);
   // display_name is user-controlled -> sanitize before it reaches the prompt.
   const name = sanitizeUserText(profile?.display_name ?? "User", 60) || "User";
 
-  const context = `User: ${name}. Streak: ${streak.currentStreak}. Workouts: ${analytics.today.workoutsCompleted}/${analytics.today.workoutsTarget}. Water: ${analytics.today.waterLiters}L. Calories: ${analytics.today.caloriesConsumed}/${analytics.today.calorieGoal}. Protein: ${analytics.today.proteinG}g. Steps today: ${analytics.today.steps}.`;
+  const context = `User: ${name}. Streak: ${streak.currentStreak}. Workouts: ${analytics.today.workoutsCompleted}/${analytics.today.workoutsTarget}. Water: ${analytics.today.waterLiters}L. Calories: ${analytics.today.caloriesConsumed}/${analytics.today.calorieGoal}. Protein: ${analytics.today.proteinG}g. Steps today: ${analytics.today.steps}.${teammate ? ` Teammate facts: ${teammate}.` : ""}`;
 
   const tokenReserve = TOKEN_BUDGET.teamChat;
   try {

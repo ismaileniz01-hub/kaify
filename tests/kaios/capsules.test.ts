@@ -129,6 +129,7 @@ describe("KAIOS capsules", () => {
     expect(ALEX_PROGRAMMING).toContain("leo_lagging");
     expect(MAYA_MEAL_PLANNING).toContain("calorie_goal");
     expect(KAI_CORE).toContain("teammate_read");
+    expect(COUNCIL_CORE).toContain("WEEKLY_SNAPSHOT");
   });
 
   it("getLocalePack returns a short pack", () => {

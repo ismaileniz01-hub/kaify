@@ -24,7 +24,7 @@ const STOPWORDS = new Set(
 );
 
 const COACH_KEYWORDS: Record<string, string[]> = {
-  alex: ["train", "lift", "workout", "exercise", "form", "program", "set", "rep"],
+  alex: ["train", "lift", "workout", "exercise", "form", "program", "set", "rep", "lagging", "leo_priority", "back", "calves"],
   maya: ["meal", "food", "macro", "protein", "calorie", "diet", "hydrat", "nutrition"],
   leo: ["physique", "posture", "photo", "muscle", "body", "score", "progress"],
   kai: ["mood", "motivat", "feel", "habit", "check-in", "friend", "streak", "exam"],
@@ -94,6 +94,15 @@ function scoreItem(
   }
 
   score += overlapScore(text, options.userMessage);
+  if (
+    text.includes("kaios event") ||
+    text.includes("leo_priority") ||
+    text.includes("leo_lagging") ||
+    text.includes("meal_saved") ||
+    text.includes("workout_completed")
+  ) {
+    score += 3;
+  }
   return score;
 }
 

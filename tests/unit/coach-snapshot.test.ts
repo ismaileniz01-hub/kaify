@@ -3,6 +3,7 @@ import {
   extractAlexPlanFocus,
   extractPhysiqueFromLeoPayload,
   formatNutritionSnapshot,
+  pickAlexPlanFocus,
   summarizePhysiqueScores,
 } from "@/lib/kaios/context/coach-snapshot";
 
@@ -68,5 +69,21 @@ describe("extractAlexPlanFocus", () => {
         },
       }),
     ).toBe("alex_last_plan: Push | Pull | Legs");
+  });
+
+  it("skips empty workout_plan rows so a later real plan wins", () => {
+    expect(
+      pickAlexPlanFocus([
+        { payload: { ui: { cardType: "workout_plan", days: [] } } },
+        {
+          payload: {
+            ui: {
+              cardType: "workout_plan",
+              days: [{ name: "Push" }, { name: "Pull" }],
+            },
+          },
+        },
+      ]),
+    ).toBe("alex_last_plan: Push | Pull");
   });
 });

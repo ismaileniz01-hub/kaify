@@ -202,12 +202,15 @@ function buildStateSummary(
   if (extras?.allergies) parts.push(`allergies: ${extras.allergies}`);
   if (extras?.userGender === "male") parts.push("user_gender: male");
   if (extras?.userGender === "female") parts.push("user_gender: female");
-  if (state?.motivation_style) parts.push(`motivation style: ${state.motivation_style}`);
-  if (state && state.training_focus.length > 0)
-    parts.push(`training focus: ${state.training_focus.join(", ")}`);
+  if (state?.injury_notes) parts.push(`injuries/limitations: ${state.injury_notes}`);
+  if (extras?.crossCoachSnapshot && extras.crossCoachSnapshot.trim()) {
+    parts.push(extras.crossCoachSnapshot.trim());
+  }
   if (state?.last_workout_summary)
     parts.push(`last workout: ${state.last_workout_summary}`);
-  if (state?.injury_notes) parts.push(`injuries/limitations: ${state.injury_notes}`);
+  if (state && state.training_focus.length > 0)
+    parts.push(`training focus: ${state.training_focus.join(", ")}`);
+  if (state?.motivation_style) parts.push(`motivation style: ${state.motivation_style}`);
   if (extras?.familiarityStage && extras.familiarityStage !== "unknown") {
     parts.push(`familiarity_stage: ${extras.familiarityStage}`);
   } else if (extras?.familiarityStage === "unknown") {
@@ -215,9 +218,6 @@ function buildStateSummary(
   }
   if (fitnessContext && fitnessContext.trim().length > 0) {
     parts.push(fitnessContext);
-  }
-  if (extras?.crossCoachSnapshot && extras.crossCoachSnapshot.trim()) {
-    parts.push(extras.crossCoachSnapshot.trim());
   }
   return parts.join("; ");
 }
@@ -361,17 +361,15 @@ function asCoachId(coachId: string): CoachId | null {
   return null;
 }
 
-/** Compact cross-coach facts — never full teammate personality prompts. */
-function compactTeamFacts(activeCoachId: string): string[] {
-  const facts: Record<string, string> = {
-    alex: "alex_owns: training_programming_form",
-    maya: "maya_owns: nutrition_meals_hydration",
-    leo: "leo_owns: physique_scores_priorities",
-    kai: "kai_owns: motivation_continuity",
-  };
-  return Object.entries(facts)
-    .filter(([id]) => id !== activeCoachId)
-    .map(([, fact]) => fact);
+/** Compact cross-coach facts — never ownership labels or teammate personality. */
+function compactTeamFacts(snapshot: string): string[] {
+  const keep =
+    /^(leo_|alex_last_plan|calorie_goal|protein_goal|carbs_goal|fat_goal|calories_today|protein_today|primary_goal|experience_level|training_days)/;
+  return snapshot
+    .split(/;\s*/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && line.length <= 180 && keep.test(line))
+    .slice(0, 6);
 }
 
 async function settleChatQuota(params: {
@@ -573,7 +571,7 @@ async function* streamKaiosCoachReply(
         locale,
         userState,
         memoryItems,
-        teamFacts: compactTeamFacts(coachId),
+        teamFacts: compactTeamFacts(crossCoachSnapshot),
         conversationTurns: history,
         signal: params.signal,
       },

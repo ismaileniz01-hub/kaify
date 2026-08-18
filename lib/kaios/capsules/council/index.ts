@@ -18,6 +18,7 @@ council:
     - reach_shared_plan
     - do_not_generate_past_user_turn
     - wait_when_user_input_needed
+    - use WEEKLY_SNAPSHOT profile/teammate facts; never invent Leo scores or Maya targets
   final:
     max_major_priorities: 3
     create_team_decision: true

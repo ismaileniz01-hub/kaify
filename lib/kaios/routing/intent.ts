@@ -1,5 +1,6 @@
 ﻿import {
   classifyShortTurn,
+  looksLikeFitnessCoachingProposal,
 } from "@/lib/kaios/context/short-turn";
 import { looksLikeWorkoutCompletion } from "@/lib/kaios/analytics/workout-log";
 
@@ -156,7 +157,7 @@ export function looksLikeFoodConsumption(message: string): boolean {
 }
 
 const MEAL_PLAN_RE =
-  /\b(meal\s*plan|yemek plan|öğün plan|ogun plan|weekly meals|dinners?\s+for\s+the\s+week|weekly\s+dinners?|menu for|hazırla.*plan|hazirla.*plan|plan my (?:dinners?|meals?|lunches?))\b/i;
+  /\b(meal\s*plan|yemek plan|yemek program|öğün plan|ogun plan|haftal[iı]k\s+men|diyet listesi|weekly meals|dinners?\s+for\s+the\s+week|weekly\s+dinners?|menu for|hazırla.*plan|hazirla.*plan|plan my (?:dinners?|meals?|lunches?))/i;
 
 const HYDRATION_RE =
   /\b(hydrat|water intake|drink water|su iç|su ic|susuz|dehydrat)\b/i;
@@ -167,6 +168,32 @@ const TOOL_RE =
 
 const COUNCIL_DECISION_RE =
   /\b(decide|decision|final plan|council decision|karar ver|sonuç|sonuc|oybirliği|oybirligi)\b/i;
+
+function continuedDomainIntent(
+  coach: CoachId,
+  previousAssistant?: string,
+): Intent | null {
+  const prev = previousAssistant?.trim() ?? "";
+  if (!prev) return null;
+  if (
+    coach === "alex" &&
+    (PROGRAM_RE.test(prev) ||
+      looksLikeFitnessCoachingProposal(prev) ||
+      /\b(program|split|sets?|reps?|ekipman|equipment|haftada|antrenman)\b/i.test(
+        prev,
+      ))
+  ) {
+    return "programming";
+  }
+  if (
+    coach === "maya" &&
+    (MEAL_PLAN_RE.test(prev) ||
+      /\b(meal_plan|kalori|protein|öğün|ogun|macro)\b/i.test(prev))
+  ) {
+    return "meal_plan";
+  }
+  return null;
+}
 
 function normalizeMessage(message: string): string {
   return message.trim().replace(/\s+/g, " ");
@@ -236,7 +263,10 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
     hasRecentHistory: input.hasRecentHistory,
   });
   if (shortTurn.needsContinuation && shortTurn.continuePreviousTopic) {
-    return "unknown";
+    return (
+      continuedDomainIntent(input.coach, input.previousAssistantMessage) ??
+      "unknown"
+    );
   }
 
   if (looksCasual(msg)) {

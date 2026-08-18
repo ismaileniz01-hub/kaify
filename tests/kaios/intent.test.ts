@@ -64,6 +64,27 @@ describe("resolveIntent", () => {
     ).toBe("motivation");
   });
 
+  it("keeps Alex programming on elliptical answers to a program interview", () => {
+    expect(
+      resolveIntent({
+        coach: "alex",
+        message: "4 gün",
+        previousAssistantMessage:
+          "Haftada kaç gün gelebiliyorsun? Programı ona göre yazayım.",
+        hasRecentHistory: true,
+      }),
+    ).toBe("programming");
+  });
+
+  it("routes Turkish weekly menu phrasing to meal_plan for Maya", () => {
+    expect(
+      resolveIntent({
+        coach: "maya",
+        message: "bana haftalık menü hazırla",
+      }),
+    ).toBe("meal_plan");
+  });
+
   it("routes nutrition and meal analysis for maya", () => {
     expect(
       resolveIntent({

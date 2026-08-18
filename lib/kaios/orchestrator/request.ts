@@ -22,6 +22,7 @@ import {
   partialJsonStringField,
 } from "@/lib/kaios/envelope-text";
 import type { ChatTurn, TokenUsage } from "@/lib/ai/types";
+import { lastAssistantMessage } from "@/lib/kaios/context/short-turn";
 import { buildRuntimeContext } from "@/lib/kaios/context/builder";
 import { compilePrompt } from "@/lib/kaios/compiler/prompt";
 import {
@@ -100,8 +101,6 @@ function messageTypeForIntent(
   if (uiType === "daily_summary") return "daily_summary";
   if (uiType === "score" || intent === "physique_analysis") return "score";
   if (uiType === "analysis" || intent === "meal_analysis") return "analysis";
-  if (intent === "programming") return "workout_plan";
-  if (intent === "meal_plan") return "meal_plan";
   return "text";
 }
 
@@ -245,10 +244,14 @@ export async function* orchestrateCoachChat(
   input: OrchestrateChatInput,
   out: { meta?: OrchestrateResultMeta },
 ): AsyncGenerator<SseChunk> {
+  const previousAssistant =
+    lastAssistantMessage(input.conversationTurns) ?? undefined;
   const intent = resolveIntent({
     coach: input.coachId,
     message: input.message,
     hasImage: input.hasImage,
+    previousAssistantMessage: previousAssistant,
+    hasRecentHistory: (input.conversationTurns?.length ?? 0) > 0,
   });
 
   // Bounded read prefetch (0–1) before model — never writes.
@@ -273,6 +276,7 @@ export async function* orchestrateCoachChat(
     knowledge: knowledge.length ? knowledge : undefined,
     conversationTurns: input.conversationTurns,
     hasImage: input.hasImage,
+    intent,
   });
 
   const compiled = compilePrompt(ctx);

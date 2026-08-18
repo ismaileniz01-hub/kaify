@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api/errors";
 import { writeConfirmAnalyticsPending } from "@/lib/repositories/analytics-write.repository";
 import { invalidateHomeBundleCache } from "@/lib/cache/invalidate";
 import { sanitizeAnalyticsPatch, sanitizeMealMacros } from "@/lib/analytics/bounds";
+import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import type { Json } from "@/lib/types/database.types";
 
 /** Pending meal/analytics confirmations expire after 24h (application-enforced). */
@@ -66,8 +67,44 @@ export async function confirmPendingAnalytics(
   userId: string,
   pendingId: string,
 ): Promise<void> {
+  const admin = createAdminSupabaseClient() as SupabaseClient;
+  const { data: pending } = await admin
+    .from("analytics_pending_confirmations")
+    .select("payload")
+    .eq("id", pendingId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
   await writeConfirmAnalyticsPending(userId, pendingId);
   void invalidateHomeBundleCache(userId).catch(() => undefined);
+
+  const payload =
+    pending?.payload && typeof pending.payload === "object"
+      ? (pending.payload as {
+          meal?: { calories?: number; protein?: number; carbs?: number; fat?: number };
+          patch?: Record<string, number>;
+          summary?: string;
+        })
+      : null;
+  if (payload?.meal) {
+    await emitKaiosEventBestEffort({
+      category: "nutrition",
+      type: "meal_saved",
+      userId,
+      payload: { meal: payload.meal },
+      at: new Date().toISOString(),
+    });
+  }
+  const workouts = Number(payload?.patch?.workoutsCompleted ?? payload?.patch?.workouts_completed);
+  if (Number.isFinite(workouts) && workouts > 0) {
+    await emitKaiosEventBestEffort({
+      category: "training",
+      type: "workout_completed",
+      userId,
+      payload: { summary: payload?.summary ?? "workout_completed" },
+      at: new Date().toISOString(),
+    });
+  }
 }
 
 export async function rejectPendingAnalytics(

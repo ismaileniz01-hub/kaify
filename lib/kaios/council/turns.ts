@@ -25,6 +25,8 @@ import { resolveLocale } from "@/lib/i18n/dictionary";
 import { getAnalyticsBundle } from "@/lib/services/analytics.service";
 import { getStreakStatus } from "@/lib/services/streak-status.service";
 import { teamMeetingWeekKey } from "@/lib/team/meeting-week";
+import { loadCrossCoachSnapshot } from "@/lib/kaios/context/coach-snapshot";
+import { formatTrustedProfileContext } from "@/lib/ai/chat-context";
 import { COUNCIL_CORE, COUNCIL_ROLE_DIGESTS } from "@/lib/kaios/capsules/council";
 import { KAI_MODE_COUNCIL } from "@/lib/kaios/capsules/kai";
 import { resolveActiveLocale } from "@/lib/kaios/localization/resolve";
@@ -51,6 +53,8 @@ function weeklySnapshot(input: {
   water: number;
   calories: string;
   protein: number;
+  profile?: string;
+  teammate?: string;
 }): string {
   return [
     `user:${input.name}`,
@@ -59,7 +63,11 @@ function weeklySnapshot(input: {
     `hydration_l:${input.water}`,
     `calories:${input.calories}`,
     `protein_g:${input.protein}`,
-  ].join("; ");
+    input.profile,
+    input.teammate,
+  ]
+    .filter((part): part is string => Boolean(part && part.trim()))
+    .join("; ");
 }
 
 export async function assertTeamChatUnlocked(userId: string): Promise<void> {
@@ -236,11 +244,24 @@ export async function runCouncilTurn(params: {
     );
   }
 
-  const [analytics, streak, { data: profile }] = await Promise.all([
-    getAnalyticsBundle(params.userId),
-    getStreakStatus(params.userId),
-    admin.from("profiles").select("display_name, locale").eq("id", params.userId).single(),
-  ]);
+  const [analytics, streak, { data: profile }, { data: settings }, teammate] =
+    await Promise.all([
+      getAnalyticsBundle(params.userId),
+      getStreakStatus(params.userId),
+      admin
+        .from("profiles")
+        .select(
+          "display_name, locale, experience_level, training_days_per_week, activity_level, dietary_preference, allergies, health_conditions, disliked_foods, height_cm, weight_kg",
+        )
+        .eq("id", params.userId)
+        .single(),
+      admin
+        .from("user_settings")
+        .select("primary_goal")
+        .eq("user_id", params.userId)
+        .maybeSingle(),
+      loadCrossCoachSnapshot(params.userId).catch(() => ""),
+    ]);
 
   const savedLocale = resolveLocale(profile?.locale);
   const locale = resolveActiveLocale({
@@ -252,6 +273,26 @@ export async function runCouncilTurn(params: {
     fallbackLocale: "en",
   });
   const name = sanitizeUserText(profile?.display_name ?? "User", 60) || "User";
+  const profileFacts = [
+    typeof settings?.primary_goal === "string" && settings.primary_goal
+      ? `primary_goal: ${settings.primary_goal}`
+      : "",
+    formatTrustedProfileContext({
+      experienceLevel: profile?.experience_level ?? null,
+      trainingDaysPerWeek: profile?.training_days_per_week ?? null,
+      activityLevel: profile?.activity_level ?? null,
+      heightCm: profile?.height_cm ?? null,
+      weightKg: profile?.weight_kg ?? null,
+      dietaryPreference: profile?.dietary_preference ?? null,
+      dislikedFoods: profile?.disliked_foods ?? null,
+      healthConditions: profile?.health_conditions ?? null,
+    }),
+    typeof profile?.allergies === "string" && profile.allergies.trim()
+      ? `allergies: ${profile.allergies.trim()}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
   const snapshot = weeklySnapshot({
     name,
     streak: streak.currentStreak,
@@ -259,6 +300,8 @@ export async function runCouncilTurn(params: {
     water: analytics.today.waterLiters,
     calories: `${analytics.today.caloriesConsumed}/${analytics.today.calorieGoal}`,
     protein: analytics.today.proteinG,
+    profile: profileFacts,
+    teammate,
   });
 
   const recentCouncil = history

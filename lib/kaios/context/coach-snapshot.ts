@@ -5,6 +5,7 @@
 
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { getTodayNutritionSnapshot } from "@/lib/services/analytics.service";
+import { logger } from "@/lib/logger";
 import {
   extractAlexPlanFocus,
   extractPhysiqueFromLeoPayload,
@@ -28,11 +29,26 @@ function compactPhysiqueRows(rows: unknown[]): string {
   return "";
 }
 
+export function pickAlexPlanFocus(rows: unknown[]): string {
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const plan = extractAlexPlanFocus((row as { payload?: unknown }).payload);
+    if (plan) return plan;
+  }
+  return "";
+}
+
 /** Compact teammate snapshot for every 1:1 coach turn. */
 export async function loadCrossCoachSnapshot(userId: string): Promise<string> {
   const admin = createAdminSupabaseClient();
   const [nutrition, leoRows, alexRows] = await Promise.all([
-    getTodayNutritionSnapshot(userId).catch(() => null),
+    getTodayNutritionSnapshot(userId).catch((error) => {
+      logger.warn("kaios.snapshot.nutrition_failed", {
+        userId,
+        error: error instanceof Error ? error.message : "unknown",
+      });
+      return null;
+    }),
     admin
       .from("chat_messages")
       .select("payload")
@@ -41,7 +57,7 @@ export async function loadCrossCoachSnapshot(userId: string): Promise<string> {
       .eq("sender", "coach")
       .in("message_type", ["score", "analysis"])
       .order("created_at", { ascending: false })
-      .limit(1),
+      .limit(3),
     admin
       .from("chat_messages")
       .select("payload")
@@ -50,7 +66,7 @@ export async function loadCrossCoachSnapshot(userId: string): Promise<string> {
       .eq("sender", "coach")
       .eq("message_type", "workout_plan")
       .order("created_at", { ascending: false })
-      .limit(1),
+      .limit(8),
   ]);
 
   const parts: string[] = [];
@@ -60,7 +76,7 @@ export async function loadCrossCoachSnapshot(userId: string): Promise<string> {
   }
   const physique = compactPhysiqueRows(leoRows.data ?? []);
   if (physique) parts.push(physique);
-  const plan = extractAlexPlanFocus(alexRows.data?.[0]?.payload);
+  const plan = pickAlexPlanFocus(alexRows.data ?? []);
   if (plan) parts.push(plan);
   return parts.join("; ");
 }

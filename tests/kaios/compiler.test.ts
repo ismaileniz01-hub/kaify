@@ -2,6 +2,7 @@
 import { buildRuntimeContext } from "@/lib/kaios/context/builder";
 import { compilePrompt } from "@/lib/kaios/compiler/prompt";
 import { CORE_CAPSULE, SAFETY_CAPSULE, KAI_CORE } from "@/lib/kaios/capsules";
+import { prioritizeTrustedUserState } from "@/lib/kaios/context/safety-state";
 
 describe("compilePrompt (casual kai)", () => {
   it("builds a lean prompt with stable order and bounded tokens", () => {
@@ -63,5 +64,27 @@ describe("compilePrompt (casual kai)", () => {
     expect(sys).not.toContain(compiled.canary);
     expect(compiled.messages[1]?.content).toContain(compiled.canary);
     expect(compiled.messages[1]?.content).toContain("<<<BEGIN_USER_MESSAGE_");
+  });
+});
+
+describe("USER_CONTEXT budget keeps teammate facts", () => {
+  it("does not drop leo_lagging when general fitness prose is huge", () => {
+    const fluff = `app check-in streak: 12 days; ${"gym skip note ".repeat(200)}`;
+    const raw = `${fluff}; leo_lagging: back,calves; calorie_goal: 2100`;
+    expect(raw.length).toBeGreaterThan(2000);
+    const kept = prioritizeTrustedUserState(raw, 2000);
+    expect(kept).toContain("leo_lagging: back,calves");
+    expect(kept).toContain("calorie_goal: 2100");
+    const ctx = buildRuntimeContext({
+      coach: "alex",
+      message: "haftalik program hazirla",
+      locale: "tr",
+      userState: raw,
+    });
+    const blob = compilePrompt(ctx)
+      .messages.map((m) => m.content)
+      .join("\n");
+    expect(blob).toContain("leo_lagging: back,calves");
+    expect(blob).toContain("calorie_goal: 2100");
   });
 });

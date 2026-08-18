@@ -124,12 +124,12 @@ describe("safety state survives pruning", () => {
       message: "hi",
       locale: "en",
       userState:
-        "leo_lagging: back,calves; calorie_goal: 2100; primary_goal: lose_weight; motivation style: tough",
+        "leo_lagging: back,calves; calorie_goal: 2100; calories_today: 900/2100; primary_goal: lose_weight; motivation style: tough",
     });
     expect(ctx.tier).toBe(0);
     expect(ctx.userState).toMatch(/leo_lagging: back,calves/);
     expect(ctx.userState).toMatch(/calorie_goal: 2100/);
-    expect(ctx.userState).toMatch(/primary_goal: lose_weight/);
+    expect(ctx.userState).toMatch(/calories_today: 900\/2100/);
     expect(ctx.userState).not.toMatch(/motivation style/);
   });
 
