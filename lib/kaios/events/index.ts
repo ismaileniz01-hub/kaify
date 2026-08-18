@@ -5,7 +5,7 @@
 
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
-import type { Json } from "@/lib/types/database.types";
+import type { Database, Json } from "@/lib/types/database.types";
 
 export type KaiosEventCategory =
   | "training"
@@ -130,9 +130,10 @@ async function persistEventStatePatches(
       .eq("user_id", userId)
       .maybeSingle();
 
-    const update: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-    };
+    const update: Database["public"]["Tables"]["user_coaching_state"]["Update"] =
+      {
+        updated_at: new Date().toISOString(),
+      };
     if (patches.last_workout !== undefined) {
       const summary =
         typeof patches.last_workout === "string"
