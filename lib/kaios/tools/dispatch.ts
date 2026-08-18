@@ -116,6 +116,28 @@ export async function prefetchToolKnowledge(input: {
 
   if (
     input.coach === "alex" &&
+    input.intent === "programming" &&
+    isToolAllowedForCoach(input.coach, "getPhysiqueHistory")
+  ) {
+    const result = await executeTool(input.userId, {
+      name: "getPhysiqueHistory",
+      args: {},
+    });
+    out.toolResults.push({ name: "getPhysiqueHistory", result });
+    out.truths.push(resultToTruth("getPhysiqueHistory", result));
+    if (result.ok) {
+      out.knowledgeLines.push(
+        `recent_physique_history: ${JSON.stringify(result.data).slice(0, 1200)}`,
+      );
+    } else {
+      out.knowledgeLines.push(
+        `recent_physique_history: UNAVAILABLE (${result.code})`,
+      );
+    }
+  }
+
+  if (
+    input.coach === "alex" &&
     (input.intent === "programming" || input.intent === "exercise_form") &&
     /\b(substitute|alternative|swap|yerine|alternatif|library|exercise id)\b/i.test(
       input.message,

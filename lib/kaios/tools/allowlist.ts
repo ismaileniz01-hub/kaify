@@ -14,6 +14,7 @@ const MAYA_TOOLS: ReadonlySet<ToolName> = new Set([
 
 const ALEX_TOOLS: ReadonlySet<ToolName> = new Set([
   "searchExercises",
+  "getPhysiqueHistory",
   "validateExerciseIds",
 ]);
 

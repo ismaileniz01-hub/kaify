@@ -135,6 +135,84 @@ function casualEnvelope(
   };
 }
 
+function hasWorkoutPlanUi(envelope: BaseEnvelope): boolean {
+  if (!envelope.ui || typeof envelope.ui !== "object" || Array.isArray(envelope.ui)) {
+    return false;
+  }
+  const ui = envelope.ui as Record<string, unknown>;
+  return ui.cardType === "workout_plan" && Array.isArray(ui.days) && ui.days.length > 0;
+}
+
+function coerceWorkoutPlanEnvelope(
+  coach: CoachId,
+  text: string,
+): BaseEnvelope | null {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const dayRe =
+    /^(Pazartesi|Salı|Sali|Çarşamba|Carsamba|Perşembe|Persembe|Cuma|Cumartesi|Pazar|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s*[–-]\s*(.+)$/i;
+  const exerciseRe =
+    /^[-•]\s*(.+?)\s+(\d+)\s*x\s*([0-9]+(?:\s*-\s*[0-9]+)?|[0-9]+\+?|failure|amrap|min)$/i;
+
+  const intro: string[] = [];
+  const days: Array<{
+    dayKey: string;
+    focusKey: string;
+    exercises: Array<{ name: string; sets: number; reps: string }>;
+  }> = [];
+  let current:
+    | {
+        dayKey: string;
+        focusKey: string;
+        exercises: Array<{ name: string; sets: number; reps: string }>;
+      }
+    | null = null;
+
+  for (const line of lines) {
+    const dayMatch = line.match(dayRe);
+    if (dayMatch) {
+      current = {
+        dayKey: dayMatch[1]!,
+        focusKey: dayMatch[2]!.trim(),
+        exercises: [],
+      };
+      days.push(current);
+      continue;
+    }
+
+    const exerciseMatch = line.match(exerciseRe);
+    if (exerciseMatch && current) {
+      current.exercises.push({
+        name: exerciseMatch[1]!.trim(),
+        sets: Number(exerciseMatch[2]),
+        reps: exerciseMatch[3]!.replace(/\s+/g, ""),
+      });
+      continue;
+    }
+
+    if (!current) intro.push(line);
+  }
+
+  const validDays = days.filter((day) => day.exercises.length > 0);
+  if (validDays.length === 0) return null;
+
+  return {
+    schema_version: SCHEMA_VERSION,
+    coach,
+    intent: "programming",
+    message: intro.join(" ").trim() || "Program hazir.",
+    data: {
+      status: "proposed",
+    },
+    ui: {
+      cardType: "workout_plan",
+      days: validDays,
+    },
+  };
+}
+
 function structuredSystemHint(intent: Intent): string {
   return [
     "Return ONLY valid JSON matching the Kaify envelope:",
@@ -145,7 +223,7 @@ function structuredSystemHint(intent: Intent): string {
       '", "data":{}, "ui":{}, "actions":[] }',
     "Omit unused fields. message is localized natural coach speech.",
     intent === "programming"
-      ? "Sets/reps live in data/ui. message MUST coach every listed lift: how to do it, how not to (common mistakes), what to watch. Put a short cue in exercise.notes when present."
+      ? 'For weekly training plans, ui.cardType MUST be "workout_plan" and ui.days MUST contain the split. Keep message short: brief setup + why this split fits. Do NOT paste the full day-by-day program into message. Sets/reps live in data/ui. message MUST coach every listed lift: how to do it, how not to (common mistakes), what to watch. Put a short cue in exercise.notes when present.'
       : "Do not duplicate structured numbers already in data/ui inside message.",
     "No generic closing. Answer directly.",
     actionTruthHintForPrompt(),
@@ -357,14 +435,26 @@ export async function* orchestrateCoachChat(
 
     if (envelopeResult?.ok) {
       envelope = envelopeResult.data;
+      if (intent === "programming" && !hasWorkoutPlanUi(envelope)) {
+        const coerced = coerceWorkoutPlanEnvelope(input.coachId, envelope.message);
+        if (coerced) envelope = coerced;
+      }
       assistantText = envelope.message;
     } else {
       assistantText = coachVisibleMessage(scrubbed);
-      envelope = casualEnvelope(input.coachId, assistantText, intent);
-      logger.warn("kaios: structured parse failed; text fallback", {
-        coachId: input.coachId,
-        intent,
-      });
+      const coerced =
+        intent === "programming"
+          ? coerceWorkoutPlanEnvelope(input.coachId, assistantText)
+          : null;
+      envelope = coerced ?? casualEnvelope(input.coachId, assistantText, intent);
+      if (coerced) {
+        assistantText = envelope.message;
+      } else {
+        logger.warn("kaios: structured parse failed; text fallback", {
+          coachId: input.coachId,
+          intent,
+        });
+      }
     }
 
     if (assistantText.length > 0) {

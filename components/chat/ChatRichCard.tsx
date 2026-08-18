@@ -42,6 +42,27 @@ function scorePayloadToAnalysis(payload: Record<string, unknown>) {
   };
 }
 
+function workoutPlanPayload(payload: Record<string, unknown>) {
+  const nestedUi =
+    payload.ui && typeof payload.ui === "object" && !Array.isArray(payload.ui)
+      ? (payload.ui as Record<string, unknown>)
+      : null;
+  const nestedData =
+    payload.data && typeof payload.data === "object" && !Array.isArray(payload.data)
+      ? (payload.data as Record<string, unknown>)
+      : null;
+  const source = nestedUi ?? nestedData ?? payload;
+  return source as {
+    titleKey?: string;
+    durationKey?: string;
+    days?: {
+      dayKey: string;
+      focusKey: string;
+      exercises: { name: string; sets: number; reps: string; notes?: string }[];
+    }[];
+  };
+}
+
 export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardProps) {
   const { t } = useLang();
   const contact = CONTACTS[contactId];
@@ -226,15 +247,8 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
   }
 
   if (messageType === "workout_plan") {
-    const wp = p as {
-      titleKey?: string;
-      durationKey?: string;
-      days?: {
-        dayKey: string;
-        focusKey: string;
-        exercises: { name: string; sets: number; reps: string; notes?: string }[];
-      }[];
-    };
+    const wp = workoutPlanPayload(p);
+    if (!Array.isArray(wp.days) || wp.days.length === 0) return null;
     return (
       <div
         className="animate-message mt-2 overflow-hidden rounded-2xl"

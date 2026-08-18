@@ -69,11 +69,12 @@ describe("tool allowlists", () => {
     expect(isToolAllowedForCoach("maya", "saveMealMacros")).toBe(true);
     expect(isToolAllowedForCoach("maya", "validateExerciseIds")).toBe(false);
     expect(isToolAllowedForCoach("alex", "searchExercises")).toBe(true);
+    expect(isToolAllowedForCoach("alex", "getPhysiqueHistory")).toBe(true);
     expect(isToolAllowedForCoach("alex", "saveMealMacros")).toBe(false);
     expect(isToolAllowedForCoach("leo", "getPhysiqueHistory")).toBe(true);
     expect(isToolAllowedForCoach("kai", "getNutritionState")).toBe(true);
     expect(isToolAllowedForCoach("council", "saveMealMacros")).toBe(false);
-    expect(toolsAllowedForCoach("alex").size).toBe(2);
+    expect(toolsAllowedForCoach("alex").size).toBe(3);
   });
 
   it("maps action types and rejects unknown", () => {

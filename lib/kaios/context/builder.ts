@@ -216,7 +216,9 @@ export function buildRuntimeContext(
 
   const outputSchemaName =
     input.outputSchemaName ??
-    (intent === "meal_analysis"
+    (intent === "programming"
+      ? "workout_plan"
+      : intent === "meal_analysis"
       ? "meal_analysis"
       : intent === "physique_analysis"
         ? "physique_analysis"
