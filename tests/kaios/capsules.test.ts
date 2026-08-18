@@ -9,6 +9,7 @@ import {
   ALEX_MOTIVATION,
   ALEX_SAFETY,
   MAYA_CORE,
+  MAYA_FOOD_LOG,
   MAYA_FOOD_ANALYSIS,
   MAYA_MEAL_PLANNING,
   MAYA_HYDRATION,
@@ -49,6 +50,7 @@ const ALL_CAPSULES: Array<[string, string]> = [
   ["ALEX_MOTIVATION", ALEX_MOTIVATION],
   ["ALEX_SAFETY", ALEX_SAFETY],
   ["MAYA_CORE", MAYA_CORE],
+  ["MAYA_FOOD_LOG", MAYA_FOOD_LOG],
   ["MAYA_FOOD_ANALYSIS", MAYA_FOOD_ANALYSIS],
   ["MAYA_MEAL_PLANNING", MAYA_MEAL_PLANNING],
   ["MAYA_HYDRATION", MAYA_HYDRATION],
@@ -100,6 +102,11 @@ describe("KAIOS capsules", () => {
 
     const maya = loadCoachCapsules("maya", "food_analysis");
     expect(maya).toContain(MAYA_FOOD_ANALYSIS);
+    expect(maya).toContain(MAYA_HYDRATION);
+
+    const mayaLog = loadCoachCapsules("maya", "food_log");
+    expect(mayaLog).toContain(MAYA_FOOD_LOG);
+    expect(mayaLog).toContain(MAYA_HYDRATION);
 
     const leo = loadCoachCapsules("leo", "scoring");
     expect(leo).toContain(LEO_SCORING);
@@ -117,6 +124,8 @@ describe("KAIOS capsules", () => {
     expect(ALEX_CORE).toContain("never_invent_exercise_ids");
     expect(MAYA_CORE).toContain("never_claim_save_without_tool_success");
     expect(MAYA_CORE).toContain("photo_vision_identifies_food_not_final_macros");
+    expect(MAYA_CORE).toContain("after_every_meal");
+    expect(MAYA_FOOD_LOG).toContain("after_every_meal");
     expect(LEO_CORE).toContain("validate_image_before_scoring");
     expect(LEO_CORE).toContain("do_not_inflate_scores_for_motivation");
     expect(KAI_CORE).toMatch(/never_fake_product_actions|do_not_invent_product_actions/i);

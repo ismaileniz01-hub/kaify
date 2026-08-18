@@ -52,11 +52,22 @@ describe("formatNutritionSnapshot", () => {
       proteinGoalG: 150,
       caloriesConsumed: 900,
       proteinG: 80,
+      waterLiters: 0.8,
+      waterGoalLiters: 2.5,
     });
     expect(line).toContain("calorie_goal: 2100");
     expect(line).toContain("protein_goal_g: 150");
     expect(line).toContain("calories_today: 900/2100");
     expect(line).toContain("protein_today_g: 80/150");
+    expect(line).toContain("water_today_l: 0.8/2.5");
+  });
+
+  it("includes zero water today so Maya can still remind", () => {
+    const line = formatNutritionSnapshot({
+      waterLiters: 0,
+      waterGoalLiters: 2.5,
+    });
+    expect(line).toContain("water_today_l: 0/2.5");
   });
 });
 
@@ -124,12 +135,14 @@ describe("prioritizeTeamFactLines", () => {
       "fat_goal_g: 70",
       "calories_today: 900/2100",
       "protein_today_g: 80/150",
+      "water_today_l: 0.8/2.5",
       "leo_lagging: back,calves",
       "alex_last_plan: Push | Pull | Legs",
     ].join("; ");
-    const lines = prioritizeTeamFactLines(snapshot, 6);
+    const lines = prioritizeTeamFactLines(snapshot, 8);
     expect(lines.join(" ")).toContain("leo_lagging: back,calves");
     expect(lines.join(" ")).toContain("alex_last_plan: Push | Pull | Legs");
-    expect(lines.length).toBeLessThanOrEqual(6);
+    expect(lines.join(" ")).toContain("water_today_l: 0.8/2.5");
+    expect(lines.length).toBeLessThanOrEqual(8);
   });
 });

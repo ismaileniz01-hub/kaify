@@ -114,6 +114,11 @@ export function extractPhysiqueFromLeoPayload(
   return summarizePhysiqueScores(scores, overall);
 }
 
+function formatLiters(n: number): string {
+  const rounded = Math.round(n * 10) / 10;
+  return String(rounded);
+}
+
 export function formatNutritionSnapshot(input: {
   calorieGoal?: number | null;
   proteinGoalG?: number | null;
@@ -121,6 +126,8 @@ export function formatNutritionSnapshot(input: {
   fatGoalG?: number | null;
   caloriesConsumed?: number | null;
   proteinG?: number | null;
+  waterLiters?: number | null;
+  waterGoalLiters?: number | null;
 }): string {
   const parts: string[] = [];
   const calorieGoal = finiteNumber(input.calorieGoal);
@@ -129,6 +136,8 @@ export function formatNutritionSnapshot(input: {
   const fatGoal = finiteNumber(input.fatGoalG);
   const calories = finiteNumber(input.caloriesConsumed);
   const protein = finiteNumber(input.proteinG);
+  const water = finiteNumber(input.waterLiters);
+  const waterGoal = finiteNumber(input.waterGoalLiters);
   if (calorieGoal !== null && calorieGoal > 0) {
     parts.push(`calorie_goal: ${Math.round(calorieGoal)}`);
   }
@@ -147,6 +156,11 @@ export function formatNutritionSnapshot(input: {
   if (protein !== null && proteinGoal !== null && proteinGoal > 0) {
     parts.push(
       `protein_today_g: ${Math.round(protein)}/${Math.round(proteinGoal)}`,
+    );
+  }
+  if (waterGoal !== null && waterGoal > 0) {
+    parts.push(
+      `water_today_l: ${formatLiters(water ?? 0)}/${formatLiters(waterGoal)}`,
     );
   }
   return parts.join("; ");
@@ -201,12 +215,12 @@ export function extractAlexPlanFocus(payload: unknown): string | null {
 }
 
 const TEAM_FACT_KEEP =
-  /^(leo_|alex_last|calorie_goal|protein_goal|carbs_goal|fat_goal|calories_today|protein_today|primary_goal|experience_level|training_days|training_focus)/;
+  /^(leo_|alex_last|calorie_goal|protein_goal|carbs_goal|fat_goal|calories_today|protein_today|water_today|primary_goal|experience_level|training_days|training_focus)/;
 
 function teamFactRank(line: string): number {
   if (/^(leo_|alex_last)/.test(line)) return 0;
   if (
-    /^(calorie_goal|protein_goal|calories_today|protein_today|primary_goal|training_days)/.test(
+    /^(calorie_goal|protein_goal|calories_today|protein_today|water_today|primary_goal|training_days)/.test(
       line,
     )
   ) {

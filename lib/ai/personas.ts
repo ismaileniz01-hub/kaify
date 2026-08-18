@@ -21,6 +21,7 @@ import {
   MAYA_BOUNDARIES,
   MAYA_CORE,
   MAYA_FOOD_ANALYSIS,
+  MAYA_HYDRATION,
 } from "@/lib/kaios/capsules/maya";
 import { getLocalePack } from "@/lib/kaios/capsules/localization";
 
@@ -180,7 +181,9 @@ export function buildSynthesisMessages(params: SynthesisParams): SynthesisBuild 
     params.persona === "leo"
       ? [LEO_VOICE, LEO_BOUNDARIES, LEO_SCORING, LEO_CORE].join("\n\n")
       : params.persona === "maya"
-        ? [MAYA_BOUNDARIES, MAYA_FOOD_ANALYSIS, MAYA_CORE].join("\n\n")
+        ? [MAYA_BOUNDARIES, MAYA_FOOD_ANALYSIS, MAYA_HYDRATION, MAYA_CORE].join(
+            "\n\n",
+          )
         : "";
 
   const system = [
@@ -195,7 +198,7 @@ export function buildSynthesisMessages(params: SynthesisParams): SynthesisBuild 
     getLocalePack(params.locale),
     "Keep it short, motivating and easy to read; light Markdown only where it helps.",
     profile.kind === "food"
-      ? "Summarize visible meal observations. Treat calories/macros as estimates, never as a verified nutrition database. If ambiguity is listed, ask one concise clarification instead of false precision. Never claim a meal was saved unless TOOL_RESULTS say SUCCEEDED. If USER_CONTEXT has calorie_goal, protein_goal_g, or alex_last_plan, stay on those numbers and time the meal to training when relevant."
+      ? "Summarize visible meal observations. Treat calories/macros as estimates, never as a verified nutrition database. If ambiguity is listed, ask one concise clarification instead of false precision. Never claim a meal was saved unless TOOL_RESULTS say SUCCEEDED. If USER_CONTEXT has calorie_goal, protein_goal_g, or alex_last_plan, stay on those numbers and time the meal to training when relevant. After every meal photo, one short water reminder — never invent liters they drank."
       : "Summarize visible-region physique observations only. Do not diagnose. Do not claim precise body-fat or muscle-mass percentages. Observation scores are inputs, not your medical authority. Calibrate against history when a consistency note is provided; if none, do not invent progress. No automatic praise or hype — evidence language only. If USER_CONTEXT has alex_last_plan or calorie_goal, fold those teammate facts into the read — never invent a split or target.",
     "At the very end, append a SHORT disclaimer line in your own voice and in the user's language, making clear this is not medical advice and that a professional should be consulted for medical concerns.",
     buildCanaryReminder(canary),

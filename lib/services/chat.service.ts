@@ -378,7 +378,7 @@ function asCoachId(coachId: string): CoachId | null {
 
 /** Compact cross-coach facts — never ownership labels or teammate personality. */
 function compactTeamFacts(snapshot: string): string[] {
-  return prioritizeTeamFactLines(snapshot, 8);
+  return prioritizeTeamFactLines(snapshot, 10);
 }
 
 async function settleChatQuota(params: {

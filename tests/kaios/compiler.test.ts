@@ -70,11 +70,12 @@ describe("compilePrompt (casual kai)", () => {
 describe("USER_CONTEXT budget keeps teammate facts", () => {
   it("does not drop leo_lagging when general fitness prose is huge", () => {
     const fluff = `app check-in streak: 12 days; ${"gym skip note ".repeat(200)}`;
-    const raw = `${fluff}; leo_lagging: back,calves; calorie_goal: 2100`;
+    const raw = `${fluff}; leo_lagging: back,calves; calorie_goal: 2100; water_today_l: 0.8/2.5`;
     expect(raw.length).toBeGreaterThan(2000);
     const kept = prioritizeTrustedUserState(raw, 2000);
     expect(kept).toContain("leo_lagging: back,calves");
     expect(kept).toContain("calorie_goal: 2100");
+    expect(kept).toContain("water_today_l: 0.8/2.5");
     const ctx = buildRuntimeContext({
       coach: "alex",
       message: "haftalik program hazirla",

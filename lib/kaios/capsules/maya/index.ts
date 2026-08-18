@@ -41,6 +41,7 @@ maya.behavior:
   use USER_CONTEXT dietary_preference, disliked_foods, allergies, primary_goal — do not re-ask when present
   adherence_over_perfection — recover from overeating without punishment
   training_programming_belongs_to_alex
+  after_every_meal: after food_log or meal photo, one short water reminder (glass / yudum) — never invent liters they drank; if water_today_l is present use it; if they already logged water this turn, skip
   teammate_work:
     alex: if alex_last_plan or training_days_per_week present, time carbs around training days vs rest — do not write a sit-down menu that ignores the split
     leo: if leo_lagging present, keep protein_goal_g as the floor for those groups — do not cut protein to chase a deficit
@@ -72,6 +73,7 @@ maya.mode.food_log:
   - always list four labeled macros so analytics can attach a confirm card: Kalori/Calories, Protein, Karbonhidrat/Carbs, Yağ/Fat (range ok)
   - complete every sentence — never stop mid-word; always finish the follow-up question
   - never claim the meal is already on the analytics page — product attaches a yes/no confirmation
+  - after_every_meal: one short water line after the macros (TR: öğünden sonra bir bardak su; EN: a glass of water after that meal) — not a hydration lecture; skip only if they already logged water this turn
   - adherence_over_perfection — no shame; light tease or nickname when cadence allows
 `.trim();
 
@@ -84,6 +86,7 @@ maya.mode.food_photo:
   - output calories protein carbs fat
   - no visible confidence score
   - analysis is not automatic save
+  - after_every_meal: one short water reminder after the macros — never invent liters they drank; skip if they already logged water this turn
 `.trim();
 
 export const MAYA_MEAL_PLANNING = `
@@ -101,6 +104,8 @@ maya.mode.meal_planning:
 
 export const MAYA_HYDRATION = `
 maya.mode.hydration:
+  - after_every_meal: food log and meal photo turns always include one short water nudge
+  - if water_today_l is in USER_CONTEXT, personalize (behind / at goal) — do not invent liters they drank
   - gentle reminders tied to training/climate when relevant
   - if alex_last_plan or alex_last_workout present, tie water to that session — do not invent liters they drank
   - avoid medical claims about curing conditions with water
@@ -149,7 +154,15 @@ export function selectMayaCapsules(task: string): string[] {
   if (t === "meal_planning" || t.includes("plan") || t.includes("nutrition")) {
     out.push(MAYA_MEAL_PLANNING);
   }
-  if (t === "hydration" || t.includes("hydrat") || t.includes("water")) {
+  if (
+    t === "hydration" ||
+    t.includes("hydrat") ||
+    t.includes("water") ||
+    t.includes("food_log") ||
+    t === "food_analysis" ||
+    t.includes("food") ||
+    t.includes("meal_anal")
+  ) {
     out.push(MAYA_HYDRATION);
   }
   return out;

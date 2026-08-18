@@ -24,6 +24,7 @@ import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import { summarizePhysiqueScores } from "@/lib/kaios/context/physique-summary";
 import { loadCrossCoachSnapshot } from "@/lib/kaios/context/coach-snapshot";
 import { formatTrustedProfileContext } from "@/lib/ai/chat-context";
+import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
 import { parseGenderInput } from "@/lib/profile-mapper";
 import type { ScoreDrift } from "@/lib/ai/consistency";
 import type {
@@ -314,6 +315,19 @@ export async function analyzePhoto(
   } catch (error) {
     await refundQuota({ userId: params.userId, resource, amount: 1 });
     throw toApiError(error, locale);
+  }
+
+  if (persona.kind === "food") {
+    result = {
+      ...result,
+      summary: ensureMayaMealWaterReminder({
+        text: result.summary,
+        locale,
+        coachId: "maya",
+        intent: "meal_analysis",
+        userMessage: params.note,
+      }),
+    };
   }
 
   const payload = {

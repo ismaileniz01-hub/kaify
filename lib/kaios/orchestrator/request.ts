@@ -46,6 +46,7 @@ import {
   prefetchToolKnowledge,
 } from "@/lib/kaios/tools/dispatch";
 import { maybeQueueCoachLogConfirmation } from "@/lib/kaios/analytics/chat-log";
+import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
 import {
   actionTruthHintForPrompt,
   enforceActionTruthOnPayload,
@@ -624,10 +625,27 @@ export async function* orchestrateCoachChat(
     assistantText = envelope.message;
   }
 
-  assistantText = coachVisibleMessage(
-    scrubFalseSuccessClaims(assistantText, actionTruth),
-  );
+  assistantText = ensureMayaMealWaterReminder({
+    text: coachVisibleMessage(
+      scrubFalseSuccessClaims(assistantText, actionTruth),
+    ),
+    locale: input.locale,
+    coachId: input.coachId,
+    intent,
+    userMessage: input.message,
+  });
   envelope = { ...envelope, message: assistantText };
+
+  if (assistantText.length > streamedVisible.length) {
+    const rest = assistantText.slice(streamedVisible.length);
+    const chunkSize = 48;
+    for (let i = 0; i < rest.length; i += chunkSize) {
+      yield {
+        event: "delta",
+        data: { content: rest.slice(i, i + chunkSize) },
+      };
+    }
+  }
 
   if (usageTokens <= 0) {
     const promptChars = compiled.messages.reduce(

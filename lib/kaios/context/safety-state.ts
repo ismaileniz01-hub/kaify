@@ -7,7 +7,7 @@ const SAFETY_LINE_RE =
 
 /** Product facts coaches must keep even on casual greetings (tier 0). */
 const STICKY_LINE_RE =
-  /\b(primary_goal|experience_level|training_days_per_week|activity_level|dietary_preference|disliked_foods|user_gender|familiarity_stage|height_cm|weight_kg|calorie_goal|protein_goal_g|carbs_goal_g|fat_goal_g|calories_today|protein_today_g|leo_lagging|leo_overall|leo_priority|leo_scores|alex_last_plan|alex_last_workout|training_focus)\b/i;
+  /\b(primary_goal|experience_level|training_days_per_week|activity_level|dietary_preference|disliked_foods|user_gender|familiarity_stage|height_cm|weight_kg|calorie_goal|protein_goal_g|carbs_goal_g|fat_goal_g|calories_today|protein_today_g|water_today_l|leo_lagging|leo_overall|leo_priority|leo_scores|alex_last_plan|alex_last_workout|training_focus)\b/i;
 
 export function splitSafetyAndGeneralState(userState?: string): {
   safetyState?: string;

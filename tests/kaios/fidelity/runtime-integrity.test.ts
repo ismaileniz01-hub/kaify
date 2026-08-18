@@ -221,6 +221,29 @@ describe("Leo photo uses KAIOS capsules", () => {
     expect(blob).toContain("calorie_goal: 2100");
     expect(blob).toMatch(/fold those teammate facts/i);
   });
+
+  it("Maya photo synthesis requires an after-meal water reminder", () => {
+    const built = buildSynthesisMessages({
+      persona: "maya",
+      locale: "tr",
+      analysis: {
+        visible_foods: ["rice"],
+        food_analysis: {
+          calories: 500,
+          protein: 20,
+          carb: 60,
+          fat: 12,
+        },
+        scores: {},
+        overall_score: 0,
+      } as never,
+      drift: [],
+      userState: "water_today_l: 0.8/2.5; calorie_goal: 2100",
+    });
+    const blob = built.messages.map((m) => m.content).join("\n");
+    expect(blob).toMatch(/after_every_meal|short water reminder/i);
+    expect(blob).toContain("water_today_l: 0.8/2.5");
+  });
 });
 
 describe("Council Kai moderator mode", () => {

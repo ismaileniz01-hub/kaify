@@ -36,6 +36,7 @@ export {
 } from "@/lib/kaios/capsules/alex";
 export {
   MAYA_CORE,
+  MAYA_FOOD_LOG,
   MAYA_FOOD_ANALYSIS,
   MAYA_MEAL_PLANNING,
   MAYA_HYDRATION,

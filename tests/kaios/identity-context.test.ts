@@ -185,7 +185,7 @@ describe("canonical state precedence over memory prose", () => {
 
 describe("coaches act on each other's product facts", () => {
   const snapshot =
-    "primary_goal: build_muscle; training_days_per_week: 4; leo_lagging: back,calves; leo_priority: back; alex_last_plan: Push | Pull | Legs; alex_last_workout: Pull; calorie_goal: 2100; protein_goal_g: 150; calories_today: 900/2100";
+    "primary_goal: build_muscle; training_days_per_week: 4; leo_lagging: back,calves; leo_priority: back; alex_last_plan: Push | Pull | Legs; alex_last_workout: Pull; calorie_goal: 2100; protein_goal_g: 150; calories_today: 900/2100; water_today_l: 0.8/2.5";
 
   it("Maya meal plans around Alex's split and Leo lagging, not a generic menu", () => {
     const ctx = buildRuntimeContext({
@@ -203,6 +203,20 @@ describe("coaches act on each other's product facts", () => {
     expect(blob).toContain("alex_last_plan");
     expect(blob).toContain("time carbs around training days");
     expect(blob).toContain("keep protein_goal_g as the floor");
+  });
+
+  it("Maya food-log prompts require a water reminder after the meal", () => {
+    const ctx = buildRuntimeContext({
+      coach: "maya",
+      message: "lahmacun yedim",
+      locale: "tr",
+      userState: "water_today_l: 0.8/2.5; calorie_goal: 2100",
+    });
+    const blob = compilePrompt(ctx)
+      .messages.map((m) => m.content)
+      .join("\n");
+    expect(blob).toContain("after_every_meal");
+    expect(blob).toMatch(/maya\.mode\.hydration|glass of water|bardak su/i);
   });
 
   it("Leo scoring reads Alex's split and Maya's energy context", () => {
@@ -248,6 +262,7 @@ describe("coaches act on each other's product facts", () => {
     });
     expect(ctx.tier).toBe(0);
     expect(ctx.userState).toContain("alex_last_workout: Pull");
+    expect(ctx.userState).toContain("water_today_l: 0.8/2.5");
     expect(ctx.userState).not.toMatch(/motivation style/);
   });
 });
