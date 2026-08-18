@@ -102,6 +102,10 @@ export function ChatComposer({
   const fireSend = () => {
     if (!canSend) return;
     void hapticImpact("light");
+    if (typeof document !== "undefined") {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement) active.blur();
+    }
     onSend();
   };
 

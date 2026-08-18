@@ -3,8 +3,8 @@
  *
  * Streaming protocol (plan §4):
  * - needs_structure=false → DeepSeek stream → SSE delta* → done envelope
- * - needs_structure=true  → one DeepSeek complete (JSON) → optional synthetic
- *   deltas from message → done (+ card transport alias from same envelope)
+ * - needs_structure=true  → DeepSeek stream (JSON held) → live `message`
+ *   field deltas → done (+ card from the same envelope)
  *
  * Never calls structured-chat second LLM.
  */
@@ -19,6 +19,7 @@ import {
 import {
   coachVisibleMessage,
   looksLikeJsonStreamPrefix,
+  partialJsonStringField,
 } from "@/lib/kaios/envelope-text";
 import type { ChatTurn, TokenUsage } from "@/lib/ai/types";
 import { buildRuntimeContext } from "@/lib/kaios/context/builder";
@@ -298,6 +299,7 @@ export async function* orchestrateCoachChat(
   let assistantText = "";
   let streamFinishReason: string | null = null;
   let holdJsonStream = false;
+  let streamedVisible = "";
   let envelope: BaseEnvelope;
   let awaitUser = false;
   let actionTruth: ActionTruthRecord[] = [...prefetch.truths];
@@ -382,11 +384,20 @@ export async function* orchestrateCoachChat(
         assistantText = next;
         if (looksLikeJsonStreamPrefix(next)) {
           holdJsonStream = true;
+          const extracted = partialJsonStringField(next, "message");
+          if (extracted && extracted.length > streamedVisible.length) {
+            yield {
+              event: "delta",
+              data: { content: extracted.slice(streamedVisible.length) },
+            };
+            streamedVisible = extracted;
+          }
           continue;
         }
         const visible = visibleStreamDelta(previous, next);
         if (visible) {
           yield { event: "delta", data: { content: visible } };
+          streamedVisible += visible;
         }
       } else if (event.type === "done") {
         providerUsage = event.usage;
@@ -397,12 +408,13 @@ export async function* orchestrateCoachChat(
     assistantText = coachVisibleMessage(
       scrubModelOutput(assistantText, compiled.canary),
     );
-    if (holdJsonStream && assistantText.length > 0) {
+    if (holdJsonStream && assistantText.length > streamedVisible.length) {
+      const rest = assistantText.slice(streamedVisible.length);
       const chunkSize = 48;
-      for (let i = 0; i < assistantText.length; i += chunkSize) {
+      for (let i = 0; i < rest.length; i += chunkSize) {
         yield {
           event: "delta",
-          data: { content: assistantText.slice(i, i + chunkSize) },
+          data: { content: rest.slice(i, i + chunkSize) },
         };
       }
     }
@@ -418,7 +430,25 @@ export async function* orchestrateCoachChat(
       compiled.messages[compiled.messages.length - 1]!,
     ];
 
-    const { content, usage } = await ModelRouter.completeText(messages, {
+    if (input.signal?.aborted) {
+      out.meta = {
+        intent,
+        envelope: casualEnvelope(input.coachId, "", intent),
+        messageType: "text",
+        payload: null,
+        usageTokens: 0,
+        modelCallCount,
+        telemetry: withProviderUsage(telemetry, null, {
+          modelCallCount,
+          latencyMs: Date.now() - startedAt,
+        }),
+        assistantText: "",
+        aborted: true,
+      };
+      return;
+    }
+
+    for await (const event of ModelRouter.streamText(messages, {
       temperature: Math.min(temperature, 0.5),
       maxTokens: ctx.maxTokens,
       signal: input.signal,
@@ -426,10 +456,71 @@ export async function* orchestrateCoachChat(
         userId: input.userId,
         operation: "kaios_chat_structured",
       },
-    });
-    providerUsage = usage;
-    usageTokens = usage?.total_tokens ?? 0;
-    const scrubbed = scrubModelOutput(content, compiled.canary);
+    })) {
+      if (input.signal?.aborted) {
+        out.meta = {
+          intent,
+          envelope: casualEnvelope(input.coachId, "", intent),
+          messageType: "text",
+          payload: null,
+          usageTokens: 0,
+          modelCallCount,
+          telemetry: withProviderUsage(telemetry, null, {
+            modelCallCount,
+            latencyMs: Date.now() - startedAt,
+          }),
+          assistantText: "",
+          aborted: true,
+        };
+        return;
+      }
+      if (event.type === "delta") {
+        const next = assistantText + event.content;
+        if (containsCanary(next, compiled.canary)) {
+          logger.error("kaios: canary leak blocked", {
+            userId: input.userId,
+            coachId: input.coachId,
+          });
+          yield {
+            event: "error",
+            data: {
+              code: "FORBIDDEN",
+              message:
+                "Güvenlik nedeniyle bu yanıt durduruldu. Lütfen sorunu farklı bir şekilde sor.",
+            },
+          };
+          out.meta = {
+            intent,
+            envelope: casualEnvelope(input.coachId, "", intent),
+            messageType: "text",
+            payload: null,
+            usageTokens: 0,
+            modelCallCount,
+            telemetry: withProviderUsage(telemetry, null, {
+              modelCallCount,
+              latencyMs: Date.now() - startedAt,
+            }),
+            assistantText: "",
+          };
+          return;
+        }
+        assistantText = next;
+        const extracted = partialJsonStringField(next, "message");
+        if (extracted && extracted.length > streamedVisible.length) {
+          yield {
+            event: "delta",
+            data: { content: extracted.slice(streamedVisible.length) },
+          };
+          streamedVisible = extracted;
+        }
+      } else if (event.type === "done") {
+        providerUsage = event.usage;
+        usageTokens = event.usage?.total_tokens ?? 0;
+        if (event.finishReason) streamFinishReason = event.finishReason;
+      }
+    }
+
+    const scrubbed = scrubModelOutput(assistantText, compiled.canary);
     const parsed = tryParseJsonObject(scrubbed);
     const envelopeResult = parsed ? parseBaseEnvelope(parsed) : null;
 
@@ -457,12 +548,13 @@ export async function* orchestrateCoachChat(
       }
     }
 
-    if (assistantText.length > 0) {
+    if (assistantText.length > streamedVisible.length) {
+      const rest = assistantText.slice(streamedVisible.length);
       const chunkSize = 48;
-      for (let i = 0; i < assistantText.length; i += chunkSize) {
+      for (let i = 0; i < rest.length; i += chunkSize) {
         yield {
           event: "delta",
-          data: { content: assistantText.slice(i, i + chunkSize) },
+          data: { content: rest.slice(i, i + chunkSize) },
         };
       }
     }

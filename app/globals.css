@@ -407,6 +407,7 @@ html.native-app .phone-shell {
 html.native-app .phone-shell.chat-shell {
   height: calc(100dvh - var(--keyboard-offset, 0px));
   max-height: calc(100dvh - var(--keyboard-offset, 0px));
+  overscroll-behavior: none;
 }
 
 /* Web chat / app headers: clear status bar + notch safe area */

@@ -29,6 +29,36 @@ export function looksLikeJsonStreamPrefix(text: string): boolean {
   return t.startsWith("{") || t.startsWith("```");
 }
 
+/** Decode a possibly still-open JSON string after `"field": "`. */
+function unescapePartialJsonString(raw: string): string {
+  let out = "";
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (ch === "\\" && i + 1 < raw.length) {
+      const next = raw[i + 1]!;
+      if (next === "n") out += "\n";
+      else if (next === "t") out += "\t";
+      else if (next === "r") out += "\r";
+      else if (next === '"' || next === "\\") out += next;
+      else out += next;
+      i += 1;
+      continue;
+    }
+    if (ch === '"') break;
+    out += ch;
+  }
+  return out;
+}
+
+/** Best-effort `message` (or other string field) while JSON is still streaming. */
+export function partialJsonStringField(text: string, field: string): string | null {
+  const marker = new RegExp(`"${field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"\\s*:\\s*"`);
+  const match = marker.exec(text);
+  if (!match) return null;
+  const value = unescapePartialJsonString(text.slice(match.index + match[0].length));
+  return value.length > 0 ? value : null;
+}
+
 /** User-facing coach copy: envelope JSON → message field, or empty if unsavable leak. */
 export function coachVisibleMessage(text: string): string {
   if (!text) return text;

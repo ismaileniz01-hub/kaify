@@ -27,7 +27,6 @@ import { useSession } from "@/lib/session-context";
 import { ChatComposer } from "@/components/chat/ChatComposer";
 import { errorToMessage, quotaErrorMessage, quotaResourceFromError, visionQuotaResourceFromError, isAnalyzeQuotaDenied } from "@/lib/i18n/api-error";
 import { MessageCircle, MoreVertical, Check } from "lucide-react";
-import { prefersReducedMotion } from "@/lib/motion/perf-guards";
 import {
   markMessageDelivered,
   markMessageFailed,
@@ -100,7 +99,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     file: File;
     url: string;
   } | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const streamTextRef = useRef("");
@@ -178,9 +177,9 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   }, [coachId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({
-      behavior: prefersReducedMotion() ? "auto" : "smooth",
-    });
+    const list = listRef.current;
+    if (!list) return;
+    list.scrollTop = list.scrollHeight;
   }, [messages, sending]);
 
   const sendTextMessage = async (
@@ -672,7 +671,10 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           if (file) attachPhotoToComposer(file);
         }}
       />
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 pb-36">
+      <div
+        ref={listRef}
+        className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 py-4"
+      >
         {loadingHistory && (
           <div className="space-y-3">
             {[0, 1, 2].map((i) => (
@@ -774,17 +776,19 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                     {isTyping ? (
                       <>
                         <div
-                          className="flex items-center gap-1.5 px-5 py-3.5"
-                          aria-hidden
+                          className="flex items-center gap-2 px-4 py-3"
                           style={{
                             backgroundColor: `${primary}22`,
                             borderRadius: "18px 18px 18px 4px",
                             boxShadow: `0 0 20px ${ring}`,
                           }}
                         >
-                          <span className="typing-dot" style={{ backgroundColor: primaryLight }} />
-                          <span className="typing-dot" style={{ backgroundColor: primaryLight }} />
-                          <span className="typing-dot" style={{ backgroundColor: primaryLight }} />
+                          <span className="typing-dot" style={{ backgroundColor: primaryLight }} aria-hidden />
+                          <span className="typing-dot" style={{ backgroundColor: primaryLight }} aria-hidden />
+                          <span className="typing-dot" style={{ backgroundColor: primaryLight }} aria-hidden />
+                          <span className="text-xs text-zinc-300">
+                            {t("chat.thinking")}
+                          </span>
                         </div>
                         <p className="sr-only" aria-live="polite">
                           {t("chat.a11y.typing", { name: contact.name })}
@@ -915,7 +919,6 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             })}
           </div>
         </div>
-        <div ref={bottomRef} />
       </div>
 
       {selectingDelete ? (

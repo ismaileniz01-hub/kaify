@@ -56,8 +56,20 @@ export default function ChatPage() {
   const { avatar: kaiAvatar, auraColor } = useKai();
 
   useEffect(() => {
+    const lockViewport = () => {
+      if (window.scrollY !== 0 || window.scrollX !== 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+    lockViewport();
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", lockViewport);
+    viewport?.addEventListener("scroll", lockViewport);
+    window.addEventListener("scroll", lockViewport, { passive: true });
     return () => {
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      viewport?.removeEventListener("resize", lockViewport);
+      viewport?.removeEventListener("scroll", lockViewport);
+      window.removeEventListener("scroll", lockViewport);
     };
   }, []);
 
@@ -158,7 +170,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div className={`phone-shell chat-shell chat-gradient ${patternClass} relative flex h-[100dvh] flex-col`}>
+    <div className={`phone-shell chat-shell chat-gradient ${patternClass} relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden`}>
 
       <AppHeader
         backHref="/messages"
@@ -234,11 +246,11 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* Large coach presence — shown for both guest demo and signed-in live chat */}
-      {!sessionLoading && (
+      {/* Large coach presence — guest demo only; live chat keeps the composer pinned. */}
+      {!sessionLoading && !isAuthenticated && (
       <div className="pointer-events-none absolute bottom-32 -left-8 z-10">
         <ContactAvatar
-          src={getAvatarSrc()}
+          src={contact.avatar}
           alt={contact.name}
           size="xl"
           pulse={false}

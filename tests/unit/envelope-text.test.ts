@@ -3,6 +3,7 @@ import {
   coachVisibleMessage,
   looksLikeJsonStreamPrefix,
   looksLikeLeakedEnvelope,
+  partialJsonStringField,
 } from "@/lib/kaios/envelope-text";
 
 const LEAK = `\`\`\`json
@@ -48,5 +49,25 @@ describe("coachVisibleMessage", () => {
     expect(looksLikeJsonStreamPrefix("{")).toBe(true);
     expect(looksLikeJsonStreamPrefix("```json")).toBe(true);
     expect(looksLikeJsonStreamPrefix("Güzel iş")).toBe(false);
+  });
+});
+
+describe("partialJsonStringField", () => {
+  it("reads an in-progress message field from streaming JSON", () => {
+    expect(
+      partialJsonStringField(
+        '{"schema_version":"kaios.envelope.v1","coach":"alex","message":"Bu split',
+        "message",
+      ),
+    ).toBe("Bu split");
+  });
+
+  it("unescapes newlines inside a complete message value", () => {
+    expect(
+      partialJsonStringField(
+        '{"message":"Line 1\\nLine 2","intent":"programming"}',
+        "message",
+      ),
+    ).toBe("Line 1\nLine 2");
   });
 });
