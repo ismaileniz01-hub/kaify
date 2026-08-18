@@ -20,6 +20,8 @@ import {
 import { resolveLocale } from "@/lib/i18n/dictionary";
 import { detectMessageLocale } from "@/lib/i18n/detect-message-locale";
 import { resolveActiveLocale } from "@/lib/kaios/localization/resolve";
+import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
+import { summarizePhysiqueScores } from "@/lib/kaios/context/physique-summary";
 import type { ScoreDrift } from "@/lib/ai/consistency";
 import type {
   AnalysisMimeType,
@@ -322,6 +324,24 @@ export async function analyzePhoto(
     });
     await refundQuota({ userId: params.userId, resource, amount: 1 });
     throw new ApiError("INTERNAL_ERROR", "Analiz sonucu kaydedilemedi.");
+  }
+
+  if (persona.kind === "body") {
+    const lagging = summarizePhysiqueScores(
+      result.analysis.scores ?? {},
+      result.analysis.overall_score,
+    );
+    await emitKaiosEventBestEffort({
+      category: "physique",
+      type: "physique_scored",
+      userId: params.userId,
+      payload: {
+        overall_score: lagging.overall,
+        priority: lagging.priority,
+        lagging: lagging.lagging,
+      },
+      at: new Date().toISOString(),
+    });
   }
 
   let confirmation: PhotoAnalyticsConfirmation | null = null;

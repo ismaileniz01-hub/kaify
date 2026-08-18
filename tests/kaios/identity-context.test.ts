@@ -131,6 +131,56 @@ describe("canonical state precedence over memory prose", () => {
     expect(blob).toContain("never interview for those again");
     expect(blob).toContain("do not re-ask fields already present");
   });
+
+  it("Alex programming uses Leo lagging body parts from USER_CONTEXT", () => {
+    const ctx = buildRuntimeContext({
+      coach: "alex",
+      message: "haftalik program hazirla",
+      locale: "tr",
+      userState:
+        "primary_goal: build_muscle; training_days_per_week: 4; leo_lagging: back,calves; leo_priority: back",
+    });
+    expect(ctx.intent).toBe("programming");
+    expect(ctx.userState).toContain("leo_lagging: back,calves");
+    const blob = compilePrompt(ctx)
+      .messages.map((m) => m.content)
+      .join("\n");
+    expect(blob).toContain("leo_lagging");
+    expect(blob).toContain("bias weekly volume toward those groups");
+  });
+
+  it("Maya meal-plan prompts keep calorie/protein goals and goal-based planning", () => {
+    const ctx = buildRuntimeContext({
+      coach: "maya",
+      message: "hazirla bana bir meal plan, yag yakimi icin",
+      locale: "tr",
+      userState:
+        "primary_goal: lose_weight; calorie_goal: 2100; protein_goal_g: 150; dietary_preference: omnivore",
+    });
+    expect(ctx.intent).toBe("meal_plan");
+    expect(ctx.userState).toContain("calorie_goal: 2100");
+    const blob = compilePrompt(ctx)
+      .messages.map((m) => m.content)
+      .join("\n");
+    expect(blob).toContain("calorie_goal");
+    expect(blob).toContain("never invent a different calorie/protein target");
+  });
+
+  it("Kai motivation references teammate facts when present", () => {
+    const ctx = buildRuntimeContext({
+      coach: "kai",
+      message: "spora gitmek istemiyorum",
+      locale: "tr",
+      userState:
+        "primary_goal: lose_weight; leo_lagging: back; alex_last_plan: Push | Pull | Legs; calorie_goal: 2100",
+    });
+    expect(ctx.userState).toContain("leo_lagging: back");
+    expect(ctx.userState).toContain("alex_last_plan");
+    const blob = compilePrompt(ctx)
+      .messages.map((m) => m.content)
+      .join("\n");
+    expect(blob).toContain("teammate_read");
+  });
 });
 
 describe("Maya confirmation-before-save contract in capsules", () => {

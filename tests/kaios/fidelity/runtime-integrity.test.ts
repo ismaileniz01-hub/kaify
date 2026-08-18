@@ -118,6 +118,21 @@ describe("safety state survives pruning", () => {
     expect(blob).toMatch(/left knee/i);
   });
 
+  it("keeps Leo lagging and calorie goals on casual Kai greetings", () => {
+    const ctx = buildRuntimeContext({
+      coach: "kai",
+      message: "hi",
+      locale: "en",
+      userState:
+        "leo_lagging: back,calves; calorie_goal: 2100; primary_goal: lose_weight; motivation style: tough",
+    });
+    expect(ctx.tier).toBe(0);
+    expect(ctx.userState).toMatch(/leo_lagging: back,calves/);
+    expect(ctx.userState).toMatch(/calorie_goal: 2100/);
+    expect(ctx.userState).toMatch(/primary_goal: lose_weight/);
+    expect(ctx.userState).not.toMatch(/motivation style/);
+  });
+
   it("splits safety vs general", () => {
     const { safetyState, generalState } = splitSafetyAndGeneralState(
       "allergies: shellfish; streak: 3",

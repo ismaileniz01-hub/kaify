@@ -11,6 +11,7 @@ import {
   buildFitnessContextSummary,
   formatTrustedProfileContext,
 } from "@/lib/ai/chat-context";
+import { loadCrossCoachSnapshot } from "@/lib/kaios/context/coach-snapshot";
 import { checkQuotaGuard, refundQuota, settleQuota } from "@/lib/ai/quota-guard";
 import { AiError, toApiError } from "@/lib/ai/errors";
 import { getCoachOrThrow } from "@/lib/services/coach.service";
@@ -183,6 +184,7 @@ function buildStateSummary(
     dietaryPreference?: string | null;
     dislikedFoods?: string | null;
     healthConditions?: string | null;
+    crossCoachSnapshot?: string | null;
   },
 ): string {
   const parts: string[] = [];
@@ -213,6 +215,9 @@ function buildStateSummary(
   }
   if (fitnessContext && fitnessContext.trim().length > 0) {
     parts.push(fitnessContext);
+  }
+  if (extras?.crossCoachSnapshot && extras.crossCoachSnapshot.trim()) {
+    parts.push(extras.crossCoachSnapshot.trim());
   }
   return parts.join("; ");
 }
@@ -438,12 +443,13 @@ async function* streamKaiosCoachReply(
       }
     }
 
-    const [profileMeta, state, memories, fitnessContext, history, msgCountRow] =
+    const [profileMeta, state, memories, fitnessContext, crossCoachSnapshot, history, msgCountRow] =
       await Promise.all([
         getProfileLocaleAndSafety(admin, params.userId),
         getCoachingState(admin, params.userId),
         getRecentMemories(params.userId, 24),
         buildFitnessContextSummary(params.userId).catch(() => ""),
+        loadCrossCoachSnapshot(params.userId).catch(() => ""),
         fetchRecentTurns(admin, params.userId, params.coachId),
         admin
           .from("chat_messages")
@@ -498,6 +504,7 @@ async function* streamKaiosCoachReply(
       dietaryPreference: profileMeta.dietaryPreference,
       dislikedFoods: profileMeta.dislikedFoods,
       healthConditions: profileMeta.healthConditions,
+      crossCoachSnapshot,
     });
 
     const { data: insertedUser, error: userInsertError } = await admin
@@ -795,12 +802,13 @@ export async function* streamCoachReply(
     }
     const canary = createCanary();
 
-    const [profileMeta, state, sync, memories, fitnessContext] = await Promise.all([
+    const [profileMeta, state, sync, memories, fitnessContext, crossCoachSnapshot] = await Promise.all([
       getProfileLocaleAndSafety(admin, params.userId),
       getCoachingState(admin, params.userId),
       syncAgents({ activeCoachId: params.coachId }),
       getRecentMemories(params.userId, 3),
       buildFitnessContextSummary(params.userId).catch(() => ""),
+      loadCrossCoachSnapshot(params.userId).catch(() => ""),
     ]);
 
     const locale = profileMeta.savedLocale;
@@ -823,6 +831,7 @@ export async function* streamCoachReply(
         dietaryPreference: profileMeta.dietaryPreference,
         dislikedFoods: profileMeta.dislikedFoods,
         healthConditions: profileMeta.healthConditions,
+        crossCoachSnapshot,
       }),
     });
     // Condensed memory is derived from prior user messages -> untrusted data.

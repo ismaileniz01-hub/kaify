@@ -126,9 +126,17 @@ export async function prefetchToolKnowledge(input: {
     out.toolResults.push({ name: "getPhysiqueHistory", result });
     out.truths.push(resultToTruth("getPhysiqueHistory", result));
     if (result.ok) {
-      out.knowledgeLines.push(
-        `recent_physique_history: ${JSON.stringify(result.data).slice(0, 1200)}`,
-      );
+      const data = result.data as {
+        compact?: string;
+        lagging?: string[];
+        priority?: string | null;
+        overall?: number | null;
+      };
+      const compact =
+        typeof data.compact === "string" && data.compact.trim()
+          ? data.compact
+          : JSON.stringify(result.data).slice(0, 400);
+      out.knowledgeLines.push(`recent_physique_history: ${compact}`);
     } else {
       out.knowledgeLines.push(
         `recent_physique_history: UNAVAILABLE (${result.code})`,
@@ -171,9 +179,12 @@ export async function prefetchToolKnowledge(input: {
     out.toolResults.push({ name: "getPhysiqueHistory", result });
     out.truths.push(resultToTruth("getPhysiqueHistory", result));
     if (result.ok) {
-      out.knowledgeLines.push(
-        `physique_history: ${JSON.stringify(result.data).slice(0, 1200)}`,
-      );
+      const data = result.data as { compact?: string };
+      const compact =
+        typeof data.compact === "string" && data.compact.trim()
+          ? data.compact
+          : JSON.stringify(result.data).slice(0, 400);
+      out.knowledgeLines.push(`physique_history: ${compact}`);
     }
   }
 

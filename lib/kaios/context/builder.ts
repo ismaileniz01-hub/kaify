@@ -162,17 +162,19 @@ export function buildRuntimeContext(
     needsContinuation: shortTurn.needsContinuation,
   });
 
-  const { safetyState, generalState } = splitSafetyAndGeneralState(
+  const { safetyState, stickyState, generalState } = splitSafetyAndGeneralState(
     input.userState,
   );
 
   const userStateParts: string[] = [];
   if (safetyState) userStateParts.push(safetyState);
+  if (stickyState) userStateParts.push(stickyState);
   if (tier >= 1 && generalState) userStateParts.push(generalState);
   else if (
     tier >= 1 &&
     input.userState?.trim() &&
     !safetyState &&
+    !stickyState &&
     !generalState
   ) {
     userStateParts.push(input.userState.trim());

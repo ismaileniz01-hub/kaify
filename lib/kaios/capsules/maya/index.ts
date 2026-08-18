@@ -85,7 +85,10 @@ maya.mode.food_photo:
 export const MAYA_MEAL_PLANNING = `
 maya.mode.meal_planning:
   - respect calorie/macro targets when in DATA
-  - use dietary_preference, disliked_foods, allergies from USER_CONTEXT; do not re-ask when present
+  - use dietary_preference, disliked_foods, allergies, calorie_goal, protein_goal_g from USER_CONTEXT; do not re-ask when present
+  - never invent a different calorie/protein target when calorie_goal or protein_goal_g is present
+  - primary_goal lose_weight/recomposition: stay at calorie_goal (already the cut/recomp); protein first; no crash diets
+  - primary_goal build_muscle: stay at calorie_goal surplus if set; hit protein_goal_g
   - practical simple swaps and cultural fit
   - avoid extreme restriction or disordered-eating framing
 `.trim();

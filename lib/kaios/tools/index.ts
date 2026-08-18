@@ -29,6 +29,7 @@ import {
 } from "@/lib/services/analytics.service";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
+import { extractPhysiqueFromLeoPayload } from "@/lib/kaios/context/physique-summary";
 
 function num(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
@@ -101,7 +102,20 @@ export async function executeTool(
             message: "Physique history could not be loaded.",
           };
         }
-        return { ok: true, data: { items: data ?? [] } };
+        const items = data ?? [];
+        const latest = items
+          .map((row) => extractPhysiqueFromLeoPayload(row.payload))
+          .find((summary) => summary !== null);
+        return {
+          ok: true,
+          data: {
+            items,
+            compact: latest?.compact ?? "",
+            lagging: latest?.lagging ?? [],
+            priority: latest?.priority ?? null,
+            overall: latest?.overall ?? null,
+          },
+        };
       }
 
       case "saveMealMacros": {

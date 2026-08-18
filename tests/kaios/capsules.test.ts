@@ -126,6 +126,9 @@ describe("KAIOS capsules", () => {
     expect(CORE_CAPSULE).toContain("do not re-ask fields already present");
     expect(ALEX_PROGRAMMING).toContain("trusted_onboarding");
     expect(ALEX_PROGRAMMING).toContain("never interview for those again");
+    expect(ALEX_PROGRAMMING).toContain("leo_lagging");
+    expect(MAYA_MEAL_PLANNING).toContain("calorie_goal");
+    expect(KAI_CORE).toContain("teammate_read");
   });
 
   it("getLocalePack returns a short pack", () => {
