@@ -74,10 +74,16 @@ describe("Wave 7 contracts", () => {
 
   it("localizes system copy for TR EN DE ES AR without an LLM", () => {
     for (const loc of ["tr", "en", "de", "es", "ar"] as const) {
-      const msg = aiCopy(loc, "chat_failed");
-      expect(msg.length).toBeGreaterThan(8);
+      const failed = aiCopy(loc, "chat_failed");
+      expect(failed.length).toBeGreaterThan(8);
       if (loc !== "en") {
-        expect(msg).not.toBe(aiCopy("en", "chat_failed"));
+        expect(failed).not.toBe(aiCopy("en", "chat_failed"));
+      }
+      const retry = aiCopy(loc, "coach_retry");
+      expect(retry.length).toBeGreaterThan(8);
+      expect(retry).not.toMatch(/INTERNAL_ERROR|STREAM_ERROR|_ERROR/);
+      if (loc !== "en") {
+        expect(retry).not.toBe(aiCopy("en", "coach_retry"));
       }
     }
   });

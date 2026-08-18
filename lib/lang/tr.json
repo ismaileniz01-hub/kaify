@@ -737,6 +737,7 @@
   "errors.STREAM_ERROR": "Canlı yanıt kesildi. Lütfen tekrar dene.",
   "chat.error.history": "Sohbet geçmişi yüklenemedi.",
   "chat.error.send": "Mesaj gönderilemedi.",
+  "chat.coach.retry": "Anlamadım, tekrar söyler misin?",
   "chat.message.failed": "Mesaj gönderilemedi",
   "chat.message.retry": "Tekrar dene",
   "chat.a11y.typing": "{name} yazıyor",

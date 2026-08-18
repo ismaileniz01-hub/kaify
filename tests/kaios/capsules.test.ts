@@ -134,6 +134,8 @@ describe("KAIOS capsules", () => {
     expect(LOCALIZATION_CAPSULE).toContain("short_expressions_do_not_switch");
     expect(CORE_CAPSULE).toContain("do not re-ask fields already present");
     expect(CORE_CAPSULE).toContain("teammate product facts");
+    expect(CORE_CAPSULE).toContain("exposing_error_codes_or_internal_labels");
+    expect(SAFETY_CAPSULE).toContain("never output error codes");
     expect(ALEX_PROGRAMMING).toContain("trusted_onboarding");
     expect(ALEX_PROGRAMMING).toContain("never interview for those again");
     expect(ALEX_PROGRAMMING).toContain("leo_lagging");

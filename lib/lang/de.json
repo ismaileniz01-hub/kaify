@@ -737,6 +737,7 @@
   "errors.STREAM_ERROR": "The live reply was interrupted. Please try again.",
   "chat.error.history": "Der Chatverlauf konnte nicht geladen werden.",
   "chat.error.send": "Ihre Nachricht konnte nicht gesendet werden.",
+  "chat.coach.retry": "Das hab ich nicht verstanden — sagst du es nochmal?",
   "chat.message.failed": "Message not sent",
   "chat.message.retry": "Retry",
   "chat.a11y.typing": "{name} is typing",

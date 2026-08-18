@@ -737,6 +737,7 @@
   "errors.STREAM_ERROR": "The live reply was interrupted. Please try again.",
   "chat.error.history": "تعذر تحميل سجل الدردشة.",
   "chat.error.send": "تعذر إرسال رسالتك.",
+  "chat.coach.retry": "ما فهمت — تعيد؟",
   "chat.message.failed": "Message not sent",
   "chat.message.retry": "Retry",
   "chat.a11y.typing": "{name} is typing",

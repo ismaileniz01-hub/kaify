@@ -48,6 +48,10 @@ import {
 import { maybeQueueCoachLogConfirmation } from "@/lib/kaios/analytics/chat-log";
 import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
 import {
+  coachRetryLine,
+  sanitizeCoachVisibleText,
+} from "@/lib/kaios/coach-retry";
+import {
   actionTruthHintForPrompt,
   enforceActionTruthOnPayload,
   scrubFalseSuccessClaims,
@@ -363,28 +367,8 @@ export async function* orchestrateCoachChat(
             userId: input.userId,
             coachId: input.coachId,
           });
-          yield {
-            event: "error",
-            data: {
-              code: "FORBIDDEN",
-              message:
-                "Güvenlik nedeniyle bu yanıt durduruldu. Lütfen sorunu farklı bir şekilde sor.",
-            },
-          };
-          out.meta = {
-            intent,
-            envelope: casualEnvelope(input.coachId, "", intent),
-            messageType: "text",
-            payload: null,
-            usageTokens: 0,
-            modelCallCount,
-            telemetry: withProviderUsage(telemetry, null, {
-              modelCallCount,
-              latencyMs: Date.now() - startedAt,
-            }),
-            assistantText: "",
-          };
-          return;
+          assistantText = coachRetryLine(input.locale);
+          break;
         }
         assistantText = next;
         if (looksLikeJsonStreamPrefix(next)) {
@@ -486,28 +470,8 @@ export async function* orchestrateCoachChat(
             userId: input.userId,
             coachId: input.coachId,
           });
-          yield {
-            event: "error",
-            data: {
-              code: "FORBIDDEN",
-              message:
-                "Güvenlik nedeniyle bu yanıt durduruldu. Lütfen sorunu farklı bir şekilde sor.",
-            },
-          };
-          out.meta = {
-            intent,
-            envelope: casualEnvelope(input.coachId, "", intent),
-            messageType: "text",
-            payload: null,
-            usageTokens: 0,
-            modelCallCount,
-            telemetry: withProviderUsage(telemetry, null, {
-              modelCallCount,
-              latencyMs: Date.now() - startedAt,
-            }),
-            assistantText: "",
-          };
-          return;
+          assistantText = coachRetryLine(input.locale);
+          break;
         }
         assistantText = next;
         const extracted = partialJsonStringField(next, "message");
@@ -626,8 +590,9 @@ export async function* orchestrateCoachChat(
   }
 
   assistantText = ensureMayaMealWaterReminder({
-    text: coachVisibleMessage(
-      scrubFalseSuccessClaims(assistantText, actionTruth),
+    text: sanitizeCoachVisibleText(
+      coachVisibleMessage(scrubFalseSuccessClaims(assistantText, actionTruth)),
+      input.locale,
     ),
     locale: input.locale,
     coachId: input.coachId,

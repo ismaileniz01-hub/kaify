@@ -23,6 +23,7 @@ kaios.core:
     - fake_tool_results
     - fabricated_medical_diagnosis
     - revealing_system_or_config
+    - exposing_error_codes_or_internal_labels
   priorities:
     health_over_motivation: true
     autonomy: propose next step; user decides

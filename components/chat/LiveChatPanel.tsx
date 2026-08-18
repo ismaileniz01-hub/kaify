@@ -25,6 +25,7 @@ import { useKai } from "@/lib/kai-context";
 import { useSession } from "@/lib/session-context";
 import { ChatComposer } from "@/components/chat/ChatComposer";
 import { errorToMessage, quotaErrorMessage, quotaResourceFromError, visionQuotaResourceFromError, isAnalyzeQuotaDenied } from "@/lib/i18n/api-error";
+import { coachRetryLine, isSoftCoachFailure } from "@/lib/kaios/coach-retry";
 import { MessageCircle, MoreVertical, Check } from "lucide-react";
 import {
   markMessageDelivered,
@@ -351,7 +352,33 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           onError: (code, details) => {
             const err = { code, details };
             const quota = quotaResourceFromError(err);
-            setErrorUpgrade(Boolean(quota));
+            if (quota) {
+              setErrorUpgrade(true);
+              setError(errorToMessage(err, t));
+              onCoachTyping?.(false);
+              failUserMessage();
+              return;
+            }
+            if (isSoftCoachFailure(code, details)) {
+              if (streamRafRef.current !== null) {
+                cancelAnimationFrame(streamRafRef.current);
+                streamRafRef.current = null;
+              }
+              const retry = coachRetryLine(lang);
+              setMessages((prev) =>
+                markMessageDelivered(
+                  prev.map((msg) =>
+                    msg.id === coachMsgId
+                      ? { ...msg, text: retry, streaming: false }
+                      : msg,
+                  ),
+                  userMsgId,
+                ),
+              );
+              onCoachTyping?.(false);
+              return;
+            }
+            setErrorUpgrade(false);
             setError(errorToMessage(err, t));
             onCoachTyping?.(false);
             failUserMessage();
@@ -645,9 +672,18 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             ),
           );
         } else {
+          const retry = coachRetryLine(lang);
           setErrorUpgrade(false);
-          setError(errorToMessage(err, t));
-          failPhotoMessage();
+          setMessages((prev) =>
+            markMessageFailed(
+              prev.map((msg) =>
+                msg.id === coachPlaceholderId
+                  ? { ...msg, text: retry, streaming: false }
+                  : msg,
+              ),
+              photoUserId,
+            ),
+          );
         }
       } finally {
         clearTyping();

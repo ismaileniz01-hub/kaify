@@ -49,6 +49,11 @@ import {
 } from "@/lib/ai/prompt-safety";
 import { coachVisibleMessage } from "@/lib/kaios/envelope-text";
 import {
+  coachRetryLine,
+  isSoftCoachFailure,
+  sanitizeCoachVisibleText,
+} from "@/lib/kaios/coach-retry";
+import {
   mapChatMessageRow,
   type ChatMessageDTO,
 } from "@/lib/types/domain.types";
@@ -66,6 +71,47 @@ const CONTEXT_TURNS = CONTEXT_BUDGET.historyTurns;
 
 /** Soft-block when multiple injection phrases match (avoids single-keyword false positives). */
 const INJECTION_SOFT_BLOCK_SCORE = 3;
+
+async function persistAndDoneCoachRetry(params: {
+  userId: string;
+  coachId: string;
+  locale: string;
+  replyToMessageId?: string | null;
+}): Promise<SseChunk> {
+  const content = coachRetryLine(params.locale);
+  const admin = createAdminSupabaseClient();
+  const { data, error } = await admin
+    .from("chat_messages")
+    .insert({
+      user_id: params.userId,
+      coach_id: params.coachId,
+      reply_to_message_id: params.replyToMessageId ?? null,
+      thread_type: "direct",
+      sender: "coach",
+      message_type: "text",
+      content,
+      payload: null,
+      tokens_used: 0,
+      locale: params.locale,
+    })
+    .select("id")
+    .single();
+  if (error) {
+    logger.error("[chat.service] persist retry reply error", {
+      error: error.message,
+    });
+  }
+  return {
+    event: "done",
+    data: {
+      messageId: data?.id ?? null,
+      userMessageId: params.replyToMessageId ?? null,
+      messageType: "text",
+      payload: null,
+      content,
+    },
+  };
+}
 
 function trimHistoryContent(
   content: string,
@@ -428,6 +474,7 @@ async function* streamKaiosCoachReply(
   let quotaSettled = false;
   let assistantText = "";
   let locale = "en";
+  let insertedUser: { id: string } | null = null;
 
   try {
     const coachId = asCoachId(params.coachId);
@@ -515,7 +562,7 @@ async function* streamKaiosCoachReply(
       crossCoachSnapshot,
     });
 
-    const { data: insertedUser, error: userInsertError } = await admin
+    const { data: insertedUserRow, error: userInsertError } = await admin
       .from("chat_messages")
       .insert({
         ...(params.clientMessageId ? { id: params.clientMessageId } : {}),
@@ -530,6 +577,7 @@ async function* streamKaiosCoachReply(
       })
       .select("id")
       .single();
+    insertedUser = insertedUserRow;
     if (userInsertError) {
       if (userInsertError.code === "23505" && params.clientIdempotencyKey) {
         const existingUserId = await lookupExistingUserMessageId(admin, params);
@@ -597,6 +645,21 @@ async function* streamKaiosCoachReply(
         assistantText += content;
       }
       if (chunk.event === "error") {
+        const data =
+          chunk.data && typeof chunk.data === "object"
+            ? (chunk.data as { code?: string; details?: unknown })
+            : {};
+        const code = typeof data.code === "string" ? data.code : "INTERNAL_ERROR";
+        if (isSoftCoachFailure(code, data.details)) {
+          assistantText = coachRetryLine(locale);
+          yield await persistAndDoneCoachRetry({
+            userId: params.userId,
+            coachId: params.coachId,
+            locale,
+            replyToMessageId: insertedUser?.id ?? null,
+          });
+          return;
+        }
         yield chunk;
         return;
       }
@@ -610,7 +673,10 @@ async function* streamKaiosCoachReply(
     if (!meta) {
       throw new ApiError("INTERNAL_ERROR", aiCopy(locale, "chat_failed"));
     }
-    assistantText = meta.assistantText || assistantText;
+    assistantText = sanitizeCoachVisibleText(
+      meta.assistantText || assistantText,
+      locale,
+    );
     if (
       isStreamCompletionSuspicious({
         text: assistantText,
@@ -619,10 +685,17 @@ async function* streamKaiosCoachReply(
         finishReason: meta.finishReason,
       })
     ) {
-      logger.error("[chat.service] kaios stream completion suspicious; skip persist", {
+      logger.error("[chat.service] kaios stream completion suspicious; persist retry", {
         userId: params.userId,
         coachId: params.coachId,
         length: assistantText.length,
+      });
+      assistantText = coachRetryLine(locale);
+      yield await persistAndDoneCoachRetry({
+        userId: params.userId,
+        coachId: params.coachId,
+        locale,
+        replyToMessageId: insertedUser?.id ?? null,
       });
       return;
     }
@@ -736,6 +809,16 @@ async function* streamKaiosCoachReply(
         : error instanceof AiError
           ? toApiError(error, locale)
           : new ApiError("INTERNAL_ERROR", aiCopy(locale, "chat_failed"));
+    if (isSoftCoachFailure(apiError.code, apiError.details)) {
+      assistantText = coachRetryLine(locale);
+      yield await persistAndDoneCoachRetry({
+        userId: params.userId,
+        coachId: params.coachId,
+        locale,
+        replyToMessageId: insertedUser?.id ?? null,
+      });
+      return;
+    }
     yield {
       event: "error",
       data: {
@@ -786,6 +869,8 @@ export async function* streamCoachReply(
   const admin = createAdminSupabaseClient();
   let quotaSettled = false;
   let assistantText = "";
+  let insertedUser: { id: string } | null = null;
+  let locale = "en";
 
   try {
     const coach = await getCoachOrThrow(params.coachId);
@@ -819,7 +904,7 @@ export async function* streamCoachReply(
       loadCrossCoachSnapshot(params.userId).catch(() => ""),
     ]);
 
-    const locale = profileMeta.savedLocale;
+    locale = profileMeta.savedLocale;
 
     const history = await fetchRecentTurns(admin, params.userId, params.coachId);
 
@@ -906,7 +991,7 @@ export async function* streamCoachReply(
     ];
 
     // Persist the sanitized user message before streaming.
-    const { data: insertedUser, error: userInsertError } = await admin
+    const { data: insertedUserRow, error: userInsertError } = await admin
       .from("chat_messages")
       .insert({
         ...(params.clientMessageId ? { id: params.clientMessageId } : {}),
@@ -921,6 +1006,7 @@ export async function* streamCoachReply(
       })
       .select("id")
       .single();
+    insertedUser = insertedUserRow;
     if (userInsertError) {
       if (userInsertError.code === "23505" && params.clientIdempotencyKey) {
         const existingUserId = await lookupExistingUserMessageId(admin, params);
@@ -1013,7 +1099,10 @@ export async function* streamCoachReply(
     }
 
     // Backstop: strip any leaked scaffolding before persisting.
-    assistantText = coachVisibleMessage(scrubModelOutput(assistantText, canary));
+    assistantText = sanitizeCoachVisibleText(
+      coachVisibleMessage(scrubModelOutput(assistantText, canary)),
+      locale,
+    );
     if (
       isStreamCompletionSuspicious({
         text: assistantText,
@@ -1022,10 +1111,17 @@ export async function* streamCoachReply(
         finishReason: streamFinishReason,
       })
     ) {
-      logger.error("[chat.service] legacy stream completion suspicious; skip persist", {
+      logger.error("[chat.service] legacy stream completion suspicious; persist retry", {
         userId: params.userId,
         coachId: params.coachId,
         length: assistantText.length,
+      });
+      assistantText = coachRetryLine(locale);
+      yield await persistAndDoneCoachRetry({
+        userId: params.userId,
+        coachId: params.coachId,
+        locale,
+        replyToMessageId: insertedUser?.id ?? null,
       });
       return;
     }
@@ -1178,8 +1274,18 @@ export async function* streamCoachReply(
       error instanceof ApiError
         ? error
         : error instanceof AiError
-          ? toApiError(error)
-          : new ApiError("INTERNAL_ERROR", "Sohbet yanıtı üretilemedi.");
+          ? toApiError(error, locale)
+          : new ApiError("INTERNAL_ERROR", aiCopy(locale, "chat_failed"));
+    if (isSoftCoachFailure(apiError.code, apiError.details)) {
+      assistantText = coachRetryLine(locale);
+      yield await persistAndDoneCoachRetry({
+        userId: params.userId,
+        coachId: params.coachId,
+        locale,
+        replyToMessageId: insertedUser?.id ?? null,
+      });
+      return;
+    }
 
     yield {
       event: "error",

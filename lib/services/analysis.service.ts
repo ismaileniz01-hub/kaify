@@ -25,6 +25,7 @@ import { summarizePhysiqueScores } from "@/lib/kaios/context/physique-summary";
 import { loadCrossCoachSnapshot } from "@/lib/kaios/context/coach-snapshot";
 import { formatTrustedProfileContext } from "@/lib/ai/chat-context";
 import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
+import { sanitizeCoachVisibleText } from "@/lib/kaios/coach-retry";
 import { parseGenderInput } from "@/lib/profile-mapper";
 import type { ScoreDrift } from "@/lib/ai/consistency";
 import type {
@@ -321,12 +322,17 @@ export async function analyzePhoto(
     result = {
       ...result,
       summary: ensureMayaMealWaterReminder({
-        text: result.summary,
+        text: sanitizeCoachVisibleText(result.summary, locale),
         locale,
         coachId: "maya",
         intent: "meal_analysis",
         userMessage: params.note,
       }),
+    };
+  } else {
+    result = {
+      ...result,
+      summary: sanitizeCoachVisibleText(result.summary, locale),
     };
   }
 

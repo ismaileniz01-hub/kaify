@@ -27,7 +27,8 @@ export type AiCopyKey =
   | "team_week_exists"
   | "team_start_first"
   | "team_fallback"
-  | "schema_failed";
+  | "schema_failed"
+  | "coach_retry";
 
 const COPY: Record<string, Record<AiCopyKey, string>> = {
   en: {
@@ -54,6 +55,7 @@ const COPY: Record<string, Record<AiCopyKey, string>> = {
     team_start_first: "Start the team meeting first.",
     team_fallback: "Great week — keep going.",
     schema_failed: "The structured reply could not be validated.",
+    coach_retry: "I didn't catch that — can you say it again?",
   },
   tr: {
     quota_text: "Aylık mesaj limitin doldu. Devam etmek için planını yükseltebilirsin.",
@@ -79,6 +81,7 @@ const COPY: Record<string, Record<AiCopyKey, string>> = {
     team_start_first: "Önce takım toplantısını başlatmalısın.",
     team_fallback: "Harika bir hafta — devam et.",
     schema_failed: "Yapılandırılmış yanıt doğrulanamadı.",
+    coach_retry: "Anlamadım, tekrar söyler misin?",
   },
   de: {
     quota_text: "Dein monatliches Nachrichtenlimit ist aufgebraucht. Upgrade deinen Plan, um fortzufahren.",
@@ -104,6 +107,7 @@ const COPY: Record<string, Record<AiCopyKey, string>> = {
     team_start_first: "Starte zuerst das Team-Meeting.",
     team_fallback: "Tolle Woche — mach weiter.",
     schema_failed: "Die strukturierte Antwort konnte nicht geprüft werden.",
+    coach_retry: "Das hab ich nicht verstanden — sagst du es nochmal?",
   },
   es: {
     quota_text: "Se agotó tu límite mensual de mensajes. Mejora tu plan para continuar.",
@@ -129,6 +133,7 @@ const COPY: Record<string, Record<AiCopyKey, string>> = {
     team_start_first: "Primero inicia la reunión de equipo.",
     team_fallback: "Gran semana — sigue así.",
     schema_failed: "No se pudo validar la respuesta estructurada.",
+    coach_retry: "No te entendí — ¿me lo dices otra vez?",
   },
   ar: {
     quota_text: "نفد حد رسائلك الشهري. رقِّ خطتك للمتابعة.",
@@ -154,6 +159,7 @@ const COPY: Record<string, Record<AiCopyKey, string>> = {
     team_start_first: "ابدأ اجتماع الفريق أولًا.",
     team_fallback: "أسبوع رائع — تابع.",
     schema_failed: "تعذر التحقق من الرد المنظم.",
+    coach_retry: "ما فهمت — تعيد؟",
   },
 };
 

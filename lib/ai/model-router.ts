@@ -16,6 +16,7 @@ import {
   type AnalysisPersona,
 } from "@/lib/ai/personas";
 import { scrubModelOutput } from "@/lib/ai/prompt-safety";
+import { sanitizeCoachVisibleText } from "@/lib/kaios/coach-retry";
 import { TOKEN_BUDGET } from "@/lib/ai/budget";
 import {
   interpretVisionEnvelope,
@@ -137,7 +138,10 @@ export const ModelRouter = {
         : { operation: "synthesis" },
     });
 
-    const summary = scrubModelOutput(content, synth.canary);
+    const summary = sanitizeCoachVisibleText(
+      scrubModelOutput(content, synth.canary),
+      params.locale,
+    );
 
     return {
       quality,

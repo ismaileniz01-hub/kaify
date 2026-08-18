@@ -137,6 +137,6 @@ export function actionTruthHintForPrompt(): string {
     "- Never claim saved/logged/applied/updated unless a tool result with status SUCCEEDED is present in TOOL_RESULTS.",
     "- If no tool ran: present changes as PROPOSED only.",
     "- Pending confirmation means saved=false until the user confirms in the app.",
-    "- Tool failures must be stated as failures, never as success.",
+    "- If a tool failed: do not name codes, tools, or TOOL_RESULTS; ask them to say it again.",
   ].join("\n");
 }

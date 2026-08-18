@@ -4,6 +4,7 @@
  */
 
 import { parseHydrationLiters } from "@/lib/kaios/analytics/chat-log";
+import { isCoachRetryLine } from "@/lib/kaios/coach-retry";
 import {
   looksLikeFoodConsumption,
   type CoachId,
@@ -57,6 +58,7 @@ export function ensureMayaMealWaterReminder(input: {
 }): string {
   const text = input.text.trim();
   if (!text) return input.text;
+  if (isCoachRetryLine(text)) return input.text;
   if (!shouldRemindWaterAfterMeal(input)) return input.text;
   if (mentionsWater(text)) return input.text;
   return `${text}\n\n${mealWaterNudge(input.locale)}`;

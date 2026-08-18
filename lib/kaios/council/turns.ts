@@ -37,6 +37,7 @@ import {
   parseCouncilTurnResponse,
 } from "@/lib/kaios/schemas/envelope";
 import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
+import { sanitizeCoachVisibleText } from "@/lib/kaios/coach-retry";
 import type { Json } from "@/lib/types/database.types";
 
 export { teamMeetingWeekKey } from "@/lib/team/meeting-week";
@@ -399,7 +400,7 @@ export async function runCouncilTurn(params: {
       thread_type: "team" as const,
       sender: "coach" as const,
       message_type: "team_meeting" as const,
-      content: sanitizeUserText(s.text, 800),
+      content: sanitizeCoachVisibleText(s.text, locale),
       payload: {
         schema_version: SCHEMA_VERSION,
         coach: "council",
