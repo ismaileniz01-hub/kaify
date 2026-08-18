@@ -194,6 +194,7 @@ export const analyzeImageInputSchema = z.object({
     .max(12_000_000, "Image is too large (max ~9MB)"),
   mimeType: z.enum(ANALYSIS_MIME_TYPES),
   note: z.string().trim().max(500, "Note too long").optional().default(""),
+  clientMessageId: z.string().uuid().optional(),
 });
 
 export type AnalyzeImageInput = z.infer<typeof analyzeImageInputSchema>;

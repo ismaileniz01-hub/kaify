@@ -182,6 +182,7 @@ export type ChatStreamHandlers = {
   onDelta: (content: string) => void;
   onDone: (data: {
     messageId: string | null;
+    userMessageId?: string | null;
     messageType?: string | null;
     payload?: unknown;
     warning_trigger?: string | null;
@@ -205,6 +206,7 @@ export async function streamChatMessage(
   handlers: ChatStreamHandlers,
   signal?: AbortSignal,
   idempotencyKey?: string,
+  clientMessageId?: string,
 ): Promise<void> {
   const key = idempotencyKey ?? createIdempotencyKey();
   const response = await fetch(resolveApiPath(`/api/chat/${coachId}`), {
@@ -215,7 +217,10 @@ export async function streamChatMessage(
       [IDEMPOTENCY_HEADER]: key,
       ...csrfHeaders(),
     },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({
+      message,
+      ...(clientMessageId ? { clientMessageId } : {}),
+    }),
     signal,
   });
 
@@ -268,6 +273,7 @@ export async function streamChatMessage(
         } else if (event === "done") {
           handlers.onDone({
             messageId: (parsed.messageId as string | null) ?? null,
+            userMessageId: (parsed.userMessageId as string | null) ?? null,
             messageType: (parsed.messageType as string | null) ?? null,
             payload: parsed.payload,
             warning_trigger: (parsed.warning_trigger as string | null) ?? null,

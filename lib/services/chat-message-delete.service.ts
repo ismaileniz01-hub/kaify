@@ -171,6 +171,15 @@ export async function deleteChatMessages(params: {
   if (impactIds.length === 0) {
     throw new ApiError("NOT_FOUND", "Silinecek mesaj bulunamadı.");
   }
+
+  const { error: unlinkError } = await admin
+    .from("chat_messages")
+    .update({ reply_to_message_id: null })
+    .eq("user_id", params.userId)
+    .in("reply_to_message_id", impactIds);
+  if (unlinkError) {
+    logger.warn("[chat-delete] reply unlink failed", { error: unlinkError.message });
+  }
   const { data: profile } = await admin
     .from("profiles")
     .select("timezone")
@@ -248,6 +257,7 @@ export async function deleteChatMessages(params: {
     .in("id", impactIds)
     .select("id");
   if (deleteError) {
+    logger.error("[chat-delete] message delete failed", { error: deleteError.message });
     throw new ApiError("INTERNAL_ERROR", "Mesaj silinemedi.");
   }
   if (!deletedRows || deletedRows.length === 0) {

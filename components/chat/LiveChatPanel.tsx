@@ -5,7 +5,6 @@ import Image from "next/image";
 import {
   streamChatMessage,
   apiGet,
-  apiDelete,
   apiPost,
   createIdempotencyKey,
 } from "@/lib/api/client";
@@ -65,8 +64,22 @@ function formatMessageTime(
 
 const VISION_COACHES = new Set<ContactId>(["maya", "leo"]);
 
+const PERSISTED_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function newPersistedMessageId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return createIdempotencyKey();
+}
+
 function canSelectForDelete(msg: LiveMessage): boolean {
-  return !msg.streaming && msg.status !== "sending" && !msg.id.startsWith("local-");
+  return (
+    !msg.streaming &&
+    msg.status !== "sending" &&
+    PERSISTED_ID_RE.test(msg.id)
+  );
 }
 
 export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
@@ -202,7 +215,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         ? options.idempotencyKey
         : createIdempotencyKey();
 
-    const userMsgId = options?.existingUserMsgId ?? `local-user-${Date.now()}`;
+    const userMsgId = options?.existingUserMsgId ?? newPersistedMessageId();
     const coachMsgId = `local-coach-${Date.now()}`;
 
     if (options?.existingUserMsgId) {
@@ -290,19 +303,29 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             }
             setMessages((prev) =>
               markMessageDelivered(
-                prev.map((msg) =>
-                  msg.id === coachMsgId
-                    ? {
-                        ...msg,
-                        id: data.messageId ?? msg.id,
-                        text: finalText || msg.text,
-                        streaming: false,
-                        messageType: data.messageType as MessageType | undefined,
-                        payload: data.payload,
-                      }
-                    : msg,
-                ),
-                userMsgId,
+                prev.map((msg) => {
+                  if (msg.id === coachMsgId) {
+                    return {
+                      ...msg,
+                      id: data.messageId ?? msg.id,
+                      text: finalText || msg.text,
+                      streaming: false,
+                      messageType: data.messageType as MessageType | undefined,
+                      payload: data.payload,
+                    };
+                  }
+                  if (
+                    msg.id === userMsgId &&
+                    typeof data.userMessageId === "string" &&
+                    data.userMessageId.length > 0
+                  ) {
+                    return { ...msg, id: data.userMessageId };
+                  }
+                  return msg;
+                }),
+                typeof data.userMessageId === "string" && data.userMessageId.length > 0
+                  ? data.userMessageId
+                  : userMsgId,
               ),
             );
             onCoachTyping?.(false);
@@ -336,6 +359,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         },
         abortRef.current.signal,
         idempotencyKey,
+        PERSISTED_ID_RE.test(userMsgId) ? userMsgId : undefined,
       );
     } catch {
       setError(t("chat.error.send"));
@@ -416,9 +440,9 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     setDeleting(true);
     setError(null);
     try {
-      const result = await apiDelete<{
+      const result = await apiPost<{
         deletedIds: string[];
-      }>(`/api/chat/messages/${ids[0]}`, { ids });
+      }>("/api/chat/messages/delete", { ids });
       const removed = new Set(result.deletedIds ?? ids);
       setMessages((prev) => prev.filter((item) => !removed.has(item.id)));
       setSelectingDelete(false);
@@ -453,7 +477,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     onCoachTyping?.(true);
 
     const caption = options?.note?.trim() ?? "";
-    const photoUserId = options?.existingUserMsgId ?? `photo-user-${Date.now()}`;
+    const photoUserId = options?.existingUserMsgId ?? newPersistedMessageId();
     const coachPlaceholderId = `photo-coach-${Date.now()}`;
     photoFileByMsgIdRef.current.set(photoUserId, { file, note: caption });
 
@@ -526,9 +550,10 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
               quotaExceeded: true;
               resource: "maya_photo" | "leo_photo" | "text_tokens";
             }
-          | {
+              | {
               summary: string;
               messageId: string | null;
+              userMessageId?: string | null;
               analysis: unknown;
               confirmation?: {
                 pendingId: string;
@@ -541,6 +566,9 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           imageBase64: base64,
           mimeType,
           ...(caption ? { note: caption.slice(0, 500) } : {}),
+          ...(PERSISTED_ID_RE.test(photoUserId)
+            ? { clientMessageId: photoUserId }
+            : {}),
         });
 
         if (isAnalyzeQuotaDenied(analysis)) {
@@ -564,6 +592,10 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         }
 
         photoFileByMsgIdRef.current.delete(photoUserId);
+        const persistedPhotoUserId =
+          typeof analysis.userMessageId === "string" && analysis.userMessageId.length > 0
+            ? analysis.userMessageId
+            : photoUserId;
         setMessages((prev) =>
           markMessageDelivered(
             prev.map((msg) =>
@@ -587,10 +619,10 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                     },
                   }
                 : msg.id === photoUserId
-                  ? { ...msg, photoRetry: undefined }
+                  ? { ...msg, id: persistedPhotoUserId, photoRetry: undefined }
                   : msg,
             ),
-            photoUserId,
+            persistedPhotoUserId,
           ),
         );
       } catch (err) {
@@ -772,7 +804,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                       />
                     </div>
                   )}
-                  <div className="max-w-[82%]">
+                  <div className="min-w-0 max-w-[78%]">
                     {isTyping ? (
                       <>
                         <div
@@ -863,6 +895,18 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                       </>
                     )}
                   </div>
+                  {!isCoach && (
+                    <div className="relative h-8 w-8 shrink-0" aria-hidden>
+                      <Image
+                        src={publicAssetUrl(userAvatar)}
+                        alt=""
+                        width={32}
+                        height={32}
+                        unoptimized
+                        className="h-full w-full rounded-full object-cover"
+                      />
+                    </div>
+                  )}
                   {showMenu && (
                     <div
                       ref={openMenuId === msg.id ? openMenuRef : undefined}
@@ -877,7 +921,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                           event.stopPropagation();
                           setOpenMenuId((current) => (current === msg.id ? null : msg.id));
                         }}
-                        className="rounded-full p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-zinc-200"
+                        className="rounded-full p-2 text-white/80 transition-colors hover:bg-white/10 hover:text-white"
                       >
                         <MoreVertical className="h-4 w-4" aria-hidden />
                       </button>
@@ -900,18 +944,6 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                           </button>
                         </div>
                       )}
-                    </div>
-                  )}
-                  {!isCoach && (
-                    <div className="relative h-8 w-8 shrink-0" aria-hidden>
-                      <Image
-                        src={publicAssetUrl(userAvatar)}
-                        alt=""
-                        width={32}
-                        height={32}
-                        unoptimized
-                        className="h-full w-full rounded-full object-cover"
-                      />
                     </div>
                   )}
                 </div>

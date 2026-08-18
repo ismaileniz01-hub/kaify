@@ -94,6 +94,15 @@ vi.mock("@/lib/supabase/admin", () => ({
             };
             return chain;
           },
+          update() {
+            const chain = {
+              eq() {
+                return chain;
+              },
+              in: async () => ({ data: null, error: null }),
+            };
+            return chain;
+          },
           delete() {
             let ids: string[] = [];
             let userId = "";

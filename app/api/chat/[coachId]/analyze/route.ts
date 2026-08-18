@@ -71,6 +71,7 @@ export const POST = defineDynamicRoute<{ coachId: string }>(
             imageBase64: parsed.data.imageBase64,
             mimeType: parsed.data.mimeType,
             note: parsed.data.note,
+            clientMessageId: parsed.data.clientMessageId,
             signal: request.signal,
           });
         } catch (error) {

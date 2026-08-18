@@ -249,9 +249,40 @@ export type StreamReplyParams = {
   tokensReserved?: number;
   /** Client Idempotency-Key — unique per user so retries do not insert twice. */
   clientIdempotencyKey?: string | null;
+  /** Optional client-generated UUID so the UI can delete the user bubble immediately. */
+  clientMessageId?: string | null;
   /** Client disconnect / request abort — must cancel the provider fetch. */
   signal?: AbortSignal;
 };
+
+async function lookupExistingUserMessageId(
+  admin: ReturnType<typeof createAdminSupabaseClient>,
+  params: {
+    userId: string;
+    clientIdempotencyKey?: string | null;
+    clientMessageId?: string | null;
+  },
+): Promise<string | null> {
+  if (params.clientIdempotencyKey) {
+    const { data } = await admin
+      .from("chat_messages")
+      .select("id")
+      .eq("user_id", params.userId)
+      .eq("client_idempotency_key", params.clientIdempotencyKey)
+      .maybeSingle();
+    if (data?.id) return data.id;
+  }
+  if (params.clientMessageId) {
+    const { data } = await admin
+      .from("chat_messages")
+      .select("id")
+      .eq("user_id", params.userId)
+      .eq("id", params.clientMessageId)
+      .maybeSingle();
+    if (data?.id) return data.id;
+  }
+  return null;
+}
 
 function asCoachId(coachId: string): CoachId | null {
   if (
@@ -404,6 +435,7 @@ async function* streamKaiosCoachReply(
     const { data: insertedUser, error: userInsertError } = await admin
       .from("chat_messages")
       .insert({
+        ...(params.clientMessageId ? { id: params.clientMessageId } : {}),
         user_id: params.userId,
         coach_id: params.coachId,
         thread_type: "direct",
@@ -417,6 +449,7 @@ async function* streamKaiosCoachReply(
       .single();
     if (userInsertError) {
       if (userInsertError.code === "23505" && params.clientIdempotencyKey) {
+        const existingUserId = await lookupExistingUserMessageId(admin, params);
         const { data: existingCoach } = await admin
           .from("chat_messages")
           .select("id, content, message_type, payload")
@@ -438,6 +471,7 @@ async function* streamKaiosCoachReply(
             event: "done",
             data: {
               messageId: existingCoach.id,
+              userMessageId: existingUserId,
               messageType: existingCoach.message_type,
               payload: existingCoach.payload,
               warning_trigger: null,
@@ -568,6 +602,7 @@ async function* streamKaiosCoachReply(
       event: "done",
       data: {
         messageId: inserted?.id ?? null,
+        userMessageId: insertedUser?.id ?? null,
         messageType: meta.messageType,
         payload: meta.payload,
         await_user: meta.awaitUser ?? false,
@@ -780,6 +815,7 @@ export async function* streamCoachReply(
     const { data: insertedUser, error: userInsertError } = await admin
       .from("chat_messages")
       .insert({
+        ...(params.clientMessageId ? { id: params.clientMessageId } : {}),
         user_id: params.userId,
         coach_id: params.coachId,
         thread_type: "direct",
@@ -793,6 +829,7 @@ export async function* streamCoachReply(
       .single();
     if (userInsertError) {
       if (userInsertError.code === "23505" && params.clientIdempotencyKey) {
+        const existingUserId = await lookupExistingUserMessageId(admin, params);
         const { data: existingCoach } = await admin
           .from("chat_messages")
           .select("id, content, message_type, payload")
@@ -814,6 +851,7 @@ export async function* streamCoachReply(
             event: "done",
             data: {
               messageId: existingCoach.id,
+              userMessageId: existingUserId,
               messageType: existingCoach.message_type,
               payload: existingCoach.payload,
               warning_trigger: null,
@@ -964,6 +1002,7 @@ export async function* streamCoachReply(
       event: "done",
       data: {
         messageId: inserted?.id ?? null,
+        userMessageId: insertedUser?.id ?? null,
         messageType: "text",
         payload: null,
         content: assistantText,

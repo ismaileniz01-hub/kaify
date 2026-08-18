@@ -42,6 +42,7 @@ export type AnalyzePhotoParams = {
   imageBase64: string;
   mimeType: AnalysisMimeType;
   note?: string;
+  clientMessageId?: string;
   signal?: AbortSignal;
 };
 
@@ -52,6 +53,7 @@ export type AnalyzePhotoResult = {
   quality: ImageQuality;
   warningTrigger: WarningTrigger | null;
   messageId: string | null;
+  userMessageId: string | null;
   confirmation: PhotoAnalyticsConfirmation | null;
   geminiCalls: number;
   deepseekCalls: number;
@@ -238,6 +240,7 @@ export async function analyzePhoto(
         quality,
         warningTrigger: null,
         messageId: reusedRow.id,
+        userMessageId: null,
         confirmation: null,
         geminiCalls: 0,
         deepseekCalls: 0,
@@ -276,6 +279,7 @@ export async function analyzePhoto(
   const { data: insertedUserPhoto, error: userPhotoError } = await admin
     .from("chat_messages")
     .insert({
+      ...(params.clientMessageId ? { id: params.clientMessageId } : {}),
       user_id: params.userId,
       coach_id: params.coachId,
       thread_type: "direct",
@@ -354,6 +358,7 @@ export async function analyzePhoto(
     quality: result.quality,
     warningTrigger: usage.warning_trigger,
     messageId: inserted?.id ?? null,
+    userMessageId: insertedUserPhoto?.id ?? null,
     confirmation,
     geminiCalls: result.geminiCalls,
     deepseekCalls: result.deepseekCalls,
