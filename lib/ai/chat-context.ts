@@ -1,3 +1,4 @@
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { localTodayDate } from "@/lib/date-utils";
 import { getStreakStatus } from "@/lib/services/streak-status.service";
 import { countConsecutiveRestDays, gymSkipFacts } from "@/lib/ai/count-consecutive-rest-days";
