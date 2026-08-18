@@ -26,7 +26,7 @@ import { useKai } from "@/lib/kai-context";
 import { useSession } from "@/lib/session-context";
 import { ChatComposer } from "@/components/chat/ChatComposer";
 import { errorToMessage, quotaErrorMessage, quotaResourceFromError, visionQuotaResourceFromError, isAnalyzeQuotaDenied } from "@/lib/i18n/api-error";
-import { MessageCircle, MoreVertical } from "lucide-react";
+import { MessageCircle, MoreVertical, Check } from "lucide-react";
 import { prefersReducedMotion } from "@/lib/motion/perf-guards";
 import {
   markMessageDelivered,
@@ -66,13 +66,8 @@ function formatMessageTime(
 
 const VISION_COACHES = new Set<ContactId>(["maya", "leo"]);
 
-function canDeleteMessage(msg: LiveMessage): boolean {
-  return (
-    msg.from === "user" &&
-    !msg.streaming &&
-    msg.status !== "sending" &&
-    !msg.id.startsWith("local-")
-  );
+function canSelectForDelete(msg: LiveMessage): boolean {
+  return !msg.streaming && msg.status !== "sending" && !msg.id.startsWith("local-");
 }
 
 export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
@@ -90,7 +85,9 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [errorUpgrade, setErrorUpgrade] = useState(false);
   const [quotaWarning, setQuotaWarning] = useState<"LIMIT_80" | "LIMIT_100" | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [selectingDelete, setSelectingDelete] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const openMenuRef = useRef<HTMLDivElement>(null);
   const [hasPhotoConsent, setHasPhotoConsent] = useState<boolean | null>(null);
@@ -387,27 +384,50 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     }
   };
 
-  const handleDelete = async (msg: LiveMessage) => {
-    if (msg.streaming || msg.status === "sending" || deletingId) return;
+  const enterDeleteSelect = (msg: LiveMessage) => {
+    if (!canSelectForDelete(msg) || deleting) return;
+    setOpenMenuId(null);
+    setSelectingDelete(true);
+    setSelectedIds(new Set([msg.id]));
+  };
+
+  const toggleDeleteSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const cancelDeleteSelect = () => {
+    if (deleting) return;
+    setSelectingDelete(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleDeleteSelected = async () => {
+    if (deleting || selectedIds.size === 0) return;
+    const ids = [...selectedIds];
     const confirmed =
       typeof window === "undefined"
         ? false
-        : window.confirm(
-            t("chat.delete.confirm"),
-          );
+        : window.confirm(t("chat.delete.confirmSelected", { count: ids.length }));
     if (!confirmed) return;
-    setDeletingId(msg.id);
+    setDeleting(true);
     setError(null);
     try {
       const result = await apiDelete<{
         deletedIds: string[];
-      }>(`/api/chat/messages/${msg.id}`);
-      const removed = new Set(result.deletedIds ?? [msg.id]);
+      }>(`/api/chat/messages/${ids[0]}`, { ids });
+      const removed = new Set(result.deletedIds ?? ids);
       setMessages((prev) => prev.filter((item) => !removed.has(item.id)));
+      setSelectingDelete(false);
+      setSelectedIds(new Set());
     } catch (err) {
       setError(errorToMessage(err, t));
     } finally {
-      setDeletingId(null);
+      setDeleting(false);
     }
   };
 
@@ -711,12 +731,33 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                 ? `${authorLabel}: ${msg.text}. ${t("chat.message.failed")}`
                 : `${authorLabel}: ${msg.text}`;
 
+              const canSelect = canSelectForDelete(msg);
+              const selected = selectedIds.has(msg.id);
+              const showMenu = !selectingDelete && canSelect;
+
               return (
                 <div
                   key={msg.id}
                   role="listitem"
                   className={`flex items-end gap-2 ${isCoach ? "justify-start" : "justify-end"}`}
+                  onClick={
+                    selectingDelete && canSelect
+                      ? () => toggleDeleteSelect(msg.id)
+                      : undefined
+                  }
                 >
+                  {selectingDelete && canSelect && (
+                    <span
+                      aria-hidden
+                      className={`mb-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                        selected
+                          ? "border-emerald-400 bg-emerald-500 text-white"
+                          : "border-zinc-500 bg-transparent"
+                      }`}
+                    >
+                      {selected ? <Check className="h-3 w-3" /> : null}
+                    </span>
+                  )}
                   {isCoach && (
                     <div className="relative h-8 w-8 shrink-0" aria-hidden>
                       <Image
@@ -818,7 +859,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                       </>
                     )}
                   </div>
-                  {!isCoach && canDeleteMessage(msg) && (
+                  {showMenu && (
                     <div
                       ref={openMenuId === msg.id ? openMenuRef : undefined}
                       className="relative shrink-0 self-center"
@@ -828,9 +869,10 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                         aria-label={t("chat.message.menu")}
                         aria-haspopup="menu"
                         aria-expanded={openMenuId === msg.id}
-                        onClick={() =>
-                          setOpenMenuId((current) => (current === msg.id ? null : msg.id))
-                        }
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenMenuId((current) => (current === msg.id ? null : msg.id));
+                        }}
                         className="rounded-full p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-zinc-200"
                       >
                         <MoreVertical className="h-4 w-4" aria-hidden />
@@ -843,16 +885,14 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                           <button
                             role="menuitem"
                             type="button"
-                            onClick={() => {
-                              setOpenMenuId(null);
-                              void handleDelete(msg);
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              enterDeleteSelect(msg);
                             }}
-                            disabled={deletingId != null}
+                            disabled={deleting}
                             className="w-full px-3 py-2 text-left text-sm text-red-300 transition-colors hover:bg-white/5 disabled:opacity-50"
                           >
-                            {deletingId === msg.id
-                              ? t("common.loading")
-                              : t("chat.delete.action")}
+                            {t("chat.delete.action")}
                           </button>
                         </div>
                       )}
@@ -878,6 +918,33 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         <div ref={bottomRef} />
       </div>
 
+      {selectingDelete ? (
+        <div className="shrink-0 border-t border-white/[0.07] bg-[#0a0812]/95 px-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
+          <p className="mb-2 text-center text-xs text-zinc-400">
+            {t("chat.delete.selectHint")}
+          </p>
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={cancelDeleteSelect}
+              disabled={deleting}
+              className="rounded-full px-4 py-2 text-sm text-zinc-300 hover:bg-white/5 disabled:opacity-50"
+            >
+              {t("common.cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDeleteSelected()}
+              disabled={deleting || selectedIds.size === 0}
+              className="rounded-full bg-red-500/90 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            >
+              {deleting
+                ? t("common.loading")
+                : t("chat.delete.deleteCount", { count: selectedIds.size })}
+            </button>
+          </div>
+        </div>
+      ) : (
       <ChatComposer
         input={input}
         onInputChange={setInput}
@@ -889,6 +956,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         attachmentPreviewUrl={composerPhoto?.url ?? null}
         onRemoveAttachment={() => setComposerPhoto(null)}
       />
+      )}
       <input
         ref={fileRef}
         type="file"

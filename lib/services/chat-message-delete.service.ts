@@ -4,14 +4,6 @@ import { invalidateUserReadCaches } from "@/lib/cache/invalidate";
 import { logger } from "@/lib/logger";
 import type { Json } from "@/lib/types/database.types";
 
-type MessageRow = {
-  id: string;
-  coach_id: string | null;
-  reply_to_message_id: string | null;
-  thread_type: string;
-  sender: string;
-};
-
 type PendingRow = {
   id: string;
   payload: Json;
@@ -56,7 +48,6 @@ async function rollbackAnalyticsPayload(params: {
   entryDate: string;
 }): Promise<void> {
   const admin = createAdminSupabaseClient();
-  const adminAny = admin as any;
   const payload =
     params.payload && typeof params.payload === "object" && !Array.isArray(params.payload)
       ? (params.payload as Record<string, unknown>)
@@ -135,62 +126,51 @@ async function rollbackAnalyticsPayload(params: {
   }
 }
 
-function collectImpactIds(rows: MessageRow[], rootId: string): string[] {
-  const byParent = new Map<string, string[]>();
-  for (const row of rows) {
-    if (!row.reply_to_message_id) continue;
-    const bucket = byParent.get(row.reply_to_message_id) ?? [];
-    bucket.push(row.id);
-    byParent.set(row.reply_to_message_id, bucket);
-  }
-
-  const seen = new Set<string>();
-  const stack = [rootId];
-  while (stack.length > 0) {
-    const id = stack.pop()!;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    for (const child of byParent.get(id) ?? []) stack.push(child);
-  }
-  return [...seen];
-}
+const MAX_DELETE_IDS = 50;
 
 export async function deleteChatMessage(params: {
   userId: string;
   messageId: string;
+  extraIds?: string[];
 }): Promise<DeleteChatMessageResult> {
+  return deleteChatMessages({
+    userId: params.userId,
+    messageIds: [params.messageId, ...(params.extraIds ?? [])],
+  });
+}
+
+export async function deleteChatMessages(params: {
+  userId: string;
+  messageIds: string[];
+}): Promise<DeleteChatMessageResult> {
+  const requested = [
+    ...new Set(
+      params.messageIds.filter((id) => typeof id === "string" && id.trim().length > 0),
+    ),
+  ];
+  if (requested.length === 0) {
+    throw new ApiError("VALIDATION_ERROR", "Silinecek mesaj seçilmedi.");
+  }
+  if (requested.length > MAX_DELETE_IDS) {
+    throw new ApiError("VALIDATION_ERROR", "Bir seferde çok fazla mesaj seçildi.");
+  }
+
   const admin = createAdminSupabaseClient();
   const adminAny = admin as any;
-  const { data: target, error: targetError } = await admin
+  const { data: owned, error: ownedError } = await admin
     .from("chat_messages")
-    .select("id, coach_id, reply_to_message_id, thread_type, sender")
-    .eq("id", params.messageId)
+    .select("id")
     .eq("user_id", params.userId)
     .eq("thread_type", "direct")
-    .maybeSingle<MessageRow>();
-  if (targetError) {
+    .in("id", requested);
+  if (ownedError) {
     throw new ApiError("INTERNAL_ERROR", "Mesaj silme bilgisi okunamadı.");
   }
-  if (!target) {
+
+  const impactIds = (owned ?? []).map((row) => row.id);
+  if (impactIds.length === 0) {
     throw new ApiError("NOT_FOUND", "Silinecek mesaj bulunamadı.");
   }
-
-  let threadQuery = admin
-    .from("chat_messages")
-    .select("id, coach_id, reply_to_message_id, thread_type, sender")
-    .eq("user_id", params.userId)
-    .eq("thread_type", "direct");
-  if (target.coach_id) {
-    threadQuery = threadQuery.eq("coach_id", target.coach_id);
-  }
-  const { data: threadRows, error: rowsError } = await threadQuery.order("created_at", {
-    ascending: true,
-  });
-  if (rowsError) {
-    throw new ApiError("INTERNAL_ERROR", "Mesaj zinciri okunamadı.");
-  }
-
-  const impactIds = collectImpactIds((threadRows ?? []) as MessageRow[], target.id);
   const { data: profile } = await admin
     .from("profiles")
     .select("timezone")

@@ -61,6 +61,17 @@ vi.mock("@/lib/supabase/admin", () => ({
                 filters[key] = value;
                 return chain;
               },
+              in(_key: string, value: string[]) {
+                return Promise.resolve({
+                  data: state.messages.filter(
+                    (row) =>
+                      row.user_id === filters.user_id &&
+                      row.thread_type === filters.thread_type &&
+                      value.includes(row.id),
+                  ),
+                  error: null,
+                });
+              },
               maybeSingle: async () => ({
                 data:
                   state.messages.find(
@@ -271,10 +282,14 @@ describe("deleteChatMessage", () => {
     invalidateUserReadCaches.mockClear();
   });
 
-  it("deletes impact-set messages, rolls back analytics, and clears memory", async () => {
+  it("deletes only selected messages, rolls back analytics, and clears memory", async () => {
     const { deleteChatMessage } = await import("@/lib/services/chat-message-delete.service");
 
-    const result = await deleteChatMessage({ userId: "u1", messageId: "user-1" });
+    const result = await deleteChatMessage({
+      userId: "u1",
+      messageId: "user-1",
+      extraIds: ["coach-1"],
+    });
 
     expect(result.deletedIds.sort()).toEqual(["coach-1", "user-1"]);
     expect(result.deletedPendingIds).toEqual(["pending-1"]);
@@ -283,5 +298,15 @@ describe("deleteChatMessage", () => {
     expect(state.analytics.workouts_completed).toBe(1);
     expect(state.analytics.calories_burned).toBe(80);
     expect(invalidateUserReadCaches).toHaveBeenCalledWith("u1");
+  });
+
+  it("does not delete an unselected coach reply", async () => {
+    const { deleteChatMessage } = await import("@/lib/services/chat-message-delete.service");
+
+    const result = await deleteChatMessage({ userId: "u1", messageId: "user-1" });
+
+    expect(result.deletedIds).toEqual(["user-1"]);
+    expect(state.messages.some((row) => row.id === "coach-1")).toBe(true);
+    expect(state.analytics.workouts_completed).toBe(2);
   });
 });
