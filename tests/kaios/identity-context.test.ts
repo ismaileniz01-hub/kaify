@@ -183,6 +183,75 @@ describe("canonical state precedence over memory prose", () => {
   });
 });
 
+describe("coaches act on each other's product facts", () => {
+  const snapshot =
+    "primary_goal: build_muscle; training_days_per_week: 4; leo_lagging: back,calves; leo_priority: back; alex_last_plan: Push | Pull | Legs; alex_last_workout: Pull; calorie_goal: 2100; protein_goal_g: 150; calories_today: 900/2100";
+
+  it("Maya meal plans around Alex's split and Leo lagging, not a generic menu", () => {
+    const ctx = buildRuntimeContext({
+      coach: "maya",
+      message: "haftalik yemek programi hazirla",
+      locale: "tr",
+      userState: snapshot,
+    });
+    expect(ctx.intent).toBe("meal_plan");
+    expect(ctx.userState).toContain("alex_last_plan: Push | Pull | Legs");
+    expect(ctx.userState).toContain("leo_lagging: back,calves");
+    const blob = compilePrompt(ctx)
+      .messages.map((m) => m.content)
+      .join("\n");
+    expect(blob).toContain("alex_last_plan");
+    expect(blob).toContain("time carbs around training days");
+    expect(blob).toContain("keep protein_goal_g as the floor");
+  });
+
+  it("Leo scoring reads Alex's split and Maya's energy context", () => {
+    const ctx = buildRuntimeContext({
+      coach: "leo",
+      message: "bu fotografa gore skorla",
+      locale: "tr",
+      hasImage: true,
+      userState: snapshot,
+    });
+    expect(ctx.userState).toContain("alex_last_plan");
+    expect(ctx.userState).toContain("calorie_goal: 2100");
+    const blob = compilePrompt(ctx)
+      .messages.map((m) => m.content)
+      .join("\n");
+    expect(blob).toContain("judge lagging groups against that split");
+    expect(blob).toContain("interpret physique trend with that energy context");
+  });
+
+  it("Alex form/session still uses Leo lagging and Maya fuel", () => {
+    const ctx = buildRuntimeContext({
+      coach: "alex",
+      message: "bench form nasil duzeltilir",
+      locale: "tr",
+      userState: snapshot,
+    });
+    expect(ctx.userState).toContain("leo_lagging: back,calves");
+    expect(ctx.userState).toContain("calories_today: 900/2100");
+    const blob = compilePrompt(ctx)
+      .messages.map((m) => m.content)
+      .join("\n");
+    expect(blob).toContain("teammate_work");
+    expect(blob).toContain("bias today's volume and cues toward those groups");
+    expect(blob).toContain("treat them as fuel truth");
+  });
+
+  it("keeps Alex last workout on a casual Kai greeting", () => {
+    const ctx = buildRuntimeContext({
+      coach: "kai",
+      message: "selam",
+      locale: "tr",
+      userState: `${snapshot}; motivation style: tough`,
+    });
+    expect(ctx.tier).toBe(0);
+    expect(ctx.userState).toContain("alex_last_workout: Pull");
+    expect(ctx.userState).not.toMatch(/motivation style/);
+  });
+});
+
 describe("Maya confirmation-before-save contract in capsules", () => {
   it("food analysis capsule forbids silent save claims", () => {
     const ctx = buildRuntimeContext({

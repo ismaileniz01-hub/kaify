@@ -124,12 +124,19 @@ describe("KAIOS capsules", () => {
     expect(COUNCIL_CORE).toContain("do_not_generate_past_user_turn");
     expect(LOCALIZATION_CAPSULE).toContain("short_expressions_do_not_switch");
     expect(CORE_CAPSULE).toContain("do not re-ask fields already present");
+    expect(CORE_CAPSULE).toContain("teammate product facts");
     expect(ALEX_PROGRAMMING).toContain("trusted_onboarding");
     expect(ALEX_PROGRAMMING).toContain("never interview for those again");
     expect(ALEX_PROGRAMMING).toContain("leo_lagging");
+    expect(ALEX_PROGRAMMING).toContain("maya_fuel");
+    expect(ALEX_CORE).toContain("teammate_work");
     expect(MAYA_MEAL_PLANNING).toContain("calorie_goal");
+    expect(MAYA_MEAL_PLANNING).toContain("alex_last_plan");
+    expect(MAYA_CORE).toContain("teammate_work");
+    expect(LEO_CORE).toContain("teammate_work");
     expect(KAI_CORE).toContain("teammate_read");
     expect(COUNCIL_CORE).toContain("WEEKLY_SNAPSHOT");
+    expect(COUNCIL_CORE).toContain("same snapshot");
   });
 
   it("getLocalePack returns a short pack", () => {

@@ -207,9 +207,9 @@ function buildStateSummary(
     parts.push(extras.crossCoachSnapshot.trim());
   }
   if (state?.last_workout_summary)
-    parts.push(`last workout: ${state.last_workout_summary}`);
+    parts.push(`alex_last_workout: ${state.last_workout_summary}`);
   if (state && state.training_focus.length > 0)
-    parts.push(`training focus: ${state.training_focus.join(", ")}`);
+    parts.push(`training_focus: ${state.training_focus.join(", ")}`);
   if (state?.motivation_style) parts.push(`motivation style: ${state.motivation_style}`);
   if (extras?.familiarityStage && extras.familiarityStage !== "unknown") {
     parts.push(`familiarity_stage: ${extras.familiarityStage}`);
@@ -364,7 +364,7 @@ function asCoachId(coachId: string): CoachId | null {
 /** Compact cross-coach facts — never ownership labels or teammate personality. */
 function compactTeamFacts(snapshot: string): string[] {
   const keep =
-    /^(leo_|alex_last_plan|calorie_goal|protein_goal|carbs_goal|fat_goal|calories_today|protein_today|primary_goal|experience_level|training_days)/;
+    /^(leo_|alex_last_plan|alex_last_workout|calorie_goal|protein_goal|carbs_goal|fat_goal|calories_today|protein_today|primary_goal|experience_level|training_days|training_focus)/;
   return snapshot
     .split(/;\s*/)
     .map((line) => line.trim())

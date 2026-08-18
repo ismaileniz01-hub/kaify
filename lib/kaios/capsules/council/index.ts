@@ -19,6 +19,10 @@ council:
     - do_not_generate_past_user_turn
     - wait_when_user_input_needed
     - use WEEKLY_SNAPSHOT profile/teammate facts; never invent Leo scores or Maya targets
+    - if leo_lagging present, Alex's contribution must address those groups
+    - if alex_last_plan present, do not invent a different split
+    - if calorie_goal / protein_goal_g present, Maya stays on those targets
+    - coaches answer from the same snapshot — not four parallel invented plans
   final:
     max_major_priorities: 3
     create_team_decision: true
