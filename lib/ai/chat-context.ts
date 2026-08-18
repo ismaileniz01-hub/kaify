@@ -1,4 +1,4 @@
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { localTodayDate } from "@/lib/date-utils";
 import { getStreakStatus } from "@/lib/services/streak-status.service";
 import { countConsecutiveRestDays, gymSkipFacts } from "@/lib/ai/count-consecutive-rest-days";
 
@@ -81,10 +81,18 @@ export function formatTrustedProfileContext(
 /** Live fitness snapshot injected into chat system prompts (DATA block). */
 export async function buildFitnessContextSummary(userId: string): Promise<string> {
   const admin = createAdminSupabaseClient();
-  const today = new Date().toISOString().slice(0, 10);
 
-  const [streak, { data: rows }, { data: settings }] = await Promise.all([
+  const [streak, { data: profile }] = await Promise.all([
     getStreakStatus(userId).catch(() => null),
+    admin.from("profiles").select("timezone").eq("id", userId).maybeSingle(),
+  ]);
+  const timezone =
+    typeof profile?.timezone === "string" && profile.timezone.trim()
+      ? profile.timezone
+      : "UTC";
+  const today = localTodayDate(timezone);
+
+  const [{ data: rows }, { data: settings }] = await Promise.all([
     admin
       .from("analytics_daily")
       .select("entry_date, workouts_completed, workouts_target")

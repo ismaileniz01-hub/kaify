@@ -62,6 +62,11 @@ function metKcal(met: number, kg: number, minutes: number): number {
 
 export type WorkoutPlanForBurn = {
   days?: Array<{
+    focusKey?: string;
+    dayKey?: string;
+    name?: string;
+    focus?: string;
+    title?: string;
     exercises?: Array<{
       name?: string;
       sets?: number;
@@ -78,16 +83,48 @@ export type WorkoutPlanForBurn = {
   durationMin?: number;
 };
 
+function daySearchText(day: NonNullable<WorkoutPlanForBurn["days"]>[number]): string {
+  return [day.focus, day.name, day.title, day.focusKey, day.dayKey]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join(" ")
+    .toLowerCase()
+    .replace(/workout\./g, "")
+    .replace(/_/g, " ");
+}
+
+export function pickSessionExercises(
+  plan: WorkoutPlanForBurn,
+  hint?: string,
+): NonNullable<WorkoutPlanForBurn["exercises"]> {
+  if (Array.isArray(plan.exercises) && plan.exercises.length > 0) {
+    return plan.exercises;
+  }
+  const days = (plan.days ?? []).filter(
+    (day) => Array.isArray(day.exercises) && day.exercises.length > 0,
+  );
+  if (days.length === 0) return [];
+  const needle = hint?.toLowerCase() ?? "";
+  if (needle) {
+    const match = days.find((day) => {
+      const label = daySearchText(day);
+      if (!label) return false;
+      return label.split(/[\s/|,-]+/).some(
+        (token) => token.length >= 3 && needle.includes(token),
+      );
+    });
+    if (match?.exercises) return match.exercises;
+  }
+  return days[0]?.exercises ?? [];
+}
+
 /** Burn from the session they were given — never a stock 400. */
 export function estimateCaloriesFromWorkoutPlan(
   plan: WorkoutPlanForBurn | null | undefined,
   weightKg: number | null | undefined,
+  hint?: string,
 ): number | null {
   if (!plan) return null;
-  const exercises =
-    plan.exercises ??
-    plan.days?.find((d) => (d.exercises?.length ?? 0) > 0)?.exercises ??
-    [];
+  const exercises = pickSessionExercises(plan, hint);
   if (exercises.length === 0 && !(plan.durationMin && plan.durationMin >= 10)) {
     return null;
   }

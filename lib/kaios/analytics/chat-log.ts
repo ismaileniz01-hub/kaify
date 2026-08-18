@@ -5,6 +5,7 @@
  */
 
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { resolveWeightKg } from "@/lib/supabase/profile-compat";
 import { localTodayDate } from "@/lib/date-utils";
 import { createPendingAnalyticsConfirmation } from "@/lib/services/analytics-confirmation.service";
 import type { CoachId } from "@/lib/kaios/routing/intent";
@@ -81,16 +82,20 @@ export function patchForCoachChatLog(
   opts?: {
     currentWorkouts?: number;
     currentBurned?: number;
+    currentWater?: number;
     sessionKcal?: number | null;
+    sessionHint?: string;
   },
 ): ChatLogPatch | null {
   if (coach === "maya") {
     const liters = parseHydrationLiters(userMessage);
     if (liters == null) return null;
+    const total = Math.min(30, Math.max(0, (opts?.currentWater ?? 0) + liters));
+    const rounded = Math.round(total * 100) / 100;
     return {
       tool: "recordHydration",
       summary: `${liters}L water`,
-      patch: { waterLiters: liters },
+      patch: { waterLiters: rounded },
     };
   }
   if (coach === "alex") {
@@ -119,9 +124,10 @@ export function patchForCoachChatLog(
   return null;
 }
 
-async function loadWorkoutLogContext(userId: string): Promise<{
+async function loadDailyLogContext(userId: string): Promise<{
   currentWorkouts: number;
   currentBurned: number;
+  currentWater: number;
   weightKg: number | null;
   plan: WorkoutPlanForBurn | null;
 }> {
@@ -150,15 +156,16 @@ async function loadWorkoutLogContext(userId: string): Promise<{
   const today = localTodayDate(timezone);
   const { data: row } = await admin
     .from("analytics_daily")
-    .select("workouts_completed, calories_burned")
+    .select("workouts_completed, calories_burned, water_liters")
     .eq("user_id", userId)
     .eq("entry_date", today)
     .maybeSingle();
-  const weightRaw = Number(profile?.weight_kg);
+  const weightRaw = resolveWeightKg(profile ?? {});
   return {
     currentWorkouts: Number(row?.workouts_completed) || 0,
     currentBurned: Number(row?.calories_burned) || 0,
-    weightKg: Number.isFinite(weightRaw) && weightRaw >= 40 ? weightRaw : null,
+    currentWater: Number(row?.water_liters) || 0,
+    weightKg: weightRaw != null && weightRaw >= 40 ? Number(weightRaw) : null,
     plan: planFromPayload(planRow?.payload),
   };
 }
@@ -185,15 +192,23 @@ export async function maybeQueueCoachLogConfirmation(input: {
   let sessionKcal: number | null = null;
   let currentWorkouts = 0;
   let currentBurned = 0;
-  if (input.coach === "alex") {
-    try {
-      const ctx = await loadWorkoutLogContext(input.userId);
-      currentWorkouts = ctx.currentWorkouts;
-      currentBurned = ctx.currentBurned;
+  let currentWater = 0;
+  try {
+    const ctx = await loadDailyLogContext(input.userId);
+    currentWorkouts = ctx.currentWorkouts;
+    currentBurned = ctx.currentBurned;
+    currentWater = ctx.currentWater;
+    if (input.coach === "alex") {
       sessionKcal =
         parseCaloriesBurnedFromText(input.assistantText ?? "") ??
-        estimateCaloriesFromWorkoutPlan(ctx.plan, ctx.weightKg);
-    } catch {
+        estimateCaloriesFromWorkoutPlan(
+          ctx.plan,
+          ctx.weightKg,
+          input.userMessage,
+        );
+    }
+  } catch {
+    if (input.coach === "alex") {
       sessionKcal = parseCaloriesBurnedFromText(input.assistantText ?? "");
     }
   }
@@ -201,6 +216,7 @@ export async function maybeQueueCoachLogConfirmation(input: {
   const spec = patchForCoachChatLog(input.coach, input.userMessage, {
     currentWorkouts,
     currentBurned,
+    currentWater,
     sessionKcal,
   });
   if (!spec) return { truths: [] };

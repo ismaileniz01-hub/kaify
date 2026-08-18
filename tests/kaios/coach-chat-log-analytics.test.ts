@@ -8,6 +8,7 @@ import {
 import {
   estimateCaloriesFromWorkoutPlan,
   parseCaloriesBurnedFromText,
+  pickSessionExercises,
 } from "@/lib/kaios/analytics/workout-log";
 
 describe("Alex workout completion → analytics patch", () => {
@@ -82,6 +83,18 @@ describe("Maya hydration log → analytics patch", () => {
     });
     expect(patchForCoachChatLog("alex", "2 litre su içtim")).toBeNull();
   });
+
+  it("adds today's water instead of overwriting it", () => {
+    expect(
+      patchForCoachChatLog("maya", "I drank 500ml of water", {
+        currentWater: 1.5,
+      }),
+    ).toEqual({
+      tool: "recordHydration",
+      summary: "0.5L water",
+      patch: { waterLiters: 2 },
+    });
+  });
 });
 
 describe("session burn without a stock 400", () => {
@@ -109,5 +122,31 @@ describe("session burn without a stock 400", () => {
     expect(kcal).toBeGreaterThan(200);
     expect(kcal).toBeLessThan(700);
     expect(kcal).not.toBe(400);
+  });
+
+  it("estimates the matching split day instead of always day 1", () => {
+    const plan = {
+      days: [
+        {
+          focusKey: "Push",
+          exercises: [
+            { name: "Bench Press", sets: 5, reps: "5" },
+            { name: "OHP", sets: 4, reps: "8" },
+            { name: "Incline walk", sets: 1, reps: "20 min" },
+          ],
+        },
+        {
+          focusKey: "Pull",
+          exercises: [{ name: "Barbell Row", sets: 3, reps: "8" }],
+        },
+      ],
+    };
+    const push = pickSessionExercises(plan, "push bitirdim");
+    const pull = pickSessionExercises(plan, "pull antrenmanı bitti");
+    expect(push?.[0]?.name).toBe("Bench Press");
+    expect(pull?.[0]?.name).toBe("Barbell Row");
+    const pushKcal = estimateCaloriesFromWorkoutPlan(plan, 80, "push bitirdim");
+    const pullKcal = estimateCaloriesFromWorkoutPlan(plan, 80, "pull antrenmanı bitti");
+    expect(pushKcal).toBeGreaterThan(pullKcal ?? 0);
   });
 });

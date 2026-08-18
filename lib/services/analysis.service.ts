@@ -23,6 +23,8 @@ import { resolveActiveLocale } from "@/lib/kaios/localization/resolve";
 import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import { summarizePhysiqueScores } from "@/lib/kaios/context/physique-summary";
 import { loadCrossCoachSnapshot } from "@/lib/kaios/context/coach-snapshot";
+import { formatTrustedProfileContext } from "@/lib/ai/chat-context";
+import { parseGenderInput } from "@/lib/profile-mapper";
 import type { ScoreDrift } from "@/lib/ai/consistency";
 import type {
   AnalysisMimeType,
@@ -131,6 +133,48 @@ async function getLocale(
   });
 }
 
+async function loadPhotoUserState(
+  admin: AdminClient,
+  userId: string,
+): Promise<string> {
+  const [{ data: profile }, { data: settings }, snapshot] = await Promise.all([
+    admin
+      .from("profiles")
+      .select(
+        "allergies, gender, experience_level, training_days_per_week, activity_level, height_cm, weight_kg, dietary_preference, disliked_foods, health_conditions",
+      )
+      .eq("id", userId)
+      .maybeSingle(),
+    admin
+      .from("user_settings")
+      .select("primary_goal")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    loadCrossCoachSnapshot(userId).catch(() => ""),
+  ]);
+  const parsed = profile?.gender ? parseGenderInput(String(profile.gender)) : null;
+  const parts = [
+    formatTrustedProfileContext({
+      primaryGoal:
+        typeof settings?.primary_goal === "string" ? settings.primary_goal : null,
+      experienceLevel: profile?.experience_level ?? null,
+      trainingDaysPerWeek: profile?.training_days_per_week ?? null,
+      activityLevel: profile?.activity_level ?? null,
+      heightCm: profile?.height_cm ?? null,
+      weightKg: profile?.weight_kg ?? null,
+      dietaryPreference: profile?.dietary_preference ?? null,
+      dislikedFoods: profile?.disliked_foods ?? null,
+      healthConditions: profile?.health_conditions ?? null,
+    }),
+    typeof profile?.allergies === "string" && profile.allergies.trim()
+      ? `allergies: ${profile.allergies.trim()}`
+      : "",
+    parsed === "male" ? "user_gender: male" : parsed === "female" ? "user_gender: female" : "",
+    snapshot,
+  ].filter((part) => part && part.trim());
+  return parts.join("; ");
+}
+
 async function getPreviousScores(
   admin: AdminClient,
   userId: string,
@@ -215,13 +259,13 @@ export async function analyzePhoto(
   const vision = await prepareVisionImage(params.imageBase64);
   const fingerprint = fingerprintVisionImage(vision.base64, vision.mimeType);
 
-  const [locale, previousScores, priorRows, teammateState] = await Promise.all([
+  const [locale, previousScores, priorRows, photoUserState] = await Promise.all([
     getLocale(admin, params.userId, params.note),
     persona.kind === "body"
       ? getPreviousScores(admin, params.userId, params.coachId)
       : Promise.resolve(null),
     loadRecentVisionRows(admin, params.userId, params.coachId, messageType),
-    loadCrossCoachSnapshot(params.userId).catch(() => ""),
+    loadPhotoUserState(admin, params.userId).catch(() => ""),
   ]);
 
   const reusedRow = selectReusableVisionRow({
@@ -264,7 +308,7 @@ export async function analyzePhoto(
       image: { base64: vision.base64, mimeType: vision.mimeType },
       previousScores,
       userNote: params.note,
-      userState: teammateState || undefined,
+      userState: photoUserState || undefined,
       signal: params.signal,
     });
   } catch (error) {

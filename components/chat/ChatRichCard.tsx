@@ -5,6 +5,11 @@ import type { ContactId } from "@/lib/contacts";
 import { CONTACTS } from "@/lib/contacts";
 import { useLang } from "@/lib/lang-context";
 import type { MessageType } from "@/lib/types/database.types";
+import {
+  displayPlanLabel,
+  planDayHeading,
+  unwrapChatCardPayload,
+} from "@/lib/chat/rich-card-payload";
 
 type ChatRichCardProps = {
   contactId: ContactId;
@@ -43,23 +48,11 @@ function scorePayloadToAnalysis(payload: Record<string, unknown>) {
 }
 
 function workoutPlanPayload(payload: Record<string, unknown>) {
-  const nestedUi =
-    payload.ui && typeof payload.ui === "object" && !Array.isArray(payload.ui)
-      ? (payload.ui as Record<string, unknown>)
-      : null;
-  const nestedData =
-    payload.data && typeof payload.data === "object" && !Array.isArray(payload.data)
-      ? (payload.data as Record<string, unknown>)
-      : null;
-  const source = nestedUi ?? nestedData ?? payload;
+  const source = unwrapChatCardPayload(payload);
   return source as {
     titleKey?: string;
     durationKey?: string;
-    days?: {
-      dayKey: string;
-      focusKey: string;
-      exercises: { name: string; sets: number; reps: string; notes?: string }[];
-    }[];
+    days?: Record<string, unknown>[];
   };
 }
 
@@ -188,15 +181,21 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
   }
 
   if (messageType === "meal_plan") {
-    const mp = p as {
+    const mp = unwrapChatCardPayload(p) as {
       totalCalories?: number;
       targetCalories?: number;
+      calorie_goal?: number;
       macros?: Record<string, { current: number; target: number }>;
-      meals?: { labelKey: string; items: { name: string; calories: number }[] }[];
+      meals?: { labelKey?: string; label?: string; items?: { name: string; calories: number }[] }[];
     };
-    const calPct = Math.round(
-      ((mp.totalCalories ?? 0) / (mp.targetCalories ?? 2100)) * 100,
-    );
+    const target =
+      mp.targetCalories && mp.targetCalories > 0
+        ? mp.targetCalories
+        : mp.calorie_goal && mp.calorie_goal > 0
+          ? mp.calorie_goal
+          : null;
+    const total = mp.totalCalories ?? 0;
+    const calPct = target ? Math.round((total / target) * 100) : 0;
     return (
       <div
         className="animate-message mt-2 overflow-hidden rounded-2xl"
@@ -207,12 +206,12 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
             className="flex h-14 w-14 items-center justify-center rounded-full text-lg font-black text-white"
             style={{ background: `conic-gradient(${primary} ${calPct}%, #1a1a2e ${calPct}%)` }}
           >
-            {calPct}%
+            {target ? `${calPct}%` : total}
           </div>
           <div>
             <p className="text-sm font-bold text-white">{t("meal.calories")}</p>
             <p className="text-xs text-zinc-400">
-              {mp.totalCalories ?? 0} / {mp.targetCalories ?? 2100} kcal
+              {target ? `${total} / ${target} kcal` : `${total} kcal`}
             </p>
           </div>
         </div>
@@ -238,6 +237,23 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
                 <span className="text-[11px] text-zinc-400">
                   {data.current}g / {data.target}g
                 </span>
+              </div>
+            ))}
+          </div>
+        )}
+        {Array.isArray(mp.meals) && mp.meals.length > 0 && (
+          <div className="flex flex-col gap-2 p-3" style={{ borderTop: `1px solid ${ring}` }}>
+            {mp.meals.map((meal, i) => (
+              <div key={i}>
+                <p className="mb-1 text-[11px] font-bold text-zinc-300">
+                  {displayPlanLabel(meal.labelKey ?? meal.label, t)}
+                </p>
+                {(meal.items ?? []).map((item, j) => (
+                  <div key={j} className="flex items-center justify-between ps-3">
+                    <span className="text-[11px] text-zinc-400">{item.name}</span>
+                    <span className="text-[11px] text-zinc-500">{item.calories} kcal</span>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -270,12 +286,21 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
             </p>
           </div>
         </div>
-        {(wp.days ?? []).map((day, di) => (
+        {(wp.days ?? []).map((day, di) => {
+          const rec = day as Record<string, unknown>;
+          const heading = planDayHeading(rec);
+          const exercises = Array.isArray(rec.exercises)
+            ? (rec.exercises as { name?: string; sets?: number; reps?: string; notes?: string }[])
+            : [];
+          const title = [displayPlanLabel(heading.day, t), displayPlanLabel(heading.focus, t)]
+            .filter(Boolean)
+            .join(" — ");
+          return (
           <div key={di} className="px-3 py-2" style={{ borderBottom: `1px solid ${ring}` }}>
             <p className="text-xs font-bold text-zinc-300">
-              {t(day.dayKey)} — {t(day.focusKey)}
+              {title}
             </p>
-            {day.exercises.map((ex, ei) => (
+            {exercises.map((ex, ei) => (
               <div key={ei} className="mt-1">
                 <p className="text-[11px] text-zinc-400">
                   • {ex.name} ({ex.sets}x{ex.reps})
@@ -288,7 +313,8 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
               </div>
             ))}
           </div>
-        ))}
+          );
+        })}
       </div>
     );
   }

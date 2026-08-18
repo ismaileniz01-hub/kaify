@@ -105,6 +105,16 @@ export async function confirmPendingAnalytics(
       at: new Date().toISOString(),
     });
   }
+  const water = Number(payload?.patch?.waterLiters ?? payload?.patch?.water_liters);
+  if (Number.isFinite(water) && water > 0) {
+    await emitKaiosEventBestEffort({
+      category: "hydration",
+      type: "hydration_recorded",
+      userId,
+      payload: { liters: water },
+      at: new Date().toISOString(),
+    });
+  }
 }
 
 export async function rejectPendingAnalytics(

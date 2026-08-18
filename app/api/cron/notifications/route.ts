@@ -97,7 +97,8 @@ export const GET = defineCronRoute("/api/cron/notifications", async () => {
 
       const ids = profiles.map((p) => p.id);
 
-      const [{ data: settings }, { data: streaks }] = await Promise.all([
+      const [{ data: settings }, { data: streaks }, { data: waterRows }] =
+        await Promise.all([
         admin
           .from("user_settings")
           .select("user_id, water_reminder, workout_reminders")
@@ -106,10 +107,28 @@ export const GET = defineCronRoute("/api/cron/notifications", async () => {
           .from("user_streaks")
           .select("user_id, current_streak, last_check_in_date")
           .in("user_id", ids),
+        admin
+          .from("analytics_daily")
+          .select("user_id, entry_date, water_liters, water_goal_liters")
+          .in("user_id", ids)
+          .gte(
+            "entry_date",
+            new Date(now.getTime() - 36 * 60 * 60 * 1000).toISOString().slice(0, 10),
+          )
+          .lte(
+            "entry_date",
+            new Date(now.getTime() + 36 * 60 * 60 * 1000).toISOString().slice(0, 10),
+          ),
       ]);
 
       const settingsById = new Map((settings ?? []).map((s) => [s.user_id, s]));
       const streakById = new Map((streaks ?? []).map((s) => [s.user_id, s]));
+      const waterByUserDate = new Map(
+        (waterRows ?? []).map((row) => [
+          `${row.user_id}:${row.entry_date}`,
+          row,
+        ]),
+      );
 
       const jobs: CreateNotificationInput[] = [];
 
@@ -142,13 +161,18 @@ export const GET = defineCronRoute("/api/cron/notifications", async () => {
 
         // 2. Water reminder — a few times a day when enabled.
         if (waterOn && WATER_HOURS.has(hour)) {
-          jobs.push({
-            userId: profile.id,
-            type: "water_reminder",
-            titleKey: "notif.water_reminder.title",
-            bodyKey: "notif.water_reminder.body",
-            dedupKey: `water:${date}:${hour}`,
-          });
+          const water = waterByUserDate.get(`${profile.id}:${date}`);
+          const drank = Number(water?.water_liters) || 0;
+          const goal = Number(water?.water_goal_liters) || 2.5;
+          if (drank < goal) {
+            jobs.push({
+              userId: profile.id,
+              type: "water_reminder",
+              titleKey: "notif.water_reminder.title",
+              bodyKey: "notif.water_reminder.body",
+              dedupKey: `water:${date}:${hour}`,
+            });
+          }
         }
 
         // 3. Weekly summary — Sunday evening.
