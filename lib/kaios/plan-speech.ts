@@ -149,31 +149,33 @@ export function parseWorkoutDaysFromSpeech(text: string): PlanDay[] {
   const days: PlanDay[] = [];
   let current: PlanDay | null = null;
 
-  const startDay = (dayKey: string, focus: string) => {
-    current = { dayKey, focus, exercises: [] };
-    days.push(current);
-  };
-
   for (const line of lines) {
     const dayMatch = line.match(dayRe) ?? line.match(dayOnlyRe);
     if (dayMatch && !bulletExRe.test(line)) {
-      startDay(dayMatch[1]!, (dayMatch[2] ?? "").trim());
+      current = { dayKey: dayMatch[1]!, focus: (dayMatch[2] ?? "").trim(), exercises: [] };
+      days.push(current);
       continue;
     }
     const gunMatch = line.match(gunRe) ?? line.match(gunOnlyRe);
     if (gunMatch) {
-      startDay(`Gün ${gunMatch[1]}`, (gunMatch[2] ?? "").trim());
+      current = {
+        dayKey: `Gün ${gunMatch[1]}`,
+        focus: (gunMatch[2] ?? "").trim(),
+        exercises: [],
+      };
+      days.push(current);
       continue;
     }
     if (!current) continue;
     const exMatch = line.match(bulletExRe) ?? line.match(bareExRe);
     if (!exMatch) continue;
-    current.exercises = current.exercises ?? [];
-    current.exercises.push({
+    const lifts = current.exercises ?? [];
+    lifts.push({
       name: exMatch[1]!.trim(),
       sets: Number(exMatch[2]),
       reps: exMatch[3]!.replace(/\s+/g, ""),
     });
+    current.exercises = lifts;
   }
 
   return days.filter((day) => (day.exercises?.length ?? 0) > 0);
