@@ -481,6 +481,13 @@ describe("Unicode stream completion", () => {
         finishReason: "length",
       }),
     ).toBe(true);
+    expect(
+      isStreamCompletionSuspicious({
+        text: "5 gün için net bir split: Pazartesi göğüs-triceps, Salı sırt-biceps, Çarşamba bacak. Ekipman salon varsayıyorum, değişirse söylersin.",
+        sawDelta: true,
+        finishReason: "length",
+      }),
+    ).toBe(false);
   });
 });
 

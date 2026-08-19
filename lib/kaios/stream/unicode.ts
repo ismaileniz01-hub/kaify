@@ -32,6 +32,10 @@ export function isStreamCompletionSuspicious(input: {
   if (input.aborted) return true;
   if (hasBrokenUtf16(input.text)) return true;
   if (input.sawDelta && input.text.trim().length === 0) return true;
-  if (input.finishReason === "length") return true;
+  // Hit max_tokens: keep a long usable reply (weekly plans often complete the
+  // spoken message then get cut in JSON). Only retry short truncated scraps.
+  if (input.finishReason === "length" && input.text.trim().length < 120) {
+    return true;
+  }
   return false;
 }

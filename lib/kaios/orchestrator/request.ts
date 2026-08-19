@@ -49,6 +49,8 @@ import { maybeQueueCoachLogConfirmation } from "@/lib/kaios/analytics/chat-log";
 import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
 import {
   coachRetryLine,
+  isCoachRetryLine,
+  looksLikeUnsafeCoachText,
   sanitizeCoachVisibleText,
 } from "@/lib/kaios/coach-retry";
 import {
@@ -502,6 +504,9 @@ export async function* orchestrateCoachChat(
       assistantText = envelope.message;
     } else {
       assistantText = coachVisibleMessage(scrubbed);
+      if (!assistantText.trim() && streamedVisible.trim()) {
+        assistantText = streamedVisible.trim();
+      }
       const coerced =
         intent === "programming"
           ? coerceWorkoutPlanEnvelope(input.coachId, assistantText)
@@ -599,6 +604,13 @@ export async function* orchestrateCoachChat(
     intent,
     userMessage: input.message,
   });
+  if (
+    isCoachRetryLine(assistantText) &&
+    streamedVisible.trim().length >= 40 &&
+    !looksLikeUnsafeCoachText(streamedVisible)
+  ) {
+    assistantText = streamedVisible.trim();
+  }
   envelope = { ...envelope, message: assistantText };
 
   if (assistantText.length > streamedVisible.length) {

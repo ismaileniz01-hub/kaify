@@ -74,6 +74,15 @@ describe("resolveIntent", () => {
         hasRecentHistory: true,
       }),
     ).toBe("programming");
+    expect(
+      resolveIntent({
+        coach: "alex",
+        message: "5 gun",
+        previousAssistantMessage:
+          "Haftada kaç gün gidebilirsin? Ekipman durumun ne?",
+        hasRecentHistory: true,
+      }),
+    ).toBe("programming");
   });
 
   it("routes Turkish weekly menu phrasing to meal_plan for Maya", () => {

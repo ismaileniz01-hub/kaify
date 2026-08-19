@@ -249,16 +249,18 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* Large coach presence — guest demo only; live chat keeps the composer pinned. */}
-      {!sessionLoading && !isAuthenticated && (
-      <div className="pointer-events-none absolute bottom-32 -left-8 z-10">
+      {/* Large coach presence — sits above the composer on the bottom-left. */}
+      {!sessionLoading && (
+      <div className="pointer-events-none absolute bottom-36 -left-8 z-[5]">
         <ContactAvatar
-          src={contact.avatar}
+          src={getAvatarSrc()}
           alt={contact.name}
           size="xl"
           pulse={false}
           effect={getEffect()}
           auraColor={contactId === "kai" ? auraColor : "default"}
+          presence={avatarState}
+          coachId={contactId}
         />
       </div>
       )}
