@@ -641,7 +641,7 @@ export async function* orchestrateCoachChat(
     latencyMs: Date.now() - startedAt,
   });
 
-  let messageType = messageTypeForIntent(intent, envelope);
+  const messageType = messageTypeForIntent(intent, envelope);
 
   // Programming without apply backend is never an applied workout_plan claim.
   if (intent === "programming" && envelope.data) {
