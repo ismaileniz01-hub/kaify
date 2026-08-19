@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type Ref } from "react";
 import Image from "next/image";
 import {
   streamChatMessage,
@@ -84,6 +84,68 @@ function newPersistedMessageId(): string {
     return crypto.randomUUID();
   }
   return createIdempotencyKey();
+}
+
+function MessageOverflowMenu({
+  open,
+  menuRef,
+  label,
+  deleteLabel,
+  deleting,
+  compact,
+  onToggle,
+  onDelete,
+}: {
+  open: boolean;
+  menuRef?: Ref<HTMLDivElement>;
+  label: string;
+  deleteLabel: string;
+  deleting: boolean;
+  compact?: boolean;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div
+      ref={menuRef}
+      className={`relative shrink-0 ${compact ? "z-10 -mb-0.5" : "self-center"}`}
+    >
+      <button
+        type="button"
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggle();
+        }}
+        className={`rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white ${
+          compact ? "p-0.5" : "p-2"
+        }`}
+      >
+        <MoreVertical className="h-4 w-4" aria-hidden />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-20 mt-1 min-w-[9rem] overflow-hidden rounded-xl border border-white/10 bg-zinc-900/95 py-1 shadow-xl backdrop-blur-sm"
+        >
+          <button
+            role="menuitem"
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete();
+            }}
+            disabled={deleting}
+            className="w-full px-3 py-2 text-left text-sm text-red-300 transition-colors hover:bg-white/5 disabled:opacity-50"
+          >
+            {deleteLabel}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function canSelectForDelete(msg: LiveMessage): boolean {
@@ -870,7 +932,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                 <div
                   key={msg.id}
                   role="listitem"
-                  className={`flex gap-2 ${isCoach ? "justify-start" : "justify-end"}`}
+                  className={`flex items-end gap-2 ${isCoach ? "justify-start" : "justify-end"}`}
                   onClick={
                     selectingDelete && canSelect
                       ? () => toggleDeleteSelect(msg.id)
@@ -890,7 +952,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                     </span>
                   )}
                   {isCoach && (
-                    <div className="flex w-8 shrink-0 flex-col justify-end" aria-hidden>
+                    <div className="flex w-8 shrink-0 flex-col justify-end self-stretch" aria-hidden>
                       <div className="contact-avatar sticky bottom-3 h-8 w-8">
                         <Image
                           src={publicAssetUrl(coachAvatar)}
@@ -903,7 +965,11 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                       </div>
                     </div>
                   )}
-                  <div className="min-w-0 max-w-[78%]">
+                  <div
+                    className={`min-w-0 ${
+                      isCoach ? "max-w-[78%]" : "max-w-[calc(100%-2.75rem)]"
+                    }`}
+                  >
                     {isTyping ? (
                       <>
                         <div
@@ -1019,8 +1085,24 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                     )}
                   </div>
                   {!isCoach && (
-                    <div className="flex w-8 shrink-0 flex-col justify-end" aria-hidden>
-                      <div className="contact-avatar sticky bottom-3 h-8 w-8">
+                    <div className="flex w-8 shrink-0 flex-col items-center justify-end">
+                      {showMenu ? (
+                        <MessageOverflowMenu
+                          open={openMenuId === msg.id}
+                          menuRef={openMenuId === msg.id ? openMenuRef : undefined}
+                          label={t("chat.message.menu")}
+                          deleteLabel={t("chat.delete.action")}
+                          deleting={deleting}
+                          compact
+                          onToggle={() =>
+                            setOpenMenuId((current) =>
+                              current === msg.id ? null : msg.id,
+                            )
+                          }
+                          onDelete={() => enterDeleteSelect(msg)}
+                        />
+                      ) : null}
+                      <div className="contact-avatar sticky bottom-3 h-8 w-8" aria-hidden>
                         <Image
                           src={publicAssetUrl(userAvatar)}
                           alt=""
@@ -1032,45 +1114,19 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                       </div>
                     </div>
                   )}
-                  {showMenu && (
-                    <div
-                      ref={openMenuId === msg.id ? openMenuRef : undefined}
-                      className="relative shrink-0 self-center"
-                    >
-                      <button
-                        type="button"
-                        aria-label={t("chat.message.menu")}
-                        aria-haspopup="menu"
-                        aria-expanded={openMenuId === msg.id}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setOpenMenuId((current) => (current === msg.id ? null : msg.id));
-                        }}
-                        className="rounded-full p-2 text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-                      >
-                        <MoreVertical className="h-4 w-4" aria-hidden />
-                      </button>
-                      {openMenuId === msg.id && (
-                        <div
-                          role="menu"
-                          className="absolute right-0 top-full z-20 mt-1 min-w-[9rem] overflow-hidden rounded-xl border border-white/10 bg-zinc-900/95 py-1 shadow-xl backdrop-blur-sm"
-                        >
-                          <button
-                            role="menuitem"
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              enterDeleteSelect(msg);
-                            }}
-                            disabled={deleting}
-                            className="w-full px-3 py-2 text-left text-sm text-red-300 transition-colors hover:bg-white/5 disabled:opacity-50"
-                          >
-                            {t("chat.delete.action")}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {isCoach && showMenu ? (
+                    <MessageOverflowMenu
+                      open={openMenuId === msg.id}
+                      menuRef={openMenuId === msg.id ? openMenuRef : undefined}
+                      label={t("chat.message.menu")}
+                      deleteLabel={t("chat.delete.action")}
+                      deleting={deleting}
+                      onToggle={() =>
+                        setOpenMenuId((current) => (current === msg.id ? null : msg.id))
+                      }
+                      onDelete={() => enterDeleteSelect(msg)}
+                    />
+                  ) : null}
                 </div>
               );
             })}
