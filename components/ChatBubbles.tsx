@@ -9,6 +9,7 @@ import { useSound } from "@/lib/use-sound";
 import { DEMO_USER_PROFILE } from "@/lib/user";
 import { useLang } from "@/lib/lang-context";
 import { WorkoutPlanCard } from "@/components/chat/WorkoutPlanCard";
+import { ChatPinnedBanner } from "@/components/chat/ChatPinnedBanner";
 import { Activity, Target, Lightbulb, TrendingUp, Dumbbell } from "lucide-react";
 
 type ChatBubblesProps = {
@@ -32,6 +33,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
   const { play } = useSound();
   const [allMessages, setAllMessages] = useState<MessageItem[]>([]);
   const [typingId, setTypingId] = useState<number | null>(null);
+  const [pinOpen, setPinOpen] = useState(false);
   const prevVisibleCountRef = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const nextIdRef = useRef(1000);
@@ -280,8 +282,36 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
     return null;
   };
 
+  const pinnedDemo =
+    contactId === "alex"
+      ? [...allMessages].reverse().find((m) => m.visible && m.type === "workoutPlan" && m.workoutPlan)
+      : contactId === "leo"
+        ? [...allMessages].reverse().find((m) => m.visible && m.type === "analysis" && m.analysis)
+        : undefined;
+  const pinMetric =
+    pinnedDemo?.type === "workoutPlan" && pinnedDemo.workoutPlan
+      ? String(pinnedDemo.workoutPlan.days.length)
+      : pinnedDemo?.type === "analysis" && pinnedDemo.analysis
+        ? String(Math.round(pinnedDemo.analysis.overallScore))
+        : "";
+
   return (
-    <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-36 pt-4">
+    <div className="flex min-h-0 flex-1 flex-col">
+      {pinnedDemo ? (
+        <ChatPinnedBanner
+          label={contactId === "leo" ? t("chat.pin.analysis") : t("chat.pin.program")}
+          title={contactId === "leo" ? t("analysis.score") : t("workout.weekly_title")}
+          metric={pinMetric}
+          primary={primary}
+          primaryLight={primaryLight}
+          ring={ring}
+          expanded={pinOpen}
+          onToggle={() => setPinOpen((open) => !open)}
+        >
+          {renderCard(pinnedDemo)}
+        </ChatPinnedBanner>
+      ) : null}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-36 pt-4">
       <p className="mb-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-center text-[11px] text-amber-200/90" role="note">
         {t("chat.demo.notice")}
       </p>
@@ -346,6 +376,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
           </div>
         ))}
         <div ref={bottomRef} />
+      </div>
       </div>
     </div>
   );

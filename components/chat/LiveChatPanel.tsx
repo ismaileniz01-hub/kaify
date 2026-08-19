@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   streamChatMessage,
@@ -14,6 +14,7 @@ import type { ContactId } from "@/lib/contacts";
 import { CONTACTS } from "@/lib/contacts";
 import { publicAssetUrl } from "@/lib/public-asset-url";
 import { ChatRichCard } from "@/components/chat/ChatRichCard";
+import { ChatPinnedBanner } from "@/components/chat/ChatPinnedBanner";
 import { AnalyticsConfirmationCard } from "@/components/chat/AnalyticsConfirmationCard";
 import { ChatMessageText } from "@/components/chat/ChatMessageText";
 import { InlineAlert } from "@/components/InlineAlert";
@@ -35,6 +36,10 @@ import {
   shouldReuseIdempotencyKeyOnRetry,
   type MessageDeliveryStatus,
 } from "@/lib/chat/message-lifecycle";
+import {
+  findLatestPinnableMessage,
+  pinnedCardMetric,
+} from "@/lib/chat/pinned-card";
 
 /** Keep DOM light when long threads accumulate locally after send. */
 const MESSAGE_RENDER_WINDOW = 48;
@@ -744,6 +749,15 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   };
 
   const youLabel = t("chat.a11y.you");
+  const pinned = useMemo(
+    () => findLatestPinnableMessage(coachId, messages),
+    [coachId, messages],
+  );
+  const [pinOpen, setPinOpen] = useState(false);
+  const pinnedId = pinned?.id ?? null;
+  useEffect(() => {
+    setPinOpen(false);
+  }, [pinnedId]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -761,6 +775,31 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           if (file) attachPhotoToComposer(file);
         }}
       />
+      {pinned ? (
+        <ChatPinnedBanner
+          label={
+            coachId === "leo" ? t("chat.pin.analysis") : t("chat.pin.program")
+          }
+          title={
+            coachId === "leo" ? t("analysis.score") : t("workout.weekly_title")
+          }
+          metric={pinnedCardMetric(coachId, pinned)}
+          primary={primary}
+          primaryLight={primaryLight}
+          ring={ring}
+          expanded={pinOpen}
+          onToggle={() => setPinOpen((open) => !open)}
+        >
+          <ChatRichCard
+            contactId={coachId}
+            messageType={
+              pinned.messageType ?? (coachId === "leo" ? "score" : "workout_plan")
+            }
+            payload={pinned.payload ?? {}}
+            fallbackText={pinned.text}
+          />
+        </ChatPinnedBanner>
+      ) : null}
       <div
         ref={listRef}
         className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 py-4"

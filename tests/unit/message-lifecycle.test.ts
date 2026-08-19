@@ -45,5 +45,7 @@ describe("chat message lifecycle (UX-005 + A11Y-001)", () => {
     expect(src).toContain("createIdempotencyKey");
     expect(src).toContain("streamTextRef.current");
     expect(src).toContain("sticky bottom-3");
+    expect(src).toContain("ChatPinnedBanner");
+    expect(src).toContain("findLatestPinnableMessage");
   });
 });

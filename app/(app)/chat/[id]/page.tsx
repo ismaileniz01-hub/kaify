@@ -224,7 +224,7 @@ export default function ChatPage() {
           />
         ) : (
           <>
-            <div className="flex-1 overflow-y-auto pb-36">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <ChatBubbles
                 contactId={contactId}
                 onTypingChange={handleTypingChange}
