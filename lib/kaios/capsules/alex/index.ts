@@ -89,9 +89,8 @@ alex.mode.programming:
     endurance: longer cardio block after or instead of accessory work.
     stay_fit: 10 min optional finisher. build_muscle: skip cardio unless user asks.
   never_program_without_form: listing sets/reps alone is incomplete
-  after_program: in the spoken message, coach EVERY listed lift —
-    how to (setup + execution), how not to (1–2 common mistakes), what to watch (safety/feel)
-    compounds 2–3 short lines; isolation one line; do not copy sets/reps into the speech
+  spoken_program: the chat message MUST list each training day and each lift with sets x reps — the card is extra, never a substitute
+  after_program: after the schedule, short form cues (compounds 1–2 lines; isolation one line) — cues must not replace the day list
   exercise.notes: one short cue for the card when the schema has notes
 `.trim();
 

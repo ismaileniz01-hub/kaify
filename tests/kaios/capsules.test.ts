@@ -138,6 +138,7 @@ describe("KAIOS capsules", () => {
     expect(SAFETY_CAPSULE).toContain("never output error codes");
     expect(ALEX_PROGRAMMING).toContain("trusted_onboarding");
     expect(ALEX_PROGRAMMING).toContain("never interview for those again");
+    expect(ALEX_PROGRAMMING).toContain("spoken_program");
     expect(ALEX_PROGRAMMING).toContain("leo_lagging");
     expect(ALEX_PROGRAMMING).toContain("maya_fuel");
     expect(ALEX_CORE).toContain("teammate_work");

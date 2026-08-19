@@ -57,7 +57,7 @@ const OUTPUT_BUDGET: Record<Intent, number> = {
   nutrition_question: 220,
   exercise_form: 240,
   unknown: 180,
-  meal_plan: 400,
+  meal_plan: 800,
   programming: 1600,
   council_turn: 400,
   meal_analysis: 650,

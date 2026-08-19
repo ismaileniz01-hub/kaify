@@ -428,25 +428,24 @@ describe("precise state provenance", () => {
 });
 
 describe("buddy nicknames per locale pack", () => {
-  it("TR pack has reis/kral/başkan", () => {
+  it("TR pack stays Turkish without assigning Alex nicknames to every coach", () => {
     const pack = getLocalePack("tr");
-    expect(pack).toMatch(/reis/);
-    expect(pack).toMatch(/kral/);
-    expect(pack).toMatch(/başkan/);
+    expect(pack).toMatch(/Türkçe|Turkc/i);
+    expect(pack).toMatch(/Maya veya Leo/i);
   });
 
-  it("EN pack has bro/king/champ", () => {
+  it("EN pack is native English without shared gym-bro nicknames", () => {
     const pack = getLocalePack("en");
-    expect(pack).toMatch(/bro/);
-    expect(pack).toMatch(/king/);
-    expect(pack).toMatch(/champ/);
+    expect(pack).toMatch(/English/i);
+    expect(pack).not.toMatch(/bro \/ king \/ champ/);
   });
 
-  it("compiled TR prompt includes buddy_address cadence ~3 messages", () => {
+  it("compiled TR prompt keeps Kai buddy_address without flattening to Alex", () => {
     const { blob } = promptInspection("tr", "bilmiyorum");
     expect(blob).toMatch(/buddy_address/);
     expect(blob).toMatch(/3 mesaj|every 3|nickname_cadence/i);
-    expect(blob).toMatch(/reis/);
+    expect(blob).toMatch(/kanka/);
+    expect(blob).toMatch(/distinct_coaches|not_alex|sounding like Alex/i);
   });
 });
 

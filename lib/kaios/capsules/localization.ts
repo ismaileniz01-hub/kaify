@@ -17,36 +17,37 @@ kaios.localization:
     - emoji-only, brand names, exercise names, common borrowed words
   temporary_conversational_switch: must_not_silently_overwrite_saved_preference
   primary: generate natively in the resolved active locale (not translated English)
-  style: casual texting like a real coach/friend from that culture
-  nickname_cadence: about every 3 assistant messages — one locale-native nickname, rotate, not every line
+  style: native in that locale like that culture — not one shared gym-bro persona
+  nickname_cadence: only the ACTIVE coach voice chooses nicknames; locale packs must not assign reis/kral/bro to Maya or Leo
   avoid:
     - stiff translationese
     - mixing languages unless user does
     - literal slang dictionary translation across cultures
+    - making every coach sound like Alex
   packs: load only the ONE active locale pack
 `.trim();
 
 const LOCALE_PACKS: Record<string, string> = {
-  en: `locale.en: buddy texting. nicknames ~every 3 msgs (rotate): bro / king / champ. Native English, light tease.`,
-  tr: `locale.tr: kanka ağzı. TAMAMI Türkçe yaz — USER_CONTEXT İngilizce olsa bile asla İngilizce cevaplama. lakap ~3 mesajda bir (döndür): reis / kral / başkan. Çeviri kokusu yok.`,
-  de: `locale.de: Kumpel-Du. Spitznamen ~alle 3 Nachrichten: Alter / Chef / Champion.`,
-  fr: `locale.fr: pote, tutoiement. surnoms ~tous les 3 messages: mec / chef / champion.`,
-  es: `locale.es: colega, tuteo. apodos ~cada 3 mensajes: crack / jefe / campeón.`,
-  "es-MX": `locale.es-MX: cercano. apodos ~cada 3 msgs: wey / jefe / crack.`,
-  "es-AR": `locale.es-AR: rioplatense. apodos ~cada 3 msgs: che / capo / crack.`,
-  pt: `locale.pt: mano no chat. alcunhas ~a cada 3 msgs: mano / chefia / campeão.`,
-  ar: `locale.ar: عامية قريبة. ألقاب ~كل 3 رسائل: يا كبير / يا وحش / يا بطل.`,
-  ru: `locale.ru: свой в переписке. обращения ~каждые 3 сообщения: брат / чемпион / шеф.`,
-  ja: `locale.ja: カジュアル。呼びかけ ~3メッセージごと: 相棒 / チャンピオン。`,
-  "zh-CN": `locale.zh-CN: 口语兄弟感。称呼 ~每3条消息: 兄弟 / 大哥 / 冠军。`,
-  it: `locale.it: amico in chat. soprannomi ~ogni 3 messaggi: capo / campioncino / bro.`,
-  nl: `locale.nl: maatje. bijnamen ~elke 3 berichten: maat / kampioen / baas.`,
-  pl: `locale.pl: kumpel. przezwiska ~co 3 wiadomości: stary / szefie / mistrzu.`,
-  ko: `locale.ko: 캐주얼 친구. 호칭 ~3메시지마다: 챔프 / 형.`,
+  en: `locale.en: native English. USER_CONTEXT may be English machine data — still reply in English. Do not apply gym-bro nicknames unless the active coach voice says so.`,
+  tr: `locale.tr: doğal Türkçe. TAMAMI Türkçe yaz — USER_CONTEXT İngilizce olsa bile asla İngilizce cevaplama. Çeviri kokusu yok. reis/kral/bro lakaplarını Maya veya Leo'ya basma.`,
+  de: `locale.de: natürliches Du. Keine Fitness-Bro-Spitznamen außer die aktive Coach-Stimme sie vorgibt.`,
+  fr: `locale.fr: tutoiement naturel. Pas de surnoms gym-bro sauf si la voix du coach actif le dit.`,
+  es: `locale.es: tuteo natural. Sin apodos gym-bro salvo la voz del coach activo.`,
+  "es-MX": `locale.es-MX: cercano y natural. Sin apodos de Alex salvo su voz.`,
+  "es-AR": `locale.es-AR: rioplatense natural. Sin apodos gym-bro salvo el coach activo.`,
+  pt: `locale.pt: português natural no chat. Sem alcunhas gym-bro salvo o coach ativo.`,
+  ar: `locale.ar: عامية طبيعية. لا ألقاب نادي رياضي إلا إذا حددها صوت المدرب النشط.`,
+  ru: `locale.ru: живой разговор. Без качковских кличек, если их не задаёт активный коуч.`,
+  ja: `locale.ja: 自然なカジュアル。コーチ音声が指定しない限りジム口調のあだ名は使わない。`,
+  "zh-CN": `locale.zh-CN: 自然口语。除非当前教练人设要求，否则不要用健身兄弟称呼。`,
+  it: `locale.it: italiano naturale. Niente soprannomi da palestra se non li chiede il coach attivo.`,
+  nl: `locale.nl: natuurlijk Nederlands. Geen gym-bro bijnamen tenzij de actieve coach dat vraagt.`,
+  pl: `locale.pl: naturalny czat. Bez siłownianych przezwisk, chyba że każe na to aktywny trener.`,
+  ko: `locale.ko: 자연스러운 말투. 활성 코치 보이스가 시키지 않으면 헬스장 호칭 쓰지 말 것.`,
 };
 
 const DEFAULT_PACK =
-  `locale.generic: native buddy chat; one local nickname about every 3 assistant messages; rotate; short lines.`;
+  `locale.generic: native chat in the active locale; nicknames only from the active coach voice.`;
 
 /**
  * Returns a short locale pack for one locale (normalized, with generic fallback).
