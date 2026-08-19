@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef, useState, type CSSProperties } from "react";
 import { Camera, Mic, Send, X } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
@@ -20,6 +20,8 @@ type ChatComposerProps = {
   /** Pending photo attached to the composer (not yet sent). */
   attachmentPreviewUrl?: string | null;
   onRemoveAttachment?: () => void;
+  /** Coach accent for the send-button burst. */
+  accentColor?: string;
 };
 
 export function ChatComposer({
@@ -33,8 +35,17 @@ export function ChatComposer({
   compactSend = false,
   attachmentPreviewUrl = null,
   onRemoveAttachment,
+  accentColor = "#a855f7",
 }: ChatComposerProps) {
   const { t, lang } = useLang();
+  const [sendBurst, setSendBurst] = useState(false);
+  const burstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
+    };
+  }, []);
 
   const voiceErrorMessage = useCallback(
     (code: string) => {
@@ -102,6 +113,9 @@ export function ChatComposer({
   const fireSend = () => {
     if (!canSend) return;
     void hapticImpact("light");
+    setSendBurst(true);
+    if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
+    burstTimerRef.current = setTimeout(() => setSendBurst(false), 420);
     if (typeof document !== "undefined") {
       const active = document.activeElement;
       if (active instanceof HTMLElement) active.blur();
@@ -113,9 +127,19 @@ export function ChatComposer({
     <footer
       className="chat-composer shrink-0 border-t border-white/[0.07] bg-[#0a0812]/95 px-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl"
       aria-busy={sending}
+      style={
+        {
+          "--chat-accent": accentColor,
+          "--chat-accent-ring": `${accentColor}73`,
+        } as CSSProperties
+      }
     >
       {attachmentPreviewUrl ? (
-        <div className="mb-2 flex items-center gap-2 rounded-2xl border border-white/10 bg-black/35 p-2">
+        <div
+          className={`mb-2 flex items-center gap-2 rounded-2xl border border-white/10 bg-black/35 p-2 ${
+            sending ? "origin-bottom-right scale-90 opacity-70 transition-all duration-300" : ""
+          }`}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={attachmentPreviewUrl}
@@ -187,7 +211,9 @@ export function ChatComposer({
             type="button"
             onClick={fireSend}
             disabled={!canSend}
-            className="touch-44 flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 text-white shadow-lg shadow-purple-950/40 active:scale-95 disabled:shadow-none disabled:opacity-35"
+            className={`touch-44 flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 text-white shadow-lg shadow-purple-950/40 active:scale-95 disabled:shadow-none disabled:opacity-35 ${
+              sendBurst ? "chat-send-burst" : ""
+            }`}
             aria-label={t("chat.aria.send")}
           >
             <Send className="h-4 w-4" />
@@ -197,7 +223,9 @@ export function ChatComposer({
             type="button"
             onClick={fireSend}
             disabled={!canSend}
-            className="touch-44 shrink-0 rounded-2xl bg-gradient-to-r from-purple-500 to-violet-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-purple-950/30 active:scale-[0.97] disabled:shadow-none disabled:opacity-35"
+            className={`touch-44 shrink-0 rounded-2xl bg-gradient-to-r from-purple-500 to-violet-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-purple-950/30 active:scale-[0.97] disabled:shadow-none disabled:opacity-35 ${
+              sendBurst ? "chat-send-burst" : ""
+            }`}
           >
             {t("chat.send")}
           </button>

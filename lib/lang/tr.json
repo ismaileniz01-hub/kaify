@@ -740,6 +740,8 @@
   "chat.coach.retry": "Anlamadım, tekrar söyler misin?",
   "chat.message.failed": "Mesaj gönderilemedi",
   "chat.message.retry": "Tekrar dene",
+  "chat.message.sending": "Gönderiliyor",
+  "chat.message.delivered": "İletildi",
   "chat.a11y.typing": "{name} yazıyor",
   "chat.a11y.you": "Sen",
   "chat.a11y.log": "Sohbet mesajları",

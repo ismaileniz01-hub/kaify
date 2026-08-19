@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { AuraColor } from "@/lib/kai-context";
+import type { ContactId } from "@/lib/contacts";
 import { AuraEffectLayer } from "@/components/AuraEffectLayer";
 import { getAuraVisual, resolveAvatarEffect, type AvatarEffect } from "@/lib/aura-effects";
 import { publicAssetUrl } from "@/lib/public-asset-url";
@@ -17,6 +18,8 @@ type ContactAvatarProps = {
   className?: string;
   /** Shared-element View Transition name (messages → chat). */
   transitionName?: string;
+  presence?: "idle" | "typing" | "sent";
+  coachId?: ContactId;
 };
 
 const sizes = {
@@ -36,6 +39,8 @@ export function ContactAvatar({
   auraColor = "default",
   className = "",
   transitionName,
+  presence = "idle",
+  coachId,
 }: ContactAvatarProps) {
   const { box, img, scale, sizesAttr } = sizes[size];
   const visual = getAuraVisual(auraColor);
@@ -48,7 +53,14 @@ export function ContactAvatar({
     : undefined;
 
   return (
-    <div className={`relative ${className}`} style={transitionStyle}>
+    <div
+      className={`relative ${className}${
+        presence === "typing" && coachId
+          ? ` chat-presence-typing chat-presence-typing--${coachId}`
+          : ""
+      }`}
+      style={transitionStyle}
+    >
       {pulse && (
         <span
           className="absolute -inset-2 animate-ping rounded-full bg-purple-500/20"

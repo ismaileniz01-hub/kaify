@@ -19,11 +19,18 @@ export function parseChatInlineBold(text: string) {
 export function ChatMessageText({
   text,
   className = "whitespace-pre-wrap",
+  streaming = false,
 }: {
   text: string;
   className?: string;
+  streaming?: boolean;
 }) {
   const visible = coachVisibleMessage(text);
-  if (!visible.trim()) return null;
-  return <p className={className}>{parseChatInlineBold(visible)}</p>;
+  if (!visible.trim() && !streaming) return null;
+  return (
+    <p className={className}>
+      {visible.trim() ? parseChatInlineBold(visible) : null}
+      {streaming ? <span className="chat-stream-caret" aria-hidden /> : null}
+    </p>
+  );
 }

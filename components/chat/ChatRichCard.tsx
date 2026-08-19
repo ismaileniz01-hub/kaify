@@ -84,7 +84,7 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
 
     return (
       <div
-        className="animate-message mt-2 overflow-hidden rounded-2xl"
+        className="chat-card-unfold mt-2 overflow-hidden rounded-2xl"
         style={{
           backgroundColor: `${primary}10`,
           border: `1px solid ${ring}`,
@@ -136,7 +136,7 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
     const a = scorePayloadToAnalysis(p);
     return (
       <div
-        className="animate-message mt-2 overflow-hidden rounded-2xl"
+        className="chat-card-unfold mt-2 overflow-hidden rounded-2xl"
         style={{
           backgroundColor: `${primary}10`,
           border: `1px solid ${ring}`,
@@ -198,7 +198,7 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
     const calPct = target ? Math.round((total / target) * 100) : 0;
     return (
       <div
-        className="animate-message mt-2 overflow-hidden rounded-2xl"
+        className="chat-card-unfold mt-2 overflow-hidden rounded-2xl"
         style={{ backgroundColor: `${primary}10`, border: `1px solid ${ring}` }}
       >
         <div className="flex items-center gap-3 p-3" style={{ borderBottom: `1px solid ${ring}` }}>
@@ -267,7 +267,7 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
     if (!Array.isArray(wp.days) || wp.days.length === 0) return null;
     return (
       <div
-        className="animate-message mt-2 overflow-hidden rounded-2xl"
+        className="chat-card-unfold mt-2 overflow-hidden rounded-2xl"
         style={{ backgroundColor: `${primary}10`, border: `1px solid ${ring}` }}
       >
         <div className="flex items-center gap-3 p-3" style={{ borderBottom: `1px solid ${ring}` }}>
@@ -336,7 +336,7 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
       : 0;
     return (
       <div
-        className="animate-message mt-2 overflow-hidden rounded-2xl"
+        className="chat-card-unfold mt-2 overflow-hidden rounded-2xl"
         style={{ backgroundColor: `${primary}10`, border: `1px solid ${ring}` }}
       >
         <div className="flex items-center gap-3 p-3" style={{ borderBottom: `1px solid ${ring}` }}>

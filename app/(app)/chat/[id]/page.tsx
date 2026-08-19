@@ -184,6 +184,8 @@ export default function ChatPage() {
               effect={getEffect()}
               auraColor={contactId === "kai" ? auraColor : "default"}
               transitionName={coachAvatarTransitionName(contactId)}
+              presence={avatarState}
+              coachId={contactId}
             />
             <span className="flex flex-col items-start">
               <span className="font-semibold" style={{ color: contact.color.primaryLight }}>
@@ -241,6 +243,7 @@ export default function ChatPage() {
                 setShowImagePicker(true);
               }}
               compactSend
+              accentColor={contact.color.primary}
             />
           </>
         )}

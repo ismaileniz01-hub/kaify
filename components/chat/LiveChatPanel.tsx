@@ -24,6 +24,8 @@ import { formatTime } from "@/lib/i18n/format";
 import { useKai } from "@/lib/kai-context";
 import { useSession } from "@/lib/session-context";
 import { ChatComposer } from "@/components/chat/ChatComposer";
+import { ChatDeliveryTicks } from "@/components/chat/ChatDeliveryTicks";
+import { chatBubbleEnterClass } from "@/lib/chat/message-motion";
 import { errorToMessage, quotaErrorMessage, quotaResourceFromError, visionQuotaResourceFromError, isAnalyzeQuotaDenied } from "@/lib/i18n/api-error";
 import { coachRetryLine, isSoftCoachFailure } from "@/lib/kaios/coach-retry";
 import { MessageCircle, MoreVertical, Check } from "lucide-react";
@@ -49,6 +51,8 @@ type LiveMessage = {
   idempotencyKey?: string;
   /** Local-only: photo upload that can be retried. */
   photoRetry?: boolean;
+  /** Blob URL shown on the bubble until the photo leaves the composer. */
+  photoPreviewUrl?: string;
 };
 
 type LiveChatPanelProps = {
@@ -118,6 +122,8 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const streamTextRef = useRef("");
   const streamRafRef = useRef<number | null>(null);
+  const skipEnterAnimRef = useRef<Set<string>>(new Set());
+  const transferredPreviewRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     return () => {
@@ -127,12 +133,19 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         cancelAnimationFrame(streamRafRef.current);
         streamRafRef.current = null;
       }
+      for (const url of transferredPreviewRef.current) {
+        URL.revokeObjectURL(url);
+      }
+      transferredPreviewRef.current.clear();
     };
   }, []);
 
   useEffect(() => {
+    const url = composerPhoto?.url;
     return () => {
-      if (composerPhoto?.url) URL.revokeObjectURL(composerPhoto.url);
+      if (url && !transferredPreviewRef.current.has(url)) {
+        URL.revokeObjectURL(url);
+      }
     };
   }, [composerPhoto?.url]);
 
@@ -152,17 +165,17 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     apiGet<ChatMessageDTO[]>(`/api/chat/${coachId}?limit=30`)
       .then((history) => {
         if (cancelled) return;
-        setMessages(
-          history.map((row) => ({
-            id: row.id,
-            from: row.sender === "user" ? "user" : "coach",
-            text: row.content ?? "",
-            time: formatMessageTime(row.createdAt, lang),
-            messageType: row.messageType,
-            payload: row.payload ?? undefined,
-            status: "delivered" as const,
-          })),
-        );
+        const mapped: LiveMessage[] = history.map((row) => ({
+          id: row.id,
+          from: row.sender === "user" ? "user" : "coach",
+          text: row.content ?? "",
+          time: formatMessageTime(row.createdAt, lang),
+          messageType: row.messageType,
+          payload: row.payload ?? undefined,
+          status: "delivered" as const,
+        }));
+        skipEnterAnimRef.current = new Set(mapped.map((row) => row.id));
+        setMessages(mapped);
       })
       .catch(() => {
         if (!cancelled) setError(t("chat.error.history"));
@@ -302,6 +315,8 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             if (data.warning_trigger === "LIMIT_80" || data.warning_trigger === "LIMIT_100") {
               setQuotaWarning(data.warning_trigger);
             }
+            if (data.messageId) skipEnterAnimRef.current.add(data.messageId);
+            if (data.userMessageId) skipEnterAnimRef.current.add(data.userMessageId);
             setMessages((prev) =>
               markMessageDelivered(
                 prev.map((msg) => {
@@ -332,6 +347,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             onCoachTyping?.(false);
           },
           onCard: (data) => {
+            if (data.messageId) skipEnterAnimRef.current.add(data.messageId);
             setMessages((prev) =>
               prev.map((msg) => {
                 const isTarget =
@@ -402,9 +418,11 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     const text = input.trim();
     if (composerPhoto) {
       const file = composerPhoto.file;
+      const previewUrl = composerPhoto.url;
+      transferredPreviewRef.current.add(previewUrl);
       setComposerPhoto(null);
       setInput("");
-      await uploadPhoto(file, { note: text });
+      await uploadPhoto(file, { note: text, previewUrl });
       return;
     }
     if (!text) return;
@@ -483,7 +501,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
 
   const uploadPhoto = async (
     file: File,
-    options?: { existingUserMsgId?: string; note?: string },
+    options?: { existingUserMsgId?: string; note?: string; previewUrl?: string },
   ) => {
     if (!VISION_COACHES.has(coachId) || sending) return;
 
@@ -533,6 +551,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           time: formatMessageTime(undefined, lang),
           status: "sending",
           photoRetry: true,
+          photoPreviewUrl: options?.previewUrl,
         },
         {
           id: coachPlaceholderId,
@@ -623,6 +642,8 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           typeof analysis.userMessageId === "string" && analysis.userMessageId.length > 0
             ? analysis.userMessageId
             : photoUserId;
+        if (analysis.messageId) skipEnterAnimRef.current.add(analysis.messageId);
+        skipEnterAnimRef.current.add(persistedPhotoUserId);
         setMessages((prev) =>
           markMessageDelivered(
             prev.map((msg) =>
@@ -844,7 +865,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                     {isTyping ? (
                       <>
                         <div
-                          className="flex items-center gap-2 px-4 py-3"
+                          className="flex animate-message animate-message--coach items-center gap-2 px-4 py-3"
                           style={{
                             backgroundColor: `${primary}22`,
                             borderRadius: "18px 18px 18px 4px",
@@ -865,8 +886,11 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                     ) : (
                       <>
                         <div
-                          className={`chat-message-bubble animate-message rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                            isFailed ? "opacity-80 ring-1 ring-red-400/50" : ""
+                          className={`${chatBubbleEnterClass(
+                            isCoach ? "coach" : "user",
+                            skipEnterAnimRef.current.has(msg.id),
+                          )} rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                            isFailed ? "chat-bubble-shake opacity-80 ring-1 ring-red-400/50" : ""
                           }`}
                           aria-label={bubbleAriaLabel}
                           aria-busy={isStreamingText || undefined}
@@ -889,8 +913,19 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                                 }
                           }
                         >
-                          <ChatMessageText text={msg.text} />
-                          <p className="chat-message-time mt-1 opacity-60">{msg.time}</p>
+                          {msg.photoPreviewUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={msg.photoPreviewUrl}
+                              alt=""
+                              className="chat-photo-in mb-2 max-h-48 w-full rounded-xl object-cover"
+                            />
+                          ) : null}
+                          <ChatMessageText text={msg.text} streaming={isStreamingText} />
+                          <p className="chat-message-time mt-1 inline-flex items-center opacity-60">
+                            {msg.time}
+                            {!isCoach ? <ChatDeliveryTicks status={msg.status} /> : null}
+                          </p>
                         </div>
                         {isFailed && (
                           <div
@@ -1026,6 +1061,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         onVoiceError={setError}
         attachmentPreviewUrl={composerPhoto?.url ?? null}
         onRemoveAttachment={() => setComposerPhoto(null)}
+        accentColor={primary}
       />
       )}
       <input

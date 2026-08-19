@@ -740,6 +740,8 @@
   "chat.coach.retry": "Das hab ich nicht verstanden — sagst du es nochmal?",
   "chat.message.failed": "Message not sent",
   "chat.message.retry": "Retry",
+  "chat.message.sending": "Sending",
+  "chat.message.delivered": "Delivered",
   "chat.a11y.typing": "{name} is typing",
   "chat.a11y.you": "You",
   "chat.a11y.log": "Chat messages",

@@ -51,7 +51,7 @@ export function AnalyticsConfirmationCard({
   }
 
   return (
-    <div className="mt-2 rounded-xl border border-white/10 bg-black/30 p-3">
+    <div className="chat-confirm-settle mt-2 rounded-xl border border-white/10 bg-black/30 p-3">
       <p className="text-xs text-zinc-300">{payload.summary}</p>
       <div className="mt-2 flex gap-2">
         {failed ? (
