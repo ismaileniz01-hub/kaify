@@ -45,21 +45,18 @@ export function ContactAvatar({
   const { box, img, scale, sizesAttr } = sizes[size];
   const visual = getAuraVisual(auraColor);
   const resolvedEffect = effect ?? resolveAvatarEffect(auraColor);
-  // Data URLs / blob previews cannot go through the optimizer.
   const needsUnoptimized =
     src.startsWith("data:") || src.startsWith("blob:");
+  const typing = presence === "typing" && Boolean(coachId);
   const transitionStyle = transitionName
-    ? ({ viewTransitionName: transitionName } as CSSProperties)
+    ? ({ viewTransitionName: transitionName, visibility: "visible" } as CSSProperties)
     : undefined;
 
   return (
     <div
-      className={`relative ${className}${
-        presence === "typing" && coachId
-          ? ` chat-presence-typing chat-presence-typing--${coachId}`
-          : ""
+      className={`contact-avatar relative shrink-0 ${className}${
+        typing ? ` chat-presence-typing chat-presence-typing--${coachId}` : ""
       }`}
-      style={transitionStyle}
     >
       {pulse && (
         <span
@@ -67,7 +64,14 @@ export function ContactAvatar({
           aria-hidden
         />
       )}
-      <div className={`relative ${box} flex items-center justify-center`}>
+      {typing ? <span className="chat-presence-ring" aria-hidden /> : null}
+      {typing && coachId === "leo" ? (
+        <span className="chat-presence-scan" aria-hidden />
+      ) : null}
+      <div
+        className={`relative ${box} flex items-center justify-center`}
+        style={transitionStyle}
+      >
         <AuraEffectLayer effect={resolvedEffect} config={visual} scale={scale} />
         <PremiumImage
           src={publicAssetUrl(src)}
@@ -75,6 +79,7 @@ export function ContactAvatar({
           width={img}
           height={img}
           sizes={sizesAttr}
+          priority={size === "xs"}
           unoptimized={needsUnoptimized}
           className="relative z-10 h-full w-full object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)]"
         />

@@ -59,7 +59,7 @@ export function MessageRow({
       style={{ "--message-accent": color } as CSSProperties}
     >
       <div
-        className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/80"
+        className="contact-avatar relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/80"
         style={transitionStyle}
       >
         <PremiumImage
@@ -67,6 +67,7 @@ export function MessageRow({
           alt={name}
           width={48}
           height={48}
+          priority
           className="h-full w-full object-contain p-0.5"
         />
       </div>

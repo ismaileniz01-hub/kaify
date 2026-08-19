@@ -1,9 +1,9 @@
 export function chatBubbleEnterClass(
   from: "user" | "coach",
-  skipEnter: boolean,
+  enter: boolean,
 ): string {
-  if (skipEnter) return "chat-message-bubble";
+  if (!enter) return "chat-message-bubble";
   return from === "coach"
-    ? "chat-message-bubble animate-message animate-message--coach"
-    : "chat-message-bubble animate-message animate-message--user";
+    ? "chat-message-bubble animate-message--coach"
+    : "chat-message-bubble animate-message--user";
 }
