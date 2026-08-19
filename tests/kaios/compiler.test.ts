@@ -64,6 +64,8 @@ describe("compilePrompt (casual kai)", () => {
     expect(sys).not.toContain(compiled.canary);
     expect(compiled.messages[1]?.content).toContain(compiled.canary);
     expect(compiled.messages[1]?.content).toContain("<<<BEGIN_USER_MESSAGE_");
+    expect(compiled.messages[1]?.content).toContain("REPLY LANGUAGE");
+    expect(compiled.messages[1]?.content).toContain("Turkish");
   });
 });
 

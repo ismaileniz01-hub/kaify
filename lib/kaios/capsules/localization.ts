@@ -28,7 +28,7 @@ kaios.localization:
 
 const LOCALE_PACKS: Record<string, string> = {
   en: `locale.en: buddy texting. nicknames ~every 3 msgs (rotate): bro / king / champ. Native English, light tease.`,
-  tr: `locale.tr: kanka ağzı. lakap ~3 mesajda bir (döndür): reis / kral / başkan. Çeviri kokusu yok.`,
+  tr: `locale.tr: kanka ağzı. TAMAMI Türkçe yaz — USER_CONTEXT İngilizce olsa bile asla İngilizce cevaplama. lakap ~3 mesajda bir (döndür): reis / kral / başkan. Çeviri kokusu yok.`,
   de: `locale.de: Kumpel-Du. Spitznamen ~alle 3 Nachrichten: Alter / Chef / Champion.`,
   fr: `locale.fr: pote, tutoiement. surnoms ~tous les 3 messages: mec / chef / champion.`,
   es: `locale.es: colega, tuteo. apodos ~cada 3 mensajes: crack / jefe / campeón.`,

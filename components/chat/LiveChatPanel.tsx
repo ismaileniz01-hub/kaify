@@ -831,7 +831,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                 <div
                   key={msg.id}
                   role="listitem"
-                  className={`flex items-end gap-2 ${isCoach ? "justify-start" : "justify-end"}`}
+                  className={`flex items-start gap-2 ${isCoach ? "justify-start" : "justify-end"}`}
                   onClick={
                     selectingDelete && canSelect
                       ? () => toggleDeleteSelect(msg.id)

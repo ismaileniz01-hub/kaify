@@ -44,5 +44,6 @@ describe("chat message lifecycle (UX-005 + A11Y-001)", () => {
     expect(src).toContain("shouldReuseIdempotencyKeyOnRetry");
     expect(src).toContain("createIdempotencyKey");
     expect(src).toContain("streamTextRef.current");
+    expect(src).toContain("flex items-start gap-2");
   });
 });

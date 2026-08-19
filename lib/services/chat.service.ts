@@ -513,9 +513,15 @@ async function* streamKaiosCoachReply(
           .eq("thread_type", "direct"),
       ]);
 
+    const recentUserTexts = history
+      .filter((turn) => turn.role === "user")
+      .map((turn) => turn.content);
+    const recentThreadTexts = history.map((turn) => turn.content);
     const messageLocale = detectMessageLocale(
       cleanMessage,
       profileMeta.savedLocale,
+      recentUserTexts,
+      recentThreadTexts,
     );
     locale = resolveActiveLocale({
       message: cleanMessage,

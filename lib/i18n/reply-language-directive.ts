@@ -9,5 +9,7 @@ export function buildReplyLanguageDirective(replyLocale: SupportedLocale): strin
     `The user's current message is in ${language} (${replyLocale}).`,
     `Write your ENTIRE reply only in ${language}. Do not mix languages.`,
     "Do not default to the app UI language when it differs from the message language.",
+    "USER_CONTEXT, memories, and tool JSON are internal English data. Do not switch to English because of them.",
+    "Never mention context data, USER_CONTEXT, or that you are reading a profile dump. Speak as a coach.",
   ].join("\n");
 }

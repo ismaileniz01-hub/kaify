@@ -7,7 +7,8 @@ describe("detectMessageLocale", () => {
     expect(detectMessageLocale("was ist das", "tr")).toBe("de");
   });
 
-  it("detects Turkish from common words when franc mislabels", () => {
+  it("detects ASCII Turkish even when profile locale is English", () => {
+    expect(detectMessageLocale("bilgileri tekrar kontrol et", "en")).toBe("tr");
     expect(detectMessageLocale("bugun ne yedin", "en")).toBe("tr");
   });
 
@@ -51,5 +52,6 @@ describe("buildReplyLanguageDirective", () => {
     expect(directive).toContain("German");
     expect(directive).toContain("(de)");
     expect(directive).toContain("mandatory");
+    expect(directive).toContain("USER_CONTEXT");
   });
 });

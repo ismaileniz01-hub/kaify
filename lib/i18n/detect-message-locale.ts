@@ -78,7 +78,7 @@ const WORD_HINTS: Array<{ locale: SupportedLocale; pattern: RegExp }> = [
   {
     locale: "tr",
     pattern:
-      /\b(ben|sen|ve|bir|bu|ne|nasıl|nasil|bugün|bugun|yemek|merhaba|lütfen|neden|için|var|yok|mı|mi|yedin)\b/i,
+      /\b(ben|sen|ve|bir|bu|ne|nasıl|nasil|bugün|bugun|yemek|merhaba|lütfen|lutfen|neden|için|icin|var|yok|mı|mi|yedin|tekrar|bilgi|kontrol|istiyorum|antrenman|kahvaltı|kahvalti|öğün|ogun|kaydet|misin|musun|mısın)\b/i,
   },
   {
     locale: "fr",
