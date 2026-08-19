@@ -11,6 +11,9 @@ import {
   readLeoAnalysisMessages,
   readMayaAnalysisMessages,
   readPreviousWeightKg,
+  readLatestWeightKg,
+  readLatestGoalRow,
+  readProfileWeightKg,
   readUserTimezone,
   readWeeklyAnalyticsSummary,
   type AnalyticsDailyRow,
@@ -21,6 +24,11 @@ import {
   writeAnalyticsMealIncrement,
   writeHealthStepsBatch,
 } from "@/lib/repositories/analytics-write.repository";
+import {
+  hydrateTodaySnapshot,
+  localDateKeysEnding,
+  sumWeekWorkouts,
+} from "@/lib/analytics/hydrate-today";
 export type AnalyticsDailyDTO = {
   entryDate: string;
   weightKg: number | null;
@@ -67,6 +75,7 @@ export type AnalyticsBundleDTO = {
   calorieHistory: CalorieDayDTO[];
   weightTrendKg: number | null;
   weeklyScore: WeeklyFitnessScoreDTO;
+  weekWorkoutsCompleted: number;
 };
 
 type AnalyticsRow = AnalyticsDailyRow;
@@ -326,12 +335,36 @@ async function loadTodayNutritionSnapshot(userId: string): Promise<AnalyticsDail
   const timezone = await resolveUserTimezone(userId);
   const today = localTodayDate(timezone);
 
-  const todayRow = await readAnalyticsDailyRow(readClient, userId, today);
+  const [todayRow, lastWeightKg, lastGoalRow, profileWeightKg] = await Promise.all([
+    readAnalyticsDailyRow(readClient, userId, today),
+    readLatestWeightKg(readClient, userId, today),
+    readLatestGoalRow(readClient, userId, today),
+    readProfileWeightKg(readClient, userId).catch(() => null),
+  ]);
 
-  let todayDto = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today);
+  const stored = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today);
   const chatTotals = await sumMayaMealsForDay(userId, today, timezone);
-  todayDto = mergeMealTotals(todayDto, chatTotals);
-  void persistMayaMealsIfNeeded(userId, today, todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today), chatTotals);
+  const merged = mergeMealTotals(stored, chatTotals);
+  const todayDto = hydrateTodaySnapshot(merged, {
+    hasTodayRow: Boolean(todayRow),
+    lastWeightKg: lastWeightKg ?? profileWeightKg,
+    lastGoals: lastGoalRow
+      ? {
+          calorieGoal: lastGoalRow.calorie_goal,
+          workoutsTarget: lastGoalRow.workouts_target,
+          waterGoalLiters: Number(lastGoalRow.water_goal_liters),
+          proteinGoalG: lastGoalRow.protein_goal_g,
+          carbsGoalG: lastGoalRow.carbs_goal_g,
+          fatGoalG: lastGoalRow.fat_goal_g,
+        }
+      : null,
+  });
+  void persistMayaMealsIfNeeded(
+    userId,
+    today,
+    todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today),
+    chatTotals,
+  );
   return todayDto;
 }
 
@@ -353,16 +386,34 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
   weekAgo.setUTCDate(weekAgo.getUTCDate() - 6);
   const weekStart = weekAgo.toISOString().slice(0, 10);
 
-  const [todayRow, weekRows, prevWeightKg, weekNutrition] = await Promise.all([
-    readAnalyticsDailyRow(readClient, userId, today),
-    readHealthStepsRange(readClient, userId, weekStart, today),
-    readPreviousWeightKg(readClient, userId, today),
-    readWeeklyAnalyticsSummary(readClient, userId, weekStart, today),
-  ]);
+  const [todayRow, weekRows, prevWeightKg, weekNutrition, lastWeightKg, lastGoalRow, profileWeightKg] =
+    await Promise.all([
+      readAnalyticsDailyRow(readClient, userId, today),
+      readHealthStepsRange(readClient, userId, weekStart, today),
+      readPreviousWeightKg(readClient, userId, today),
+      readWeeklyAnalyticsSummary(readClient, userId, weekStart, today),
+      readLatestWeightKg(readClient, userId, today),
+      readLatestGoalRow(readClient, userId, today),
+      readProfileWeightKg(readClient, userId).catch(() => null),
+    ]);
 
   const storedDto = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today);
   const chatTotals = await sumMayaMealsForDay(userId, today, timezone);
   let todayDto = mergeMealTotals(storedDto, chatTotals);
+  todayDto = hydrateTodaySnapshot(todayDto, {
+    hasTodayRow: Boolean(todayRow),
+    lastWeightKg: lastWeightKg ?? profileWeightKg,
+    lastGoals: lastGoalRow
+      ? {
+          calorieGoal: lastGoalRow.calorie_goal,
+          workoutsTarget: lastGoalRow.workouts_target,
+          waterGoalLiters: Number(lastGoalRow.water_goal_liters),
+          proteinGoalG: lastGoalRow.protein_goal_g,
+          carbsGoalG: lastGoalRow.carbs_goal_g,
+          fatGoalG: lastGoalRow.fat_goal_g,
+        }
+      : null,
+  });
   void persistMayaMealsIfNeeded(userId, today, storedDto, chatTotals);
 
   if (weekRows && weekRows.length > 0) {
@@ -373,10 +424,7 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
   }
 
   const weeklySteps: WeeklyStepsDTO = [];
-  for (let i = 6; i >= 0; i -= 1) {
-    const d = new Date();
-    d.setUTCDate(d.getUTCDate() - i);
-    const key = d.toISOString().slice(0, 10);
+  for (const key of localDateKeysEnding(today, 7)) {
     const found = weekRows?.find((r) => r.entry_date === key);
     weeklySteps.push({ date: key, steps: found?.steps ?? 0 });
   }
@@ -388,10 +436,7 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
   }
 
   const calorieHistory: CalorieDayDTO[] = [];
-  for (let i = 6; i >= 0; i -= 1) {
-    const d = new Date(`${today}T12:00:00.000Z`);
-    d.setUTCDate(d.getUTCDate() - i);
-    const key = d.toISOString().slice(0, 10);
+  for (const key of localDateKeysEnding(today, 7)) {
     const found = weekNutrition.find((r) => r.entry_date === key) as
       | {
           calories_consumed?: number;
@@ -408,8 +453,16 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
   }
 
   const weeklyScore = await computeWeeklyScore(userId, weekStart, today);
+  const weekWorkoutsCompleted = sumWeekWorkouts(calorieHistory);
 
-  return { today: todayDto, weeklySteps, calorieHistory, weightTrendKg, weeklyScore };
+  return {
+    today: todayDto,
+    weeklySteps,
+    calorieHistory,
+    weightTrendKg,
+    weeklyScore,
+    weekWorkoutsCompleted,
+  };
 }
 
 export async function patchAnalyticsDaily(

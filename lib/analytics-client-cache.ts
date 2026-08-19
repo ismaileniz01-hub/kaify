@@ -1,6 +1,6 @@
 import type { AnalyticsBundleDTO } from "@/lib/services/analytics.service";
 
-const KEY = "kaify:analytics:v1";
+const KEY = "kaify:analytics:v2";
 
 export function readAnalyticsCache(): AnalyticsBundleDTO | null {
   if (typeof sessionStorage === "undefined") return null;

@@ -14,6 +14,9 @@ vi.mock("@/lib/repositories/analytics-read.repository", () => ({
   readAnalyticsDailyRow: vi.fn().mockResolvedValue(null),
   readHealthStepsRange: vi.fn().mockResolvedValue([]),
   readPreviousWeightKg: vi.fn().mockResolvedValue(null),
+  readLatestWeightKg: vi.fn().mockResolvedValue(null),
+  readLatestGoalRow: vi.fn().mockResolvedValue(null),
+  readProfileWeightKg: vi.fn().mockResolvedValue(null),
   readUserTimezone: vi.fn().mockResolvedValue("UTC"),
   readLeoAnalysisMessages: vi.fn().mockResolvedValue([]),
   readMayaAnalysisMessages: vi.fn().mockResolvedValue([]),
@@ -30,8 +33,8 @@ vi.mock("@/lib/repositories/analytics-write.repository", () => ({
 describe("analytics read cache keys", () => {
   it("invalidates bundle and today keys together", () => {
     const keys = CacheInvalidation.analyticsUser("user-1");
-    expect(keys).toContain("analytics:bundle:v1:user-1");
-    expect(keys).toContain("analytics:today:v1:user-1");
+    expect(keys).toContain("analytics:bundle:v2:user-1");
+    expect(keys).toContain("analytics:today:v2:user-1");
     expect(keys.some((k) => k.startsWith("home:bundle:v3:user-1"))).toBe(true);
     expect(keys.length).toBeGreaterThanOrEqual(3);
   });
@@ -45,7 +48,7 @@ describe("getAnalyticsBundle", () => {
     await getAnalyticsBundle("user-1");
 
     expect(cached).toHaveBeenCalledWith(
-      "analytics:bundle:v1:user-1",
+      "analytics:bundle:v2:user-1",
       120,
       expect.any(Function),
     );
@@ -62,7 +65,7 @@ describe("getTodayNutritionSnapshot", () => {
     await getTodayNutritionSnapshot("user-1");
 
     expect(cached).toHaveBeenCalledWith(
-      "analytics:today:v1:user-1",
+      "analytics:today:v2:user-1",
       120,
       expect.any(Function),
     );

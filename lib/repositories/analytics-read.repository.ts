@@ -91,6 +91,62 @@ export async function readPreviousWeightKg(
   return data?.weight_kg != null ? Number(data.weight_kg) : null;
 }
 
+/** Most recent logged weight on or before today (new days keep the last weigh-in). */
+export async function readLatestWeightKg(
+  client: SupabaseClient,
+  userId: string,
+  onOrBeforeDate: string,
+): Promise<number | null> {
+  const { data } = await client
+    .from("analytics_daily")
+    .select("weight_kg")
+    .eq("user_id", userId)
+    .not("weight_kg", "is", null)
+    .lte("entry_date", onOrBeforeDate)
+    .order("entry_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.weight_kg != null ? Number(data.weight_kg) : null;
+}
+
+export async function readLatestGoalRow(
+  client: SupabaseClient,
+  userId: string,
+  onOrBeforeDate: string,
+): Promise<{
+  calorie_goal: number;
+  workouts_target: number;
+  water_goal_liters: number;
+  protein_goal_g: number;
+  carbs_goal_g: number;
+  fat_goal_g: number;
+} | null> {
+  const { data } = await client
+    .from("analytics_daily")
+    .select(
+      "calorie_goal, workouts_target, water_goal_liters, protein_goal_g, carbs_goal_g, fat_goal_g",
+    )
+    .eq("user_id", userId)
+    .lte("entry_date", onOrBeforeDate)
+    .order("entry_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data;
+}
+
+export async function readProfileWeightKg(
+  client: SupabaseClient,
+  userId: string,
+): Promise<number | null> {
+  const { data } = await client
+    .from("profiles")
+    .select("weight_kg")
+    .eq("id", userId)
+    .maybeSingle();
+  const n = Number(data?.weight_kg);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 export async function readWeeklyAnalyticsSummary(
   client: SupabaseClient,
   userId: string,

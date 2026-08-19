@@ -7,9 +7,9 @@ describe("cache keys registry", () => {
   });
 
   it("scopes analytics per user", () => {
-    expect(CacheKeys.analyticsBundle("abc")).toBe("analytics:bundle:v1:abc");
-    expect(CacheKeys.analyticsToday("abc")).toBe("analytics:today:v1:abc");
-    expect(CacheKeys.analyticsUser("abc")).toBe("analytics:bundle:v1:abc");
+    expect(CacheKeys.analyticsBundle("abc")).toBe("analytics:bundle:v2:abc");
+    expect(CacheKeys.analyticsToday("abc")).toBe("analytics:today:v2:abc");
+    expect(CacheKeys.analyticsUser("abc")).toBe("analytics:bundle:v2:abc");
   });
 
   it("parameterizes leaderboard keys", () => {

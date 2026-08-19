@@ -58,6 +58,11 @@ export default function AnalyticsPage() {
   }, [loadAnalytics]);
 
   const today = data?.today;
+  const weekWorkouts =
+    data?.weekWorkoutsCompleted ??
+    data?.calorieHistory?.reduce((sum, day) => sum + day.workoutsCompleted, 0) ??
+    today?.workoutsCompleted ??
+    0;
   const weightVal =
     today?.weightKg != null
       ? unit === "metric"
@@ -70,23 +75,20 @@ export default function AnalyticsPage() {
       ? data.weightTrendKg === 0
         ? t("analytics.weight_stable")
         : `${data.weightTrendKg > 0 ? "▲" : "▼"} ${Math.abs(data.weightTrendKg).toFixed(1)} kg`
-      : t("analytics.no_trend");
+      : today?.weightKg != null
+        ? t("analytics.weight_stable")
+        : t("analytics.no_trend");
 
-  const remaining = today
-    ? Math.round(today.calorieGoal - today.caloriesConsumed + today.caloriesBurned)
-    : 0;
   const calPct = today
     ? Math.min(
         100,
         Math.round(
-          (today.caloriesConsumed /
-            Math.max(1, today.calorieGoal + today.caloriesBurned)) *
-            100,
+          (today.caloriesConsumed / Math.max(1, today.calorieGoal)) * 100,
         ),
       )
     : 0;
   const workoutPct = today
-    ? Math.min(100, Math.round((today.workoutsCompleted / today.workoutsTarget) * 100))
+    ? Math.min(100, Math.round((weekWorkouts / Math.max(1, today.workoutsTarget)) * 100))
     : 0;
   const waterPct = today
     ? Math.min(100, Math.round((today.waterLiters / today.waterGoalLiters) * 100))
@@ -176,9 +178,11 @@ export default function AnalyticsPage() {
           <StatCard
             icon={Flame}
             label={t("analytics.calories")}
-            value={today ? "" : "—"}
-            numericValue={today ? remaining : undefined}
-            unitSuffix="kcal"
+            value={
+              today
+                ? `${Math.round(today.caloriesConsumed)} / ${Math.round(today.calorieGoal)}`
+                : "—"
+            }
             trend={
               today
                 ? t("analytics.calories_io", {
@@ -197,7 +201,7 @@ export default function AnalyticsPage() {
             label={t("analytics.workouts")}
             value={
               today
-                ? `${today.workoutsCompleted} / ${today.workoutsTarget}`
+                ? `${weekWorkouts} / ${today.workoutsTarget}`
                 : "—"
             }
             trend={today ? t("analytics.workouts_trend") : t("analytics.no_trend")}
