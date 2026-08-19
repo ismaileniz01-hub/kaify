@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { MacroRing } from "@/components/analytics/MacroRing";
 import { StatCard } from "@/components/analytics/StatCard";
 import { WeeklyChart } from "@/components/analytics/WeeklyChart";
+import { WeeklyEnergyBar } from "@/components/analytics/WeeklyEnergyBar";
 import { WeeklyScoreCard } from "@/components/analytics/WeeklyScoreCard";
 import { CalorieHistorySheet } from "@/components/analytics/CalorieHistorySheet";
 import { GoalsEditor } from "@/components/goals/GoalsEditor";
@@ -220,6 +221,12 @@ export default function AnalyticsPage() {
             gradient="water"
           />
         </div>
+
+        <WeeklyEnergyBar
+          days={data?.calorieHistory}
+          calorieGoal={today?.calorieGoal ?? 2100}
+          onOpenHistory={today ? () => setHistoryOpen(true) : undefined}
+        />
 
         <div className="mt-3">
           <WeeklyChart stepsData={data?.weeklySteps} />
