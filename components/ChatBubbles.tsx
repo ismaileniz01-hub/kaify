@@ -299,7 +299,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
           <div key={msg.id}>
             {typingId === msg.id && (
               msg.from === "contact" ? (
-                <div className="flex max-w-[82%] items-start gap-2">
+                <div className="flex max-w-[82%] items-end gap-2">
                   <div className="relative h-8 w-8 shrink-0"><Image src={contactId === "leo" ? "/avatars/leo-1.png" : contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain [image-rendering:pixelated]" style={{ filter: "brightness(1.05) contrast(1.1)" }} /></div>
                   <div className="flex animate-message--coach items-center gap-1.5 px-5 py-3.5" style={{ backgroundColor: `${primary}22`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 0 20px ${ring}` }}>
                     <span className="typing-dot" style={{ backgroundColor: primaryLight }} /><span className="typing-dot" style={{ backgroundColor: primaryLight }} /><span className="typing-dot" style={{ backgroundColor: primaryLight }} />
@@ -319,8 +319,10 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
             {msg.visible && (
               msg.from === "contact" ? (
                 ["analysis", "mealPlan", "workoutPlan", "dailySummary"].includes(msg.type || "") ? (
-                  <div className="flex max-w-[90%] items-start gap-2">
-                    <div className="relative h-8 w-8 shrink-0 mt-1"><Image src={contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain" /></div>
+                  <div className="flex max-w-[90%] gap-2">
+                    <div className="flex w-8 shrink-0 flex-col justify-end">
+                      <div className="sticky bottom-3 h-8 w-8"><Image src={contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain" /></div>
+                    </div>
                     <div className="flex flex-col gap-1">
                       <div className="chat-message-bubble animate-message--coach px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}>{msg.text}</div>
                       {renderCard(msg)}
@@ -328,8 +330,10 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
                     </div>
                   </div>
                 ) : (
-                  <div className="flex max-w-[82%] items-start gap-2">
-                    <div className="relative h-8 w-8 shrink-0"><Image src={contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain" /></div>
+                  <div className="flex max-w-[82%] gap-2">
+                    <div className="flex w-8 shrink-0 flex-col justify-end">
+                      <div className="sticky bottom-3 h-8 w-8"><Image src={contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain" /></div>
+                    </div>
                     <div className="flex flex-col gap-1">
                       <div className="chat-message-bubble animate-message--coach px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}>{msg.text}</div>
                       <span className="chat-message-time ps-1 text-zinc-600">{msg.time}</span>

@@ -831,7 +831,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                 <div
                   key={msg.id}
                   role="listitem"
-                  className={`flex items-start gap-2 ${isCoach ? "justify-start" : "justify-end"}`}
+                  className={`flex gap-2 ${isCoach ? "justify-start" : "justify-end"}`}
                   onClick={
                     selectingDelete && canSelect
                       ? () => toggleDeleteSelect(msg.id)
@@ -851,15 +851,17 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                     </span>
                   )}
                   {isCoach && (
-                    <div className="contact-avatar relative h-8 w-8 shrink-0" aria-hidden>
-                      <Image
-                        src={publicAssetUrl(coachAvatar)}
-                        alt=""
-                        width={32}
-                        height={32}
-                        unoptimized
-                        className="h-full w-full object-contain"
-                      />
+                    <div className="flex w-8 shrink-0 flex-col justify-end" aria-hidden>
+                      <div className="contact-avatar sticky bottom-3 h-8 w-8">
+                        <Image
+                          src={publicAssetUrl(coachAvatar)}
+                          alt=""
+                          width={32}
+                          height={32}
+                          unoptimized
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
                     </div>
                   )}
                   <div className="min-w-0 max-w-[78%]">
@@ -977,15 +979,17 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                     )}
                   </div>
                   {!isCoach && (
-                    <div className="contact-avatar relative h-8 w-8 shrink-0" aria-hidden>
-                      <Image
-                        src={publicAssetUrl(userAvatar)}
-                        alt=""
-                        width={32}
-                        height={32}
-                        unoptimized
-                        className="h-full w-full rounded-full object-cover"
-                      />
+                    <div className="flex w-8 shrink-0 flex-col justify-end" aria-hidden>
+                      <div className="contact-avatar sticky bottom-3 h-8 w-8">
+                        <Image
+                          src={publicAssetUrl(userAvatar)}
+                          alt=""
+                          width={32}
+                          height={32}
+                          unoptimized
+                          className="h-full w-full rounded-full object-cover"
+                        />
+                      </div>
                     </div>
                   )}
                   {showMenu && (
