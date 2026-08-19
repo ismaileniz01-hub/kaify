@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ensureStructuredPlanVisible,
   formatWorkoutPlanSpeech,
+  parseWorkoutDaysFromSpeech,
   workoutSpeechMissingDays,
 } from "@/lib/kaios/plan-speech";
 
@@ -57,6 +58,14 @@ describe("plan-speech", () => {
       ui: { cardType: "workout_plan", days: SAMPLE_DAYS },
     });
     expect(out).toBe(spoken);
+  });
+
+  it("parses em-dash weekday blocks from speech", () => {
+    const days = parseWorkoutDaysFromSpeech(
+      "İşte programın.\nPazartesi — Push\n• Bench press 4x8\n• Overhead press 3x10\nSalı — Pull\n• Lat pulldown 4x10",
+    );
+    expect(days).toHaveLength(2);
+    expect(days[0]?.exercises).toHaveLength(2);
   });
 
   it("appends meals when a meal-plan blurb has no food names", () => {

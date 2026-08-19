@@ -8,6 +8,7 @@ import { useKai } from "@/lib/kai-context";
 import { useSound } from "@/lib/use-sound";
 import { DEMO_USER_PROFILE } from "@/lib/user";
 import { useLang } from "@/lib/lang-context";
+import { WorkoutPlanCard } from "@/components/chat/WorkoutPlanCard";
 import { Activity, Target, Lightbulb, TrendingUp, Dumbbell } from "lucide-react";
 
 type ChatBubblesProps = {
@@ -200,34 +201,24 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
     if (msg.type === "workoutPlan" && msg.workoutPlan) {
       const wp = msg.workoutPlan;
       return (
-        <div className="chat-card-unfold overflow-hidden rounded-2xl" style={{ backgroundColor: `${primary}10`, border: `1px solid ${ring}`, boxShadow: `0 0 20px ${ring}` }}>
-          <div className="flex items-center gap-3 p-3" style={{ borderBottom: `1px solid ${ring}` }}>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}><Dumbbell className="h-6 w-6 text-white" /></div>
-            <div><p className="text-sm font-bold text-white">{t(wp.titleKey)}</p><p className="text-xs text-zinc-400">{t(wp.durationKey)}</p></div>
-          </div>
-          {wp.days.map((day: WorkoutPlanData["days"][number], di: number) => (
-            <div key={di} style={{ borderBottom: di < wp.days.length - 1 ? `1px solid ${ring}` : undefined }}>
-              <div className="flex items-center gap-2 px-3 pt-3 pb-1"><p className="text-xs font-bold text-zinc-300">{t(day.dayKey)}</p><span className="text-[10px] text-zinc-500">—</span><span className="text-[10px] text-zinc-400">{t(day.focusKey)}</span></div>
-              <div className="flex flex-col px-3 pb-2">{day.exercises.map((ex, ei: number) => (
-                <div key={ei} className="flex items-start gap-2 py-1">
-                  <div className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: primary }} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2"><span className="text-[11px] font-medium text-white truncate">{ex.name}</span><span className="shrink-0 text-[10px] text-zinc-500">{t("workout.sets", { sets: ex.sets, reps: ex.reps })}</span></div>
-                    <p className="text-[10px] text-zinc-500 leading-relaxed mt-0.5">{ex.notes}</p>
-                  </div>
-                </div>
-              ))}</div>
-            </div>
-          ))}
-          {wp.tips?.length > 0 && (
-            <div className="flex flex-col gap-1.5 p-3" style={{ borderTop: `1px solid ${ring}` }}>
-              <p className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400"><Lightbulb className="h-3.5 w-3.5" />{t("workout.tips")}</p>
-              {wp.tips.map((tip: string, i: number) => (
-                <div key={i} className="flex items-start gap-2"><div className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: primary }} /><span className="text-[11px] leading-relaxed text-zinc-300">{tip}</span></div>
-              ))}
-            </div>
-          )}
-        </div>
+        <WorkoutPlanCard
+          primary={primary}
+          primaryLight={primaryLight}
+          ring={ring}
+          title={t(wp.titleKey)}
+          subtitle={t(wp.durationKey)}
+          days={wp.days.map((day: WorkoutPlanData["days"][number]) => ({
+            day: t(day.dayKey),
+            focus: t(day.focusKey),
+            exercises: day.exercises.map((ex) => ({
+              name: ex.name,
+              setsLabel: t("workout.sets", { sets: ex.sets, reps: ex.reps }),
+              notes: ex.notes,
+            })),
+          }))}
+          tipsLabel={wp.tips?.length ? t("workout.tips") : undefined}
+          tips={wp.tips}
+        />
       );
     }
     if (msg.type === "dailySummary" && msg.dailySummary) {

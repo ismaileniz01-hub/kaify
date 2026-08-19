@@ -1,20 +1,22 @@
 "use client";
 
-import { Activity, Dumbbell, Target, TrendingUp } from "lucide-react";
+import { Activity, Target, TrendingUp } from "lucide-react";
 import type { ContactId } from "@/lib/contacts";
 import { CONTACTS } from "@/lib/contacts";
 import { useLang } from "@/lib/lang-context";
 import type { MessageType } from "@/lib/types/database.types";
+import { WorkoutPlanCard } from "@/components/chat/WorkoutPlanCard";
 import {
   displayPlanLabel,
-  planDayHeading,
   unwrapChatCardPayload,
 } from "@/lib/chat/rich-card-payload";
+import { resolveWorkoutPlanDays } from "@/lib/kaios/plan-speech";
 
 type ChatRichCardProps = {
   contactId: ContactId;
   messageType: MessageType;
   payload: unknown;
+  fallbackText?: string;
 };
 
 const SCORE_COLORS = ["#ef4444", "#f59e0b", "#3b82f6", "#22c55e", "#a855f7", "#ec4899"];
@@ -47,22 +49,37 @@ function scorePayloadToAnalysis(payload: Record<string, unknown>) {
   };
 }
 
-function workoutPlanPayload(payload: Record<string, unknown>) {
-  const source = unwrapChatCardPayload(payload);
-  return source as {
-    titleKey?: string;
-    durationKey?: string;
-    days?: Record<string, unknown>[];
-  };
+function workoutSetsLabel(
+  sets: string | undefined,
+  reps: string | undefined,
+  translate: (key: string, params?: Record<string, string | number>) => string,
+): string | undefined {
+  if (sets && reps) return translate("workout.sets", { sets, reps });
+  if (sets) return sets;
+  if (reps) return String(reps);
+  return undefined;
 }
 
-export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardProps) {
+export function ChatRichCard({
+  contactId,
+  messageType,
+  payload,
+  fallbackText,
+}: ChatRichCardProps) {
   const { t } = useLang();
   const contact = CONTACTS[contactId];
   const { primary, primaryLight, ring } = contact.color;
 
-  if (!payload || typeof payload !== "object") return null;
-  const p = payload as Record<string, unknown>;
+  if (
+    (!payload || typeof payload !== "object" || Array.isArray(payload)) &&
+    !fallbackText?.trim()
+  ) {
+    return null;
+  }
+  const p =
+    payload && typeof payload === "object" && !Array.isArray(payload)
+      ? (payload as Record<string, unknown>)
+      : {};
 
   // Food analysis (Maya) — macro/calorie card. Kept separate from the body
   // score card so a meal photo never renders an empty "Body Analysis Score".
@@ -262,61 +279,47 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
     );
   }
 
-  if (messageType === "workout_plan") {
-    const wp = workoutPlanPayload(p);
-    if (!Array.isArray(wp.days) || wp.days.length === 0) return null;
-    return (
-      <div
-        className="chat-card-unfold mt-2 overflow-hidden rounded-2xl"
-        style={{ backgroundColor: `${primary}10`, border: `1px solid ${ring}` }}
-      >
-        <div className="flex items-center gap-3 p-3" style={{ borderBottom: `1px solid ${ring}` }}>
-          <div
-            className="flex h-12 w-12 items-center justify-center rounded-xl"
-            style={{ background: `linear-gradient(135deg, ${primary}, ${primaryLight})` }}
-          >
-            <Dumbbell className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-white">
-              {wp.titleKey ? t(wp.titleKey) : t("workout.weekly_title")}
-            </p>
-            <p className="text-xs text-zinc-400">
-              {wp.durationKey ? t(wp.durationKey) : ""}
-            </p>
-          </div>
-        </div>
-        {(wp.days ?? []).map((day, di) => {
-          const rec = day as Record<string, unknown>;
-          const heading = planDayHeading(rec);
-          const exercises = Array.isArray(rec.exercises)
-            ? (rec.exercises as { name?: string; sets?: number; reps?: string; notes?: string }[])
-            : [];
-          const title = [displayPlanLabel(heading.day, t), displayPlanLabel(heading.focus, t)]
-            .filter(Boolean)
-            .join(" — ");
-          return (
-          <div key={di} className="px-3 py-2" style={{ borderBottom: `1px solid ${ring}` }}>
-            <p className="text-xs font-bold text-zinc-300">
-              {title}
-            </p>
-            {exercises.map((ex, ei) => (
-              <div key={ei} className="mt-1">
-                <p className="text-[11px] text-zinc-400">
-                  • {ex.name} ({ex.sets}x{ex.reps})
-                </p>
-                {ex.notes ? (
-                  <p className="pl-3 text-[11px] leading-snug text-zinc-500">
-                    {ex.notes}
-                  </p>
-                ) : null}
-              </div>
-            ))}
-          </div>
-          );
-        })}
-      </div>
-    );
+  if (
+    messageType === "workout_plan" ||
+    (contactId === "alex" && messageType !== "daily_summary")
+  ) {
+    const days = resolveWorkoutPlanDays(p, fallbackText);
+    if (days.length > 0) {
+      const unwrapped = unwrapChatCardPayload(p);
+      const titleKey =
+        typeof unwrapped.titleKey === "string" ? unwrapped.titleKey : "workout.weekly_title";
+      const durationKey =
+        typeof unwrapped.durationKey === "string" ? unwrapped.durationKey : "";
+      const exerciseCount = days.reduce((sum, day) => sum + day.exercises.length, 0);
+      const subtitle = durationKey
+        ? t(durationKey)
+        : `${days.length} · ${exerciseCount} ${t("workout.exercises")}`;
+      const tips = Array.isArray(unwrapped.tips)
+        ? (unwrapped.tips as unknown[]).filter((tip): tip is string => typeof tip === "string")
+        : [];
+      return (
+        <WorkoutPlanCard
+          className="mt-2"
+          primary={primary}
+          primaryLight={primaryLight}
+          ring={ring}
+          title={t(titleKey)}
+          subtitle={subtitle}
+          days={days.map((day) => ({
+            day: displayPlanLabel(day.day, t),
+            focus: displayPlanLabel(day.focus, t),
+            exercises: day.exercises.map((ex) => ({
+              name: ex.name,
+              setsLabel: workoutSetsLabel(ex.sets, ex.reps, t),
+              notes: ex.notes,
+            })),
+          }))}
+          tipsLabel={tips.length > 0 ? t("workout.tips") : undefined}
+          tips={tips}
+        />
+      );
+    }
+    if (messageType === "workout_plan") return null;
   }
 
   if (messageType === "daily_summary") {

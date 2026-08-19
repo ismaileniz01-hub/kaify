@@ -11,6 +11,7 @@
 
 import { ModelRouter } from "@/lib/ai/model-router";
 import { extractJsonObject } from "@/lib/ai/extract-json";
+import { parseWorkoutDaysFromSpeech } from "@/lib/kaios/plan-speech";
 import {
   containsCanary,
   scrubModelOutput,
@@ -155,52 +156,8 @@ function coerceWorkoutPlanEnvelope(
   coach: CoachId,
   text: string,
 ): BaseEnvelope | null {
-  const lines = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const dayRe =
-    /^(Pazartesi|Salı|Sali|Çarşamba|Carsamba|Perşembe|Persembe|Cuma|Cumartesi|Pazar|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s*[–-]\s*(.+)$/i;
-  const exerciseRe =
-    /^[-•]\s*(.+?)\s+(\d+)\s*x\s*([0-9]+(?:\s*-\s*[0-9]+)?|[0-9]+\+?|failure|amrap|min)$/i;
-
-  const days: Array<{
-    dayKey: string;
-    focusKey: string;
-    exercises: Array<{ name: string; sets: number; reps: string }>;
-  }> = [];
-  let current:
-    | {
-        dayKey: string;
-        focusKey: string;
-        exercises: Array<{ name: string; sets: number; reps: string }>;
-      }
-    | null = null;
-
-  for (const line of lines) {
-    const dayMatch = line.match(dayRe);
-    if (dayMatch) {
-      current = {
-        dayKey: dayMatch[1]!,
-        focusKey: dayMatch[2]!.trim(),
-        exercises: [],
-      };
-      days.push(current);
-      continue;
-    }
-
-    const exerciseMatch = line.match(exerciseRe);
-    if (exerciseMatch && current) {
-      current.exercises.push({
-        name: exerciseMatch[1]!.trim(),
-        sets: Number(exerciseMatch[2]),
-        reps: exerciseMatch[3]!.replace(/\s+/g, ""),
-      });
-      continue;
-    }
-  }
-
-  const validDays = days.filter((day) => day.exercises.length > 0);
+  const parsed = parseWorkoutDaysFromSpeech(text);
+  const validDays = parsed.filter((day) => (day.exercises?.length ?? 0) > 0);
   if (validDays.length === 0) return null;
 
   return {
@@ -213,7 +170,16 @@ function coerceWorkoutPlanEnvelope(
     },
     ui: {
       cardType: "workout_plan",
-      days: validDays,
+      days: validDays.map((day) => ({
+        dayKey: day.dayKey || day.day || "",
+        focusKey: day.focus || day.focusKey || "",
+        exercises: (day.exercises ?? []).map((ex) => ({
+          name: ex.name ?? "",
+          sets: typeof ex.sets === "number" ? ex.sets : Number(ex.sets) || ex.sets,
+          reps: String(ex.reps ?? ""),
+          notes: ex.notes,
+        })),
+      })),
     },
   };
 }

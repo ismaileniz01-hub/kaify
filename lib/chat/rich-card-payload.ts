@@ -31,10 +31,10 @@ export function planDayHeading(day: Record<string, unknown>): {
 } {
   const focus =
     stringField(day, "focus") ??
+    stringField(day, "focusKey") ??
     stringField(day, "name") ??
-    stringField(day, "title") ??
-    stringField(day, "focusKey");
-  const dayLabel = stringField(day, "dayKey");
+    stringField(day, "title");
+  const dayLabel = stringField(day, "dayKey") ?? stringField(day, "day");
   return { day: dayLabel, focus };
 }
 

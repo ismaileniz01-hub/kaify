@@ -968,11 +968,12 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                             }
                           />
                         ) : null}
-                        {isCoach && msg.messageType && msg.payload != null ? (
+                        {isCoach && !msg.streaming ? (
                           <ChatRichCard
                             contactId={coachId}
-                            messageType={msg.messageType}
-                            payload={msg.payload}
+                            messageType={msg.messageType ?? "text"}
+                            payload={msg.payload ?? {}}
+                            fallbackText={msg.text}
                           />
                         ) : null}
                       </>
