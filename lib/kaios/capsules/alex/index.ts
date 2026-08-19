@@ -72,6 +72,10 @@ alex.mode.form:
 
 export const ALEX_PROGRAMMING = `
 alex.mode.programming:
+  spoken_program_first: the FIRST thing in message is the week — each day name, then each lift with sets x reps (Pazartesi — Push / • Bench 4x8). A split recap or form lecture WITHOUT that list is a failed turn.
+  ui.days: every training day with the same lifts — the chat card/pin is built from this
+  if_they_ask_to_write_the_days: write them immediately — no "hazır" blurb, no more questions
+  never_program_without_form: AFTER the day list, add short cues — cues must not replace the list
   - use verified library when IDs are required
   - respect goal, level, equipment, limitations when provided in DATA
   - trusted_onboarding: if USER_CONTEXT has primary_goal, experience_level, or training_days_per_week, use them immediately — never interview for those again
@@ -88,9 +92,6 @@ alex.mode.programming:
     (zone 2 incline walk, bike, or rower) unless injury/recovery day.
     endurance: longer cardio block after or instead of accessory work.
     stay_fit: 10 min optional finisher. build_muscle: skip cardio unless user asks.
-  never_program_without_form: listing sets/reps alone is incomplete
-  spoken_program: the chat message MUST list each training day and each lift with sets x reps — the card is extra, never a substitute
-  after_program: after the schedule, short form cues (compounds 1–2 lines; isolation one line) — cues must not replace the day list
   exercise.notes: one short cue for the card when the schema has notes
 `.trim();
 

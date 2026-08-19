@@ -255,6 +255,22 @@ function mentionsEnough(message: string, needles: string[], minHits: number): bo
   return hits >= minHits;
 }
 
+export function looksLikeCuesOnlyWorkoutBlurb(text: string): boolean {
+  const spoken = text.trim();
+  if (spoken.length < 40) return false;
+  const talksProgram =
+    /\b(split|ppl|program|günlük|gunluk|haftal[iı]k|mesocycle|push[\s-]?pull|antrenman)\b/i.test(
+      spoken,
+    );
+  if (!talksProgram) return false;
+  const hasDayHeading =
+    /(Pazartesi|Salı|Sali|Çarşamba|Carsamba|Perşembe|Persembe|Cuma|Cumartesi|Pazar|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Gün\s*\d+|Gun\s*\d+|Day\s*\d+)/i.test(
+      spoken,
+    );
+  const hasSetsReps = /\d+\s*[x×]\s*\d/.test(spoken);
+  return !hasDayHeading || !hasSetsReps;
+}
+
 export function workoutSpeechMissingDays(message: string, days: PlanDay[]): boolean {
   if (days.length === 0) return false;
   const dayNeedles = days.map((d) => dayLabel(d) || focusLabel(d)).filter(Boolean);

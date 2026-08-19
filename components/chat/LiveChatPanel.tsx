@@ -753,10 +753,10 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     () => findLatestPinnableMessage(coachId, messages),
     [coachId, messages],
   );
-  const [pinOpen, setPinOpen] = useState(false);
+  const [pinOpen, setPinOpen] = useState(true);
   const pinnedId = pinned?.id ?? null;
   useEffect(() => {
-    setPinOpen(false);
+    if (pinnedId) setPinOpen(true);
   }, [pinnedId]);
 
   return (
@@ -1007,7 +1007,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                             }
                           />
                         ) : null}
-                        {isCoach && !msg.streaming ? (
+                        {isCoach && !msg.streaming && msg.id !== pinnedId ? (
                           <ChatRichCard
                             contactId={coachId}
                             messageType={msg.messageType ?? "text"}

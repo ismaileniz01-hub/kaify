@@ -3,6 +3,8 @@
  * Structure + previous dialogue state drive behavior; phrase lists are fixtures only.
  */
 
+import { looksLikeCuesOnlyWorkoutBlurb } from "@/lib/kaios/plan-speech";
+
 export type ShortTurnFunction =
   | "GREETING"
   | "HESITATION"
@@ -224,6 +226,13 @@ export function continuationHint(
       "  on_first_hesitation: stay motivating — shrink the ask, light tease, remind real goals from USER_CONTEXT when present",
       "  do_not_defer_sport_to_later: true unless illness/injury or user explicitly opts out of coaching",
       "  do_not_switch_to_feelings_therapy_mode: acknowledge briefly then re-anchor to the proposed minimum action",
+    );
+  }
+  if (looksLikeCuesOnlyWorkoutBlurb(previousAssistant ?? "")) {
+    lines.push(
+      "  previous_turn_was_cues_only_program: true",
+      "  this_turn_MUST_list_every_training_day_with_lifts_and_sets_x_reps: true",
+      "  do_not_recap_the_split: start with day 1 immediately",
     );
   }
   return lines.join("\n");

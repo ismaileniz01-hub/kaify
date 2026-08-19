@@ -29,6 +29,7 @@ import { prepareMemoriesForContext } from "@/lib/kaios/memory";
 import { resolveActiveLocale } from "@/lib/kaios/localization/resolve";
 import { resolveKaiFamiliarityStage } from "@/lib/kaios/kai/familiarity";
 import { linkPendingConfirmationToMessage } from "@/lib/services/analytics-confirmation.service";
+import { lastAssistantMessage } from "@/lib/kaios/context/short-turn";
 import {
   resolveIntent,
   type CoachId,
@@ -538,7 +539,13 @@ async function* streamKaiosCoachReply(
           })
         : null;
 
-    const intent = resolveIntent({ coach: coachId, message: cleanMessage });
+    const previousAssistant = lastAssistantMessage(history);
+    const intent = resolveIntent({
+      coach: coachId,
+      message: cleanMessage,
+      previousAssistantMessage: previousAssistant ?? undefined,
+      hasRecentHistory: history.length > 0,
+    });
     const memoryItems = prepareMemoriesForContext(
       memories.map((m) => m.summary),
       {

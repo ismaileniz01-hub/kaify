@@ -57,6 +57,21 @@ describe("resolveIntent", () => {
       }),
     ).toBe("programming");
     expect(
+      resolveIntent({
+        coach: "alex",
+        message: "tamam gunleri ve antrenmanlari yazarmisin",
+      }),
+    ).toBe("programming");
+    expect(
+      resolveIntent({
+        coach: "alex",
+        message: "?",
+        previousAssistantMessage:
+          "Tamam kral, 5 günlük split hazır. Göğüs ve sırt zayıf, PPL + üst + alt kurdum. Forma dikkat.",
+        hasRecentHistory: true,
+      }),
+    ).toBe("programming");
+    expect(
       resolveIntent({ coach: "alex", message: "antrenman bitti" }),
     ).toBe("motivation");
     expect(

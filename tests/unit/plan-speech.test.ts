@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ensureStructuredPlanVisible,
   formatWorkoutPlanSpeech,
+  looksLikeCuesOnlyWorkoutBlurb,
   parseWorkoutDaysFromSpeech,
   workoutSpeechMissingDays,
 } from "@/lib/kaios/plan-speech";
@@ -66,6 +67,19 @@ describe("plan-speech", () => {
     );
     expect(days).toHaveLength(2);
     expect(days[0]?.exercises).toHaveLength(2);
+  });
+
+  it("flags a split recap without days as cues-only", () => {
+    expect(
+      looksLikeCuesOnlyWorkoutBlurb(
+        "Tamam kral, 5 günlük split hazır. Göğüs ve sırt zayıf, PPL + üst vücut + alt vücut. Forma dikkat, ego yapma.",
+      ),
+    ).toBe(true);
+    expect(
+      looksLikeCuesOnlyWorkoutBlurb(
+        "Pazartesi — Push\n• Bench press 4x8\nSalı — Pull\n• Row 4x10",
+      ),
+    ).toBe(false);
   });
 
   it("appends meals when a meal-plan blurb has no food names", () => {

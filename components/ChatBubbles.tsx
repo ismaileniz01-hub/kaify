@@ -33,7 +33,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
   const { play } = useSound();
   const [allMessages, setAllMessages] = useState<MessageItem[]>([]);
   const [typingId, setTypingId] = useState<number | null>(null);
-  const [pinOpen, setPinOpen] = useState(false);
+  const [pinOpen, setPinOpen] = useState(true);
   const prevVisibleCountRef = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const nextIdRef = useRef(1000);
@@ -346,7 +346,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
                     </div>
                     <div className="flex flex-col gap-1">
                       <div className="chat-message-bubble animate-message--coach px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}>{msg.text}</div>
-                      {renderCard(msg)}
+                      {pinnedDemo?.id !== msg.id ? renderCard(msg) : null}
                       <span className="chat-message-time ps-1 text-zinc-600">{msg.time}</span>
                     </div>
                   </div>

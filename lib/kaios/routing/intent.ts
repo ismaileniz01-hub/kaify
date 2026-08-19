@@ -143,7 +143,7 @@ const FORM_RE =
   /\b(form|technique|cue|rom\b|range of motion|knees?\s+cave|how (?:do|to|deep|far|wide) (?:should |can )?(?:i )?(?:squats?|bench(?:es)?|deadlifts?|press(?:es)?|rows?)|(?:squats?|bench(?:es)?|deadlifts?|press(?:es)?|rows?).{0,24}(?:form|depth|stance|cue|technique|fix)|doğru form|dogru form|teknik|nasıl yapılır|nasil yapilir)\b/i;
 
 const PROGRAM_RE =
-  /\b(program|split|mesocycle|periodiz|weekly plan|workout plan|antrenman program|sets?\s*(?:and|&|x)\s*reps?|progress(?:ion|ing)?|deload|push[\s-]?pull[\s-]?legs|\bppl\b|(?:build|create|design|give me|need).{0,48}\b(?:workout|program|split|mesocycle))\b/i;
+  /\b(program|split|mesocycle|periodiz|weekly plan|workout plan|antrenman program|antrenmanlar(?:ı|i)?|sets?\s*(?:and|&|x)\s*reps?|progress(?:ion|ing)?|deload|push[\s-]?pull[\s-]?legs|\bppl\b|(?:build|create|design|give me|need).{0,48}\b(?:workout|program|split|mesocycle)|(?:günler(?:i|ı)?|gunler(?:i|i)?)(?:\s+ve)?|(?:write|yaz(?:ar\s*m[ıi]s[ıi]n)?).{0,32}(?:gün|gun|day|antrenman|workout|hareket))\b/i;
 
 const NUTRITION_Q_RE =
   /\b(protein|carbs?|calories?|macro|kalori|besin|nutrition|diet|diyet|kilo|bulk|cut|surplus|deficit|ne yesem|kaç kalori|kac kalori)\b/i;
@@ -324,7 +324,10 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
     input.coach === "alex" &&
     /\b(workout|lift|squats?|benchs?|benches|deadlifts?|gym|antrenman)\b/i.test(lower)
   ) {
-    if (FORM_RE.test(msg) || /[?]/.test(msg)) return "exercise_form";
+    if (FORM_RE.test(msg)) return "exercise_form";
+    if (/[?]/.test(msg) && msg.replace(/[?\s]/g, "").length > 8) {
+      return "exercise_form";
+    }
     return "programming";
   }
   if (input.coach === "maya" && NUTRITION_Q_RE.test(msg)) {
@@ -342,7 +345,15 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
     !MOTIVATION_RE.test(msg)
   ) {
     if (/[?]/.test(msg) && input.coach === "maya") return "nutrition_question";
-    if (/[?]/.test(msg) && input.coach === "alex") return "exercise_form";
+    if (/[?]/.test(msg) && input.coach === "alex") {
+      if (msg.replace(/[?\s.!]+\s*$/u, "").trim().length <= 2) {
+        return (
+          continuedDomainIntent(input.coach, input.previousAssistantMessage) ??
+          "unknown"
+        );
+      }
+      return "exercise_form";
+    }
     if (/[?]/.test(msg) && !looksCasual(msg)) return "unknown";
     return "casual";
   }
