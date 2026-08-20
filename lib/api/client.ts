@@ -246,6 +246,48 @@ export async function streamChatMessage(
   const decoder = new TextDecoder();
   let buffer = "";
 
+  const dispatchBlock = (block: string) => {
+    const lines = block.split("\n");
+    let event = "message";
+    let data = "";
+
+    for (const line of lines) {
+      if (line.startsWith("event:")) event = line.slice(6).trim();
+      if (line.startsWith("data:")) data = line.slice(5).trim();
+    }
+
+    if (!data) return;
+
+    try {
+      const parsed = JSON.parse(data) as Record<string, unknown>;
+      if (event === "delta" && typeof parsed.content === "string") {
+        handlers.onDelta(parsed.content);
+      } else if (event === "done") {
+        handlers.onDone({
+          messageId: (parsed.messageId as string | null) ?? null,
+          userMessageId: (parsed.userMessageId as string | null) ?? null,
+          messageType: (parsed.messageType as string | null) ?? null,
+          payload: parsed.payload,
+          warning_trigger: (parsed.warning_trigger as string | null) ?? null,
+          content:
+            typeof parsed.content === "string" ? parsed.content : null,
+        });
+      } else if (event === "card") {
+        handlers.onCard?.({
+          messageId: (parsed.messageId as string | null) ?? null,
+          messageType: (parsed.messageType as string | null) ?? null,
+          payload: parsed.payload,
+        });
+      } else if (event === "error") {
+        const code =
+          typeof parsed.code === "string" ? parsed.code : "INTERNAL_ERROR";
+        handlers.onError(code);
+      }
+    } catch {
+      // skip malformed SSE block
+    }
+  };
+
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -254,46 +296,9 @@ export async function streamChatMessage(
     const blocks = buffer.split("\n\n");
     buffer = blocks.pop() ?? "";
 
-    for (const block of blocks) {
-      const lines = block.split("\n");
-      let event = "message";
-      let data = "";
-
-      for (const line of lines) {
-        if (line.startsWith("event:")) event = line.slice(6).trim();
-        if (line.startsWith("data:")) data = line.slice(5).trim();
-      }
-
-      if (!data) continue;
-
-      try {
-        const parsed = JSON.parse(data) as Record<string, unknown>;
-        if (event === "delta" && typeof parsed.content === "string") {
-          handlers.onDelta(parsed.content);
-        } else if (event === "done") {
-          handlers.onDone({
-            messageId: (parsed.messageId as string | null) ?? null,
-            userMessageId: (parsed.userMessageId as string | null) ?? null,
-            messageType: (parsed.messageType as string | null) ?? null,
-            payload: parsed.payload,
-            warning_trigger: (parsed.warning_trigger as string | null) ?? null,
-            content:
-              typeof parsed.content === "string" ? parsed.content : null,
-          });
-        } else if (event === "card") {
-          handlers.onCard?.({
-            messageId: (parsed.messageId as string | null) ?? null,
-            messageType: (parsed.messageType as string | null) ?? null,
-            payload: parsed.payload,
-          });
-        } else if (event === "error") {
-          const code =
-            typeof parsed.code === "string" ? parsed.code : "INTERNAL_ERROR";
-          handlers.onError(code);
-        }
-      } catch {
-        // skip malformed SSE block
-      }
-    }
+    for (const block of blocks) dispatchBlock(block);
   }
+
+  buffer += decoder.decode();
+  if (buffer.trim()) dispatchBlock(buffer);
 }

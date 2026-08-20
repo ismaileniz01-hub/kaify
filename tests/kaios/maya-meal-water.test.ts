@@ -58,6 +58,18 @@ describe("ensureMayaMealWaterReminder", () => {
     expect(plan).toBe("Haftalık menü hazır.");
   });
 
+  it("uses Turkish water copy when the user logged food in Turkish even if locale drifted", () => {
+    const out = ensureMayaMealWaterReminder({
+      text: "Jasno, rižin puding!",
+      locale: "hr",
+      coachId: "maya",
+      intent: "nutrition_question",
+      userMessage: "Bi kase sutlac yedim",
+    });
+    expect(out).toContain(mealWaterNudge("tr"));
+    expect(out).not.toContain(mealWaterNudge("en"));
+  });
+
   it("nudges meal photo analysis even without eat-slang in the caption", () => {
     const out = ensureMayaMealWaterReminder({
       text: "Looks like grilled chicken and rice.",

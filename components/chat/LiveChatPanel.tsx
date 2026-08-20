@@ -364,6 +364,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         text,
         {
           onDelta: (content) => {
+            if (!streamTextRef.current) onCoachTyping?.(false);
             streamTextRef.current += content;
             if (streamRafRef.current !== null) return;
             streamRafRef.current = window.requestAnimationFrame(() => {
@@ -481,6 +482,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
       onCoachTyping?.(false);
       failUserMessage();
     } finally {
+      onCoachTyping?.(false);
       setSending(false);
     }
   };

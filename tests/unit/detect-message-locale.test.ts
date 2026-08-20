@@ -7,9 +7,9 @@ describe("detectMessageLocale", () => {
     expect(detectMessageLocale("was ist das", "tr")).toBe("de");
   });
 
-  it("detects ASCII Turkish even when profile locale is English", () => {
-    expect(detectMessageLocale("bilgileri tekrar kontrol et", "en")).toBe("tr");
-    expect(detectMessageLocale("bugun ne yedin", "en")).toBe("tr");
+  it("detects ASCII Turkish food logs that franc-min tags as Croatian", () => {
+    expect(detectMessageLocale("Bi kase sutlac yedim", "en")).toBe("tr");
+    expect(detectMessageLocale("bi kase sutlac yedim", "hr")).toBe("tr");
   });
 
   it("detects English from common words when franc mislabels", () => {

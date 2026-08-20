@@ -5,6 +5,7 @@
 
 import { parseHydrationLiters } from "@/lib/kaios/analytics/chat-log";
 import { isCoachRetryLine } from "@/lib/kaios/coach-retry";
+import { looksLikeTurkishChat } from "@/lib/i18n/detect-message-locale";
 import {
   looksLikeFoodConsumption,
   type CoachId,
@@ -21,6 +22,9 @@ const NUDGE_BY_LOCALE: Record<string, string> = {
   es: "No olvides un vaso de agua después de esa comida.",
   fr: "N'oublie pas un verre d'eau après ce repas.",
   ar: "لا تنسَ شرب كوب ماء بعد الوجبة.",
+  hr: "Ne zaboravi čašu vode nakon obroka.",
+  bs: "Ne zaboravi čašu vode poslije obroka.",
+  sr: "Ne zaboravi čašu vode posle obroka.",
 };
 
 function localePrefix(locale: string): string {
@@ -61,5 +65,9 @@ export function ensureMayaMealWaterReminder(input: {
   if (isCoachRetryLine(text)) return input.text;
   if (!shouldRemindWaterAfterMeal(input)) return input.text;
   if (mentionsWater(text)) return input.text;
-  return `${text}\n\n${mealWaterNudge(input.locale)}`;
+  const locale =
+    looksLikeTurkishChat(input.userMessage ?? "") || looksLikeTurkishChat(text)
+      ? "tr"
+      : input.locale;
+  return `${text}\n\n${mealWaterNudge(locale)}`;
 }

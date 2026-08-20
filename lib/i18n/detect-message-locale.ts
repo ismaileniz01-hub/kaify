@@ -61,6 +61,20 @@ const ENGLISH_SLANG =
 /** Skip franc on tiny strings — it often mislabels casual Latin chat (e.g. "ohh cute" → French). */
 const FRANC_MIN_CHARS = 20;
 
+/** franc-min regularly tags short Turkish (no diacritics) as Balkan / Malay. */
+const FRANC_UNSTABLE_SHORT = new Set<SupportedLocale>([
+  "hr",
+  "bs",
+  "sr",
+  "sl",
+  "id",
+  "az",
+  "sk",
+]);
+
+const TURKISH_PAST_OR_FOOD =
+  /\b[a-zçğıöşü]{2,}(?:dım|dim|dum|düm|tım|tim|tum|tüm|mış|miş|muş|müş)\b/iu;
+
 function localeFromEnglishSlang(text: string): SupportedLocale | null {
   return ENGLISH_SLANG.test(normalizeForDetection(text)) ? "en" : null;
 }
@@ -78,7 +92,7 @@ const WORD_HINTS: Array<{ locale: SupportedLocale; pattern: RegExp }> = [
   {
     locale: "tr",
     pattern:
-      /\b(ben|sen|ve|bir|bu|ne|nasıl|nasil|bugün|bugun|yemek|merhaba|lütfen|lutfen|neden|için|icin|var|yok|mı|mi|yedin|tekrar|bilgi|kontrol|istiyorum|antrenman|kahvaltı|kahvalti|öğün|ogun|kaydet|misin|musun|mısın)\b/i,
+      /\b(ben|sen|ve|bir|bi|bu|ne|nasıl|nasil|bugün|bugun|yemek|merhaba|lütfen|lutfen|neden|için|icin|var|yok|mı|mi|mu|mü|yedim|yedin|yedik|içtim|ictim|yaptım|yaptim|kase|sutlac|sütlaç|çorba|corba|pilav|tekrar|bilgi|kontrol|istiyorum|antrenman|kahvaltı|kahvalti|öğün|ogun|kaydet|misin|musun|mısın)\b/i,
   },
   {
     locale: "fr",
@@ -112,6 +126,16 @@ function countPatternHits(text: string, pattern: RegExp): number {
   return [...text.matchAll(re)].length;
 }
 
+const TURKISH_WORD_HINT =
+  WORD_HINTS.find((h) => h.locale === "tr")?.pattern ?? /$^/;
+
+export function looksLikeTurkishChat(text: string): boolean {
+  const cleaned = normalizeForDetection(text);
+  if (!cleaned) return false;
+  if (countPatternHits(cleaned, TURKISH_WORD_HINT) > 0) return true;
+  return TURKISH_PAST_OR_FOOD.test(cleaned);
+}
+
 function localeFromWordHints(text: string): SupportedLocale | null {
   let best: { locale: SupportedLocale; hits: number } | null = null;
 
@@ -129,12 +153,15 @@ function localeFromFranc(text: string): SupportedLocale | null {
   const cleaned = normalizeForDetection(text);
   if (cleaned.length < FRANC_MIN_CHARS) return null;
 
+  const turkish = looksLikeTurkishChat(cleaned);
   const candidates = francAll(cleaned, { minLength: 3 });
   for (const [iso3, score] of candidates) {
     const mapped = FRANC_TO_LOCALE[iso3];
-    if (mapped && score >= 0.5) return mapped;
+    if (!mapped || score < 0.5) continue;
+    if (turkish && FRANC_UNSTABLE_SHORT.has(mapped)) continue;
+    return mapped;
   }
-  return null;
+  return turkish ? "tr" : null;
 }
 
 function inheritLocaleFromPriorMessages(
@@ -177,7 +204,12 @@ export function detectMessageLocale(
   if (!cleaned || !HAS_LETTERS.test(cleaned)) return fallback;
 
   const direct = detectWithoutFallback(text);
-  if (direct) return direct;
+  if (direct) {
+    if (direct !== "tr" && FRANC_UNSTABLE_SHORT.has(direct) && looksLikeTurkishChat(cleaned)) {
+      return "tr";
+    }
+    return direct;
+  }
 
   if (isAmbiguousShortMessage(cleaned)) {
     const fromUser = inheritLocaleFromPriorMessages(recentUserMessages);
