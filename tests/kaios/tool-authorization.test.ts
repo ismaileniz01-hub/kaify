@@ -219,6 +219,7 @@ vi.mock("@/lib/repositories/analytics-write.repository", () => ({
     }
     row.status = "confirmed";
   },
+  invalidateAnalyticsUserCache: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/lib/cache/invalidate", () => ({

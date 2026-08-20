@@ -168,7 +168,11 @@ export async function executeTool(
           };
         }
         await patchAnalyticsDaily(userId, { waterLiters: liters });
-        await invalidateAnalyticsUserCache(userId);
+        try {
+          await invalidateAnalyticsUserCache(userId);
+        } catch {
+          // Write already landed; stale cache is retried on next read.
+        }
         // Canonical write already succeeded — event is best-effort only.
         await emitKaiosEventBestEffort({
           category: "hydration",
