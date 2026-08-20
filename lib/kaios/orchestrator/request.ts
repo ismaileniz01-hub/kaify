@@ -48,6 +48,7 @@ import {
 } from "@/lib/kaios/tools/dispatch";
 import { maybeQueueCoachLogConfirmation } from "@/lib/kaios/analytics/chat-log";
 import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
+import { ensureMayaAlexHandoff } from "@/lib/kaios/maya/alex-handoff";
 import {
   coachRetryLine,
   isCoachRetryLine,
@@ -518,6 +519,8 @@ export async function* orchestrateCoachChat(
       userMessage: input.message,
       assistantText,
       alreadyConfirming: false,
+      envelopeData: envelope.data,
+      envelopeUi: envelope.ui,
     });
     actionTruth = [...actionTruth, ...foodLog.truths];
     if (foodLog.confirmation) confirmation = foodLog.confirmation;
@@ -529,6 +532,7 @@ export async function* orchestrateCoachChat(
       coach: input.coachId,
       userMessage: input.message,
       assistantText,
+      previousAssistantMessage: previousAssistant,
       alreadyConfirming: false,
     });
     actionTruth = [...actionTruth, ...coachLog.truths];
@@ -557,14 +561,19 @@ export async function* orchestrateCoachChat(
     assistantText = envelope.message;
   }
 
-  assistantText = ensureMayaMealWaterReminder({
-    text: sanitizeCoachVisibleText(
-      coachVisibleMessage(scrubFalseSuccessClaims(assistantText, actionTruth)),
-      input.locale,
-    ),
+  assistantText = ensureMayaAlexHandoff({
+    text: ensureMayaMealWaterReminder({
+      text: sanitizeCoachVisibleText(
+        coachVisibleMessage(scrubFalseSuccessClaims(assistantText, actionTruth)),
+        input.locale,
+      ),
+      locale: input.locale,
+      coachId: input.coachId,
+      intent,
+      userMessage: input.message,
+    }),
     locale: input.locale,
     coachId: input.coachId,
-    intent,
     userMessage: input.message,
   });
   if (

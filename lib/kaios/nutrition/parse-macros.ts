@@ -47,37 +47,74 @@ export function extractMealMacrosFromCoachText(
 ): ParsedMealMacros | null {
   const src = text.normalize("NFC");
   const calories =
-    labeledNumber(src, "kalori(?:ler)?|calories?|kcal") ??
+    labeledNumber(src, "kalori(?:ler|ye)?|calories?|kcal|kalorije") ??
     (() => {
       const m = src.match(
         /(\d+(?:[.,]\d+)?)(?:\s*[-–—]\s*(\d+(?:[.,]\d+)?))?\s*k(?:cal|kal)/i,
       );
       return m?.[1] ? parseValueOrRange(m[1], m[2]) : null;
     })();
-  const protein = labeledNumber(src, "protein");
+  const protein = labeledNumber(src, "protein(?:e|i|s)?");
   const carbs = labeledNumber(
     src,
-    "karbonhidrat(?:lar)?|carbohydrates?|carbs?",
+    "karbonhidrat(?:lar)?|carbohydrates?|carbs?|ugljikohidrat(?:i)?|ugljeni\\s*hidrat(?:i)?",
   );
-  const fat = labeledNumber(src, "yağ|yag|fat");
+  const fat = labeledNumber(src, "yağ|yag|fat|masti|masno[cć]a");
 
-  if (
-    calories == null ||
-    protein == null ||
-    carbs == null ||
-    fat == null
-  ) {
+  return finalizeMacros(calories, protein, carbs, fat);
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function numField(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const n = Number.parseFloat(value.replace(",", "."));
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+function finalizeMacros(
+  calories: number | null,
+  protein: number | null,
+  carbs: number | null,
+  fat: number | null,
+): ParsedMealMacros | null {
+  if (calories == null || protein == null || carbs == null || fat == null) {
     return null;
   }
   if (calories <= 0 || calories > 20_000) return null;
   if (protein < 0 || protein > 2_000) return null;
   if (carbs < 0 || carbs > 2_000) return null;
   if (fat < 0 || fat > 2_000) return null;
-
   return {
     calories: Math.round(calories),
     protein: Math.round(protein),
     carbs: Math.round(carbs),
     fat: Math.round(fat),
   };
+}
+
+/** Macros from envelope data/ui when the spoken labels were non-Turkish. */
+export function extractMealMacrosFromRecord(
+  value: unknown,
+): ParsedMealMacros | null {
+  const rec = asRecord(value);
+  if (!rec) return null;
+  const own = finalizeMacros(
+    numField(rec.calories ?? rec.kcal),
+    numField(rec.protein ?? rec.protein_g),
+    numField(rec.carbs ?? rec.carbohydrates ?? rec.carbs_g ?? rec.karbonhidrat),
+    numField(rec.fat ?? rec.fat_g),
+  );
+  if (own) return own;
+  for (const key of ["macros", "meal", "nutrition", "analysis"] as const) {
+    const nested = extractMealMacrosFromRecord(rec[key]);
+    if (nested) return nested;
+  }
+  return null;
 }

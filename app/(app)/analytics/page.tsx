@@ -16,7 +16,7 @@ import { InlineAlert } from "@/components/InlineAlert";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import { formatTime } from "@/lib/i18n/format";
 import { apiGet } from "@/lib/api/client";
-import type { AnalyticsBundleDTO } from "@/lib/services/analytics.service";
+import { summarizeWeeklyEnergy } from "@/lib/analytics/weekly-energy";
 import { AppHeader } from "@/components/navigation/AppHeader";
 
 export default function AnalyticsPage() {
@@ -64,21 +64,31 @@ export default function AnalyticsPage() {
     data?.calorieHistory?.reduce((sum, day) => sum + day.workoutsCompleted, 0) ??
     today?.workoutsCompleted ??
     0;
-  const weightVal =
+  const weeklyEnergy = summarizeWeeklyEnergy(
+    data?.calorieHistory,
+    today?.calorieGoal ?? 2100,
+  );
+  const displayWeightKg =
     today?.weightKg != null
+      ? Math.round((today.weightKg + weeklyEnergy.kgDelta) * 10) / 10
+      : null;
+  const weightVal =
+    displayWeightKg != null
       ? unit === "metric"
-        ? `${today.weightKg} kg`
-        : `${(today.weightKg * 2.205).toFixed(1)} lb`
+        ? `${displayWeightKg} kg`
+        : `${(displayWeightKg * 2.205).toFixed(1)} lb`
       : "—";
 
   const weightTrend =
-    data?.weightTrendKg != null
-      ? data.weightTrendKg === 0
-        ? t("analytics.weight_stable")
-        : `${data.weightTrendKg > 0 ? "▲" : "▼"} ${Math.abs(data.weightTrendKg).toFixed(1)} kg`
-      : today?.weightKg != null
-        ? t("analytics.weight_stable")
-        : t("analytics.no_trend");
+    weeklyEnergy.kgDelta !== 0
+      ? `${weeklyEnergy.kgDelta > 0 ? "▲" : "▼"} ${Math.abs(weeklyEnergy.kgDelta).toFixed(1)} kg`
+      : data?.weightTrendKg != null
+        ? data.weightTrendKg === 0
+          ? t("analytics.weight_stable")
+          : `${data.weightTrendKg > 0 ? "▲" : "▼"} ${Math.abs(data.weightTrendKg).toFixed(1)} kg`
+        : today?.weightKg != null
+          ? t("analytics.weight_stable")
+          : t("analytics.no_trend");
 
   const calPct = today
     ? Math.min(
@@ -173,7 +183,7 @@ export default function AnalyticsPage() {
             value={weightVal}
             trend={weightTrend}
             barColor="#3b82f6"
-            barPercent={today?.weightKg ? 62 : 0}
+            barPercent={displayWeightKg ? 62 : 0}
             gradient="blue"
           />
           <StatCard

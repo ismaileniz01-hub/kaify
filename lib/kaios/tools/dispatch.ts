@@ -8,7 +8,7 @@ import {
   type CoachId,
   type Intent,
 } from "@/lib/kaios/routing/intent";
-import { extractMealMacrosFromCoachText } from "@/lib/kaios/nutrition/parse-macros";
+import { extractMealMacrosFromCoachText, extractMealMacrosFromRecord } from "@/lib/kaios/nutrition/parse-macros";
 import {
   executeTool,
   type ToolName,
@@ -369,11 +369,17 @@ export function macrosForMayaFoodLogConfirm(input: {
   userMessage: string;
   assistantText: string;
   alreadyConfirming?: boolean;
+  envelopeData?: unknown;
+  envelopeUi?: unknown;
 }): ReturnType<typeof extractMealMacrosFromCoachText> {
   if (input.alreadyConfirming) return null;
   if (input.coach !== "maya") return null;
   if (!looksLikeFoodConsumption(input.userMessage)) return null;
-  return extractMealMacrosFromCoachText(input.assistantText);
+  return (
+    extractMealMacrosFromCoachText(input.assistantText) ??
+    extractMealMacrosFromRecord(input.envelopeData) ??
+    extractMealMacrosFromRecord(input.envelopeUi)
+  );
 }
 
 /**
@@ -386,6 +392,8 @@ export async function maybeQueueMayaFoodLogConfirmation(input: {
   userMessage: string;
   assistantText: string;
   alreadyConfirming?: boolean;
+  envelopeData?: unknown;
+  envelopeUi?: unknown;
 }): Promise<DispatchResult> {
   const out: DispatchResult = { truths: [], toolResults: [], knowledgeLines: [] };
   const macros = macrosForMayaFoodLogConfirm(input);

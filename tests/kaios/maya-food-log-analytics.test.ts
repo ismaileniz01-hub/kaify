@@ -19,6 +19,14 @@ describe("extractMealMacrosFromCoachText", () => {
     });
   });
 
+  it("parses Croatian labeled macros from a drifted Maya reply", () => {
+    expect(
+      extractMealMacrosFromCoachText(
+        "Jasno, rižin puding! Kalorije: 280 Proteini: 4 Ugljikohidrati: 48 Masti: 8",
+      ),
+    ).toEqual({ calories: 280, protein: 4, carbs: 48, fat: 8 });
+  });
+
   it("parses English labeled macros", () => {
     expect(
       extractMealMacrosFromCoachText(
@@ -77,5 +85,16 @@ describe("macrosForMayaFoodLogConfirm", () => {
         alreadyConfirming: true,
       }),
     ).toBeNull();
+  });
+
+  it("queues sütlaç logs and envelope macros when speech labels are missing", () => {
+    expect(
+      macrosForMayaFoodLogConfirm({
+        coach: "maya",
+        userMessage: "bir sutlac yedim",
+        assistantText: "Afiyet olsun, tatlı bir tercih.",
+        envelopeData: { calories: 280, protein: 4, carbohydrates: 48, fat: 8 },
+      }),
+    ).toEqual({ calories: 280, protein: 4, carbs: 48, fat: 8 });
   });
 });

@@ -37,22 +37,48 @@ function parseNum(raw: string): number | null {
 }
 
 const DRINK_VERB_RE = /\b(içtim|ictim|i\s+drank|drank|i\s+had)\b/i;
+const WATER_NUDGE_RE =
+  /\b(su|suyu|water|hydrat|agua|wasser|eau|ماء|bardak)\b/i;
+const WATER_YES_RE =
+  /^(?:ok|okay|tamam|evet|yes|yep|yeah|olur|içtim|ictim|içerim|icerim|sure)[\s!.?…]*$/iu;
+const GLASS_RE = /\b(?:bir\s+bardak|a\s+glass|bardak\s+su)\b/i;
+const GLASS_LITERS = 0.25;
 
-export function parseHydrationLiters(message: string): number | null {
+function looksLikeWaterYes(
+  message: string,
+  previousAssistant?: string,
+): boolean {
+  const prev = previousAssistant?.trim() ?? "";
+  if (!prev || !WATER_NUDGE_RE.test(prev)) return false;
+  return WATER_YES_RE.test(message.trim());
+}
+
+export function parseHydrationLiters(
+  message: string,
+  previousAssistant?: string,
+): number | null {
   const msg = message.trim();
-  if (!DRINK_VERB_RE.test(msg)) return null;
-  const ml = msg.match(/(\d+(?:[.,]\d+)?)\s*ml\b/i);
-  if (ml?.[1]) {
-    const n = parseNum(ml[1]);
-    if (n == null || n <= 0) return null;
-    return Math.round((n / 1000) * 100) / 100;
+  if (DRINK_VERB_RE.test(msg)) {
+    const ml = msg.match(/(\d+(?:[.,]\d+)?)\s*ml\b/i);
+    if (ml?.[1]) {
+      const n = parseNum(ml[1]);
+      if (n == null || n <= 0) return null;
+      return Math.round((n / 1000) * 100) / 100;
+    }
+    const liters = msg.match(
+      /(\d+(?:[.,]\d+)?)\s*(?:l\b|lt\b|litre|liter|liters)/i,
+    );
+    if (liters?.[1]) {
+      const n = parseNum(liters[1]);
+      if (n == null || n <= 0 || n > 30) return null;
+      return Math.round(n * 100) / 100;
+    }
+    if (GLASS_RE.test(msg)) return GLASS_LITERS;
   }
-  const liters = msg.match(/(\d+(?:[.,]\d+)?)\s*(?:l\b|lt\b|litre|liter|liters)/i);
-  if (liters?.[1]) {
-    const n = parseNum(liters[1]);
-    if (n == null || n <= 0 || n > 30) return null;
-    return Math.round(n * 100) / 100;
+  if (GLASS_RE.test(msg) && looksLikeWaterYes(msg, previousAssistant)) {
+    return GLASS_LITERS;
   }
+  if (looksLikeWaterYes(msg, previousAssistant)) return GLASS_LITERS;
   return null;
 }
 
@@ -85,10 +111,14 @@ export function patchForCoachChatLog(
     currentWater?: number;
     sessionKcal?: number | null;
     sessionHint?: string;
+    previousAssistant?: string;
   },
 ): ChatLogPatch | null {
   if (coach === "maya") {
-    const liters = parseHydrationLiters(userMessage);
+    const liters = parseHydrationLiters(
+      userMessage,
+      opts?.previousAssistant,
+    );
     if (liters == null) return null;
     const total = Math.min(30, Math.max(0, (opts?.currentWater ?? 0) + liters));
     const rounded = Math.round(total * 100) / 100;
@@ -175,6 +205,7 @@ export async function maybeQueueCoachLogConfirmation(input: {
   coach: CoachId;
   userMessage: string;
   assistantText?: string;
+  previousAssistantMessage?: string;
   alreadyConfirming?: boolean;
 }): Promise<{
   confirmation?: { pendingId: string; summary: string };
@@ -218,6 +249,7 @@ export async function maybeQueueCoachLogConfirmation(input: {
     currentBurned,
     currentWater,
     sessionKcal,
+    previousAssistant: input.previousAssistantMessage,
   });
   if (!spec) return { truths: [] };
 

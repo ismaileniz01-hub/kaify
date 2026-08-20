@@ -150,7 +150,7 @@ const NUTRITION_Q_RE =
 
 /** User reporting food they ate (slang / short logs) — needs macro headroom, not casual. */
 const FOOD_CONSUMPTION_RE =
-  /\b(yedim|yuttum|gomdum|gömdüm|gom|i ate|i had|just ate|had a|devoured|scoffed|ate a|ate an|doner|döner|durum|dürüm|wrap|burger|pizza|kebab|lahmacun|pide|tost|sandwich|breakfast|lunch|dinner|brunch|snack|öğün|ogun|yemek yedim|meal i|food log)\b/i;
+  /\b(yedim|yuttum|gomdum|gömdüm|gom|i ate|i had|just ate|had a|devoured|scoffed|ate a|ate an|doner|döner|durum|dürüm|wrap|burger|pizza|kebab|lahmacun|pide|tost|sandwich|breakfast|lunch|dinner|brunch|snack|öğün|ogun|yemek yedim|meal i|food log|sutlac|sütlaç|pudding|muhallebi)\b/i;
 
 export function looksLikeFoodConsumption(message: string): boolean {
   return FOOD_CONSUMPTION_RE.test(normalizeMessage(message));
