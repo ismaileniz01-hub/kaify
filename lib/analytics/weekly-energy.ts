@@ -33,18 +33,15 @@ export function summarizeWeeklyEnergy(
 ): WeeklyEnergySummary {
   const days = history ?? [];
   const eaten = Math.round(days.reduce((sum, day) => sum + kcal(day.caloriesConsumed), 0));
-  const workoutBurn = Math.round(days.reduce((sum, day) => sum + kcal(day.caloriesBurned), 0));
-  const loggedDays = days.filter(
-    (day) => kcal(day.caloriesConsumed) > 0 || kcal(day.caloriesBurned) > 0,
-  ).length;
+  const foodDays = days.filter((day) => kcal(day.caloriesConsumed) > 0).length;
   const goal =
     Number.isFinite(calorieGoal) && calorieGoal > 0 ? calorieGoal : 2100;
 
-  if (loggedDays === 0) {
+  if (foodDays === 0) {
     return { eaten: 0, burned: KCAL_PER_KG, kgDelta: 0 };
   }
 
-  const net = eaten - workoutBurn - goal * loggedDays;
+  const net = eaten - goal * foodDays;
   const raw = net / KCAL_PER_KG;
   const kgDelta = Math.max(-KG_CAP, Math.min(KG_CAP, Math.round(raw * 10) / 10));
   const deficit = Math.max(0, -net);

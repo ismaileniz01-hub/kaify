@@ -196,6 +196,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const transferredPreviewRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    const previewUrls = transferredPreviewRef.current;
     return () => {
       abortRef.current?.abort();
       abortRef.current = null;
@@ -203,17 +204,18 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         cancelAnimationFrame(streamRafRef.current);
         streamRafRef.current = null;
       }
-      for (const url of transferredPreviewRef.current) {
+      for (const url of previewUrls) {
         URL.revokeObjectURL(url);
       }
-      transferredPreviewRef.current.clear();
+      previewUrls.clear();
     };
   }, []);
 
   useEffect(() => {
     const url = composerPhoto?.url;
+    const transferred = transferredPreviewRef.current;
     return () => {
-      if (url && !transferredPreviewRef.current.has(url)) {
+      if (url && !transferred.has(url)) {
         URL.revokeObjectURL(url);
       }
     };

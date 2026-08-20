@@ -156,7 +156,29 @@ export async function deleteChatMessages(params: {
   }
 
   const admin = createAdminSupabaseClient();
-  const adminAny = admin as any;
+  const pendingAdmin = admin as unknown as {
+    from: (table: "analytics_pending_confirmations") => {
+      select: (columns: string) => {
+        eq: (column: string, value: string) => {
+          in: (
+            column: string,
+            values: string[],
+          ) => Promise<{
+            data: PendingRow[] | null;
+            error: { message: string } | null;
+          }>;
+        };
+      };
+      delete: () => {
+        eq: (column: string, value: string) => {
+          in: (
+            column: string,
+            values: string[],
+          ) => Promise<{ error: { message: string } | null }>;
+        };
+      };
+    };
+  };
   const { data: owned, error: ownedError } = await admin
     .from("chat_messages")
     .select("id")
@@ -190,7 +212,7 @@ export async function deleteChatMessages(params: {
       ? profile.timezone
       : "UTC";
 
-  const { data: pendingByMessage, error: pendingError } = await adminAny
+  const { data: pendingByMessage, error: pendingError } = await pendingAdmin
     .from("analytics_pending_confirmations")
     .select("id, payload, status, message_id, created_at, resolved_at, source_message_id")
     .eq("user_id", params.userId)
@@ -198,7 +220,7 @@ export async function deleteChatMessages(params: {
   if (pendingError) {
     throw new ApiError("INTERNAL_ERROR", "Bağlı analytics kayıtları okunamadı.");
   }
-  const { data: pendingBySource, error: pendingSourceError } = await adminAny
+  const { data: pendingBySource, error: pendingSourceError } = await pendingAdmin
     .from("analytics_pending_confirmations")
     .select("id, payload, status, message_id, created_at, resolved_at, source_message_id")
     .eq("user_id", params.userId)
@@ -231,7 +253,7 @@ export async function deleteChatMessages(params: {
   }
 
   if (deletedPendingIds.length > 0) {
-    const { error } = await adminAny
+    const { error } = await pendingAdmin
       .from("analytics_pending_confirmations")
       .delete()
       .eq("user_id", params.userId)

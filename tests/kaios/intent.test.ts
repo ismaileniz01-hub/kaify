@@ -137,6 +137,18 @@ describe("resolveIntent", () => {
     ).toBe("meal_plan");
   });
 
+  it("keeps Maya water yes as hydration instead of continuing a meal plan", () => {
+    expect(
+      resolveIntent({
+        coach: "maya",
+        message: "evet",
+        previousAssistantMessage:
+          "Kalori 280. Öğünden sonra bir bardak su içmeyi unutma.",
+        hasRecentHistory: true,
+      }),
+    ).toBe("hydration");
+  });
+
   it("respects workflow/route overrides for council", () => {
     expect(
       resolveIntent({

@@ -20,7 +20,7 @@ describe("summarizeWeeklyEnergy", () => {
     expect(summarizeWeeklyEnergy(week, 2100).burned).toBe(KCAL_PER_KG);
   });
 
-  it("puts remaining kcal-to-1kg in verilen and kg from the real deficit", () => {
+  it("puts remaining kcal-to-1kg in verilen from food vs goal, ignoring workout burn", () => {
     const summary = summarizeWeeklyEnergy(
       [
         { caloriesConsumed: 1800, caloriesBurned: 200 },
@@ -30,9 +30,19 @@ describe("summarizeWeeklyEnergy", () => {
       2100,
     );
     expect(summary.eaten).toBe(5400);
-    // net = 5400 - 400 - 2100*3 = -1300 → -0.2 kg, 6400 kcal left to 1 kg
-    expect(summary.kgDelta).toBe(-0.2);
-    expect(summary.burned).toBe(KCAL_PER_KG - 1300);
+    // net = 5400 - 2100*3 = -900 → -0.1 kg, 6800 kcal left to 1 kg
+    expect(summary.kgDelta).toBe(-0.1);
+    expect(summary.burned).toBe(KCAL_PER_KG - 900);
+  });
+
+  it("does not invent a full-day deficit from a workout-only day", () => {
+    const summary = summarizeWeeklyEnergy(
+      [{ caloriesConsumed: 0, caloriesBurned: 400 }],
+      2100,
+    );
+    expect(summary.eaten).toBe(0);
+    expect(summary.burned).toBe(KCAL_PER_KG);
+    expect(summary.kgDelta).toBe(0);
   });
 
   it("does not show a kg drop while verilen is 0", () => {

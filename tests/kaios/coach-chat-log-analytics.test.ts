@@ -89,6 +89,12 @@ describe("Maya hydration log → analytics patch", () => {
     ).toEqual({ waterLiters: 0.25 });
   });
 
+  it("logs a glass when they say su içtim after Maya's water nudge", () => {
+    const prev = "Öğünden sonra bir bardak su içmeyi unutma.";
+    expect(parseHydrationLiters("su içtim", prev)).toBe(0.25);
+    expect(parseHydrationLiters("I drank water", prev)).toBe(0.25);
+  });
+
   it("only Maya can queue a water patch", () => {
     expect(patchForCoachChatLog("maya", "2 litre su içtim")).toEqual({
       tool: "recordHydration",

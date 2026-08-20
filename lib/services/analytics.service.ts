@@ -1,7 +1,6 @@
 import { localDayQueryWindow, localTodayDate, isLocalDate } from "@/lib/date-utils";
 import { cached } from "@/lib/cache";
 import { CacheKeys, CacheTTL } from "@/lib/cache/keys";
-import { logger } from "@/lib/logger";
 import type { Json } from "@/lib/types/database.types";
 import {
   createAnalyticsAdminReadClient,
@@ -285,42 +284,6 @@ function mergeMealTotals(stored: AnalyticsDailyDTO, chat: MealTotals): Analytics
   };
 }
 
-/** Persist chat totals when they exceed stored DB values (fire-and-forget safe). */
-async function persistMayaMealsIfNeeded(
-  userId: string,
-  entryDate: string,
-  stored: AnalyticsDailyDTO,
-  chat: MealTotals,
-): Promise<void> {
-  if (
-    chat.calories <= stored.caloriesConsumed &&
-    chat.protein <= stored.proteinG &&
-    chat.carbs <= stored.carbsG &&
-    chat.fat <= stored.fatG
-  ) {
-    return;
-  }
-  if (chat.calories === 0 && chat.protein === 0) return;
-
-  try {
-    await patchAnalyticsDaily(
-      userId,
-      {
-        caloriesConsumed: chat.calories,
-        proteinG: chat.protein,
-        carbsG: chat.carbs,
-        fatG: chat.fat,
-      },
-      entryDate,
-    );
-    await invalidateAnalyticsCache(userId);
-  } catch (syncError) {
-    logger.warn("[analytics.service] maya meal persist failed", {
-      error: syncError instanceof Error ? syncError.message : String(syncError),
-    });
-  }
-}
-
 /** Lightweight today snapshot for the home screen (no weekly score). */
 export async function getTodayNutritionSnapshot(userId: string): Promise<AnalyticsDailyDTO> {
   return cached(
@@ -359,12 +322,6 @@ async function loadTodayNutritionSnapshot(userId: string): Promise<AnalyticsDail
         }
       : null,
   });
-  void persistMayaMealsIfNeeded(
-    userId,
-    today,
-    todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today),
-    chatTotals,
-  );
   return todayDto;
 }
 
@@ -414,7 +371,6 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
         }
       : null,
   });
-  void persistMayaMealsIfNeeded(userId, today, storedDto, chatTotals);
 
   if (weekRows && weekRows.length > 0) {
     const stepSum = weekRows.reduce((sum, r) => sum + (r.steps ?? 0), 0);
@@ -446,7 +402,10 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
       | undefined;
     calorieHistory.push({
       date: key,
-      caloriesConsumed: Number(found?.calories_consumed) || 0,
+      caloriesConsumed:
+        key === today
+          ? Math.max(Number(found?.calories_consumed) || 0, todayDto.caloriesConsumed)
+          : Number(found?.calories_consumed) || 0,
       caloriesBurned: Number(found?.calories_burned) || 0,
       workoutsCompleted: Number(found?.workouts_completed) || 0,
     });

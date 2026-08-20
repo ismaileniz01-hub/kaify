@@ -62,6 +62,13 @@ describe("action truth contract", () => {
     ]);
     expect(msg).toContain("saved");
   });
+
+  it("still scrubs save claims when only a read tool succeeded", () => {
+    const scrubbed = scrubFalseSuccessClaims("Kaydettim, öğün analize girdi.", [
+      { status: "SUCCEEDED", tool: "getNutritionState" },
+    ]);
+    expect(scrubbed.toLowerCase()).not.toMatch(/kaydettim/);
+  });
 });
 
 describe("tool allowlists", () => {

@@ -83,13 +83,9 @@ export default function AnalyticsPage() {
   const weightTrend =
     weeklyEnergy.kgDelta !== 0
       ? `${weeklyEnergy.kgDelta > 0 ? "▲" : "▼"} ${Math.abs(weeklyEnergy.kgDelta).toFixed(1)} kg`
-      : data?.weightTrendKg != null
-        ? data.weightTrendKg === 0
-          ? t("analytics.weight_stable")
-          : `${data.weightTrendKg > 0 ? "▲" : "▼"} ${Math.abs(data.weightTrendKg).toFixed(1)} kg`
-        : today?.weightKg != null
-          ? t("analytics.weight_stable")
-          : t("analytics.no_trend");
+      : today?.weightKg != null
+        ? t("analytics.weight_stable")
+        : t("analytics.no_trend");
 
   const calPct = today
     ? Math.min(

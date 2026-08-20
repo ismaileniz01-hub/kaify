@@ -28,6 +28,21 @@ const SUCCESS_BOOL_KEYS = [
   "succeeded",
 ] as const;
 
+const WRITE_SUCCESS_TOOLS = new Set([
+  "saveMealMacros",
+  "recordHydration",
+  "logWorkout",
+]);
+
+function hasWriteSuccess(truths: ActionTruthRecord[]): boolean {
+  return truths.some(
+    (t) =>
+      t.status === "SUCCEEDED" &&
+      typeof t.tool === "string" &&
+      WRITE_SUCCESS_TOOLS.has(t.tool),
+  );
+}
+
 /**
  * Strip machine success flags unless lifecycle is SUCCEEDED.
  * PENDING_CONFIRMATION forces saved=false when present.
@@ -37,7 +52,7 @@ export function enforceActionTruthOnPayload(
   truths: ActionTruthRecord[],
 ): Record<string, unknown> | null {
   if (!payload) return payload;
-  const hasSucceeded = truths.some((t) => t.status === "SUCCEEDED");
+  const hasSucceeded = hasWriteSuccess(truths);
   const hasPending = truths.some((t) => t.status === "PENDING_CONFIRMATION");
   const next: Record<string, unknown> = { ...payload };
 
@@ -90,7 +105,7 @@ export function scrubFalseSuccessClaims(
   message: string,
   truths: ActionTruthRecord[],
 ): string {
-  const hasSucceeded = truths.some((t) => t.status === "SUCCEEDED");
+  const hasSucceeded = hasWriteSuccess(truths);
   if (hasSucceeded || !message.trim()) return message;
 
   const hasPending = truths.some((t) => t.status === "PENDING_CONFIRMATION");

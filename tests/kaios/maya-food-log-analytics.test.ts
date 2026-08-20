@@ -103,4 +103,17 @@ describe("macrosForMayaFoodLogConfirm", () => {
       }),
     ).toEqual({ calories: 280, protein: 4, carbs: 48, fat: 8 });
   });
+
+  it("reads food_analysis envelopes that use carb singular", () => {
+    expect(
+      macrosForMayaFoodLogConfirm({
+        coach: "maya",
+        userMessage: "bunu yedim",
+        assistantText: "Afiyet.",
+        envelopeData: {
+          food_analysis: { calories: 280, protein: 4, carb: 48, fat: 8 },
+        },
+      }),
+    ).toEqual({ calories: 280, protein: 4, carbs: 48, fat: 8 });
+  });
 });

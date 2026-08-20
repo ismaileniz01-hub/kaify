@@ -124,11 +124,24 @@ export function extractMealMacrosFromRecord(
   const own = finalizeMacros(
     numField(rec.calories ?? rec.kcal),
     numField(rec.protein ?? rec.protein_g),
-    numField(rec.carbs ?? rec.carbohydrates ?? rec.carbs_g ?? rec.karbonhidrat),
+    numField(
+      rec.carbs ??
+        rec.carb ??
+        rec.carbohydrates ??
+        rec.carbs_g ??
+        rec.carb_g ??
+        rec.karbonhidrat,
+    ),
     numField(rec.fat ?? rec.fat_g),
   );
   if (own) return own;
-  for (const key of ["macros", "meal", "nutrition", "analysis"] as const) {
+  for (const key of [
+    "macros",
+    "meal",
+    "nutrition",
+    "analysis",
+    "food_analysis",
+  ] as const) {
     const nested = extractMealMacrosFromRecord(rec[key]);
     if (nested) return nested;
   }

@@ -209,14 +209,6 @@ async function getProfileLocaleAndSafety(
   };
 }
 
-async function getLocale(
-  admin: ReturnType<typeof createAdminSupabaseClient>,
-  userId: string,
-): Promise<string> {
-  const { savedLocale } = await getProfileLocaleAndSafety(admin, userId);
-  return savedLocale;
-}
-
 async function getCoachingState(
   admin: ReturnType<typeof createAdminSupabaseClient>,
   userId: string,

@@ -251,6 +251,17 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
 
   if (msg.length === 0) return "unknown";
 
+  const prev = input.previousAssistantMessage ?? "";
+  if (
+    input.coach === "maya" &&
+    /^(?:ok|okay|tamam|evet|yes|yep|yeah|olur|içtim|ictim|sure)[\s!.?…]*$/iu.test(
+      msg,
+    ) &&
+    /\b(su|suyu|water|hydrat|bardak)\b/i.test(prev)
+  ) {
+    return "hydration";
+  }
+
   // Finished-session logs are celebration + analytics, never a new program JSON.
   if (input.coach === "alex" && looksLikeWorkoutCompletion(msg)) {
     return "motivation";

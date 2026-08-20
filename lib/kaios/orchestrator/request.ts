@@ -47,7 +47,7 @@ import {
   maybeQueueMayaFoodLogConfirmation,
   prefetchToolKnowledge,
 } from "@/lib/kaios/tools/dispatch";
-import { maybeQueueCoachLogConfirmation, looksLikeChatYes } from "@/lib/kaios/analytics/chat-log";
+import { maybeQueueCoachLogConfirmation } from "@/lib/kaios/analytics/chat-log";
 import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
 import { ensureMayaAlexHandoff } from "@/lib/kaios/maya/alex-handoff";
 import { ensureMayaAnalyticsSavedAck } from "@/lib/kaios/maya/analytics-ack";
@@ -68,7 +68,6 @@ import type { SseChunk } from "@/lib/api/sse";
 import type { MessageType } from "@/lib/types/database.types";
 import { ensureStructuredPlanVisible } from "@/lib/kaios/plan-speech";
 import {
-  confirmLatestPendingAnalytics,
   confirmPendingAnalytics,
 } from "@/lib/services/analytics-confirmation.service";
 
@@ -561,39 +560,7 @@ export async function* orchestrateCoachChat(
     }
   }
 
-  let confirmedWaterFromPending = false;
-  if (input.coachId === "maya" && looksLikeChatYes(input.message)) {
-    try {
-      const applied = await confirmLatestPendingAnalytics(input.userId);
-      if (applied?.meal) {
-        mealSaved = true;
-        actionTruth = [
-          ...actionTruth,
-          {
-            status: "SUCCEEDED",
-            tool: "saveMealMacros",
-            data: { saved: true, ...applied.meal },
-          },
-        ];
-      }
-      if (applied?.patch?.waterLiters != null) {
-        waterSaved = true;
-        confirmedWaterFromPending = true;
-        actionTruth = [
-          ...actionTruth,
-          {
-            status: "SUCCEEDED",
-            tool: "recordHydration",
-            data: { saved: true, ...applied.patch },
-          },
-        ];
-      }
-    } catch {
-      // Ignore leftover-card failures; water write below can still run.
-    }
-  }
-
-  if (!confirmedWaterFromPending && (input.coachId === "maya" || !confirmation)) {
+  if (input.coachId === "maya" || !confirmation) {
     const coachLog = await maybeQueueCoachLogConfirmation({
       userId: input.userId,
       coach: input.coachId,

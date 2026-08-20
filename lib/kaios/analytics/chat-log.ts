@@ -86,6 +86,13 @@ export function parseHydrationLiters(
     return GLASS_LITERS;
   }
   if (looksLikeWaterYes(msg, previousAssistant)) return GLASS_LITERS;
+  if (
+    previousAssistant &&
+    WATER_NUDGE_RE.test(previousAssistant) &&
+    DRINK_VERB_RE.test(msg)
+  ) {
+    return GLASS_LITERS;
+  }
   return null;
 }
 
