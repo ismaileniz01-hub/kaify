@@ -400,7 +400,7 @@ export async function runCouncilTurn(params: {
       thread_type: "team" as const,
       sender: "coach" as const,
       message_type: "team_meeting" as const,
-      content: sanitizeCoachVisibleText(s.text, locale),
+      content: sanitizeCoachVisibleText(s.text, locale, s.coachId),
       payload: {
         schema_version: SCHEMA_VERSION,
         coach: "council",

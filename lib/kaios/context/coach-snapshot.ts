@@ -8,12 +8,14 @@ import { getTodayNutritionSnapshot } from "@/lib/services/analytics.service";
 import { logger } from "@/lib/logger";
 import {
   extractAlexPlanFocus,
+  extractAlexPlanFocusFromSpeech,
   extractPhysiqueFromLeoPayload,
   formatNutritionSnapshot,
 } from "@/lib/kaios/context/physique-summary";
 
 export {
   extractAlexPlanFocus,
+  extractAlexPlanFocusFromSpeech,
   extractPhysiqueFromLeoPayload,
   formatNutritionSnapshot,
   humanizePlanDayLabel,
@@ -34,8 +36,13 @@ function compactPhysiqueRows(rows: unknown[]): string {
 export function pickAlexPlanFocus(rows: unknown[]): string {
   for (const row of rows) {
     if (!row || typeof row !== "object") continue;
-    const plan = extractAlexPlanFocus((row as { payload?: unknown }).payload);
-    if (plan) return plan;
+    const rec = row as { payload?: unknown; content?: unknown };
+    const fromPayload = extractAlexPlanFocus(rec.payload);
+    if (fromPayload) return fromPayload;
+    if (typeof rec.content === "string") {
+      const fromSpeech = extractAlexPlanFocusFromSpeech(rec.content);
+      if (fromSpeech) return fromSpeech;
+    }
   }
   return "";
 }
@@ -62,13 +69,13 @@ export async function loadCrossCoachSnapshot(userId: string): Promise<string> {
       .limit(3),
     admin
       .from("chat_messages")
-      .select("payload")
+      .select("payload, content")
       .eq("user_id", userId)
       .eq("coach_id", "alex")
       .eq("sender", "coach")
-      .eq("message_type", "workout_plan")
+      .in("message_type", ["workout_plan", "text"])
       .order("created_at", { ascending: false })
-      .limit(8),
+      .limit(12),
   ]);
 
   const parts: string[] = [];

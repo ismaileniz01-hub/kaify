@@ -322,7 +322,7 @@ export async function analyzePhoto(
     result = {
       ...result,
       summary: ensureMayaMealWaterReminder({
-        text: sanitizeCoachVisibleText(result.summary, locale),
+        text: sanitizeCoachVisibleText(result.summary, locale, "maya"),
         locale,
         coachId: "maya",
         intent: "meal_analysis",
@@ -332,7 +332,7 @@ export async function analyzePhoto(
   } else {
     result = {
       ...result,
-      summary: sanitizeCoachVisibleText(result.summary, locale),
+      summary: sanitizeCoachVisibleText(result.summary, locale, "leo"),
     };
   }
 

@@ -53,6 +53,18 @@ export type NormalizedWorkoutDay = {
   exercises: NormalizedWorkoutExercise[];
 };
 
+/** True when a plan day lists at least one named lift — labels alone are not a program. */
+export function workoutDayHasLifts(day: unknown): boolean {
+  if (!day || typeof day !== "object" || Array.isArray(day)) return false;
+  const exercises = (day as { exercises?: unknown }).exercises;
+  if (!Array.isArray(exercises)) return false;
+  return exercises.some((ex) => {
+    if (!ex || typeof ex !== "object" || Array.isArray(ex)) return false;
+    const name = (ex as { name?: unknown }).name;
+    return typeof name === "string" && name.trim().length > 0;
+  });
+}
+
 export function extractWorkoutDays(ui: unknown): PlanDay[] {
   const rec = asRecord(ui);
   if (!rec) return [];

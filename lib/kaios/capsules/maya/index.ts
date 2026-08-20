@@ -152,10 +152,18 @@ export function selectMayaCapsules(task: string): string[] {
   if (t.includes("food_log")) {
     out.push(MAYA_FOOD_LOG);
   }
-  if (t === "food_analysis" || t.includes("food") || t.includes("meal_anal")) {
+  if (
+    t === "food_analysis" ||
+    t.includes("meal_anal") ||
+    (t.includes("food") && !t.includes("food_log"))
+  ) {
     out.push(MAYA_FOOD_ANALYSIS);
   }
-  if (t === "meal_planning" || t.includes("plan") || t.includes("nutrition")) {
+  if (
+    t === "meal_planning" ||
+    t.includes("nutrition") ||
+    (t.includes("plan") && !t.includes("food_log"))
+  ) {
     out.push(MAYA_MEAL_PLANNING);
   }
   if (
@@ -164,8 +172,8 @@ export function selectMayaCapsules(task: string): string[] {
     t.includes("water") ||
     t.includes("food_log") ||
     t === "food_analysis" ||
-    t.includes("food") ||
-    t.includes("meal_anal")
+    t.includes("meal_anal") ||
+    (t.includes("food") && !t.includes("food_log"))
   ) {
     out.push(MAYA_HYDRATION);
   }

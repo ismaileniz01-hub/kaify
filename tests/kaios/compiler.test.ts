@@ -90,4 +90,24 @@ describe("USER_CONTEXT budget keeps teammate facts", () => {
     expect(blob).toContain("leo_lagging: back,calves");
     expect(blob).toContain("calorie_goal: 2100");
   });
+
+  it("keeps TEAM_FACTS on history turns below programming tier", () => {
+    const ctx = buildRuntimeContext({
+      coach: "kai",
+      message: "bugün ne yesem",
+      locale: "tr",
+      teamFacts: ["alex_last_plan: Push | Pull", "leo_lagging: back"],
+      conversationTurns: [
+        { role: "user", content: "dün antrenman yaptım" },
+        { role: "assistant", content: "Harika, nasıldı?" },
+      ],
+    });
+    expect(ctx.tier).toBeGreaterThanOrEqual(1);
+    expect(ctx.teamFacts?.join(" ")).toContain("alex_last_plan: Push | Pull");
+    const blob = compilePrompt(ctx)
+      .messages.map((m) => m.content)
+      .join("\n");
+    expect(blob).toContain("alex_last_plan: Push | Pull");
+    expect(blob).toContain("leo_lagging: back");
+  });
 });

@@ -146,7 +146,17 @@ export function selectActiveCapsules(
     task = `${task}+motivation`;
   }
   if (coach === "maya" && looksLikeFoodConsumption(msg)) {
-    task = `${task}+food_log`;
+    const extras = task
+      .split("+")
+      .map((part) => part.trim())
+      .filter(
+        (part) =>
+          part.length > 0 &&
+          part !== "food_log" &&
+          part !== "meal_planning" &&
+          part !== "nutrition_question",
+      );
+    task = ["food_log", ...extras].join("+");
   }
   switch (coach) {
     case "alex":

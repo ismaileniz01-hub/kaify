@@ -77,10 +77,25 @@ describe("extractAlexPlanFocus", () => {
       extractAlexPlanFocus({
         ui: {
           cardType: "workout_plan",
-          days: [{ name: "Push" }, { name: "Pull" }, { focus: "Legs" }],
+          days: [
+            { name: "Push", exercises: [{ name: "Bench Press" }] },
+            { name: "Pull", exercises: [{ name: "Barbell Row" }] },
+            { focus: "Legs", exercises: [{ name: "Squat" }] },
+          ],
         },
       }),
     ).toBe("alex_last_plan: Push | Pull | Legs");
+  });
+
+  it("ignores stub days that only have labels", () => {
+    expect(
+      extractAlexPlanFocus({
+        ui: {
+          cardType: "workout_plan",
+          days: [{ name: "Push" }, { name: "Pull" }, { focus: "Legs" }],
+        },
+      }),
+    ).toBeNull();
   });
 
   it("skips empty workout_plan rows so a later real plan wins", () => {
@@ -91,7 +106,10 @@ describe("extractAlexPlanFocus", () => {
           payload: {
             ui: {
               cardType: "workout_plan",
-              days: [{ name: "Push" }, { name: "Pull" }],
+              days: [
+                { name: "Push", exercises: [{ name: "Bench Press" }] },
+                { name: "Pull", exercises: [{ name: "Row" }] },
+              ],
             },
           },
         },
@@ -105,9 +123,21 @@ describe("extractAlexPlanFocus", () => {
         ui: {
           cardType: "workout_plan",
           days: [
-            { dayKey: "workout.day1", focusKey: "workout.chest_triceps" },
-            { dayKey: "workout.day2", focusKey: "workout.back_biceps" },
-            { dayKey: "Pazartesi", focusKey: "Pull" },
+            {
+              dayKey: "workout.day1",
+              focusKey: "workout.chest_triceps",
+              exercises: [{ name: "Bench Press" }],
+            },
+            {
+              dayKey: "workout.day2",
+              focusKey: "workout.back_biceps",
+              exercises: [{ name: "Row" }],
+            },
+            {
+              dayKey: "Pazartesi",
+              focusKey: "Pull",
+              exercises: [{ name: "Pulldown" }],
+            },
           ],
         },
       }),
@@ -119,10 +149,24 @@ describe("extractAlexPlanFocus", () => {
       extractAlexPlanFocus({
         ui: { cardType: "workout_plan" },
         data: {
-          days: [{ focusKey: "Push" }, { focusKey: "Legs" }],
+          days: [
+            { focusKey: "Push", exercises: [{ name: "Bench Press" }] },
+            { focusKey: "Legs", exercises: [{ name: "Squat" }] },
+          ],
         },
       }),
     ).toBe("alex_last_plan: Push | Legs");
+  });
+
+  it("reads a spoken Alex program saved as text", () => {
+    expect(
+      pickAlexPlanFocus([
+        {
+          content:
+            "Pazartesi - Push\n- Bench Press 4x8\nSalı - Pull\n- Barbell Row 4x10",
+        },
+      ]),
+    ).toBe("alex_last_plan: Push | Pull");
   });
 });
 

@@ -11,7 +11,11 @@
 
 import { ModelRouter } from "@/lib/ai/model-router";
 import { extractJsonObject } from "@/lib/ai/extract-json";
-import { parseWorkoutDaysFromSpeech } from "@/lib/kaios/plan-speech";
+import {
+  ensureStructuredPlanVisible,
+  parseWorkoutDaysFromSpeech,
+  workoutDayHasLifts,
+} from "@/lib/kaios/plan-speech";
 import {
   containsCanary,
   scrubModelOutput,
@@ -66,7 +70,6 @@ import {
 import { logger } from "@/lib/logger";
 import type { SseChunk } from "@/lib/api/sse";
 import type { MessageType } from "@/lib/types/database.types";
-import { ensureStructuredPlanVisible } from "@/lib/kaios/plan-speech";
 import {
   confirmPendingAnalytics,
 } from "@/lib/services/analytics-confirmation.service";
@@ -155,7 +158,11 @@ function hasWorkoutPlanUi(envelope: BaseEnvelope): boolean {
     return false;
   }
   const ui = envelope.ui as Record<string, unknown>;
-  return ui.cardType === "workout_plan" && Array.isArray(ui.days) && ui.days.length > 0;
+  return (
+    ui.cardType === "workout_plan" &&
+    Array.isArray(ui.days) &&
+    ui.days.some(workoutDayHasLifts)
+  );
 }
 
 function coerceWorkoutPlanEnvelope(
@@ -586,6 +593,7 @@ export async function* orchestrateCoachChat(
       t.tool === "validateExerciseIds" && t.status === "FAILED",
   );
   if (idValidationFailed) {
+    const keepPlanUi = hasWorkoutPlanUi(envelope);
     envelope = {
       ...envelope,
       message:
@@ -598,6 +606,7 @@ export async function* orchestrateCoachChat(
         status: "proposed",
         exercise_validation: "failed",
       },
+      ...(keepPlanUi ? {} : { ui: undefined }),
     };
     assistantText = envelope.message;
   }
@@ -607,6 +616,7 @@ export async function* orchestrateCoachChat(
       text: sanitizeCoachVisibleText(
         coachVisibleMessage(scrubFalseSuccessClaims(assistantText, actionTruth)),
         input.locale,
+        input.coachId,
       ),
       locale: input.locale,
       coachId: input.coachId,

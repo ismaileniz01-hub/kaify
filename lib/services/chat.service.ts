@@ -681,6 +681,7 @@ async function* streamKaiosCoachReply(
     assistantText = sanitizeCoachVisibleText(
       meta.assistantText || assistantText,
       locale,
+      params.coachId,
     );
     if (
       isStreamCompletionSuspicious({
@@ -1107,6 +1108,7 @@ export async function* streamCoachReply(
     assistantText = sanitizeCoachVisibleText(
       coachVisibleMessage(scrubModelOutput(assistantText, canary)),
       locale,
+      params.coachId,
     );
     if (
       isStreamCompletionSuspicious({

@@ -59,10 +59,39 @@ export function looksLikeUnsafeCoachText(text: string): boolean {
 export function sanitizeCoachVisibleText(
   text: string,
   locale?: string | null,
+  coachId?: string | null,
 ): string {
   const spoken = coachVisibleMessage(text).trim();
   if (looksLikeUnsafeCoachText(spoken)) return coachRetryLine(locale);
-  return spoken;
+  return scrubCoachLaneVoice(spoken, coachId);
+}
+
+/**
+ * Capsules are prompt-only; this stops Maya/Leo/Kai from leaking Alex gym-bark
+ * nicknames (reis/kral/bro) into the persisted reply.
+ */
+export function scrubCoachLaneVoice(
+  text: string,
+  coachId?: string | null,
+): string {
+  const coach = (coachId ?? "").toLowerCase();
+  if (!coach || coach === "alex") return text;
+
+  const pattern =
+    coach === "kai"
+      ? /\b(reis|kral)\b/gi
+      : coach === "maya" || coach === "leo"
+        ? /\b(reis|kral|bro)\b/gi
+        : null;
+  if (!pattern) return text;
+
+  const next = text
+    .replace(pattern, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/ +([,.;:!?])/g, "$1")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return next.length > 0 ? next : text;
 }
 
 /** Quota / auth / validation stay real errors. Everything else becomes a retry line. */

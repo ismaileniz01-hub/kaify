@@ -141,6 +141,7 @@ export const ModelRouter = {
     const summary = sanitizeCoachVisibleText(
       scrubModelOutput(content, synth.canary),
       params.locale,
+      params.persona,
     );
 
     return {

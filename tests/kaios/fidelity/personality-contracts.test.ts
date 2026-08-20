@@ -242,11 +242,19 @@ describe("KAIOS personality prompt contracts", () => {
         message: "1 hatay doner gomdum",
         locale: "tr",
         userState: "user_gender: male",
+        teamFacts: ["alex_last_plan: Push | Pull", "leo_lagging: back"],
+        conversationTurns: [
+          { role: "user", content: "selam" },
+          { role: "assistant", content: "Nasılsın?" },
+        ],
       });
       expect(blob).toMatch(/maya\.mode\.food_log|no greeting reset/i);
+      expect(blob).not.toContain("maya.mode.meal_planning");
       expect(blob).toMatch(/feminine_coach|male_user/i);
       expect(blob).toMatch(/four labeled macros|confirmation/i);
       expect(blob).toMatch(/after_every_meal|glass of water|bardak su/i);
+      expect(blob).toContain("alex_last_plan: Push | Pull");
+      expect(blob).toContain("leo_lagging: back");
     });
   });
 

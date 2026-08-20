@@ -107,6 +107,8 @@ describe("KAIOS capsules", () => {
     const mayaLog = loadCoachCapsules("maya", "food_log");
     expect(mayaLog).toContain(MAYA_FOOD_LOG);
     expect(mayaLog).toContain(MAYA_HYDRATION);
+    expect(mayaLog).not.toContain(MAYA_FOOD_ANALYSIS);
+    expect(mayaLog).not.toContain(MAYA_MEAL_PLANNING);
 
     const leo = loadCoachCapsules("leo", "scoring");
     expect(leo).toContain(LEO_SCORING);

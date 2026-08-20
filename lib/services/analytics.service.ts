@@ -1,4 +1,4 @@
-import { localDayQueryWindow, localTodayDate, isLocalDate } from "@/lib/date-utils";
+import { localTodayDate } from "@/lib/date-utils";
 import { cached } from "@/lib/cache";
 import { CacheKeys, CacheTTL } from "@/lib/cache/keys";
 import type { Json } from "@/lib/types/database.types";
@@ -8,7 +8,6 @@ import {
   readAnalyticsDailyRow,
   readHealthStepsRange,
   readLeoAnalysisMessages,
-  readMayaAnalysisMessages,
   readPreviousWeightKg,
   readLatestWeightKg,
   readLatestGoalRow,
@@ -130,37 +129,6 @@ function defaultToday(entryDate?: string): AnalyticsDailyDTO {
   };
 }
 
-type MealTotals = {
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-};
-
-function extractFoodFromPayload(payload: Json | null): MealTotals | null {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
-  const analysis = (payload as Record<string, unknown>).analysis;
-  if (!analysis || typeof analysis !== "object" || Array.isArray(analysis)) return null;
-  const food = (analysis as Record<string, unknown>).food_analysis;
-  if (!food || typeof food !== "object" || Array.isArray(food)) return null;
-
-  const row = food as Record<string, unknown>;
-  const calories = Number(row.calories);
-  const protein = Number(row.protein);
-  const carbs = Number(row.carb ?? row.carbs);
-  const fat = Number(row.fat);
-  if (![calories, protein, carbs, fat].some((n) => Number.isFinite(n) && n > 0)) {
-    return null;
-  }
-
-  return {
-    calories: Number.isFinite(calories) ? Math.max(0, Math.round(calories)) : 0,
-    protein: Number.isFinite(protein) ? Math.max(0, Math.round(protein)) : 0,
-    carbs: Number.isFinite(carbs) ? Math.max(0, Math.round(carbs)) : 0,
-    fat: Number.isFinite(fat) ? Math.max(0, Math.round(fat)) : 0,
-  };
-}
-
 function extractBodyScoreFromPayload(payload: Json | null): number | null {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
   const analysis = (payload as Record<string, unknown>).analysis;
@@ -247,43 +215,6 @@ async function computeWeeklyScore(
   };
 }
 
-/** Sum Maya food-photo analyses for a local calendar day from chat messages. */
-async function sumMayaMealsForDay(
-  userId: string,
-  entryDate: string,
-  timezone: string,
-): Promise<MealTotals> {
-  const admin = createAnalyticsAdminReadClient();
-  const { start, end } = localDayQueryWindow(entryDate, timezone);
-
-  const messages = await readMayaAnalysisMessages(admin, userId, start, end);
-
-  const chatTotals: MealTotals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
-  for (const msg of messages) {
-    if (!isLocalDate(msg.created_at, entryDate, timezone)) continue;
-    const meal = extractFoodFromPayload(msg.payload ?? null);
-    if (!meal) continue;
-    chatTotals.calories += meal.calories;
-    chatTotals.protein += meal.protein;
-    chatTotals.carbs += meal.carbs;
-    chatTotals.fat += meal.fat;
-  }
-  return chatTotals;
-}
-
-function mergeMealTotals(stored: AnalyticsDailyDTO, chat: MealTotals): AnalyticsDailyDTO {
-  if (chat.calories === 0 && chat.protein === 0 && chat.carbs === 0 && chat.fat === 0) {
-    return stored;
-  }
-  return {
-    ...stored,
-    caloriesConsumed: Math.max(stored.caloriesConsumed, chat.calories),
-    proteinG: Math.max(stored.proteinG, chat.protein),
-    carbsG: Math.max(stored.carbsG, chat.carbs),
-    fatG: Math.max(stored.fatG, chat.fat),
-  };
-}
-
 /** Lightweight today snapshot for the home screen (no weekly score). */
 export async function getTodayNutritionSnapshot(userId: string): Promise<AnalyticsDailyDTO> {
   return cached(
@@ -306,9 +237,7 @@ async function loadTodayNutritionSnapshot(userId: string): Promise<AnalyticsDail
   ]);
 
   const stored = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today);
-  const chatTotals = await sumMayaMealsForDay(userId, today, timezone);
-  const merged = mergeMealTotals(stored, chatTotals);
-  const todayDto = hydrateTodaySnapshot(merged, {
+  const todayDto = hydrateTodaySnapshot(stored, {
     hasTodayRow: Boolean(todayRow),
     lastWeightKg: lastWeightKg ?? profileWeightKg,
     lastGoals: lastGoalRow
@@ -355,9 +284,7 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
     ]);
 
   const storedDto = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today);
-  const chatTotals = await sumMayaMealsForDay(userId, today, timezone);
-  let todayDto = mergeMealTotals(storedDto, chatTotals);
-  todayDto = hydrateTodaySnapshot(todayDto, {
+  let todayDto = hydrateTodaySnapshot(storedDto, {
     hasTodayRow: Boolean(todayRow),
     lastWeightKg: lastWeightKg ?? profileWeightKg,
     lastGoals: lastGoalRow

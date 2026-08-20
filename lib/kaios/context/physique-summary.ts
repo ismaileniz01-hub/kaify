@@ -2,6 +2,7 @@
  * Pure cross-coach fact formatters — no service imports (avoids cycles).
  */
 
+import { parseWorkoutDaysFromSpeech, workoutDayHasLifts } from "@/lib/kaios/plan-speech";
 import { MUSCLE_GROUPS } from "@/lib/validations/analysis.schema";
 
 const MUSCLE_SET = new Set<string>(MUSCLE_GROUPS);
@@ -201,17 +202,29 @@ function labelFromPlanDay(rec: Record<string, unknown>): string {
   return "";
 }
 
-export function extractAlexPlanFocus(payload: unknown): string | null {
-  if (!payload || typeof payload !== "object") return null;
-  const root = payload as Record<string, unknown>;
+function compactPlanDayNames(days: unknown[]): string | null {
   const names: string[] = [];
-  for (const day of daysFromPlanPayload(root)) {
+  for (const day of days) {
+    if (!workoutDayHasLifts(day)) continue;
     if (!day || typeof day !== "object") continue;
     const label = labelFromPlanDay(day as Record<string, unknown>);
     if (label && names.length < 7) names.push(label);
   }
   if (names.length === 0) return null;
   return `alex_last_plan: ${names.join(" | ")}`;
+}
+
+export function extractAlexPlanFocus(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const root = payload as Record<string, unknown>;
+  return compactPlanDayNames(daysFromPlanPayload(root));
+}
+
+/** Spoken Alex programs saved as text still become teammate facts. */
+export function extractAlexPlanFocusFromSpeech(text: string): string | null {
+  if (!text.trim()) return null;
+  const days = parseWorkoutDaysFromSpeech(text);
+  return compactPlanDayNames(days);
 }
 
 const TEAM_FACT_KEEP =

@@ -4,6 +4,7 @@ import {
   isSoftCoachFailure,
   looksLikeUnsafeCoachText,
   sanitizeCoachVisibleText,
+  scrubCoachLaneVoice,
 } from "@/lib/kaios/coach-retry";
 
 describe("sanitizeCoachVisibleText", () => {
@@ -35,6 +36,21 @@ describe("sanitizeCoachVisibleText", () => {
     expect(
       sanitizeCoachVisibleText("Last set failed at 80kg, drop the load.", "en"),
     ).toBe("Last set failed at 80kg, drop the load.");
+  });
+
+  it("strips Alex gym-bark nicknames from Maya, Leo, and Kai", () => {
+    expect(
+      sanitizeCoachVisibleText("Selam reis, protein hedefin 150.", "tr", "maya"),
+    ).toBe("Selam, protein hedefin 150.");
+    expect(scrubCoachLaneVoice("Nice work bro, calves are lagging.", "leo")).toBe(
+      "Nice work, calves are lagging.",
+    );
+    expect(scrubCoachLaneVoice("Tamam kral, yarın gideriz.", "kai")).toBe(
+      "Tamam, yarın gideriz.",
+    );
+    expect(sanitizeCoachVisibleText("Hadi reis, bench zamanı.", "tr", "alex")).toBe(
+      "Hadi reis, bench zamanı.",
+    );
   });
 });
 

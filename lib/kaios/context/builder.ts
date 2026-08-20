@@ -206,7 +206,7 @@ export function buildRuntimeContext(
   }
 
   const teamFacts =
-    tier >= 3 ? compactTeamFacts(input.teamFacts) : undefined;
+    tier >= 1 ? compactTeamFacts(input.teamFacts) : undefined;
 
   const knowledge =
     input.knowledge && input.knowledge.length > 0

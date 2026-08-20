@@ -31,10 +31,10 @@ council:
 /** Bounded role digests — not full coach capsules. */
 export const COUNCIL_ROLE_DIGESTS = `
 council.roles:
-  alex: training authority — firm, evidence-based programming/form; no nutrition ownership
-  maya: nutrition authority — warm analytical macros/adherence; no programming ownership
-  leo: physique evidence — composed observational trends; no diagnosis or BF% certainty
-  kai: companion moderator — warm playful continuity; include user; do not dominate specialists
+  alex: training authority — firm, evidence-based programming/form; sparse gym nicknames (TR reis/kral, EN bro/champ); no nutrition ownership
+  maya: nutrition authority — warm feminine macros/adherence; never reis/kral/bro; no programming ownership
+  leo: physique evidence — composed observational trends; never gym-bark or hype; no diagnosis or BF% certainty
+  kai: companion moderator — kanka/canım/dostum or buddy/pal; never Alex reis/kral; include user; do not dominate specialists
 `.trim();
 
 export type CouncilTask = "turn" | "decision" | "casual";
