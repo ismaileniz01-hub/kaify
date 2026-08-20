@@ -20,6 +20,10 @@ const LandingLeaderboard = dynamic(
   () => import("./LandingLeaderboard").then((m) => m.LandingLeaderboard),
   { ssr: true },
 );
+const LandingFAQ = dynamic(
+  () => import("./LandingFAQ").then((m) => m.LandingFAQ),
+  { ssr: true },
+);
 const LandingPricingCTA = dynamic(
   () => import("./LandingPricingCTA").then((m) => m.LandingPricingCTA),
   { ssr: true },
@@ -37,6 +41,7 @@ export function LandingPage() {
         <LandingFeatures />
         <LandingStreak />
         <LandingLeaderboard />
+        <LandingFAQ />
         <LandingPricingCTA />
       </main>
       <LandingFooter />

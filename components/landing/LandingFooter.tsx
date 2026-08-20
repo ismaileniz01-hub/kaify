@@ -33,6 +33,9 @@ export function LandingFooter() {
           <Link href="/#features" className="transition hover:text-white">
             {t("landing.nav.features")}
           </Link>
+          <Link href="/#faq" className="transition hover:text-white">
+            {t("landing.nav.faq")}
+          </Link>
           <Link href="/pricing" className="transition hover:text-white">
             {t("landing.nav.pricing")}
           </Link>

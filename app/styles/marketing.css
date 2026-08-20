@@ -284,6 +284,186 @@ html[data-cookie-banner="open"] .phone-shell {
   background: rgba(6, 182, 212, 0.2);
 }
 
+.landing-section-glow--faq {
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(139, 92, 246, 0.22);
+}
+
+.landing-section--faq {
+  background: linear-gradient(180deg, #050308 0%, #0b0614 48%, #050308 100%);
+}
+
+.landing-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.landing-faq-item {
+  --faq-accent: #a855f7;
+  --faq-accent-soft: rgba(168, 85, 247, 0.18);
+  --faq-accent-glow: rgba(168, 85, 247, 0.28);
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(160deg, rgba(22, 12, 36, 0.78) 0%, rgba(8, 4, 16, 0.94) 100%);
+  overflow: hidden;
+  transition:
+    border-color 0.35s ease,
+    box-shadow 0.45s ease,
+    background 0.45s ease;
+}
+
+.landing-faq-item--cyan {
+  --faq-accent: #22d3ee;
+  --faq-accent-soft: rgba(34, 211, 238, 0.16);
+  --faq-accent-glow: rgba(34, 211, 238, 0.24);
+}
+
+.landing-faq-item--green {
+  --faq-accent: #34d399;
+  --faq-accent-soft: rgba(52, 211, 153, 0.16);
+  --faq-accent-glow: rgba(52, 211, 153, 0.24);
+}
+
+.landing-faq-item--blue {
+  --faq-accent: #60a5fa;
+  --faq-accent-soft: rgba(96, 165, 250, 0.16);
+  --faq-accent-glow: rgba(96, 165, 250, 0.24);
+}
+
+.landing-faq-item--orange {
+  --faq-accent: #fb923c;
+  --faq-accent-soft: rgba(251, 146, 60, 0.16);
+  --faq-accent-glow: rgba(251, 146, 60, 0.24);
+}
+
+.landing-faq-item--open {
+  border-color: color-mix(in srgb, var(--faq-accent) 45%, transparent);
+  box-shadow: 0 0 36px var(--faq-accent-glow);
+}
+
+.landing-faq-heading {
+  margin: 0;
+}
+
+.landing-faq-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 1rem 1rem 1rem 0.9rem;
+  text-align: start;
+  color: white;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.landing-faq-index {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--faq-accent);
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+
+.landing-faq-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  color: var(--faq-accent);
+  background: var(--faq-accent-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.landing-faq-question {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.landing-faq-chevron {
+  flex-shrink: 0;
+  width: 1.15rem;
+  height: 1.15rem;
+  color: rgb(161 161 170);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), color 0.3s ease;
+}
+
+.landing-faq-item--open .landing-faq-chevron {
+  transform: rotate(180deg);
+  color: var(--faq-accent);
+}
+
+.landing-faq-answer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.landing-faq-item--open .landing-faq-answer {
+  grid-template-rows: 1fr;
+}
+
+.landing-faq-trigger:focus-visible {
+  outline: 2px solid rgba(192, 132, 252, 0.9);
+  outline-offset: -2px;
+}
+
+.landing-faq-answer-inner {
+  overflow: hidden;
+  min-height: 0;
+  margin: 0;
+  padding-block: 0;
+  padding-inline: 1rem;
+  padding-inline-start: 3.9rem;
+  max-width: 52rem;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: rgb(161 161 170);
+}
+
+.landing-faq-item--open .landing-faq-answer-inner {
+  padding-bottom: 1.15rem;
+}
+
+@media (max-width: 639px) {
+  .landing-faq-trigger {
+    gap: 0.6rem;
+    padding: 0.9rem 0.85rem;
+  }
+
+  .landing-faq-index {
+    display: none;
+  }
+
+  .landing-faq-question {
+    font-size: 0.92rem;
+  }
+
+  .landing-faq-answer-inner {
+    padding-inline: 0.85rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (hover: hover) {
+  .landing-faq-item:hover {
+    border-color: color-mix(in srgb, var(--faq-accent) 32%, transparent);
+  }
+}
+
 /* Pillar cards */
 .landing-pillar-card {
   padding: 1.75rem;
@@ -821,6 +1001,11 @@ html[data-cookie-banner="open"] .phone-shell {
   .landing-kai-aura {
     animation: none;
   }
+
+  .landing-faq-answer,
+  .landing-faq-chevron {
+    transition: none;
+  }
 }
 
 /* Phone: keep Kai, CTAs, and coach portraits from stacking on top of each other */
@@ -875,7 +1060,8 @@ html[data-cookie-banner="open"] .phone-shell {
 @media (hover: none) {
   .landing-btn--primary:hover,
   .pricing-card:hover,
-  .landing-pillar-card:hover {
+  .landing-pillar-card:hover,
+  .landing-faq-item:hover {
     transform: none;
     filter: none;
   }

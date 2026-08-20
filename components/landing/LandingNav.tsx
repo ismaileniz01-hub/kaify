@@ -14,6 +14,7 @@ const LINKS = [
   { href: "#features", labelKey: "landing.nav.features" },
   { href: "#streak", labelKey: "landing.nav.streak" },
   { href: "#kai", labelKey: "landing.nav.kai" },
+  { href: "#faq", labelKey: "landing.nav.faq" },
 ] as const;
 
 export function LandingNav({
@@ -72,7 +73,7 @@ export function LandingNav({
           />
         </Link>
 
-        <nav className="hidden items-center gap-7 lg:flex">
+        <nav className="hidden items-center gap-4 xl:gap-7 lg:flex">
           {pricingPage ? (
             <>
               <Link
@@ -92,6 +93,12 @@ export function LandingNav({
                 className="text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-white"
               >
                 {t("landing.nav.features")}
+              </Link>
+              <Link
+                href="/#faq"
+                className="text-sm font-medium text-zinc-400 transition-colors duration-300 hover:text-white"
+              >
+                {t("landing.nav.faq")}
               </Link>
             </>
           ) : (
