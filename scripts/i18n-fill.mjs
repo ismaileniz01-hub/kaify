@@ -23,7 +23,7 @@ const ROOT = join(__dirname, "..");
 const LANG_DIR = join(ROOT, "lib", "lang");
 const SOURCE = "en";
 
-const MODEL = process.env.GEMINI_TRANSLATE_MODEL || "gemini-2.0-flash";
+const MODEL = process.env.GEMINI_TRANSLATE_MODEL || "gemini-3.6-flash";
 const CHUNK_SIZE = 40;
 const MAX_RETRIES = 3;
 

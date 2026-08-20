@@ -36,7 +36,7 @@ export function MacroRing({ label, value, percent, color, gradient }: MacroRingP
 
   return (
     <div
-      className={`analytics-card analytics-card--${gradient} flex flex-col items-center gap-2 p-3`}
+      className={`analytics-card analytics-card--${gradient} flex min-w-0 flex-col items-center gap-1 overflow-hidden p-2 sm:gap-2 sm:p-3`}
       role="progressbar"
       aria-label={label}
       aria-valuemin={0}
@@ -44,7 +44,7 @@ export function MacroRing({ label, value, percent, color, gradient }: MacroRingP
       aria-valuenow={Math.round(percent)}
       aria-valuetext={`${Math.round(percent)}% ${value}`}
     >
-      <div className="relative h-[72px] w-[72px]" aria-hidden>
+      <div className="relative h-[56px] w-[56px] sm:h-[72px] sm:w-[72px]" aria-hidden>
         <svg className="h-full w-full -rotate-90" viewBox="0 0 72 72">
           <circle
             cx="36"

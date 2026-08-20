@@ -51,6 +51,9 @@ export function LandingPricingCTA() {
                     /{t("pricing.unit.month_short")}
                   </span>
                 </p>
+                <p className="mt-1 text-[11px] text-zinc-500">
+                  {t("pricing.depends_on_region")}
+                </p>
                 <p className="mt-3 text-xs leading-relaxed text-zinc-500">
                   {t(`pricing.plan.${plan.id}.tagline`)}
                 </p>
@@ -93,15 +96,15 @@ export function LandingPricingCTA() {
               ))}
             </ul>
 
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <div className="mt-10 flex w-full flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
               <Link
                 href="/pricing"
-                className="landing-btn landing-btn--primary landing-btn--lg group inline-flex gap-2"
+                className="landing-btn landing-btn--primary landing-btn--lg group inline-flex w-full justify-center gap-2 sm:w-auto"
               >
                 {t("landing.pricing.explore_plans")}
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
               </Link>
-              <Link href="/signup" className="landing-btn landing-btn--ghost landing-btn--lg">
+              <Link href="/signup" className="landing-btn landing-btn--ghost landing-btn--lg w-full justify-center sm:w-auto">
                 {t("landing.nav.login")}
               </Link>
             </div>

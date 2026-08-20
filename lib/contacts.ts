@@ -48,7 +48,7 @@ export const CONTACTS: Record<ContactId, Contact> = {
   },
   maya: {
     id: "maya",
-    name: "Dr. Maya",
+    name: "Maya",
     role: "Nutritionist",
     roleKey: "contact.maya.role",
     avatar: "/avatars/maya.webp",

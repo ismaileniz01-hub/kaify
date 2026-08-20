@@ -306,6 +306,9 @@ export function PricingPage() {
                                 ),
                               })}
                         </p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          {t("pricing.depends_on_region")}
+                        </p>
 
                         <p className="mt-4 text-sm leading-relaxed text-zinc-400">
                           {t(`pricing.plan.${plan.id}.description`)}
@@ -427,6 +430,9 @@ export function PricingPage() {
                   </tbody>
                 </table>
               </div>
+              <p className="mt-4 text-center text-sm text-zinc-500">
+                {t("pricing.depends_on_region")}
+              </p>
             </ScrollReveal>
           </div>
         </section>
