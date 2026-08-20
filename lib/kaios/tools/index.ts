@@ -27,6 +27,7 @@ import {
   getTodayNutritionSnapshot,
   patchAnalyticsDaily,
 } from "@/lib/services/analytics.service";
+import { invalidateAnalyticsUserCache } from "@/lib/repositories/analytics-write.repository";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import { extractPhysiqueFromLeoPayload } from "@/lib/kaios/context/physique-summary";
@@ -167,6 +168,7 @@ export async function executeTool(
           };
         }
         await patchAnalyticsDaily(userId, { waterLiters: liters });
+        await invalidateAnalyticsUserCache(userId);
         // Canonical write already succeeded — event is best-effort only.
         await emitKaiosEventBestEffort({
           category: "hydration",

@@ -63,6 +63,29 @@ export async function createPendingAnalyticsConfirmation(params: {
   return data.id;
 }
 
+/** Confirm the newest still-open Maya/Alex analytics card (chat "evet"). */
+export async function confirmLatestPendingAnalytics(
+  userId: string,
+): Promise<PendingAnalyticsPayload | null> {
+  const admin = createAdminSupabaseClient() as SupabaseClient;
+  const { data } = await admin
+    .from("analytics_pending_confirmations")
+    .select("id, payload, created_at")
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data?.id) return null;
+  if (pendingAnalyticsIsExpired(data.created_at)) return null;
+  await confirmPendingAnalytics(userId, data.id);
+  const payload =
+    data.payload && typeof data.payload === "object"
+      ? (data.payload as PendingAnalyticsPayload)
+      : null;
+  return payload;
+}
+
 export async function confirmPendingAnalytics(
   userId: string,
   pendingId: string,

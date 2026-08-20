@@ -9,6 +9,8 @@ import {
   type Intent,
 } from "@/lib/kaios/routing/intent";
 import { extractMealMacrosFromCoachText, extractMealMacrosFromRecord } from "@/lib/kaios/nutrition/parse-macros";
+import { addMealToAnalytics } from "@/lib/services/analytics.service";
+import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import {
   executeTool,
   type ToolName,
@@ -383,8 +385,8 @@ export function macrosForMayaFoodLogConfirm(input: {
 }
 
 /**
- * After an unstructured Maya food-log reply, queue pending meal confirmation
- * from the numbers she already spoke — no second model call.
+ * After an unstructured Maya food-log reply, write the spoken macros to
+ * analytics. Reporting "I ate X" is the confirmation.
  */
 export async function maybeQueueMayaFoodLogConfirmation(input: {
   userId: string;
@@ -400,26 +402,31 @@ export async function maybeQueueMayaFoodLogConfirmation(input: {
   if (!macros) return out;
   if (!isToolAllowedForCoach(input.coach, "saveMealMacros")) return out;
 
-  const result = await executeTool(input.userId, {
-    name: "saveMealMacros",
-    args: macros,
-  });
-  out.toolResults.push({ name: "saveMealMacros", result });
-  const truth = resultToTruth("saveMealMacros", result);
-  out.truths.push(truth);
-  if (
-    truth.status === "PENDING_CONFIRMATION" &&
-    result.ok &&
-    result.data &&
-    typeof result.data === "object"
-  ) {
-    const data = result.data as { pendingId?: string; message?: string };
-    if (typeof data.pendingId === "string") {
-      out.confirmation = {
-        pendingId: data.pendingId,
-        summary: `${macros.calories} kcal · P${macros.protein} C${macros.carbs} F${macros.fat}`,
-      };
-    }
+  try {
+    await addMealToAnalytics(input.userId, macros);
+    await emitKaiosEventBestEffort({
+      category: "nutrition",
+      type: "meal_saved",
+      userId: input.userId,
+      payload: { meal: macros },
+      at: new Date().toISOString(),
+    });
+    out.toolResults.push({
+      name: "saveMealMacros",
+      result: { ok: true, data: { saved: true, ...macros } },
+    });
+    out.truths.push({
+      status: "SUCCEEDED",
+      tool: "saveMealMacros",
+      data: { saved: true, ...macros },
+    });
+  } catch {
+    out.truths.push({
+      status: "FAILED",
+      tool: "saveMealMacros",
+      code: "SAVE_FAILED",
+      message: "Meal could not be written to analytics.",
+    });
   }
   return out;
 }

@@ -13,6 +13,16 @@ describe("ensureMayaAlexHandoff", () => {
     expect(out).toMatch(/Alex/i);
   });
 
+  it("still sends them to Alex when Maya defers sport on a food log", () => {
+    const out = ensureMayaAlexHandoff({
+      text: "Afiyet. Sporu sonra konuşuruz.",
+      locale: "tr",
+      coachId: "maya",
+      userMessage: "bir kase sütlaç yedim",
+    });
+    expect(out).toContain("/chat/alex");
+  });
+
   it("does not duplicate when Maya already named Alex", () => {
     const text = "Bunu Alex ile konuş, /chat/alex";
     expect(

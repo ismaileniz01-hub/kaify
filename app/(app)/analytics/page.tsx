@@ -17,6 +17,7 @@ import { errorToMessage } from "@/lib/i18n/api-error";
 import { formatTime } from "@/lib/i18n/format";
 import { apiGet } from "@/lib/api/client";
 import { summarizeWeeklyEnergy } from "@/lib/analytics/weekly-energy";
+import type { AnalyticsBundleDTO } from "@/lib/services/analytics.service";
 import { AppHeader } from "@/components/navigation/AppHeader";
 
 export default function AnalyticsPage() {

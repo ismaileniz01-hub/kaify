@@ -29,6 +29,7 @@ import { compilePrompt } from "@/lib/kaios/compiler/prompt";
 import {
   needsStructuredOutput,
   resolveIntent,
+  looksLikeFoodConsumption,
   type CoachId,
   type Intent,
 } from "@/lib/kaios/routing/intent";
@@ -46,9 +47,10 @@ import {
   maybeQueueMayaFoodLogConfirmation,
   prefetchToolKnowledge,
 } from "@/lib/kaios/tools/dispatch";
-import { maybeQueueCoachLogConfirmation } from "@/lib/kaios/analytics/chat-log";
+import { maybeQueueCoachLogConfirmation, looksLikeChatYes } from "@/lib/kaios/analytics/chat-log";
 import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
 import { ensureMayaAlexHandoff } from "@/lib/kaios/maya/alex-handoff";
+import { ensureMayaAnalyticsSavedAck } from "@/lib/kaios/maya/analytics-ack";
 import {
   coachRetryLine,
   isCoachRetryLine,
@@ -65,6 +67,10 @@ import { logger } from "@/lib/logger";
 import type { SseChunk } from "@/lib/api/sse";
 import type { MessageType } from "@/lib/types/database.types";
 import { ensureStructuredPlanVisible } from "@/lib/kaios/plan-speech";
+import {
+  confirmLatestPendingAnalytics,
+  confirmPendingAnalytics,
+} from "@/lib/services/analytics-confirmation.service";
 
 export type OrchestrateChatInput = {
   userId: string;
@@ -526,7 +532,68 @@ export async function* orchestrateCoachChat(
     if (foodLog.confirmation) confirmation = foodLog.confirmation;
   }
 
-  if (!confirmation) {
+  let mealSaved = actionTruth.some(
+    (t) => t.tool === "saveMealMacros" && t.status === "SUCCEEDED",
+  );
+  let waterSaved = actionTruth.some(
+    (t) => t.tool === "recordHydration" && t.status === "SUCCEEDED",
+  );
+
+  if (
+    confirmation &&
+    input.coachId === "maya" &&
+    looksLikeFoodConsumption(input.message)
+  ) {
+    try {
+      await confirmPendingAnalytics(input.userId, confirmation.pendingId);
+      actionTruth = [
+        ...actionTruth.filter((t) => t.status !== "PENDING_CONFIRMATION"),
+        {
+          status: "SUCCEEDED",
+          tool: "saveMealMacros",
+          data: { saved: true, pendingId: confirmation.pendingId },
+        },
+      ];
+      mealSaved = true;
+      confirmation = undefined;
+    } catch {
+      // Keep the yes/no card if the write fails.
+    }
+  }
+
+  let confirmedWaterFromPending = false;
+  if (input.coachId === "maya" && looksLikeChatYes(input.message)) {
+    try {
+      const applied = await confirmLatestPendingAnalytics(input.userId);
+      if (applied?.meal) {
+        mealSaved = true;
+        actionTruth = [
+          ...actionTruth,
+          {
+            status: "SUCCEEDED",
+            tool: "saveMealMacros",
+            data: { saved: true, ...applied.meal },
+          },
+        ];
+      }
+      if (applied?.patch?.waterLiters != null) {
+        waterSaved = true;
+        confirmedWaterFromPending = true;
+        actionTruth = [
+          ...actionTruth,
+          {
+            status: "SUCCEEDED",
+            tool: "recordHydration",
+            data: { saved: true, ...applied.patch },
+          },
+        ];
+      }
+    } catch {
+      // Ignore leftover-card failures; water write below can still run.
+    }
+  }
+
+  if (!confirmedWaterFromPending && (input.coachId === "maya" || !confirmation)) {
     const coachLog = await maybeQueueCoachLogConfirmation({
       userId: input.userId,
       coach: input.coachId,
@@ -537,6 +604,13 @@ export async function* orchestrateCoachChat(
     });
     actionTruth = [...actionTruth, ...coachLog.truths];
     if (coachLog.confirmation) confirmation = coachLog.confirmation;
+    if (
+      coachLog.truths.some(
+        (t) => t.tool === "recordHydration" && t.status === "SUCCEEDED",
+      )
+    ) {
+      waterSaved = true;
+    }
   }
 
   // Downgrade invalid Alex program cards.
@@ -588,6 +662,13 @@ export async function* orchestrateCoachChat(
     message: assistantText,
     ui: envelope.ui,
     data: envelope.data,
+  });
+  assistantText = ensureMayaAnalyticsSavedAck({
+    text: assistantText,
+    locale: input.locale,
+    coachId: input.coachId,
+    mealSaved,
+    waterSaved,
   });
   envelope = { ...envelope, message: assistantText };
 

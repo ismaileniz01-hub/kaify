@@ -35,6 +35,12 @@ describe("extractMealMacrosFromCoachText", () => {
     ).toEqual({ calories: 520, protein: 32, carbs: 48, fat: 18 });
   });
 
+  it("parses compact kcal · P · C · F lines", () => {
+    expect(
+      extractMealMacrosFromCoachText("Sütlaç ≈ 280 kcal · 4g protein · 48g carbs · 8g fat"),
+    ).toEqual({ calories: 280, protein: 4, carbs: 48, fat: 8 });
+  });
+
   it("does not treat a protein target as a meal", () => {
     expect(
       extractMealMacrosFromCoachText(

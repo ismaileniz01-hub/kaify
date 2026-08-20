@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  looksLikeChatYes,
   looksLikeWorkoutCompletion,
   parseHydrationLiters,
   parseWorkoutCompletion,
@@ -78,6 +79,7 @@ describe("Maya hydration log → analytics patch", () => {
   it("logs a glass when they say evet after Maya's water nudge", () => {
     const prev =
       "Kalori 280. Öğünden sonra bir bardak su içmeyi unutma.";
+    expect(looksLikeChatYes("evet")).toBe(true);
     expect(parseHydrationLiters("evet", prev)).toBe(0.25);
     expect(
       patchForCoachChatLog("maya", "evet", {

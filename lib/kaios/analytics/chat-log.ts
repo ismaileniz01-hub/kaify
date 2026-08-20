@@ -8,6 +8,9 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { resolveWeightKg } from "@/lib/supabase/profile-compat";
 import { localTodayDate } from "@/lib/date-utils";
 import { createPendingAnalyticsConfirmation } from "@/lib/services/analytics-confirmation.service";
+import { patchAnalyticsDaily } from "@/lib/services/analytics.service";
+import { invalidateAnalyticsUserCache } from "@/lib/repositories/analytics-write.repository";
+import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import type { CoachId } from "@/lib/kaios/routing/intent";
 import type { ActionTruthRecord } from "@/lib/kaios/tools/action-truth";
 import {
@@ -44,13 +47,17 @@ const WATER_YES_RE =
 const GLASS_RE = /\b(?:bir\s+bardak|a\s+glass|bardak\s+su)\b/i;
 const GLASS_LITERS = 0.25;
 
+export function looksLikeChatYes(message: string): boolean {
+  return WATER_YES_RE.test(message.trim());
+}
+
 function looksLikeWaterYes(
   message: string,
   previousAssistant?: string,
 ): boolean {
   const prev = previousAssistant?.trim() ?? "";
   if (!prev || !WATER_NUDGE_RE.test(prev)) return false;
-  return WATER_YES_RE.test(message.trim());
+  return looksLikeChatYes(message);
 }
 
 export function parseHydrationLiters(
@@ -252,6 +259,28 @@ export async function maybeQueueCoachLogConfirmation(input: {
     previousAssistant: input.previousAssistantMessage,
   });
   if (!spec) return { truths: [] };
+
+  if (spec.tool === "recordHydration") {
+    await patchAnalyticsDaily(input.userId, spec.patch);
+    await invalidateAnalyticsUserCache(input.userId);
+    const liters = Number(spec.patch.waterLiters);
+    await emitKaiosEventBestEffort({
+      category: "hydration",
+      type: "hydration_recorded",
+      userId: input.userId,
+      payload: { liters },
+      at: new Date().toISOString(),
+    });
+    return {
+      truths: [
+        {
+          status: "SUCCEEDED",
+          tool: "recordHydration",
+          data: { saved: true, ...spec.patch },
+        },
+      ],
+    };
+  }
 
   const pendingId = await createPendingAnalyticsConfirmation({
     userId: input.userId,

@@ -47,21 +47,23 @@ export function extractMealMacrosFromCoachText(
 ): ParsedMealMacros | null {
   const src = text.normalize("NFC");
   const calories =
-    labeledNumber(src, "kalori(?:ler|ye)?|calories?|kcal|kalorije") ??
+    labeledNumber(src, "kalori(?:ler|ye)?|calories?|kalorije") ??
     (() => {
       const m = src.match(
         /(\d+(?:[.,]\d+)?)(?:\s*[-–—]\s*(\d+(?:[.,]\d+)?))?\s*k(?:cal|kal)/i,
       );
       return m?.[1] ? parseValueOrRange(m[1], m[2]) : null;
     })();
-  const protein = labeledNumber(src, "protein(?:e|i|s)?");
+  const protein = labeledNumber(src, "protein(?:e|i|s)?|proteini");
   const carbs = labeledNumber(
     src,
     "karbonhidrat(?:lar)?|carbohydrates?|carbs?|ugljikohidrat(?:i)?|ugljeni\\s*hidrat(?:i)?",
   );
   const fat = labeledNumber(src, "yağ|yag|fat|masti|masno[cć]a");
 
-  return finalizeMacros(calories, protein, carbs, fat);
+  return (
+    finalizeMacros(calories, protein, carbs, fat) ?? extractCompactMacros(src)
+  );
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -97,6 +99,20 @@ function finalizeMacros(
     carbs: Math.round(carbs),
     fat: Math.round(fat),
   };
+}
+
+/** 280 kcal · 4 P · 48 C · 8 F without full word labels. */
+function extractCompactMacros(src: string): ParsedMealMacros | null {
+  const m = src.match(
+    /(\d+(?:[.,]\d+)?)\s*k(?:cal|kal)[\s\S]{0,160}?(\d+(?:[.,]\d+)?)\s*g?\s*(?:protein|proteini|p\b)[\s\S]{0,80}?(\d+(?:[.,]\d+)?)\s*g?\s*(?:karbonhidrat|carb|ugljikohidrat|c\b)[\s\S]{0,80}?(\d+(?:[.,]\d+)?)\s*g?\s*(?:yağ|yag|fat|masti|f\b)/i,
+  );
+  if (!m?.[1] || !m[2] || !m[3] || !m[4]) return null;
+  return finalizeMacros(
+    parseNum(m[1]),
+    parseNum(m[2]),
+    parseNum(m[3]),
+    parseNum(m[4]),
+  );
 }
 
 /** Macros from envelope data/ui when the spoken labels were non-Turkish. */
