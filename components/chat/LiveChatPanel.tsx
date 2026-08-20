@@ -60,6 +60,8 @@ type LiveMessage = {
   photoPreviewUrl?: string;
   /** Play enter motion once (in-session messages only). */
   enter?: boolean;
+  /** This-session message — coach copy types in instead of popping. */
+  fresh?: boolean;
 };
 
 type LiveChatPanelProps = {
@@ -313,6 +315,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           time: formatMessageTime(undefined, lang),
           streaming: true,
           enter: true,
+          fresh: true,
         },
       ]);
     } else {
@@ -324,6 +327,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         status: "sending",
         idempotencyKey,
         enter: true,
+        fresh: true,
       };
       setMessages((prev) => [
         ...prev,
@@ -335,6 +339,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           time: formatMessageTime(undefined, lang),
           streaming: true,
           enter: true,
+          fresh: true,
         },
       ]);
     }
@@ -607,6 +612,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           time: formatMessageTime(undefined, lang),
           streaming: true,
           enter: true,
+          fresh: true,
         },
       ]);
     } else {
@@ -621,6 +627,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           photoRetry: true,
           photoPreviewUrl: options?.previewUrl,
           enter: true,
+          fresh: true,
         },
         {
           id: coachPlaceholderId,
@@ -629,6 +636,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           time: formatMessageTime(undefined, lang),
           streaming: true,
           enter: true,
+          fresh: true,
         },
       ]);
     }
@@ -865,6 +873,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
       <div
         ref={listRef}
         className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 py-4"
+        data-chat-scroller
       >
         {loadingHistory && (
           <div className="space-y-3">
@@ -1038,7 +1047,11 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                               className="chat-photo-in mb-2 max-h-48 w-full rounded-xl object-cover"
                             />
                           ) : null}
-                          <ChatMessageText text={msg.text} streaming={isStreamingText} />
+                          <ChatMessageText
+                            text={msg.text}
+                            streaming={isStreamingText}
+                            typeIn={isCoach && Boolean(msg.fresh)}
+                          />
                           <p className="chat-message-time mt-1 inline-flex items-center opacity-60">
                             {msg.time}
                             {!isCoach ? <ChatDeliveryTicks status={msg.status} /> : null}

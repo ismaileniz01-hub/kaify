@@ -10,6 +10,7 @@ import { DEMO_USER_PROFILE } from "@/lib/user";
 import { useLang } from "@/lib/lang-context";
 import { WorkoutPlanCard } from "@/components/chat/WorkoutPlanCard";
 import { ChatPinnedBanner } from "@/components/chat/ChatPinnedBanner";
+import { ChatMessageText } from "@/components/chat/ChatMessageText";
 import { Activity, Target, Lightbulb, TrendingUp, Dumbbell } from "lucide-react";
 
 type ChatBubblesProps = {
@@ -311,7 +312,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
           {renderCard(pinnedDemo)}
         </ChatPinnedBanner>
       ) : null}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-36 pt-4">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-36 pt-4" data-chat-scroller>
       <p className="mb-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-center text-[11px] text-amber-200/90" role="note">
         {t("chat.demo.notice")}
       </p>
@@ -345,7 +346,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
                       <div className="sticky bottom-3 h-8 w-8"><Image src={contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain" /></div>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <div className="chat-message-bubble animate-message--coach px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}>{msg.text}</div>
+                      <div className="chat-message-bubble animate-message--coach px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}><ChatMessageText text={msg.text} typeIn /></div>
                       {pinnedDemo?.id !== msg.id ? renderCard(msg) : null}
                       <span className="chat-message-time ps-1 text-zinc-600">{msg.time}</span>
                     </div>
@@ -356,7 +357,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
                       <div className="sticky bottom-3 h-8 w-8"><Image src={contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain" /></div>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <div className="chat-message-bubble animate-message--coach px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}>{msg.text}</div>
+                      <div className="chat-message-bubble animate-message--coach px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}><ChatMessageText text={msg.text} typeIn /></div>
                       <span className="chat-message-time ps-1 text-zinc-600">{msg.time}</span>
                     </div>
                   </div>

@@ -7,7 +7,7 @@ describe("chatBubbleEnterClass", () => {
     expect(chatBubbleEnterClass("coach", false)).toBe("chat-message-bubble");
   });
 
-  it("sends the user bubble in from the right and the coach from the left", () => {
+  it("applies enter motion classes for new user and coach bubbles", () => {
     expect(chatBubbleEnterClass("user", true)).toContain("animate-message--user");
     expect(chatBubbleEnterClass("coach", true)).toContain("animate-message--coach");
   });

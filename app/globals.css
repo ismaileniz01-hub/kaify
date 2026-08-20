@@ -1138,28 +1138,52 @@ html.native-app .chat-composer {
 
 @keyframes message-in-coach {
   from {
-    transform: translateX(-18px) scale(0.96);
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
   }
   to {
-    transform: translateX(0) scale(1);
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
 @keyframes message-in-user {
   from {
-    transform: translateX(22px) translateY(10px) scale(0.92);
+    opacity: 0;
+    transform: translateY(4.25rem) scale(0.88);
   }
   to {
-    transform: translateX(0) translateY(0) scale(1);
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
 .animate-message--coach {
-  animation: message-in-coach var(--motion-slow) var(--ease-premium-out);
+  animation: message-in-coach 280ms var(--ease-premium-out) both;
 }
 
 .animate-message--user {
-  animation: message-in-user 280ms var(--ease-premium-out);
+  transform-origin: 100% 100%;
+  animation: message-in-user 420ms 70ms var(--ease-premium-out) both;
+}
+
+@keyframes chat-send-launch {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(0.96);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-2.75rem) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-5.5rem) scale(0.98);
+  }
+}
+
+.chat-send-launch {
+  animation: chat-send-launch 420ms var(--ease-premium-out) both;
 }
 
 @keyframes chat-send-burst {
@@ -3322,6 +3346,7 @@ html:not([data-theme="light"]) .text-zinc-600 {
   .animate-message,
   .animate-message--coach,
   .animate-message--user,
+  .chat-send-launch,
   .chat-send-burst,
   .chat-stream-caret,
   .chat-card-unfold,

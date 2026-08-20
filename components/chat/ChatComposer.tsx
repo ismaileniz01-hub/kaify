@@ -39,6 +39,7 @@ export function ChatComposer({
 }: ChatComposerProps) {
   const { t, lang } = useLang();
   const [sendBurst, setSendBurst] = useState(false);
+  const [launchText, setLaunchText] = useState<string | null>(null);
   const burstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -116,6 +117,11 @@ export function ChatComposer({
     setSendBurst(true);
     if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
     burstTimerRef.current = setTimeout(() => setSendBurst(false), 420);
+    const snapshot = input.trim();
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (snapshot && !reduceMotion) setLaunchText(snapshot);
     if (typeof document !== "undefined") {
       const active = document.activeElement;
       if (active instanceof HTMLElement) active.blur();
@@ -125,7 +131,7 @@ export function ChatComposer({
 
   return (
     <footer
-      className="chat-composer shrink-0 border-t border-white/[0.07] bg-[#0a0812]/95 px-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl"
+      className="chat-composer relative shrink-0 border-t border-white/[0.07] bg-[#0a0812]/95 px-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl"
       aria-busy={sending}
       style={
         {
@@ -134,6 +140,18 @@ export function ChatComposer({
         } as CSSProperties
       }
     >
+      {launchText ? (
+        <div
+          className="chat-send-launch pointer-events-none absolute bottom-[calc(100%-0.35rem)] right-14 z-30 line-clamp-4 max-w-[70%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed text-white shadow-lg"
+          style={{
+            background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
+          }}
+          onAnimationEnd={() => setLaunchText(null)}
+          aria-hidden
+        >
+          {launchText}
+        </div>
+      ) : null}
       {attachmentPreviewUrl ? (
         <div
           className={`mb-2 flex items-center gap-2 rounded-2xl border border-white/10 bg-black/35 p-2 ${
