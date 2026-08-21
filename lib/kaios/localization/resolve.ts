@@ -67,11 +67,12 @@ const EMOJI_OR_SYMBOL_ONLY = /^[\p{Emoji}\p{P}\p{S}\s0-9]+$/u;
 export type ResolveActiveLocaleInput = {
   /** Explicit user instruction like "speak Turkish" / "Türkçe konuş". */
   explicitLocale?: string | null;
-  /** Detected meaningful language of the current user message (BCP-47). */
+  /**
+   * Detected message language — ignored for replies. Settings lock the language.
+   */
   messageLocale?: string | null;
   /**
-   * Ongoing chat language from recent user turns.
-   * Short acks prefer this over the app UI locale so EN UI + TR chat stays TR.
+   * Ongoing chat language — ignored for replies. Settings lock the language.
    */
   conversationLocale?: string | null;
   /** Saved app language preference. */
@@ -103,25 +104,12 @@ export function isNonSwitchingExpression(message: string): boolean {
 }
 
 /**
- * Resolve active reply locale using KAIOS priority order.
- * Short expressions keep conversation/saved language — they must not invent a switch.
+ * Reply language follows Settings until the user changes it there.
+ * Detected message language must not flip the coach.
  */
 export function resolveActiveLocale(input: ResolveActiveLocaleInput): string {
   const fallback = (input.fallbackLocale || "en").trim() || "en";
   if (input.explicitLocale?.trim()) return input.explicitLocale.trim();
-
-  const message = input.message ?? "";
-  if (message && isNonSwitchingExpression(message)) {
-    return (
-      input.conversationLocale?.trim() ||
-      input.savedLocale?.trim() ||
-      input.deviceLocale?.trim() ||
-      fallback
-    );
-  }
-
-  if (input.messageLocale?.trim()) return input.messageLocale.trim();
-  if (input.conversationLocale?.trim()) return input.conversationLocale.trim();
   if (input.savedLocale?.trim()) return input.savedLocale.trim();
   if (input.deviceLocale?.trim()) return input.deviceLocale.trim();
   return fallback;

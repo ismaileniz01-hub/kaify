@@ -4,7 +4,6 @@ import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
 import { ModelRouter } from "@/lib/ai/model-router";
 import { resolveLocale } from "@/lib/i18n/dictionary";
-import { detectConversationLocale, detectMessageLocale } from "@/lib/i18n/detect-message-locale";
 import { buildReplyLanguageDirective } from "@/lib/i18n/reply-language-directive";
 import { buildChatSystemPrompt } from "@/lib/ai/personas";
 import {
@@ -506,21 +505,7 @@ async function* streamKaiosCoachReply(
           .eq("thread_type", "direct"),
       ]);
 
-    const recentUserTexts = history
-      .filter((turn) => turn.role === "user")
-      .map((turn) => turn.content);
-    const recentThreadTexts = history.map((turn) => turn.content);
-    const conversationLocale = detectConversationLocale(recentUserTexts);
-    const messageLocale = detectMessageLocale(
-      cleanMessage,
-      profileMeta.savedLocale,
-      recentUserTexts,
-      recentThreadTexts,
-    );
     locale = resolveActiveLocale({
-      message: cleanMessage,
-      messageLocale,
-      conversationLocale,
       savedLocale: profileMeta.savedLocale,
       fallbackLocale: "en",
     });
@@ -978,20 +963,7 @@ export async function* streamCoachReply(
     // turn but OUTSIDE the untrusted delimiter block, so it's read as a trusted
     // instruction while the user's text stays spotlighted as data — preserving
     // the prompt-leak defense without breaking the cacheable prefix.
-    const recentUserTexts = history
-      .filter((turn) => turn.role === "user")
-      .map((turn) => turn.content);
-    const recentThreadTexts = history.map((turn) => turn.content);
-    const conversationLocale = detectConversationLocale(recentUserTexts);
     const replyLocale = resolveActiveLocale({
-      message: cleanMessage,
-      messageLocale: detectMessageLocale(
-        cleanMessage,
-        locale,
-        recentUserTexts,
-        recentThreadTexts,
-      ),
-      conversationLocale,
       savedLocale: locale,
       fallbackLocale: "en",
     });

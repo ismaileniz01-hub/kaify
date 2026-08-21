@@ -7,16 +7,13 @@
 export const LOCALIZATION_CAPSULE = `
 kaios.localization:
   resolve_language_priority:
-    1. explicit_current_user_instruction
-    2. meaningful_language_of_current_message
-    3. conversation_thread_language
-    4. saved_app_language
-    5. device_or_system_locale
-    6. product_fallback_locale
+    1. saved_app_language (Settings) — lock until the user changes it there
+    2. device_or_system_locale
+    3. product_fallback_locale
+  do_not_switch_from_message: true — English lifts, macro pastes, missing accents, or short acks must not change reply language
   short_expressions_do_not_switch:
     - okay, yes, no, thanks, sagol, tamam, lol, bro, haha, wow
     - emoji-only, brand names, exercise names, common borrowed words
-    - keep the conversation language even if the app UI language differs
   temporary_conversational_switch: must_not_silently_overwrite_saved_preference
   diacritic_tolerance:
     users often cannot type special letters (TR: g/ğ s/ş i/ı ü/u ö/o ç/c; DE ä/ö/ü/ß; FR é/è; ES ñ; …)

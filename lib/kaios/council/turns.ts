@@ -30,7 +30,6 @@ import { formatTrustedProfileContext } from "@/lib/ai/chat-context";
 import { COUNCIL_CORE, COUNCIL_ROLE_DIGESTS } from "@/lib/kaios/capsules/council";
 import { KAI_MODE_COUNCIL } from "@/lib/kaios/capsules/kai";
 import { resolveActiveLocale } from "@/lib/kaios/localization/resolve";
-import { detectMessageLocale } from "@/lib/i18n/detect-message-locale";
 import { CORE_CAPSULE, SAFETY_CAPSULE } from "@/lib/kaios/capsules";
 import {
   SCHEMA_VERSION,
@@ -266,10 +265,6 @@ export async function runCouncilTurn(params: {
 
   const savedLocale = resolveLocale(profile?.locale);
   const locale = resolveActiveLocale({
-    message: params.userMessage ?? "",
-    messageLocale: params.userMessage
-      ? detectMessageLocale(params.userMessage, savedLocale)
-      : null,
     savedLocale,
     fallbackLocale: "en",
   });

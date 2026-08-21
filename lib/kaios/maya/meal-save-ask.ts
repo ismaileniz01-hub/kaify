@@ -4,7 +4,6 @@
  */
 
 import { isCoachRetryLine } from "@/lib/kaios/coach-retry";
-import { looksLikeTurkishChat } from "@/lib/i18n/detect-message-locale";
 import {
   looksLikeFoodConsumption,
   type CoachId,
@@ -58,9 +57,5 @@ export function ensureMayaMealSaveAsk(input: {
   if (isCoachRetryLine(text)) return input.text;
   if (!shouldAskMayaMealSave(input)) return input.text;
   if (mentionsSaveAsk(text)) return input.text;
-  const locale =
-    looksLikeTurkishChat(input.userMessage ?? "") || looksLikeTurkishChat(text)
-      ? "tr"
-      : input.locale;
-  return `${text}\n\n${mealSaveAsk(locale)}`;
+  return `${text}\n\n${mealSaveAsk(input.locale)}`;
 }

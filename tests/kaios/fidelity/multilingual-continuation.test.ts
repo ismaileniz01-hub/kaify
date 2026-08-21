@@ -345,7 +345,7 @@ describe("locale resolution + short ack", () => {
     }
   });
 
-  it("short acks prefer conversation language over app UI locale", () => {
+  it("short acks stay on Settings language", () => {
     expect(
       resolveActiveLocale({
         message: "sagol",
@@ -354,10 +354,10 @@ describe("locale resolution + short ack", () => {
         savedLocale: "en",
         fallbackLocale: "en",
       }),
-    ).toBe("tr");
+    ).toBe("en");
   });
 
-  it("meaningful language switch still uses message locale", () => {
+  it("does not follow message language over Settings", () => {
     expect(
       resolveActiveLocale({
         message: "I don't feel like training today",
@@ -365,7 +365,7 @@ describe("locale resolution + short ack", () => {
         savedLocale: "tr",
         fallbackLocale: "en",
       }),
-    ).toBe("en");
+    ).toBe("tr");
   });
 });
 

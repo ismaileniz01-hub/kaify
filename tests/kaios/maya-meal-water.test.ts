@@ -58,10 +58,10 @@ describe("ensureMayaMealWaterReminder", () => {
     expect(plan).toBe("Haftalık menü hazır.");
   });
 
-  it("uses Turkish water copy when the user logged food in Turkish even if locale drifted", () => {
+  it("uses Settings language for the water line even if Maya drifted", () => {
     const out = ensureMayaMealWaterReminder({
       text: "Jasno, rižin puding!",
-      locale: "hr",
+      locale: "tr",
       coachId: "maya",
       intent: "nutrition_question",
       userMessage: "Bi kase sutlac yedim",

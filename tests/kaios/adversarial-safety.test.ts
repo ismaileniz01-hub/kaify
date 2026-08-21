@@ -156,7 +156,7 @@ describe("localization short expressions", () => {
         messageLocale: "de",
         savedLocale: "tr",
       }),
-    ).toBe("de");
+    ).toBe("tr");
   });
 });
 

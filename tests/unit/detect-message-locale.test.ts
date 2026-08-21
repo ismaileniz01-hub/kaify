@@ -61,7 +61,7 @@ describe("detectMessageLocale", () => {
 });
 
 describe("resolveActiveLocale conversation stickiness", () => {
-  it("keeps TR conversation on short ack even when app UI is English", async () => {
+  it("keeps Settings language even on short acks and mixed messages", async () => {
     const { resolveActiveLocale } = await import(
       "@/lib/kaios/localization/resolve"
     );
@@ -71,6 +71,14 @@ describe("resolveActiveLocale conversation stickiness", () => {
         messageLocale: "en",
         conversationLocale: "tr",
         savedLocale: "en",
+        fallbackLocale: "en",
+      }),
+    ).toBe("en");
+    expect(
+      resolveActiveLocale({
+        message: "1 litre de su ictim",
+        messageLocale: "fr",
+        savedLocale: "tr",
         fallbackLocale: "en",
       }),
     ).toBe("tr");

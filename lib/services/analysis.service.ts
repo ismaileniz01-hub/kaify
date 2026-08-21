@@ -18,7 +18,6 @@ import {
   type StoredVisionRow,
 } from "@/lib/kaios/vision/fingerprint";
 import { resolveLocale } from "@/lib/i18n/dictionary";
-import { detectMessageLocale } from "@/lib/i18n/detect-message-locale";
 import { resolveActiveLocale } from "@/lib/kaios/localization/resolve";
 import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import { summarizePhysiqueScores } from "@/lib/kaios/context/physique-summary";
@@ -121,7 +120,7 @@ function extractQuality(payload: Json | null): ImageQuality | null {
 async function getLocale(
   admin: AdminClient,
   userId: string,
-  note?: string,
+  _note?: string,
 ): Promise<string> {
   const { data } = await admin
     .from("profiles")
@@ -129,10 +128,7 @@ async function getLocale(
     .eq("id", userId)
     .maybeSingle();
   const saved = resolveLocale(data?.locale);
-  const message = note?.trim() ?? "";
   return resolveActiveLocale({
-    message,
-    messageLocale: message ? detectMessageLocale(message, saved) : null,
     savedLocale: saved,
     fallbackLocale: "en",
   });

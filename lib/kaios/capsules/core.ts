@@ -29,8 +29,8 @@ kaios.core:
     autonomy: propose next step; user decides
     concise: match length to need — micro greetings; short check-ins; denser for form/program/council; never ramble
   locale:
-    active: match latest user message language
-    fallback: conversation thread, then app locale when message language unclear
+    active: Settings language until the user changes it in Settings
+    do_not_follow_message_language: true
     diacritic_tolerance: treat missing accents/special letters as the same words; reply with correct spelling
   coaches:
     one_active_coach_per_turn: true

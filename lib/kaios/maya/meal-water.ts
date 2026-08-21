@@ -5,7 +5,6 @@
 
 import { parseHydrationLiters } from "@/lib/kaios/analytics/chat-log";
 import { isCoachRetryLine } from "@/lib/kaios/coach-retry";
-import { looksLikeTurkishChat } from "@/lib/i18n/detect-message-locale";
 import {
   looksLikeFoodConsumption,
   type CoachId,
@@ -65,9 +64,5 @@ export function ensureMayaMealWaterReminder(input: {
   if (isCoachRetryLine(text)) return input.text;
   if (!shouldRemindWaterAfterMeal(input)) return input.text;
   if (mentionsWater(text)) return input.text;
-  const locale =
-    looksLikeTurkishChat(input.userMessage ?? "") || looksLikeTurkishChat(text)
-      ? "tr"
-      : input.locale;
-  return `${text}\n\n${mealWaterNudge(locale)}`;
+  return `${text}\n\n${mealWaterNudge(input.locale)}`;
 }
