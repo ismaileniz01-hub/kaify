@@ -45,6 +45,9 @@ describe("sanitizeCoachVisibleText", () => {
     expect(scrubCoachLaneVoice("Nice work bro, calves are lagging.", "leo")).toBe(
       "Nice work, calves are lagging.",
     );
+    expect(scrubCoachLaneVoice("Selam kanka, skorların durağan.", "leo")).toBe(
+      "Selam, skorların durağan.",
+    );
     expect(scrubCoachLaneVoice("Tamam kral, yarın gideriz.", "kai")).toBe(
       "Tamam, yarın gideriz.",
     );

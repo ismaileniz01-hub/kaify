@@ -90,6 +90,7 @@ describe("KAIOS personality prompt contracts", () => {
       expect(blob).toContain("kai.mode.casual");
       expect(blob).not.toContain("kai.mode.motivation");
       expect(blob).toMatch(/permanent motivation mode/i);
+      expect(blob).toMatch(/street|close buddy texting/i);
     });
 
     it("laziness → motivation + health classification", () => {
@@ -270,6 +271,7 @@ describe("KAIOS personality prompt contracts", () => {
       expect(blob).toMatch(/hype-coach|do_not_inflate_scores/i);
       expect(blob).toMatch(/body-fat|validate_image_before_scoring/i);
       expect(blob).toContain("do_not_diagnose_medical_conditions");
+      expect(blob).toMatch(/no nicknames|never nicknames/i);
     });
   });
 

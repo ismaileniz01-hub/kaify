@@ -9,7 +9,7 @@ import { WeeklyEnergyBar } from "@/components/analytics/WeeklyEnergyBar";
 import { WeeklyScoreCard } from "@/components/analytics/WeeklyScoreCard";
 import { CalorieHistorySheet } from "@/components/analytics/CalorieHistorySheet";
 import { GoalsEditor } from "@/components/goals/GoalsEditor";
-import { readAnalyticsCache, writeAnalyticsCache } from "@/lib/analytics-client-cache";
+import { readAnalyticsCache, writeAnalyticsCache, ANALYTICS_UPDATED_EVENT } from "@/lib/analytics-client-cache";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { InlineAlert } from "@/components/InlineAlert";
@@ -56,7 +56,11 @@ export default function AnalyticsPage() {
       if (document.visibilityState === "visible") loadAnalytics();
     };
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    window.addEventListener(ANALYTICS_UPDATED_EVENT, loadAnalytics);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener(ANALYTICS_UPDATED_EVENT, loadAnalytics);
+    };
   }, [loadAnalytics]);
 
   const today = data?.today;

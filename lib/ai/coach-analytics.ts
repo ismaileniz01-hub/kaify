@@ -201,6 +201,7 @@ export async function requestPhotoAnalyticsConfirmation(params: {
   meal?: { calories: number; protein: number; carbs: number; fat: number };
   bodyScore?: number;
   attachToMessageId?: string | null;
+  waterLiters?: number;
 }): Promise<PhotoAnalyticsConfirmation | null> {
   const summary = params.meal
     ? buildSummary({
@@ -208,6 +209,7 @@ export async function requestPhotoAnalyticsConfirmation(params: {
         proteinG: params.meal.protein,
         carbsG: params.meal.carbs,
         fatG: params.meal.fat,
+        ...(params.waterLiters != null ? { waterLiters: params.waterLiters } : {}),
       })
     : params.bodyScore != null
       ? `body score ${params.bodyScore}/100`
@@ -224,6 +226,9 @@ export async function requestPhotoAnalyticsConfirmation(params: {
     payload: {
       summary,
       ...(params.meal ? { meal: params.meal } : {}),
+      ...(params.waterLiters != null
+        ? { patch: { waterLiters: params.waterLiters } }
+        : {}),
     },
     sourceMessageId: params.attachToMessageId ?? null,
   });

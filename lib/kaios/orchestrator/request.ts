@@ -33,7 +33,6 @@ import { compilePrompt } from "@/lib/kaios/compiler/prompt";
 import {
   needsStructuredOutput,
   resolveIntent,
-  looksLikeFoodConsumption,
   type CoachId,
   type Intent,
 } from "@/lib/kaios/routing/intent";
@@ -53,6 +52,7 @@ import {
 } from "@/lib/kaios/tools/dispatch";
 import { maybeQueueCoachLogConfirmation } from "@/lib/kaios/analytics/chat-log";
 import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
+import { ensureMayaMealSaveAsk } from "@/lib/kaios/maya/meal-save-ask";
 import { ensureMayaAlexHandoff } from "@/lib/kaios/maya/alex-handoff";
 import { ensureMayaAnalyticsSavedAck } from "@/lib/kaios/maya/analytics-ack";
 import {
@@ -70,9 +70,6 @@ import {
 import { logger } from "@/lib/logger";
 import type { SseChunk } from "@/lib/api/sse";
 import type { MessageType } from "@/lib/types/database.types";
-import {
-  confirmPendingAnalytics,
-} from "@/lib/services/analytics-confirmation.service";
 
 export type OrchestrateChatInput = {
   userId: string;
@@ -538,43 +535,21 @@ export async function* orchestrateCoachChat(
     if (foodLog.confirmation) confirmation = foodLog.confirmation;
   }
 
-  let mealSaved = actionTruth.some(
+  const mealSaved = actionTruth.some(
     (t) => t.tool === "saveMealMacros" && t.status === "SUCCEEDED",
   );
   let waterSaved = actionTruth.some(
     (t) => t.tool === "recordHydration" && t.status === "SUCCEEDED",
   );
 
-  if (
-    confirmation &&
-    input.coachId === "maya" &&
-    looksLikeFoodConsumption(input.message)
-  ) {
-    try {
-      await confirmPendingAnalytics(input.userId, confirmation.pendingId);
-      actionTruth = [
-        ...actionTruth.filter((t) => t.status !== "PENDING_CONFIRMATION"),
-        {
-          status: "SUCCEEDED",
-          tool: "saveMealMacros",
-          data: { saved: true, pendingId: confirmation.pendingId },
-        },
-      ];
-      mealSaved = true;
-      confirmation = undefined;
-    } catch {
-      // Keep the yes/no card if the write fails.
-    }
-  }
-
-  if (input.coachId === "maya" || !confirmation) {
+  if (!confirmation) {
     const coachLog = await maybeQueueCoachLogConfirmation({
       userId: input.userId,
       coach: input.coachId,
       userMessage: input.message,
       assistantText,
       previousAssistantMessage: previousAssistant,
-      alreadyConfirming: false,
+      alreadyConfirming: Boolean(confirmation),
     });
     actionTruth = [...actionTruth, ...coachLog.truths];
     if (coachLog.confirmation) confirmation = coachLog.confirmation;
@@ -612,12 +587,18 @@ export async function* orchestrateCoachChat(
   }
 
   assistantText = ensureMayaAlexHandoff({
-    text: ensureMayaMealWaterReminder({
-      text: sanitizeCoachVisibleText(
-        coachVisibleMessage(scrubFalseSuccessClaims(assistantText, actionTruth)),
-        input.locale,
-        input.coachId,
-      ),
+    text: ensureMayaMealSaveAsk({
+      text: ensureMayaMealWaterReminder({
+        text: sanitizeCoachVisibleText(
+          coachVisibleMessage(scrubFalseSuccessClaims(assistantText, actionTruth)),
+          input.locale,
+          input.coachId,
+        ),
+        locale: input.locale,
+        coachId: input.coachId,
+        intent,
+        userMessage: input.message,
+      }),
       locale: input.locale,
       coachId: input.coachId,
       intent,

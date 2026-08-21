@@ -2,8 +2,9 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/api/errors";
 import { writeConfirmAnalyticsPending } from "@/lib/repositories/analytics-write.repository";
-import { invalidateHomeBundleCache } from "@/lib/cache/invalidate";
+import { invalidateHomeBundleCache, invalidateUserReadCaches } from "@/lib/cache/invalidate";
 import { sanitizeAnalyticsPatch, sanitizeMealMacros } from "@/lib/analytics/bounds";
+import { patchAnalyticsDaily } from "@/lib/services/analytics.service";
 import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import type { Json } from "@/lib/types/database.types";
 
@@ -99,7 +100,10 @@ export async function confirmPendingAnalytics(
     .maybeSingle();
 
   await writeConfirmAnalyticsPending(userId, pendingId);
-  void invalidateHomeBundleCache(userId).catch(() => undefined);
+  void Promise.all([
+    invalidateUserReadCaches(userId),
+    invalidateHomeBundleCache(userId),
+  ]).catch(() => undefined);
 
   const payload =
     pending?.payload && typeof pending.payload === "object"
@@ -109,6 +113,18 @@ export async function confirmPendingAnalytics(
           summary?: string;
         })
       : null;
+  if (payload?.meal && payload.patch) {
+    const extras: Record<string, number> = {};
+    const water = Number(payload.patch.waterLiters ?? payload.patch.water_liters);
+    if (Number.isFinite(water) && water > 0) extras.waterLiters = water;
+    if (Object.keys(extras).length > 0) {
+      try {
+        await patchAnalyticsDaily(userId, extras);
+      } catch {
+        // Meal already landed; water can be retried from a later log.
+      }
+    }
+  }
   if (payload?.meal) {
     await emitKaiosEventBestEffort({
       category: "nutrition",

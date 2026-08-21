@@ -8,9 +8,6 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { resolveWeightKg } from "@/lib/supabase/profile-compat";
 import { localTodayDate } from "@/lib/date-utils";
 import { createPendingAnalyticsConfirmation } from "@/lib/services/analytics-confirmation.service";
-import { patchAnalyticsDaily } from "@/lib/services/analytics.service";
-import { invalidateAnalyticsUserCache } from "@/lib/repositories/analytics-write.repository";
-import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import type { CoachId } from "@/lib/kaios/routing/intent";
 import type { ActionTruthRecord } from "@/lib/kaios/tools/action-truth";
 import {
@@ -268,22 +265,20 @@ export async function maybeQueueCoachLogConfirmation(input: {
   if (!spec) return { truths: [] };
 
   if (spec.tool === "recordHydration") {
-    await patchAnalyticsDaily(input.userId, spec.patch);
-    await invalidateAnalyticsUserCache(input.userId);
-    const liters = Number(spec.patch.waterLiters);
-    await emitKaiosEventBestEffort({
-      category: "hydration",
-      type: "hydration_recorded",
+    const pendingId = await createPendingAnalyticsConfirmation({
       userId: input.userId,
-      payload: { liters },
-      at: new Date().toISOString(),
+      coachId: input.coach,
+      source: "chat",
+      payload: { summary: spec.summary, patch: spec.patch },
     });
     return {
+      confirmation: { pendingId, summary: spec.summary },
       truths: [
         {
-          status: "SUCCEEDED",
-          tool: "recordHydration",
-          data: { saved: true, ...spec.patch },
+          status: "PENDING_CONFIRMATION",
+          tool: spec.tool,
+          message: "Awaiting user confirmation",
+          data: { pendingId, saved: false, ...spec.patch },
         },
       ],
     };

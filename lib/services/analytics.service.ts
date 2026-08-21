@@ -27,6 +27,7 @@ import {
   localDateKeysEnding,
   sumWeekWorkouts,
 } from "@/lib/analytics/hydrate-today";
+import { effectiveDailyBurned } from "@/lib/analytics/resting-burn";
 export type AnalyticsDailyDTO = {
   entryDate: string;
   weightKg: number | null;
@@ -305,6 +306,13 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
       weekRows.find((r) => r.entry_date === today)?.steps ?? stepSum;
     todayDto = { ...todayDto, steps: todaySteps };
   }
+
+  todayDto = {
+    ...todayDto,
+    caloriesBurned: effectiveDailyBurned(todayDto.caloriesBurned, todayDto.calorieGoal, {
+      includeResting: true,
+    }),
+  };
 
   const weeklySteps: WeeklyStepsDTO = [];
   for (const key of localDateKeysEnding(today, 7)) {

@@ -23,13 +23,8 @@ export type ToolResult =
 
 import { searchExercises, assertExerciseIdsExist } from "@/lib/kaios/exercises";
 import { createPendingAnalyticsConfirmation } from "@/lib/services/analytics-confirmation.service";
-import {
-  getTodayNutritionSnapshot,
-  patchAnalyticsDaily,
-} from "@/lib/services/analytics.service";
-import { invalidateAnalyticsUserCache } from "@/lib/repositories/analytics-write.repository";
+import { getTodayNutritionSnapshot } from "@/lib/services/analytics.service";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import { extractPhysiqueFromLeoPayload } from "@/lib/kaios/context/physique-summary";
 
 function num(v: unknown): number | null {
@@ -137,12 +132,13 @@ export async function executeTool(
             message: "calories, protein, carbs, fat are required numbers.",
           };
         }
+        const summary = `${Math.round(calories)} kcal · P${Math.round(protein)} C${Math.round(carbs)} F${Math.round(fat)}`;
         const pendingId = await createPendingAnalyticsConfirmation({
           userId,
           coachId: "maya",
           source: "chat",
           payload: {
-            summary: `${Math.round(calories)} kcal · P${Math.round(protein)} C${Math.round(carbs)} F${Math.round(fat)}`,
+            summary,
             meal: { calories, protein, carbs, fat },
           },
         });
@@ -152,8 +148,7 @@ export async function executeTool(
             pendingId,
             requiresConfirmation: true,
             saved: false,
-            message:
-              "Meal prepared for confirmation — not saved until user confirms.",
+            message: summary,
           },
         };
       }
@@ -167,21 +162,26 @@ export async function executeTool(
             message: "liters must be a non-negative number.",
           };
         }
-        await patchAnalyticsDaily(userId, { waterLiters: liters });
-        try {
-          await invalidateAnalyticsUserCache(userId);
-        } catch {
-          // Write already landed; stale cache is retried on next read.
-        }
-        // Canonical write already succeeded — event is best-effort only.
-        await emitKaiosEventBestEffort({
-          category: "hydration",
-          type: "hydration_recorded",
+        const summary = `${liters}L water`;
+        const pendingId = await createPendingAnalyticsConfirmation({
           userId,
-          payload: { liters },
-          at: new Date().toISOString(),
+          coachId: "maya",
+          source: "chat",
+          payload: {
+            summary,
+            patch: { waterLiters: liters },
+          },
         });
-        return { ok: true, data: { waterLiters: liters, saved: true } };
+        return {
+          ok: true,
+          data: {
+            pendingId,
+            requiresConfirmation: true,
+            saved: false,
+            waterLiters: liters,
+            message: summary,
+          },
+        };
       }
 
       default:

@@ -162,7 +162,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const contact = CONTACTS[coachId];
   const { t, lang } = useLang();
   const { avatar: kaiAvatar } = useKai();
-  const { userProfile } = useSession();
+  const { userProfile, refreshHome } = useSession();
   const { primary, primaryLight, secondary, ring, shadow } = contact.color;
   const coachAvatar = coachId === "kai" ? kaiAvatar : contact.avatar;
   const userAvatar = userProfile?.avatar ?? "/kaify-logo.png";
@@ -1088,6 +1088,9 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                               (msg.payload as { confirmation: { pendingId: string; summary: string } })
                                 .confirmation
                             }
+                            onResolved={() => {
+                              void refreshHome();
+                            }}
                           />
                         ) : null}
                         {isCoach && !msg.streaming && msg.id !== pinnedId ? (

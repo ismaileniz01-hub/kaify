@@ -112,10 +112,11 @@ describe("KAIOS capsules", () => {
 
     const leo = loadCoachCapsules("leo", "scoring");
     expect(leo).toContain(LEO_SCORING);
-    expect(leo.join("\n")).toMatch(/analytical|objective/i);
+    expect(LEO_CORE).toMatch(/no nicknames|never nicknames/i);
 
     const kai = loadCoachCapsules("kai", "motivation");
     expect(kai).toContain(KAI_MOTIVATION);
+    expect(kai.join("\n")).toMatch(/street|kanka/i);
 
     const council = loadCoachCapsules("council", "turn");
     expect(council).toContain(COUNCIL_CORE);
@@ -128,8 +129,10 @@ describe("KAIOS capsules", () => {
     expect(MAYA_CORE).toContain("photo_vision_identifies_food_not_final_macros");
     expect(MAYA_CORE).toContain("after_every_meal");
     expect(MAYA_FOOD_LOG).toContain("after_every_meal");
+    expect(MAYA_FOOD_LOG).toMatch(/always ask to save|ask_before_saving/i);
     expect(LEO_CORE).toContain("validate_image_before_scoring");
     expect(LEO_CORE).toContain("do_not_inflate_scores_for_motivation");
+    expect(LEO_CORE).toMatch(/no nicknames|never nicknames/i);
     expect(KAI_CORE).toMatch(/never_fake_product_actions|do_not_invent_product_actions/i);
     expect(COUNCIL_CORE).toContain("user_is_participant");
     expect(COUNCIL_CORE).toContain("do_not_generate_past_user_turn");

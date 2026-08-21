@@ -66,9 +66,12 @@ export function sanitizeCoachVisibleText(
   return scrubCoachLaneVoice(spoken, coachId);
 }
 
+const LEO_NICKNAME_RE =
+  /\b(reis|kral|bro|kanka|canım|canim|dostum|yakışıklı|yakisikli|terminator|güzelim|guzelim|queen|champ|buddy|pal|handsome)\b/gi;
+
 /**
  * Capsules are prompt-only; this stops Maya/Leo/Kai from leaking Alex gym-bark
- * nicknames (reis/kral/bro) into the persisted reply.
+ * nicknames (reis/kral/bro) into the persisted reply. Leo also drops pet names.
  */
 export function scrubCoachLaneVoice(
   text: string,
@@ -80,9 +83,11 @@ export function scrubCoachLaneVoice(
   const pattern =
     coach === "kai"
       ? /\b(reis|kral)\b/gi
-      : coach === "maya" || coach === "leo"
+      : coach === "maya"
         ? /\b(reis|kral|bro)\b/gi
-        : null;
+        : coach === "leo"
+          ? LEO_NICKNAME_RE
+          : null;
   if (!pattern) return text;
 
   const next = text

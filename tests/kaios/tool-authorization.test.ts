@@ -224,6 +224,7 @@ vi.mock("@/lib/repositories/analytics-write.repository", () => ({
 
 vi.mock("@/lib/cache/invalidate", () => ({
   invalidateHomeBundleCache: vi.fn().mockResolvedValue(undefined),
+  invalidateUserReadCaches: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -353,19 +354,24 @@ describe("tool server-owned identity (client userId cannot override)", () => {
     expect(row?.user_id).not.toBe(USER_B);
   });
 
-  it("recordHydration patches analytics for server userId only", async () => {
+  it("recordHydration queues confirmation for server userId only", async () => {
     const result = await executeTool(USER_A, {
       name: "recordHydration",
       args: { userId: USER_B, liters: 2.5 },
     });
     expect(result.ok).toBe(true);
-    expect(patchAnalyticsDaily).toHaveBeenCalledWith(USER_A, {
-      waterLiters: 2.5,
-    });
-    expect(patchAnalyticsDaily).not.toHaveBeenCalledWith(
-      USER_B,
-      expect.anything(),
-    );
+    if (!result.ok) return;
+    const data = result.data as {
+      pendingId: string;
+      saved: boolean;
+      requiresConfirmation?: boolean;
+    };
+    expect(data.saved).toBe(false);
+    expect(data.requiresConfirmation).toBe(true);
+    const row = pendingStore.get(data.pendingId);
+    expect(row?.user_id).toBe(USER_A);
+    expect(row?.user_id).not.toBe(USER_B);
+    expect(patchAnalyticsDaily).not.toHaveBeenCalled();
   });
 
   it("getNutritionState reads server userId snapshot", async () => {
@@ -427,14 +433,17 @@ describe("invalid schema / malformed tool payloads", () => {
     if (!result.ok) expect(result.code).toBe("UNKNOWN_TOOL");
   });
 
-  it("does not report hydration saved when canonical write fails", async () => {
-    patchAnalyticsDaily.mockRejectedValueOnce(new Error("db down"));
+  it("does not report hydration saved until the user confirms", async () => {
     const result = await executeTool(USER_A, {
       name: "recordHydration",
       args: { liters: 1 },
     });
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe("TOOL_EXECUTION_FAILED");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const data = result.data as { saved: boolean; requiresConfirmation?: boolean };
+    expect(data.saved).toBe(false);
+    expect(data.requiresConfirmation).toBe(true);
+    expect(patchAnalyticsDaily).not.toHaveBeenCalled();
   });
 });
 
@@ -485,7 +494,7 @@ describe("event durability invariant", () => {
     // Contract assertion for release audit — not the in-memory Map.
     const canonicalStores = {
       meal_saved: "analytics_daily / confirm_analytics_pending RPC",
-      hydration_recorded: "analytics_daily via patchAnalyticsDaily",
+      hydration_recorded: "analytics_daily via confirm_analytics_pending RPC",
       physique_scored: "chat_messages (message_type=score)",
       council_decision: "chat_messages.payload.data.decision",
     };

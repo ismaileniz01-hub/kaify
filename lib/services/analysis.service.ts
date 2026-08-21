@@ -25,6 +25,9 @@ import { summarizePhysiqueScores } from "@/lib/kaios/context/physique-summary";
 import { loadCrossCoachSnapshot } from "@/lib/kaios/context/coach-snapshot";
 import { formatTrustedProfileContext } from "@/lib/ai/chat-context";
 import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
+import { ensureMayaMealSaveAsk } from "@/lib/kaios/maya/meal-save-ask";
+import { parseHydrationLiters } from "@/lib/kaios/analytics/chat-log";
+import { getTodayNutritionSnapshot } from "@/lib/services/analytics.service";
 import { sanitizeCoachVisibleText } from "@/lib/kaios/coach-retry";
 import { parseGenderInput } from "@/lib/profile-mapper";
 import type { ScoreDrift } from "@/lib/ai/consistency";
@@ -229,10 +232,44 @@ function foodHasUsableMacros(analysis: TechnicalAnalysis): boolean {
   );
 }
 
-function observationAmbiguous(analysis: TechnicalAnalysis): boolean {
-  const extra = analysis as TechnicalAnalysis & { ambiguity?: unknown };
-  if (!Array.isArray(extra.ambiguity)) return false;
-  return extra.ambiguity.some((v) => typeof v === "string" && v.trim().length > 0);
+async function waterTotalForMealConfirm(
+  userId: string,
+  note?: string,
+): Promise<number | undefined> {
+  const glass = 0.25;
+  const logged = parseHydrationLiters(note ?? "");
+  try {
+    const snap = await getTodayNutritionSnapshot(userId);
+    const current = Math.max(0, snap.waterLiters ?? 0);
+    const add = logged ?? glass;
+    return Math.min(30, Math.round((current + add) * 100) / 100);
+  } catch {
+    return Math.round((logged ?? glass) * 100) / 100;
+  }
+}
+
+async function queueFoodPhotoConfirmation(params: {
+  userId: string;
+  coachId: string;
+  analysis: TechnicalAnalysis;
+  attachToMessageId: string | null;
+  note?: string;
+}): Promise<PhotoAnalyticsConfirmation | null> {
+  if (!foodHasUsableMacros(params.analysis)) return null;
+  const food = params.analysis.food_analysis!;
+  const waterLiters = await waterTotalForMealConfirm(params.userId, params.note);
+  return requestPhotoAnalyticsConfirmation({
+    userId: params.userId,
+    coachId: params.coachId,
+    attachToMessageId: params.attachToMessageId,
+    meal: {
+      calories: food.calories,
+      protein: food.protein,
+      carbs: food.carb,
+      fat: food.fat,
+    },
+    waterLiters,
+  });
 }
 
 /**
@@ -283,6 +320,22 @@ export async function analyzePhoto(
     const analysis = extractAnalysisFromPayload(reusedRow.payload);
     const quality = extractQuality(reusedRow.payload);
     if (analysis && quality) {
+      let confirmation: PhotoAnalyticsConfirmation | null = null;
+      if (persona.kind === "food") {
+        try {
+          confirmation = await queueFoodPhotoConfirmation({
+            userId: params.userId,
+            coachId: params.coachId,
+            analysis,
+            attachToMessageId: reusedRow.id,
+            note: params.note,
+          });
+        } catch (error) {
+          logger.error("[analysis.service] reused meal confirmation failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
       return {
         summary: reusedRow.content ?? "",
         analysis,
@@ -291,7 +344,7 @@ export async function analyzePhoto(
         warningTrigger: null,
         messageId: reusedRow.id,
         userMessageId: null,
-        confirmation: null,
+        confirmation,
         geminiCalls: 0,
         deepseekCalls: 0,
         reused: true,
@@ -321,8 +374,14 @@ export async function analyzePhoto(
   if (persona.kind === "food") {
     result = {
       ...result,
-      summary: ensureMayaMealWaterReminder({
-        text: sanitizeCoachVisibleText(result.summary, locale, "maya"),
+      summary: ensureMayaMealSaveAsk({
+        text: ensureMayaMealWaterReminder({
+          text: sanitizeCoachVisibleText(result.summary, locale, "maya"),
+          locale,
+          coachId: "maya",
+          intent: "meal_analysis",
+          userMessage: params.note,
+        }),
         locale,
         coachId: "maya",
         intent: "meal_analysis",
@@ -413,23 +472,14 @@ export async function analyzePhoto(
 
   let confirmation: PhotoAnalyticsConfirmation | null = null;
 
-  if (
-    persona.kind === "food" &&
-    foodHasUsableMacros(result.analysis) &&
-    !observationAmbiguous(result.analysis)
-  ) {
-    const food = result.analysis.food_analysis!;
+  if (persona.kind === "food") {
     try {
-      confirmation = await requestPhotoAnalyticsConfirmation({
+      confirmation = await queueFoodPhotoConfirmation({
         userId: params.userId,
         coachId: params.coachId,
+        analysis: result.analysis,
         attachToMessageId: inserted?.id ?? null,
-        meal: {
-          calories: food.calories,
-          protein: food.protein,
-          carbs: food.carb,
-          fat: food.fat,
-        },
+        note: params.note,
       });
     } catch (error) {
       logger.error("[analysis.service] meal confirmation failed", {

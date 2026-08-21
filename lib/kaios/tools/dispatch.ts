@@ -9,8 +9,9 @@ import {
   type Intent,
 } from "@/lib/kaios/routing/intent";
 import { extractMealMacrosFromCoachText, extractMealMacrosFromRecord } from "@/lib/kaios/nutrition/parse-macros";
-import { addMealToAnalytics } from "@/lib/services/analytics.service";
-import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
+import { createPendingAnalyticsConfirmation } from "@/lib/services/analytics-confirmation.service";
+import { parseHydrationLiters } from "@/lib/kaios/analytics/chat-log";
+import { getTodayNutritionSnapshot } from "@/lib/services/analytics.service";
 import {
   executeTool,
   type ToolName,
@@ -49,7 +50,7 @@ function resultToTruth(
   }
   const data = result.data as Record<string, unknown> | null;
   if (
-    tool === "saveMealMacros" &&
+    (tool === "saveMealMacros" || tool === "recordHydration") &&
     data &&
     data.requiresConfirmation === true
   ) {
@@ -385,8 +386,8 @@ export function macrosForMayaFoodLogConfirm(input: {
 }
 
 /**
- * After an unstructured Maya food-log reply, write the spoken macros to
- * analytics. Reporting "I ate X" is the confirmation.
+ * After an unstructured Maya food-log reply, queue a yes/no analytics card.
+ * Never silent-write macros — reporting "I ate X" is not the confirmation.
  */
 export async function maybeQueueMayaFoodLogConfirmation(input: {
   userId: string;
@@ -396,36 +397,57 @@ export async function maybeQueueMayaFoodLogConfirmation(input: {
   alreadyConfirming?: boolean;
   envelopeData?: unknown;
   envelopeUi?: unknown;
+  currentWaterLiters?: number;
 }): Promise<DispatchResult> {
   const out: DispatchResult = { truths: [], toolResults: [], knowledgeLines: [] };
   const macros = macrosForMayaFoodLogConfirm(input);
   if (!macros) return out;
   if (!isToolAllowedForCoach(input.coach, "saveMealMacros")) return out;
 
+  let current = Math.max(0, input.currentWaterLiters ?? 0);
+  if (input.currentWaterLiters == null) {
+    try {
+      const snap = await getTodayNutritionSnapshot(input.userId);
+      current = Math.max(0, snap.waterLiters ?? 0);
+    } catch {
+      current = 0;
+    }
+  }
+  const waterThisTurn = parseHydrationLiters(input.userMessage);
+  const glass = 0.25;
+  const waterTotal =
+    waterThisTurn != null
+      ? Math.min(30, Math.round((current + waterThisTurn) * 100) / 100)
+      : Math.min(30, Math.round((current + glass) * 100) / 100);
+  const waterDelta = waterThisTurn ?? glass;
+
   try {
-    await addMealToAnalytics(input.userId, macros);
-    await emitKaiosEventBestEffort({
-      category: "nutrition",
-      type: "meal_saved",
+    const pendingId = await createPendingAnalyticsConfirmation({
       userId: input.userId,
-      payload: { meal: macros },
-      at: new Date().toISOString(),
+      coachId: "maya",
+      source: "chat",
+      payload: {
+        summary: `${Math.round(macros.calories)} kcal · P${Math.round(macros.protein)} C${Math.round(macros.carbs)} F${Math.round(macros.fat)} + ${waterDelta}L water`,
+        meal: macros,
+        patch: { waterLiters: waterTotal },
+      },
     });
-    out.toolResults.push({
-      name: "saveMealMacros",
-      result: { ok: true, data: { saved: true, ...macros } },
-    });
+    out.confirmation = {
+      pendingId,
+      summary: `${Math.round(macros.calories)} kcal · P${Math.round(macros.protein)} C${Math.round(macros.carbs)} F${Math.round(macros.fat)} + ${waterDelta}L water`,
+    };
     out.truths.push({
-      status: "SUCCEEDED",
+      status: "PENDING_CONFIRMATION",
       tool: "saveMealMacros",
-      data: { saved: true, ...macros },
+      message: "Awaiting user confirmation",
+      data: { pendingId, saved: false, ...macros, waterLiters: waterTotal },
     });
   } catch {
     out.truths.push({
       status: "FAILED",
       tool: "saveMealMacros",
       code: "SAVE_FAILED",
-      message: "Meal could not be written to analytics.",
+      message: "Meal could not be queued for confirmation.",
     });
   }
   return out;

@@ -23,12 +23,33 @@ type PendingRow = {
 const pendingStore = new Map<string, PendingRow>();
 const patchAnalyticsDaily = vi.fn();
 const getTodayNutritionSnapshot = vi.fn();
+let pendingInsertError: { message: string } | null = null;
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminSupabaseClient: () => ({
     from: (table: string) => {
       if (table === "analytics_pending_confirmations") {
         return {
+          insert: (row: Record<string, unknown>) => ({
+            select: () => ({
+              single: async () => {
+                if (pendingInsertError) {
+                  return { data: null, error: pendingInsertError };
+                }
+                const id = `pending-${pendingStore.size + 1}`;
+                pendingStore.set(id, {
+                  id,
+                  user_id: String(row.user_id),
+                  status: String(row.status ?? "pending"),
+                  created_at: new Date().toISOString(),
+                  payload: (row.payload as Record<string, unknown>) ?? {},
+                  source: String(row.source ?? "chat"),
+                  coach_id: String(row.coach_id ?? "maya"),
+                });
+                return { data: { id }, error: null };
+              },
+            }),
+          }),
           select: () => {
             let filters: Record<string, string> = {};
             const api = {
@@ -106,6 +127,7 @@ vi.mock("@/lib/repositories/analytics-write.repository", () => ({
 
 vi.mock("@/lib/cache/invalidate", () => ({
   invalidateHomeBundleCache: vi.fn().mockResolvedValue(undefined),
+  invalidateUserReadCaches: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -128,6 +150,7 @@ import {
 
 beforeEach(() => {
   pendingStore.clear();
+  pendingInsertError = null;
   vi.clearAllMocks();
   pendingStore.set(PENDING_B, {
     id: PENDING_B,
@@ -156,8 +179,8 @@ beforeEach(() => {
 });
 
 describe("tool hydration write failure", () => {
-  it("returns ok:false when patchAnalyticsDaily rejects (no fake success)", async () => {
-    patchAnalyticsDaily.mockRejectedValueOnce(new Error("db write failed"));
+  it("returns ok:false when pending confirmation insert fails (no fake success)", async () => {
+    pendingInsertError = { message: "db write failed" };
     const result = await executeTool(USER_A, {
       name: "recordHydration",
       args: { liters: 1.5 },
@@ -165,7 +188,7 @@ describe("tool hydration write failure", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe("TOOL_EXECUTION_FAILED");
-      expect(result.message).toMatch(/db write failed/i);
+      expect(result.message).toMatch(/onay kaydı|db write failed/i);
     }
   });
 });

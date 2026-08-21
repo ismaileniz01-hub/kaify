@@ -24,3 +24,21 @@ export function writeAnalyticsCache(data: AnalyticsBundleDTO): void {
     // quota / private mode — ignore
   }
 }
+
+export const ANALYTICS_UPDATED_EVENT = "kaify:analytics-updated";
+
+export function clearAnalyticsCache(): void {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.removeItem(KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/** Chat confirmations call this so the analytics page refetches immediately. */
+export function notifyAnalyticsUpdated(): void {
+  clearAnalyticsCache();
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(ANALYTICS_UPDATED_EVENT));
+}
