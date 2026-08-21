@@ -1,6 +1,6 @@
 ﻿/**
  * Select a small set of RELEVANT memories. Never pads with irrelevant items.
- * Hard cap: 5. No minimum — 0 is correct when nothing qualifies.
+ * Hard cap: 8. No minimum — 0 is correct when nothing qualifies.
  */
 
 import { sanitizeMemories } from "@/lib/kaios/memory/sanitize";
@@ -9,10 +9,22 @@ import type {
   StructuredMemoryItem,
 } from "@/lib/kaios/memory/types";
 
-const HARD_LIMIT = 5;
+const HARD_LIMIT = 8;
 /** Minimum score after keyword / overlap hits. Baseline filler score is 0. */
 export const MEMORY_RELEVANCE_THRESHOLD = 2;
-const STALE_MS = 180 * 24 * 60 * 60 * 1000;
+/** Keyed coaching facts stay eligible for 90 days (last write). */
+export const MEMORY_STALE_MS = 90 * 24 * 60 * 60 * 1000;
+const STALE_MS = MEMORY_STALE_MS;
+
+const ALWAYS_ON_KEYS = new Set([
+  "injury",
+  "pain",
+  "health_limit",
+  "allergy",
+  "disliked_food",
+  "equipment",
+  "training_days",
+]);
 
 const STOPWORDS = new Set(
   [
@@ -94,6 +106,12 @@ function scoreItem(
   }
 
   score += overlapScore(text, options.userMessage);
+  if (item.fact?.key && ALWAYS_ON_KEYS.has(item.fact.key)) {
+    score += 6;
+  }
+  if (item.kind === "fact" && item.fact?.key) {
+    score += 2;
+  }
   if (
     text.includes("kaios event") ||
     text.includes("leo_priority") ||
@@ -141,6 +159,9 @@ export function selectRelevantMemories(
     .filter((row) => {
       if (isStaleWeak(row.item, row.score, now)) return false;
       if (intent === "casual") {
+        if (row.item.fact?.key && ALWAYS_ON_KEYS.has(row.item.fact.key)) {
+          return true;
+        }
         return overlapScore(itemText(row.item), options.userMessage) >= 3;
       }
       return row.score >= MEMORY_RELEVANCE_THRESHOLD;

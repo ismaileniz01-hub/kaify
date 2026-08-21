@@ -23,7 +23,7 @@ import type {
   RuntimeContext,
 } from "@/lib/kaios/context/types";
 
-const MAX_MEMORY_ITEMS = 5;
+const MAX_MEMORY_ITEMS = 8;
 
 /** Pure greetings that do not need relationship continuity. */
 const BARE_GREETING_RE =

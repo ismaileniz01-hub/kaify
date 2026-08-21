@@ -1,8 +1,5 @@
 ﻿/**
  * KAIOS memory helpers — sanitize + select for chat context injection.
- *
- * Wire note: chat path can keep using getRecentMemories from memory.service,
- * then map strings → StructuredMemoryItem and pass through sanitize + select.
  */
 
 export type {
@@ -14,9 +11,22 @@ export type {
 export { sanitizeMemories, isPoisonMemory } from "@/lib/kaios/memory/sanitize";
 export { selectRelevantMemories } from "@/lib/kaios/memory/select";
 export { parseStructuredFacts } from "@/lib/kaios/memory/extract";
+export {
+  extractUserMemoryFacts,
+  MEMORY_TTL_DAYS,
+} from "@/lib/kaios/memory/keys";
+export { MEMORY_STALE_MS } from "@/lib/kaios/memory/select";
 
 import type { StructuredMemoryItem } from "@/lib/kaios/memory/types";
 import { selectRelevantMemories } from "@/lib/kaios/memory/select";
+import { parseStructuredFacts } from "@/lib/kaios/memory/extract";
+
+export type MemoryRecord = {
+  summary: string;
+  createdAt?: string;
+  factKey?: string | null;
+  keyFacts?: Record<string, string>;
+};
 
 /** Map raw summary strings (e.g. getRecentMemories) into structured items. */
 export function memoriesFromSummaries(
@@ -33,12 +43,74 @@ export function memoriesFromSummaries(
     }));
 }
 
+/** Map persisted 90-day rows into keyed facts (newest key wins). */
+export function memoriesFromRecords(
+  rows: MemoryRecord[],
+  source = "coaching_memory",
+): StructuredMemoryItem[] {
+  const items: StructuredMemoryItem[] = [];
+  const seenKeys = new Set<string>();
+
+  for (let i = 0; i < rows.length; i += 1) {
+    const row = rows[i];
+    if (!row) continue;
+    const fromColumn = row.factKey?.trim();
+    const fromJson = row.keyFacts ? Object.keys(row.keyFacts)[0] : undefined;
+    const key = fromColumn || fromJson;
+    const value =
+      (key && row.keyFacts?.[key]) ||
+      (key && row.summary.includes(":")
+        ? row.summary.replace(/^[^:]+:\s*/, "").trim()
+        : undefined);
+
+    if (key && !seenKeys.has(key)) {
+      seenKeys.add(key);
+      items.push({
+        id: `fact-${key}`,
+        kind: "fact",
+        text: value ? `${key}: ${value}` : row.summary.trim(),
+        fact: value ? { key, value } : undefined,
+        source,
+        createdAt: row.createdAt,
+      });
+      continue;
+    }
+
+    if (!key && row.summary.trim()) {
+      const parsed = parseStructuredFacts(row.summary);
+      if (parsed.length > 0) {
+        for (const fact of parsed) {
+          if (seenKeys.has(fact.key)) continue;
+          seenKeys.add(fact.key);
+          items.push({
+            id: `fact-${fact.key}-${i}`,
+            kind: "fact",
+            text: `${fact.key}: ${fact.value}`,
+            fact,
+            source,
+            createdAt: row.createdAt,
+          });
+        }
+        continue;
+      }
+      items.push({
+        id: `summary-${i}`,
+        kind: "summary",
+        text: row.summary.trim(),
+        source,
+        createdAt: row.createdAt,
+      });
+    }
+  }
+
+  return items;
+}
+
 /**
- * Convenience: summaries → sanitize + selectRelevantMemories.
- * Use after getRecentMemories(...) in chat context building.
+ * Records or summaries → sanitize + selectRelevantMemories.
  */
 export function prepareMemoriesForContext(
-  summaries: string[],
+  input: string[] | MemoryRecord[],
   options: {
     coach?: string;
     intent?: string;
@@ -48,9 +120,12 @@ export function prepareMemoriesForContext(
     createdAt?: string[];
   } = {},
 ): StructuredMemoryItem[] {
-  const items = memoriesFromSummaries(summaries, options.source).map((item, i) => ({
+  const items = (typeof input[0] === "string"
+    ? memoriesFromSummaries(input as string[], options.source)
+    : memoriesFromRecords(input as MemoryRecord[], options.source)
+  ).map((item, i) => ({
     ...item,
-    createdAt: options.createdAt?.[i],
+    createdAt: item.createdAt ?? options.createdAt?.[i],
   }));
   return selectRelevantMemories(items, {
     coach: options.coach,

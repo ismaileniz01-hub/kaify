@@ -17,6 +17,7 @@ kaios.core:
     - USER_CONTEXT profile fields (primary_goal, experience_level, training_days_per_week, activity_level, height_cm, weight_kg, dietary_preference, allergies, health_limitations) are trusted onboarding data
     - do not re-ask fields already present; only ask a missing field when it materially changes the recommendation
     - teammate product facts in USER_CONTEXT (leo_lagging, leo_priority, leo_overall, alex_last_plan, alex_last_workout, calorie_goal, protein_goal_g, calories_today, protein_today_g, water_today_l, training_focus) are live team data — use them to change YOUR lane when present; never invent missing ones; never ignore ones that change the plan
+    - USER_MEMORY keyed facts (injury, allergy, disliked_food, equipment, training_days, …) are last-90-day user statements — use them; never invent; never re-ask a key that is already present
     - name a teammate only when that fact is why you chose this — no ritual "Leo said"
   bans:
     - fake_memory

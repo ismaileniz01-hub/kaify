@@ -5,6 +5,7 @@ import {
   prepareMemoriesForContext,
   sanitizeMemories,
   selectRelevantMemories,
+  extractUserMemoryFacts,
 } from "@/lib/kaios/memory";
 import type { StructuredMemoryItem } from "@/lib/kaios/memory/types";
 
@@ -70,7 +71,7 @@ describe("KAIOS memory select", () => {
     expect(selected[0].id).toBe("lift");
   });
 
-  it("never returns more than 5 items even if ten are relevant", () => {
+  it("never returns more than 8 items even if ten are relevant", () => {
     const items = Array.from({ length: 12 }, (_, i) =>
       item(`Memory about training session ${i}`, { id: String(i) }),
     );
@@ -79,8 +80,8 @@ describe("KAIOS memory select", () => {
       intent: "programming",
       limit: 99,
     });
-    expect(selected.length).toBeLessThanOrEqual(5);
-    expect(selected).toHaveLength(5);
+    expect(selected.length).toBeLessThanOrEqual(8);
+    expect(selected).toHaveLength(8);
   });
 
   it("returns 0 for casual questions with no overlapping memory", () => {
@@ -191,5 +192,43 @@ describe("KAIOS memory extract", () => {
         { key: "Goal", value: "cut" },
       ]),
     );
+  });
+});
+
+describe("extractUserMemoryFacts", () => {
+  it("skips thanks and empty chatter", () => {
+    expect(extractUserMemoryFacts("sagol")).toEqual([]);
+    expect(extractUserMemoryFacts("tamam")).toEqual([]);
+  });
+
+  it("keys injury, dislike, and training days from ASCII Turkish", () => {
+    expect(extractUserMemoryFacts("dizim agriyor bugun salona gidemem")).toEqual(
+      expect.arrayContaining([{ key: "injury", value: expect.stringMatching(/diz/i) }]),
+    );
+    expect(extractUserMemoryFacts("brokoli sevmiyorum")).toEqual([
+      { key: "disliked_food", value: "brokoli" },
+    ]);
+    expect(extractUserMemoryFacts("haftada 4 gun gelebiliyorum")).toEqual([
+      { key: "training_days", value: "4" },
+    ]);
+  });
+
+  it("keeps newest keyed fact when preparing context", () => {
+    const prepared = prepareMemoriesForContext(
+      [
+        {
+          summary: "injury: diz",
+          factKey: "injury",
+          keyFacts: { injury: "diz" },
+          createdAt: new Date().toISOString(),
+        },
+        {
+          summary: "KAIOS event facts:\n- meal_saved",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      { coach: "alex", intent: "programming", userMessage: "program yaz" },
+    );
+    expect(prepared.some((m) => m.fact?.key === "injury")).toBe(true);
   });
 });

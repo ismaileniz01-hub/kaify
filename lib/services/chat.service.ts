@@ -16,7 +16,7 @@ import { checkQuotaGuard, refundQuota, settleQuota } from "@/lib/ai/quota-guard"
 import { AiError, toApiError } from "@/lib/ai/errors";
 import { getCoachOrThrow } from "@/lib/services/coach.service";
 import { syncAgents } from "@/lib/services/coaching.service";
-import { getRecentMemories } from "@/lib/services/memory.service";
+import { getRecentMemories, persistUserMessageMemories } from "@/lib/services/memory.service";
 import { applyCoachAnalyticsFromChat } from "@/lib/ai/coach-analytics";
 import { maybeGenerateStructuredCard } from "@/lib/ai/structured-chat";
 import { TOKEN_BUDGET, CONTEXT_BUDGET, AI_FEATURES } from "@/lib/ai/budget";
@@ -24,7 +24,7 @@ import {
   orchestrateCoachChat,
   type OrchestrateResultMeta,
 } from "@/lib/kaios/orchestrator";
-import { prepareMemoriesForContext } from "@/lib/kaios/memory";
+import { prepareMemoriesForContext, extractUserMemoryFacts } from "@/lib/kaios/memory";
 import { resolveActiveLocale } from "@/lib/kaios/localization/resolve";
 import { resolveKaiFamiliarityStage } from "@/lib/kaios/kai/familiarity";
 import { linkPendingConfirmationToMessage } from "@/lib/services/analytics-confirmation.service";
@@ -525,18 +525,23 @@ async function* streamKaiosCoachReply(
       previousAssistantMessage: previousAssistant ?? undefined,
       hasRecentHistory: history.length > 0,
     });
-    const memoryItems = prepareMemoriesForContext(
-      memories.map((m) => m.summary),
-      {
-        coach: coachId,
-        intent,
-        userMessage: cleanMessage,
-        limit: 5,
-        createdAt: memories.map((m) => m.createdAt),
-      },
-    )
+    const extractedFacts = extractUserMemoryFacts(cleanMessage);
+    const storedMemory = prepareMemoriesForContext(memories, {
+      coach: coachId,
+      intent,
+      userMessage: cleanMessage,
+      limit: 8,
+    })
       .map((m) => m.text)
       .filter((text): text is string => typeof text === "string" && text.length > 0);
+    const claimedKeys = new Set(extractedFacts.map((f) => f.key));
+    const memoryItems = [
+      ...extractedFacts.map((f) => `${f.key}: ${f.value}`),
+      ...storedMemory.filter((text) => {
+        const key = text.split(":")[0]?.trim();
+        return !key || !claimedKeys.has(key);
+      }),
+    ].slice(0, 8);
 
     const userState = buildStateSummary(state, fitnessContext, {
       allergies: profileMeta.allergies,
@@ -611,6 +616,15 @@ async function* streamKaiosCoachReply(
         throw new ApiError("INTERNAL_ERROR", aiCopy(locale, "message_not_saved"));
       }
     }
+
+    after(() =>
+      persistUserMessageMemories({
+        userId: params.userId,
+        coachId: params.coachId,
+        userMessage: cleanMessage,
+        sourceMessageId: insertedUser?.id ?? null,
+      }),
+    );
 
     const out: { meta?: OrchestrateResultMeta } = {};
     for await (const chunk of orchestrateCoachChat(
@@ -892,7 +906,7 @@ export async function* streamCoachReply(
       getProfileLocaleAndSafety(admin, params.userId),
       getCoachingState(admin, params.userId),
       syncAgents({ activeCoachId: params.coachId }),
-      getRecentMemories(params.userId, 3),
+      getRecentMemories(params.userId, 24),
       buildFitnessContextSummary(params.userId).catch(() => ""),
       loadCrossCoachSnapshot(params.userId).catch(() => ""),
     ]);
@@ -930,7 +944,9 @@ export async function* streamCoachReply(
           wrapUntrustedInputStable(
             "USER_MEMORY",
             sanitizeUserText(
-              memories.map((m) => m.summary).join("\n- "),
+              memories
+                .map((m) => (m.factKey ? `${m.factKey}: ${m.summary.replace(/^[^:]+:\s*/, "")}` : m.summary))
+                .join("\n- "),
               CONTEXT_BUDGET.memoryChars,
             ),
           )
@@ -1228,6 +1244,12 @@ export async function* streamCoachReply(
     // Background analytics (hint-gated, metered). No automatic N-turn LLM summary.
     after(async () => {
       try {
+        await persistUserMessageMemories({
+          userId: params.userId,
+          coachId: params.coachId,
+          userMessage: cleanMessage,
+          sourceMessageId: insertedUser?.id ?? null,
+        });
         await applyCoachAnalyticsFromChat({
           userId: params.userId,
           coachId: params.coachId,

@@ -73,6 +73,7 @@ export {
   sanitizeMemories,
   prepareMemoriesForContext,
   parseStructuredFacts,
+  extractUserMemoryFacts,
   type StructuredMemoryItem,
 } from "@/lib/kaios/memory";
 

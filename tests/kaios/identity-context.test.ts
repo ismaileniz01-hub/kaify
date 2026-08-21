@@ -105,7 +105,7 @@ describe("canonical state precedence over memory prose", () => {
         "Should be dropped by limit",
       ],
     });
-    expect(ctx.memoryItems?.length).toBeLessThanOrEqual(5);
+    expect(ctx.memoryItems?.length).toBeLessThanOrEqual(8);
     const blob = compilePrompt(ctx)
       .messages.map((m) => m.content)
       .join("\n");

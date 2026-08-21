@@ -424,6 +424,7 @@ type CoachingMemoryRow = {
   user_id: string;
   coach_id: string | null;
   source_message_id: string | null;
+  fact_key: string | null;
   summary: string;
   key_facts: Json;
   source_range: Json | null;
@@ -436,6 +437,7 @@ type CoachingMemoryInsert = {
   user_id: string;
   coach_id?: string | null;
   source_message_id?: string | null;
+  fact_key?: string | null;
   summary: string;
   key_facts?: Json;
   source_range?: Json | null;
