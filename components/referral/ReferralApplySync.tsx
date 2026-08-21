@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { apiPost } from "@/lib/api/client";
-import { clearPendingReferral, getPendingReferral } from "@/lib/referral";
+import { clearPendingReferral, getPendingReferral, REFERRAL_APPLIED_EVENT } from "@/lib/referral";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 
 const SKIP_PREFIXES = ["/login", "/signup", "/privacy", "/terms", "/cookies", "/api/"];
@@ -29,6 +29,7 @@ export function ReferralApplySync() {
       try {
         await apiPost("/api/referral", { code });
         clearPendingReferral();
+        window.dispatchEvent(new Event(REFERRAL_APPLIED_EVENT));
       } catch {
         // Retry on next navigation
       }

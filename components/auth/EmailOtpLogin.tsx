@@ -24,7 +24,7 @@ import {
 import { PENDING_OTP_EMAIL_KEY } from "@/lib/auth/logout";
 import { useSession } from "@/lib/session-context";
 import { apiPost } from "@/lib/api/client";
-import { clearPendingReferral, getPendingReferral } from "@/lib/referral";
+import { clearPendingReferral, getPendingReferral, REFERRAL_APPLIED_EVENT } from "@/lib/referral";
 import { apiErrorMessage } from "@/lib/i18n/api-error";
 import { otpSendSchema } from "@/lib/validations/auth-otp.schema";
 import {
@@ -160,14 +160,17 @@ export function EmailOtpLogin({
     }
   }, [captchaRef, email, goToStep, isSignup, lang, legalAccepted, t]);
 
-  const applyPendingReferral = useCallback(async () => {
+  const applyPendingReferral = useCallback(async (): Promise<boolean> => {
     const code = getPendingReferral();
-    if (!code) return;
+    if (!code) return false;
     try {
       await apiPost("/api/referral", { code });
       clearPendingReferral();
+      window.dispatchEvent(new Event(REFERRAL_APPLIED_EVENT));
+      return true;
     } catch {
       // ReferralApplySync retries on next navigation
+      return Boolean(getPendingReferral());
     }
   }, []);
 
@@ -184,13 +187,13 @@ export function EmailOtpLogin({
           return;
         }
         await refreshSession();
-        await applyPendingReferral();
+        const referralReady = await applyPendingReferral();
         sessionStorage.removeItem(PENDING_OTP_EMAIL_KEY);
         if (skipAutoRedirect) {
           onAuthSuccess?.();
           return;
         }
-        router.replace(safeRedirect);
+        router.replace(referralReady ? "/welcome" : safeRedirect);
       } catch {
         setError(t("login.error.otp_invalid"));
       } finally {

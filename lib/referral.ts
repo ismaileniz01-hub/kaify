@@ -35,10 +35,24 @@ export function getPendingReferral(): string | null {
   return localStorage.getItem(PENDING_REF_KEY);
 }
 
+/** Save or clear a referral code entered during signup (optional step). */
+export function setPendingReferral(code: string | null): void {
+  if (typeof window === "undefined") return;
+  const trimmed = code?.trim().toUpperCase() ?? "";
+  if (!trimmed) {
+    localStorage.removeItem(PENDING_REF_KEY);
+    return;
+  }
+  localStorage.setItem(PENDING_REF_KEY, trimmed);
+}
+
 export function clearPendingReferral(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(PENDING_REF_KEY);
 }
+
+/** Fired after a pending referral is successfully applied (client). */
+export const REFERRAL_APPLIED_EVENT = "kaify:referral-applied";
 
 /** Referral kodunu getir. Yoksa oluştur ve kaydet. */
 export function getReferralCode(): string {
