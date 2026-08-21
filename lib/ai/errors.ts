@@ -35,7 +35,7 @@ export function toApiError(error: unknown, locale?: string): ApiError {
   if (error instanceof AiError) {
     switch (error.code) {
       case "AI_CONFIG":
-        return new ApiError("INTERNAL_ERROR", aiCopy(locale, "ai_unconfigured"));
+        return new ApiError("SERVICE_UNAVAILABLE", aiCopy(locale, "ai_unconfigured"));
       case "AI_LOW_QUALITY":
         return new ApiError(
           "VALIDATION_ERROR",

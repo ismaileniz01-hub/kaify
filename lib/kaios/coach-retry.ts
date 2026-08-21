@@ -24,6 +24,9 @@ const HARD_FAIL_CODES = new Set([
   "STEP_UP_REQUIRED",
   "NOT_FOUND",
   "CONFLICT",
+  "FORBIDDEN",
+  "SERVICE_UNAVAILABLE",
+  "PROVIDER_UNAVAILABLE",
 ]);
 
 export function coachRetryLine(locale?: string | null): string {

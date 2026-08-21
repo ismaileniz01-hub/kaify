@@ -111,7 +111,7 @@ export function ReferralRewardRedeem() {
       open={open}
       labelledBy="referral-redeem-title"
       closeOnBackdrop={false}
-      className="z-[110] bg-black/80"
+      className="z-[90] bg-black/80"
       panelClassName="relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl border border-violet-400/25 bg-zinc-950 shadow-2xl shadow-violet-950/40"
     >
       <div className="flex flex-col items-center px-6 pb-6 pt-8 text-center">

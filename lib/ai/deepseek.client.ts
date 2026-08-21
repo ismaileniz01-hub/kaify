@@ -67,6 +67,13 @@ function withTimeout(
 function toAiError(error: unknown, externalSignal?: AbortSignal): AiError {
   if (error instanceof AiError) return error;
   if (error instanceof UpstreamHttpError) {
+    if (error.status === 401 || error.status === 403) {
+      return new AiError(
+        "AI_CONFIG",
+        "DeepSeek API key is missing or invalid",
+        { status: error.status },
+      );
+    }
     return new AiError("AI_UPSTREAM", error.message);
   }
   if (error instanceof DOMException && error.name === "AbortError") {
