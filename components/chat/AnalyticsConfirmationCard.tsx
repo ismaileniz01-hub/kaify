@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { apiPost } from "@/lib/api/client";
+import { useLang } from "@/lib/lang-context";
 import { notifyAnalyticsUpdated } from "@/lib/analytics-client-cache";
 
 type ConfirmationPayload = {
