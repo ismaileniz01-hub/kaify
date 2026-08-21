@@ -210,8 +210,8 @@ export function extractMealMacrosFromRecord(
 ): ParsedMealMacros | null {
   const rec = asRecord(value);
   if (!rec) return null;
-  let calories = numField(rec.calories ?? rec.kcal);
-  let protein = numField(rec.protein ?? rec.protein_g);
+  const calories = numField(rec.calories ?? rec.kcal);
+  const protein = numField(rec.protein ?? rec.protein_g);
   let carbs = numField(
     rec.carbs ??
       rec.carb ??
