@@ -25,10 +25,7 @@ function parseValueOrRange(a: string, b?: string): number | null {
   return (lo + hi) / 2;
 }
 
-function labeledNumber(
-  text: string,
-  labels: string,
-): number | null {
+function labeledNumber(text: string, labels: string): number | null {
   const re = new RegExp(
     `(?:${labels})\\s*[:：]?\\s*(?:≈|~|yaklaşık|yaklasik|about|around|approx(?:imately)?)?\\s*(\\d+(?:[.,]\\d+)?)(?:\\s*[-–—]\\s*(\\d+(?:[.,]\\d+)?))?`,
     "i",
@@ -38,32 +35,124 @@ function labeledNumber(
   return parseValueOrRange(m[1], m[2]);
 }
 
+function numberBeforeLabel(text: string, labels: string): number | null {
+  const re = new RegExp(
+    `(\\d+(?:[.,]\\d+)?)(?:\\s*[-–—]\\s*(\\d+(?:[.,]\\d+)?))?\\s*(?:g|gr|gram)?\\s*(?:${labels})\\b`,
+    "i",
+  );
+  const m = text.match(re);
+  if (!m?.[1]) return null;
+  return parseValueOrRange(m[1], m[2]);
+}
+
+function kcalIn(text: string): number | null {
+  const m = text.match(
+    /(?:≈|~|yaklaşık|yaklasik|about|around)?\s*(\d+(?:[.,]\d+)?)(?:\s*[-–—]\s*(\d+(?:[.,]\d+)?))?\s*k(?:cal|kal)/i,
+  );
+  return m?.[1] ? parseValueOrRange(m[1], m[2]) : null;
+}
+
+/**
+ * Prefer "Toplam / Total" lines so per-item ~350 kcal does not steal the meal total.
+ */
+function extractFromTotalsLine(src: string): {
+  calories: number | null;
+  protein: number | null;
+  carbs: number | null;
+  fat: number | null;
+} {
+  const block =
+    src.match(
+      /(?:toplam(?:\s+tahmini)?|estimated\s+total|total(?:\s+estimat(?:ed|e))?)[^\n]{0,220}/i,
+    )?.[0] ?? "";
+  if (!block) {
+    return { calories: null, protein: null, carbs: null, fat: null };
+  }
+  return {
+    calories: kcalIn(block),
+    protein:
+      labeledNumber(block, "protein(?:e|i|s)?|proteini") ??
+      numberBeforeLabel(block, "protein(?:e|i|s)?|proteini"),
+    carbs:
+      labeledNumber(
+        block,
+        "karbonhidrat(?:lar)?|carbohydrates?|carbs?",
+      ) ??
+      numberBeforeLabel(block, "karbonhidrat(?:lar)?|carbohydrates?|carbs?"),
+    fat:
+      labeledNumber(block, "yağ|yag|fat") ??
+      numberBeforeLabel(block, "yağ|yag|fat"),
+  };
+}
+
+/**
+ * When Maya lists kcal + protein but skips carbs/fat (common), fill the remainder
+ * so a confirm card can still be offered. Split leftover kcal ~55% carbs / 45% fat.
+ */
+export function fillMissingCarbsFat(
+  calories: number,
+  protein: number,
+  carbs: number | null,
+  fat: number | null,
+): { carbs: number; fat: number } | null {
+  if (carbs != null && fat != null) {
+    return { carbs: Math.round(carbs), fat: Math.round(fat) };
+  }
+  const proteinKcal = Math.max(0, protein * 4);
+  const rem = Math.max(0, calories - proteinKcal);
+  if (carbs != null && fat == null) {
+    const carbsKcal = Math.max(0, carbs * 4);
+    const fatEst = Math.round(Math.max(0, rem - carbsKcal) / 9);
+    return { carbs: Math.round(carbs), fat: fatEst };
+  }
+  if (fat != null && carbs == null) {
+    const fatKcal = Math.max(0, fat * 9);
+    const carbsEst = Math.round(Math.max(0, rem - fatKcal) / 4);
+    return { carbs: carbsEst, fat: Math.round(fat) };
+  }
+  const carbsEst = Math.round((rem * 0.55) / 4);
+  const fatEst = Math.round((rem * 0.45) / 9);
+  return { carbs: carbsEst, fat: fatEst };
+}
+
 /**
  * Parse calories / protein / carbs / fat from a Maya-style macro breakdown.
- * Requires all four fields so daily protein targets are not logged as a meal.
+ * Requires calories + protein at minimum; carbs/fat may be estimated from remainder.
  */
 export function extractMealMacrosFromCoachText(
   text: string,
 ): ParsedMealMacros | null {
   const src = text.normalize("NFC");
-  const calories =
-    labeledNumber(src, "kalori(?:ler|ye)?|calories?|kalorije") ??
-    (() => {
-      const m = src.match(
-        /(\d+(?:[.,]\d+)?)(?:\s*[-–—]\s*(\d+(?:[.,]\d+)?))?\s*k(?:cal|kal)/i,
-      );
-      return m?.[1] ? parseValueOrRange(m[1], m[2]) : null;
-    })();
-  const protein = labeledNumber(src, "protein(?:e|i|s)?|proteini");
-  const carbs = labeledNumber(
-    src,
-    "karbonhidrat(?:lar)?|carbohydrates?|carbs?|ugljikohidrat(?:i)?|ugljeni\\s*hidrat(?:i)?",
-  );
-  const fat = labeledNumber(src, "yağ|yag|fat|masti|masno[cć]a");
+  const fromTotal = extractFromTotalsLine(src);
 
-  return (
-    finalizeMacros(calories, protein, carbs, fat) ?? extractCompactMacros(src)
-  );
+  const calories =
+    fromTotal.calories ??
+    labeledNumber(src, "kalori(?:ler|ye)?|calories?|kalorije") ??
+    kcalIn(src);
+  const protein =
+    fromTotal.protein ??
+    labeledNumber(src, "protein(?:e|i|s)?|proteini") ??
+    numberBeforeLabel(src, "protein(?:e|i|s)?|proteini");
+  let carbs =
+    fromTotal.carbs ??
+    labeledNumber(
+      src,
+      "karbonhidrat(?:lar)?|carbohydrates?|carbs?|ugljikohidrat(?:i)?|ugljeni\\s*hidrat(?:i)?",
+    );
+  let fat =
+    fromTotal.fat ?? labeledNumber(src, "yağ|yag|fat|masti|masno[cć]a");
+
+  if (calories != null && protein != null && (carbs == null || fat == null)) {
+    const compact = extractCompactMacros(src);
+    if (compact) return compact;
+    const filled = fillMissingCarbsFat(calories, protein, carbs, fat);
+    if (filled) {
+      carbs = filled.carbs;
+      fat = filled.fat;
+    }
+  }
+
+  return finalizeMacros(calories, protein, carbs, fat);
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -121,19 +210,25 @@ export function extractMealMacrosFromRecord(
 ): ParsedMealMacros | null {
   const rec = asRecord(value);
   if (!rec) return null;
-  const own = finalizeMacros(
-    numField(rec.calories ?? rec.kcal),
-    numField(rec.protein ?? rec.protein_g),
-    numField(
-      rec.carbs ??
-        rec.carb ??
-        rec.carbohydrates ??
-        rec.carbs_g ??
-        rec.carb_g ??
-        rec.karbonhidrat,
-    ),
-    numField(rec.fat ?? rec.fat_g),
+  let calories = numField(rec.calories ?? rec.kcal);
+  let protein = numField(rec.protein ?? rec.protein_g);
+  let carbs = numField(
+    rec.carbs ??
+      rec.carb ??
+      rec.carbohydrates ??
+      rec.carbs_g ??
+      rec.carb_g ??
+      rec.karbonhidrat,
   );
+  let fat = numField(rec.fat ?? rec.fat_g);
+  if (calories != null && protein != null && (carbs == null || fat == null)) {
+    const filled = fillMissingCarbsFat(calories, protein, carbs, fat);
+    if (filled) {
+      carbs = filled.carbs;
+      fat = filled.fat;
+    }
+  }
+  const own = finalizeMacros(calories, protein, carbs, fat);
   if (own) return own;
   for (const key of [
     "macros",

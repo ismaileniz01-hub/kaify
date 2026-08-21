@@ -151,17 +151,42 @@ const NUTRITION_Q_RE =
 
 /** User reporting food they ate (slang / short logs) — needs macro headroom, not casual. */
 const FOOD_CONSUMPTION_RE =
-  /\b(yedim|yuttum|gomdum|gömdüm|gom|i ate|i had|just ate|had a|devoured|scoffed|ate a|ate an|doner|döner|durum|dürüm|wrap|burger|pizza|kebab|lahmacun|pide|tost|sandwich|breakfast|lunch|dinner|brunch|snack|öğün|ogun|yemek yedim|meal i|food log|sutlac|sütlaç|pudding|muhallebi)\b/i;
+  /\b(yedim|yuttum|gomdum|gömdüm|gom|i ate|i had|just ate|had a|devoured|scoffed|ate a|ate an|doner|döner|durum|dürüm|wrap|burger|pizza|kebab|lahmacun|pide|tost|sandwich|breakfast|lunch|dinner|brunch|snack|öğün|ogun|yemek yedim|meal i|food log|sutlac|sütlaç|pudding|muhallebi|tavuk|simit|çiğköfte|cigkofte|sufle|souffle)\b/i;
 
 export function looksLikeFoodConsumption(message: string): boolean {
   return FOOD_CONSUMPTION_RE.test(normalizeMessage(message));
+}
+
+/** Asking if the prior meal was saved, or re-pasting the macro estimate. */
+const MEAL_SAVE_FOLLOWUP_RE =
+  /\b(ekledin\s*mi|kaydettin\s*mi|analize\s*ekle(?:din)?|yeme[gğ]i\s*analize|did you (?:add|save)|add(?:ed)? (?:it|this|the meal)|save(?:d)? (?:it|this|the meal))\b/i;
+
+export function looksLikeMealSaveFollowUp(message: string): boolean {
+  const msg = normalizeMessage(message);
+  if (MEAL_SAVE_FOLLOWUP_RE.test(msg)) return true;
+  if (msg.length >= 40 && /\b(?:kcal|kalori)\b/i.test(msg) && /\bprotein/i.test(msg)) {
+    return true;
+  }
+  return false;
+}
+
+export function looksLikeHydrationLog(message: string): boolean {
+  const msg = normalizeMessage(message);
+  if (HYDRATION_RE.test(msg)) return true;
+  if (
+    /\b(ictim|ictim|icim|drank)\b/i.test(msg) &&
+    /\b(su|suyu|water|litre|liter|liters|\d+\s*ml)\b/i.test(msg)
+  ) {
+    return true;
+  }
+  return false;
 }
 
 const MEAL_PLAN_RE =
   /\b(meal\s*plan|yemek plan|yemek program|öğün plan|ogun plan|haftal[iı]k\s+men|diyet listesi|weekly meals|dinners?\s+for\s+the\s+week|weekly\s+dinners?|menu for|hazırla.*plan|hazirla.*plan|plan my (?:dinners?|meals?|lunches?))/i;
 
 const HYDRATION_RE =
-  /\b(hydrat|water intake|drink water|su iç|su ic|susuz|dehydrat)\b/i;
+  /\b(hydrat|water intake|drink water|su\s*iç|su\s*ic|susuz|dehydrat|(?:\d+(?:[.,]\d+)?\s*(?:l|lt|litre|liter|liters|ml).{0,24}(?:su|suyu|water)|(?:su|suyu|water).{0,24}(?:içtim|ictim|içerim|icerim|drank|drink)))\b/i;
 
 /** Avoid bare "schedule" — it false-positives programming phrases like "PPL schedule". */
 const TOOL_RE =
@@ -225,7 +250,9 @@ function continuedDomainIntent(
     (MEAL_PLAN_RE.test(prev) ||
       /\b(meal_plan|kalori|protein|öğün|ogun|macro)\b/i.test(prev))
   ) {
-    return "meal_plan";
+    // Macro estimates are food-log follow-ups, not a weekly menu rewrite.
+    if (MEAL_PLAN_RE.test(prev)) return "meal_plan";
+    return "nutrition_question";
   }
   return null;
 }
@@ -302,6 +329,19 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
     return "motivation";
   }
 
+  // Water / "did you save the meal?" must win before elliptical continuation,
+  // otherwise Maya treats them as meal_plan and dumps a new week.
+  if (
+    input.coach === "maya" &&
+    looksLikeHydrationLog(msg) &&
+    !looksLikeFoodConsumption(msg)
+  ) {
+    return "hydration";
+  }
+  if (input.coach === "maya" && looksLikeMealSaveFollowUp(msg)) {
+    return "nutrition_question";
+  }
+
   // Elliptical replies after a prior proposal are NOT standalone casual.
   const shortTurn = classifyShortTurn({
     message: msg,
@@ -310,8 +350,6 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
   });
   if (shortTurn.needsContinuation && shortTurn.continuePreviousTopic) {
     const prevMsg = input.previousAssistantMessage ?? "";
-    // Thanks / "ok" after a FULL weekly program already delivered → short ack,
-    // never rewrite the split (structured programming would regenerate it).
     if (
       input.coach === "alex" &&
       looksLikeDeliveredWorkoutProgram(prevMsg) &&
@@ -319,6 +357,12 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
       (looksLikeThanksOrSocialAck(msg) || looksLikeBareConfirm(msg))
     ) {
       return "casual";
+    }
+    if (input.coach === "maya" && looksLikeHydrationLog(msg)) {
+      return "hydration";
+    }
+    if (input.coach === "maya" && looksLikeMealSaveFollowUp(msg)) {
+      return "nutrition_question";
     }
     return (
       continuedDomainIntent(input.coach, input.previousAssistantMessage) ??

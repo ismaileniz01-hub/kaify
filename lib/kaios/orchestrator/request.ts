@@ -530,6 +530,7 @@ export async function* orchestrateCoachChat(
       alreadyConfirming: false,
       envelopeData: envelope.data,
       envelopeUi: envelope.ui,
+      previousAssistantText: previousAssistant,
     });
     actionTruth = [...actionTruth, ...foodLog.truths];
     if (foodLog.confirmation) confirmation = foodLog.confirmation;

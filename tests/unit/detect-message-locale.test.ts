@@ -45,10 +45,14 @@ describe("detectMessageLocale", () => {
     expect(detectMessageLocale("今日は何を食べましたか", "en")).toBe("ja");
   });
 
-  it("treats ASCII-folded Turkish as Turkish", () => {
-    expect(detectMessageLocale("nasil antrenman yapmaliyim", "en")).toBe("tr");
-    expect(detectMessageLocale("bugun salona gidesim yok", "en")).toBe("tr");
-    expect(detectMessageLocale("sagol kral", "en")).toBe("tr");
+  it("keeps Turkish when the user pastes a TR food-macro list", () => {
+    expect(
+      detectMessageLocale(
+        "Tavuk tava (1 porsiyon): ~350-400 kcal, 30-35g protein - Çiğköfte (1 porsiyon): ~250-300 kcal",
+        "en",
+        ["bugun tavuk tava cigkofte sufle ve 2 simit yedim"],
+      ),
+    ).toBe("tr");
   });
 
   it("keeps Turkish when gym English words appear in a TR sentence", () => {

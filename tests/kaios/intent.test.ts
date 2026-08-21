@@ -200,6 +200,30 @@ Forma dikkat, ego yapma.
     ).toBe("hydration");
   });
 
+  it("keeps Maya liter water logs as hydration after a food estimate", () => {
+    expect(
+      resolveIntent({
+        coach: "maya",
+        message: "1 litre de su ictim",
+        previousAssistantMessage:
+          "Toplam tahmini: ~1400-1600 kcal, 55-65g protein. Analize eklememi onaylıyor musun?",
+        hasRecentHistory: true,
+      }),
+    ).toBe("hydration");
+  });
+
+  it("treats Maya save-follow-ups as nutrition, not a new meal plan", () => {
+    expect(
+      resolveIntent({
+        coach: "maya",
+        message: "yemegi analize ekledin mi",
+        previousAssistantMessage:
+          "Toplam tahmini: ~1400 kcal, 60g protein. Analize eklememi onaylıyor musun?",
+        hasRecentHistory: true,
+      }),
+    ).toBe("nutrition_question");
+  });
+
   it("respects workflow/route overrides for council", () => {
     expect(
       resolveIntent({

@@ -5,6 +5,7 @@
 
 import {
   looksLikeFoodConsumption,
+  looksLikeMealSaveFollowUp,
   type CoachId,
   type Intent,
 } from "@/lib/kaios/routing/intent";
@@ -374,12 +375,18 @@ export function macrosForMayaFoodLogConfirm(input: {
   alreadyConfirming?: boolean;
   envelopeData?: unknown;
   envelopeUi?: unknown;
+  previousAssistantText?: string;
 }): ReturnType<typeof extractMealMacrosFromCoachText> {
   if (input.alreadyConfirming) return null;
   if (input.coach !== "maya") return null;
-  if (!looksLikeFoodConsumption(input.userMessage)) return null;
+  const followUp = looksLikeMealSaveFollowUp(input.userMessage);
+  if (!looksLikeFoodConsumption(input.userMessage) && !followUp) return null;
   return (
     extractMealMacrosFromCoachText(input.assistantText) ??
+    extractMealMacrosFromCoachText(input.userMessage) ??
+    (followUp
+      ? extractMealMacrosFromCoachText(input.previousAssistantText ?? "")
+      : null) ??
     extractMealMacrosFromRecord(input.envelopeData) ??
     extractMealMacrosFromRecord(input.envelopeUi)
   );
@@ -398,6 +405,7 @@ export async function maybeQueueMayaFoodLogConfirmation(input: {
   envelopeData?: unknown;
   envelopeUi?: unknown;
   currentWaterLiters?: number;
+  previousAssistantText?: string;
 }): Promise<DispatchResult> {
   const out: DispatchResult = { truths: [], toolResults: [], knowledgeLines: [] };
   const macros = macrosForMayaFoodLogConfirm(input);

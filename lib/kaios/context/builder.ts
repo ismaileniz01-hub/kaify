@@ -196,14 +196,15 @@ export function buildRuntimeContext(
       ? input.conversationTurns
       : undefined;
 
-  // Short-turn continuation: keep only the minimum recent turns (1–3).
+  // Short-turn continuation: keep only the minimum recent turns (1–3),
+  // except Maya — she must still see the meal being confirmed.
   if (
     shortTurn.needsContinuation &&
     input.conversationTurns &&
     input.conversationTurns.length > 0
   ) {
-    const budget = Math.max(1, Math.min(3, shortTurn.recentTurnBudget || 2));
-    conversationTurns = input.conversationTurns.slice(-budget);
+    const cap = input.coach === "maya" ? 8 : Math.max(1, Math.min(3, shortTurn.recentTurnBudget || 2));
+    conversationTurns = input.conversationTurns.slice(-cap);
   }
 
   const teamFacts =

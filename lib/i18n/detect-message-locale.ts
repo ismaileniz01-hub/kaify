@@ -67,14 +67,21 @@ const SHARED_ACK_ONLY =
 const FRANC_MIN_CHARS = 20;
 
 /** franc-min regularly tags short Turkish (no diacritics) as Balkan / Malay. */
-const FRANC_UNSTABLE_SHORT = new Set<SupportedLocale>([
+const FRANC_FLAKY_LATIN = new Set<SupportedLocale>([
+  "fr",
+  "de",
+  "es",
+  "it",
+  "pt",
+  "nl",
+  "ro",
   "hr",
   "bs",
   "sr",
-  "sl",
   "id",
   "az",
   "sk",
+  "sl",
 ]);
 
 const TURKISH_PAST_OR_FOOD =
@@ -100,7 +107,7 @@ const WORD_HINTS: Array<{ locale: SupportedLocale; pattern: RegExp }> = [
   {
     locale: "tr",
     pattern:
-      /\b(ben|sen|ve|bir|bi|bu|ne|nasıl|nasil|bugün|bugun|yemek|merhaba|lütfen|lutfen|neden|için|icin|var|yok|mı|mi|mu|mü|yedim|yedin|yedik|içtim|ictim|yaptım|yaptim|kase|sutlac|sütlaç|çorba|corba|pilav|tekrar|bilgi|kontrol|istiyorum|antrenman|kahvaltı|kahvalti|öğün|ogun|kaydet|misin|musun|mısın|sagol|sağol|tesekkur|teşekkür|tamam|tamamdir|tamamdır|kral|reis|program|gunluk|günlük|haftalik|haftalık|koc|koç|turkce|türkçe|yazamiyorum|yazamıyorum|anlamadin|anlamadın|anladim|anladım)\b/i,
+      /\b(ben|sen|ve|bir|bi|bu|ne|nasıl|nasil|bugün|bugun|yemek|merhaba|lütfen|lutfen|neden|için|icin|var|yok|mı|mi|mu|mü|yedim|yedin|yedik|içtim|ictim|yaptım|yaptim|kase|sutlac|sütlaç|çorba|corba|pilav|tekrar|bilgi|kontrol|istiyorum|antrenman|kahvaltı|kahvalti|öğün|ogun|kaydet|misin|musun|mısın|sagol|sağol|tesekkur|teşekkür|tamam|tamamdir|tamamdır|kral|reis|program|gunluk|günlük|haftalik|haftalık|koc|koç|turkce|türkçe|yazamiyorum|yazamıyorum|anlamadin|anlamadın|anladim|anladım|tavuk|simit|porsiyon|cigkofte|çiğköfte|sufle|ekledin)\b/i,
   },
   {
     locale: "fr",
@@ -168,7 +175,7 @@ function localeFromFranc(text: string): SupportedLocale | null {
   for (const [iso3, score] of candidates) {
     const mapped = FRANC_TO_LOCALE[iso3];
     if (!mapped || score < 0.5) continue;
-    if (turkish && FRANC_UNSTABLE_SHORT.has(mapped)) continue;
+    if (turkish && FRANC_FLAKY_LATIN.has(mapped)) continue;
     return mapped;
   }
   return turkish ? "tr" : null;
@@ -215,15 +222,23 @@ export function detectMessageLocale(
   const cleaned = normalizeForDetection(text);
   if (!cleaned || !HAS_LETTERS.test(cleaned)) return fallback;
 
+  const conversation = inheritLocaleFromPriorMessages(recentUserMessages);
   const folded = foldDiacritics(cleaned);
   const direct = detectWithoutFallback(cleaned);
   if (direct) {
-    if (direct !== "tr" && FRANC_UNSTABLE_SHORT.has(direct) && looksLikeTurkishChat(cleaned)) {
+    if (direct !== "tr" && FRANC_FLAKY_LATIN.has(direct) && looksLikeTurkishChat(cleaned)) {
       return "tr";
     }
-    // Gym English tokens inside ASCII-Turkish must not flip the reply language.
     if (direct === "en" && looksLikeTurkishChat(cleaned)) {
       return "tr";
+    }
+    if (
+      conversation &&
+      conversation !== direct &&
+      FRANC_FLAKY_LATIN.has(direct) &&
+      (localeFromWordHints(cleaned) ?? localeFromWordHints(folded)) !== direct
+    ) {
+      return conversation;
     }
     return direct;
   }

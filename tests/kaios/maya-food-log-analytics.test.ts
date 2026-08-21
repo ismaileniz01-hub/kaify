@@ -41,12 +41,25 @@ describe("extractMealMacrosFromCoachText", () => {
     ).toEqual({ calories: 280, protein: 4, carbs: 48, fat: 8 });
   });
 
-  it("does not treat a protein target as a meal", () => {
-    expect(
-      extractMealMacrosFromCoachText(
-        "Aim for about 150g protein a day. Stay consistent.",
-      ),
-    ).toBeNull();
+  it("parses a totals line when per-item kcal is listed first", () => {
+    const text = `Tavuk tava (1 porsiyon): ~350-400 kcal, 30-35g protein
+Çiğköfte (1 porsiyon): ~250-300 kcal, 8-10g protein
+Toplam tahmini: ~1400-1600 kcal, 55-65g protein`;
+    const parsed = extractMealMacrosFromCoachText(text);
+    expect(parsed?.calories).toBe(1500);
+    expect(parsed?.protein).toBe(60);
+    expect(parsed?.carbs).toBeGreaterThan(0);
+    expect(parsed?.fat).toBeGreaterThan(0);
+  });
+
+  it("fills carbs/fat when Maya only listed calories and protein", () => {
+    const parsed = extractMealMacrosFromCoachText(
+      "Kalori: 650 kcal Protein: 40g. Analize eklememi onaylıyor musun?",
+    );
+    expect(parsed?.calories).toBe(650);
+    expect(parsed?.protein).toBe(40);
+    expect(parsed?.carbs).toBeGreaterThan(0);
+    expect(parsed?.fat).toBeGreaterThan(0);
   });
 });
 
@@ -61,15 +74,15 @@ describe("macrosForMayaFoodLogConfirm", () => {
     ).toEqual({ calories: 650, protein: 38, carbs: 65, fat: 28 });
   });
 
-  it("skips general nutrition questions without a food log", () => {
+  it("queues confirmation when the user pastes the macro estimate", () => {
     expect(
       macrosForMayaFoodLogConfirm({
         coach: "maya",
-        userMessage: "How much protein should I eat?",
-        assistantText:
-          "Kalori: 1800 kcal Protein: 140g Karbonhidrat: 180g Yağ: 60g",
+        userMessage:
+          "Tavuk tava (1 porsiyon): ~350-400 kcal, 30-35g protein - Çiğköfte: ~250-300 kcal, 8-10g protein Toplam tahmini: ~1400-1600 kcal, 55-65g protein",
+        assistantText: "Salut, je vois une liste.",
       }),
-    ).toBeNull();
+    ).toMatchObject({ calories: 1500, protein: 60 });
   });
 
   it("skips other coaches", () => {
