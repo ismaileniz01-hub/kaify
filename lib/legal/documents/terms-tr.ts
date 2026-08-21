@@ -17,7 +17,7 @@ import type { LegalDocument } from "./types";
 export const TERMS_DOCUMENT_TR: LegalDocument = {
   title: "Kullanım Koşulları",
   subtitle: `Son güncelleme: 21 Ağustos 2026 · Sürüm ${TERMS_VERSION} · İngilizce metin esas alınır`,
-  intro: `Bu Kullanım Koşulları ("Koşullar"), abonelik tabanlı bir fitness ve wellness teknoloji hizmeti olan Kaify (${LEGAL_URL}) kullanımınız için sizinle ${LEGAL_ENTITY} arasında bağlayıcı bir sözleşme oluşturur. Hesap oluşturarak, kabul ederek veya Kaify'ı kullanarak bu Koşulları ve Gizlilik Politikamızı kabul etmiş olursunuz. Kabul etmiyorsanız Kaify'ı kullanmayın. Bu Türkçe metin kolaylık içindir; zorunlu yerel dil kurallarının geçerli olduğu durumlar dışında İngilizce metin esas alınır.`,
+  intro: `Bu Kullanım Koşulları ("Koşullar"), abonelik tabanlı bir fitness ve wellness teknoloji hizmeti olan Kaify Ai (${LEGAL_URL}) kullanımınız için sizinle ${LEGAL_ENTITY} arasında bağlayıcı bir sözleşme oluşturur. Hesap oluşturarak, kabul ederek veya Kaify Ai'ı kullanarak bu Koşulları ve Gizlilik Politikamızı kabul etmiş olursunuz. Kabul etmiyorsanız Kaify Ai'ı kullanmayın. Bu Türkçe metin kolaylık içindir; zorunlu yerel dil kurallarının geçerli olduğu durumlar dışında İngilizce metin esas alınır.`,
   sections: [
     {
       id: "parties",
@@ -25,15 +25,15 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: `Sözleşme tarafı, Kaify'ı ${LEGAL_URL} adresinde işleten ${LEGAL_ENTITY}'dır. Halen yayımlanan operasyonel adres: ${LEGAL_OPERATIONAL_ADDRESS}. Tescilli tüzel kişi unvanı, şirket sicil numarası ve tescilli merkez, hukuk müşavirliği tarafından teyit edilmelidir (bkz. LEGAL_FACTS_REQUIRED).`,
+          text: `Sözleşme tarafı, Kaify Ai'ı ${LEGAL_URL} adresinde işleten ${LEGAL_ENTITY}'dır. Halen yayımlanan operasyonel adres: ${LEGAL_OPERATIONAL_ADDRESS}. Tescilli tüzel kişi unvanı, şirket sicil numarası ve tescilli merkez, hukuk müşavirliği tarafından teyit edilmelidir (bkz. LEGAL_FACTS_REQUIRED).`,
         },
         {
           type: "p",
-          text: "Yasanın izin verdiği azami ölçüde: (a) bu sözleşme yalnızca siz ile Kaify'ı işleten tüzel kişi arasındadır; (b) hiçbir kurucu, yönetici, yetkili, çalışan, yüklenici, yatırımcı, pay sahibi, bağlı kuruluş veya lisans veren bu Koşulların bireysel tarafı değildir; ve (c) Kaify ile ilgili talepler, yürürlükteki hukukun böyle bir sınırlamaya izin vermediği durumlar dışında, korunan kişilere değil işleten tüzel kişiye yöneltilmelidir.",
+          text: "Yasanın izin verdiği azami ölçüde: (a) bu sözleşme yalnızca siz ile Kaify Ai'ı işleten tüzel kişi arasındadır; (b) hiçbir kurucu, yönetici, yetkili, çalışan, yüklenici, yatırımcı, pay sahibi, bağlı kuruluş veya lisans veren bu Koşulların bireysel tarafı değildir; ve (c) Kaify Ai ile ilgili talepler, yürürlükteki hukukun böyle bir sınırlamaya izin vermediği durumlar dışında, korunan kişilere değil işleten tüzel kişiye yöneltilmelidir.",
         },
         {
           type: "p",
-          text: "Paddle (Kayıtlı Satıcı / Merchant of Record olarak hareket eden ilgili Paddle grup şirketi) ödeme işlemlerini yürütür. Paddle, Kaify'ın fitness içeriğinin, AI koçlarının veya ürün işlevselliğinin sağlayıcısı değildir.",
+          text: "Paddle (Kayıtlı Satıcı / Merchant of Record olarak hareket eden ilgili Paddle grup şirketi) ödeme işlemlerini yürütür. Paddle, Kaify Ai'ın fitness içeriğinin, AI koçlarının veya ürün işlevselliğinin sağlayıcısı değildir.",
         },
       ],
     },
@@ -43,15 +43,15 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "16 yaşından küçük hiç kimse hesap oluşturamaz veya Kaify'ı kullanamaz. Kayıt olarak en az 16 yaşında olduğunuzu ve verdiğiniz bilgilerin doğru olduğunu beyan edersiniz.",
+          text: "16 yaşından küçük hiç kimse hesap oluşturamaz veya Kaify Ai'ı kullanamaz. Kayıt olarak en az 16 yaşında olduğunuzu ve verdiğiniz bilgilerin doğru olduğunu beyan edersiniz.",
         },
         {
           type: "p",
-          text: "16 veya 17 yaşındaysanız ve bulunduğunuz yerde yasal erginlik yaşına ulaşmadıysanız, bir ebeveyn veya yasal vasinin bu Koşulları ve Gizlilik Politikasını incelediğini ve kullanımınıza izin verdiğini beyan edersiniz. Kaify, makul ölçüde gerekli olduğunda yaş veya vasi doğrulaması isteyebilir; reşit olmadığınıza veya gerekli yetkiye sahip olmadığınıza makul ölçüde inanırsa hesabı askıya alabilir veya silebilir.",
+          text: "16 veya 17 yaşındaysanız ve bulunduğunuz yerde yasal erginlik yaşına ulaşmadıysanız, bir ebeveyn veya yasal vasinin bu Koşulları ve Gizlilik Politikasını incelediğini ve kullanımınıza izin verdiğini beyan edersiniz. Kaify Ai, makul ölçüde gerekli olduğunda yaş veya vasi doğrulaması isteyebilir; reşit olmadığınıza veya gerekli yetkiye sahip olmadığınıza makul ölçüde inanırsa hesabı askıya alabilir veya silebilir.",
         },
         {
           type: "p",
-          text: "Bir küçüğün kullanımına izin veren ebeveyn veya vasi, yasanın izin verdiği ölçüde bu kullanımı denetlemekten sorumludur. Kaify, 16 veya 17 yaşındaki her kullanıcının yetişkin olduğunu iddia etmez.",
+          text: "Bir küçüğün kullanımına izin veren ebeveyn veya vasi, yasanın izin verdiği ölçüde bu kullanımı denetlemekten sorumludur. Kaify Ai, 16 veya 17 yaşındaki her kullanıcının yetişkin olduğunu iddia etmez.",
         },
       ],
     },
@@ -61,7 +61,7 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Hesap oluşturup bu Koşulları kabul ettiğinizde (onay kutusu veya eşdeğer kontrol dahil) Kaify ile sözleşme kurarsınız. Abonelik satın alımı ayrıca Paddle'ın Alıcı Koşulları kapsamında Paddle ile bir ödeme işlemi oluşturur. Kabulün elektronik kayıtları (sürüm, zaman damgası ve ilgili deliller) Gizlilik Politikamızda açıklandığı şekilde saklanabilir.",
+          text: "Hesap oluşturup bu Koşulları kabul ettiğinizde (onay kutusu veya eşdeğer kontrol dahil) Kaify Ai ile sözleşme kurarsınız. Abonelik satın alımı ayrıca Paddle'ın Alıcı Koşulları kapsamında Paddle ile bir ödeme işlemi oluşturur. Kabulün elektronik kayıtları (sürüm, zaman damgası ve ilgili deliller) Gizlilik Politikamızda açıklandığı şekilde saklanabilir.",
         },
       ],
     },
@@ -71,7 +71,7 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Kaify; AI destekli sanal koçlar (Alex, Maya, Leo ve Kai dahil), seriler, analizler, isteğe bağlı yemek ve fizik fotoğraf analizi, programlar ve ilgili özellikler sunan bir fitness ve genel wellness teknoloji hizmetidir. Sonuçlar kişiden kişiye değişir. Kaify belirli bir kilo, vücut kompozisyonu, güç, performans, sağlık, gelir veya yaşam tarzı sonucu vaat etmez.",
+          text: "Kaify Ai; AI destekli sanal koçlar (Alex, Maya, Leo ve Kai dahil), seriler, analizler, isteğe bağlı yemek ve fizik fotoğraf analizi, programlar ve ilgili özellikler sunan bir fitness ve genel wellness teknoloji hizmetidir. Sonuçlar kişiden kişiye değişir. Kaify Ai belirli bir kilo, vücut kompozisyonu, güç, performans, sağlık, gelir veya yaşam tarzı sonucu vaat etmez.",
         },
         {
           type: "p",
@@ -79,7 +79,7 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
         },
         {
           type: "p",
-          text: "Kaify özellikler, planlar, içerik veya teknik gereksinimleri ekleyebilir, kaldırabilir, değiştirebilir, yerine koyabilir veya sonlandırabilir. Beta veya deneysel özellikler eksik, hatalı olabilir veya zorunlu hukukun ötesinde sorumluluk doğurmaksızın geri çekilebilir.",
+          text: "Kaify Ai özellikler, planlar, içerik veya teknik gereksinimleri ekleyebilir, kaldırabilir, değiştirebilir, yerine koyabilir veya sonlandırabilir. Beta veya deneysel özellikler eksik, hatalı olabilir veya zorunlu hukukun ötesinde sorumluluk doğurmaksızın geri çekilebilir.",
         },
       ],
     },
@@ -89,11 +89,11 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Kaify bir sağlık hizmeti sağlayıcısı, tıp profesyoneli, acil durum hizmeti, sigortacı veya tıbbi cihaz değildir. Kaify tıbbi teşhis, tedavi, reçete, fizyoterapi, acil bakım veya kişiselleştirilmiş tıbbi tavsiye sunmaz. İçerik yalnızca genel bilgilendirme, eğitim, fitness ve wellness amaçlıdır; hekim veya diğer nitelikli bir profesyonelin yerine geçmez.",
+          text: "Kaify Ai bir sağlık hizmeti sağlayıcısı, tıp profesyoneli, acil durum hizmeti, sigortacı veya tıbbi cihaz değildir. Kaify Ai tıbbi teşhis, tedavi, reçete, fizyoterapi, acil bakım veya kişiselleştirilmiş tıbbi tavsiye sunmaz. İçerik yalnızca genel bilgilendirme, eğitim, fitness ve wellness amaçlıdır; hekim veya diğer nitelikli bir profesyonelin yerine geçmez.",
         },
         {
           type: "p",
-          text: "Tıbbi durumunuz, yaralanmanız, gebeliğiniz, belirtileriniz, ilaçlarınız, engeliniz varsa veya emin değilseniz katılmadan önce profesyonel tavsiye alın. Ağrı, baş dönmesi, baygınlık, göğüs rahatsızlığı, nefes alma güçlüğü veya diğer endişe verici belirtiler yaşarsanız aktiviteyi bırakın ve uygun yardım alın. Acil durumlarda yerel acil servisleri (örneğin 112 veya 911) arayın — Kaify'ı kullanmayın.",
+          text: "Tıbbi durumunuz, yaralanmanız, gebeliğiniz, belirtileriniz, ilaçlarınız, engeliniz varsa veya emin değilseniz katılmadan önce profesyonel tavsiye alın. Ağrı, baş dönmesi, baygınlık, göğüs rahatsızlığı, nefes alma güçlüğü veya diğer endişe verici belirtiler yaşarsanız aktiviteyi bırakın ve uygun yardım alın. Acil durumlarda yerel acil servisleri (örneğin 112 veya 911) arayın — Kaify Ai'ı kullanmayın.",
         },
         {
           type: "ul",
@@ -101,7 +101,7 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
             "Güvenli ortam, ekipman, yoğunluk, form ve aktivite seviyesini seçmek sizin sorumluluğunuzdadır.",
             "Egzersiz, beslenme değişiklikleri, oruç, takviyeler ve fiziksel aktivite doğası gereği risk içerir.",
             "Yasanın izin verdiği ölçüde, gerçekleştirmeyi seçtiğiniz faaliyetlerin doğasında bulunan olağan riskleri gönüllü olarak üstlenirsiniz.",
-            "Kaify fiziksel durumunuzu veya çevrenizi gerçek zamanlı izleyemez.",
+            "Kaify Ai fiziksel durumunuzu veya çevrenizi gerçek zamanlı izleyemez.",
             "Bu Koşullardaki hiçbir hüküm yasal olarak hariç tutulamayacak sorumluluğu ortadan kaldırmaz.",
           ],
         },
@@ -117,21 +117,21 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Kaify; yanıtlar, planlar ve analizler üretmek için AI sistemleri kullanır (görüntü analizi için Google Gemini ve sohbet koçluğu için DeepSeek gibi üçüncü taraf sağlayıcılar dahil). AI çıktıları eksik, hatalı, güncel olmayan, güvensiz veya sizin için uygunsuz olabilir. Ürün açıkça aksi yönde belirtmedikçe çıktılar bir sağlık profesyoneli tarafından incelenmez.",
+          text: "Kaify Ai; yanıtlar, planlar ve analizler üretmek için AI sistemleri kullanır (görüntü analizi için Google Gemini ve sohbet koçluğu için DeepSeek gibi üçüncü taraf sağlayıcılar dahil). AI çıktıları eksik, hatalı, güncel olmayan, güvensiz veya sizin için uygunsuz olabilir. Ürün açıkça aksi yönde belirtmedikçe çıktılar bir sağlık profesyoneli tarafından incelenmez.",
         },
         {
           type: "ul",
           items: [
             "Harekete geçmeden önce önerileri bağımsız olarak değerlendirmelisiniz.",
             "Acil durumlar, teşhis, ilaç veya tedavi için AI çıktısına güvenmeyin.",
-            "Kaify AI çıktısının kullanılabilirliğini, doğruluğunu, benzersizliğini veya uygunluğunu garanti etmez.",
-            "Kaify güvenlik, kötüye kullanımın önlenmesi veya yasal nedenlerle istemleri ve çıktıları kısıtlayabilir.",
+            "Kaify Ai AI çıktısının kullanılabilirliğini, doğruluğunu, benzersizliğini veya uygunluğunu garanti etmez.",
+            "Kaify Ai güvenlik, kötüye kullanımın önlenmesi veya yasal nedenlerle istemleri ve çıktıları kısıtlayabilir.",
             "Üçüncü taraf haklarını ihlal eden veya sağlama yetkiniz olmayan girdiler göndermemelisiniz.",
           ],
         },
         {
           type: "p",
-          text: "Kaify, AI sağlayıcılarının verileri asla saklamadığını veya üzerinde eğitim yapmadığını iddia etmez. İşleme, Gizlilik Politikasında açıklanır ve o sırada yürürlükte olan sağlayıcı sözleşmeleri ile teknik kontrollere bağlıdır.",
+          text: "Kaify Ai, AI sağlayıcılarının verileri asla saklamadığını veya üzerinde eğitim yapmadığını iddia etmez. İşleme, Gizlilik Politikasında açıklanır ve o sırada yürürlükte olan sağlayıcı sözleşmeleri ile teknik kontrollere bağlıdır.",
         },
       ],
     },
@@ -147,9 +147,9 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
           type: "ul",
           items: [
             "Yetkisiz erişimi derhal " + SUPPORT_EMAIL + " adresinden bize bildirin.",
-            "Kaify şifre veya oturum sıfırlaması isteyebilir, oturumları iptal edebilir veya hesapları geçici kilitleyebilir.",
-            "Kaify delil muhafaza edebilir ve yasal soruşturmalarla iş birliği yapabilir.",
-            "Kaify, yasa gerektirmedikçe silinen kullanıcı içeriğini geri yükleme yükümlülüğü taşımaz.",
+            "Kaify Ai şifre veya oturum sıfırlaması isteyebilir, oturumları iptal edebilir veya hesapları geçici kilitleyebilir.",
+            "Kaify Ai delil muhafaza edebilir ve yasal soruşturmalarla iş birliği yapabilir.",
+            "Kaify Ai, yasa gerektirmedikçe silinen kullanıcı içeriğini geri yükleme yükümlülüğü taşımaz.",
           ],
         },
       ],
@@ -160,7 +160,7 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Bu Koşullara ve abonelik durumunuza bağlı olarak Kaify, yetkili erişim süresince kişisel, ticari olmayan kullanım için sınırlı, geri alınabilir, münhasır olmayan, devredilemez, alt lisanslanamaz bir lisans verir. Abonelikler erişim satın alır; yazılım, içerik veya veri derlemelerinin mülkiyetini değil.",
+          text: "Bu Koşullara ve abonelik durumunuza bağlı olarak Kaify Ai, yetkili erişim süresince kişisel, ticari olmayan kullanım için sınırlı, geri alınabilir, münhasır olmayan, devredilemez, alt lisanslanamaz bir lisans verir. Abonelikler erişim satın alır; yazılım, içerik veya veri derlemelerinin mülkiyetini değil.",
         },
       ],
     },
@@ -175,7 +175,7 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
         {
           type: "ul",
           items: [
-            "Kaify'ı yasa dışı, dolandırıcılık, kötüye kullanım, taciz, tehlikeli veya aldatıcı amaçlarla kullanmak",
+            "Kaify Ai'ı yasa dışı, dolandırıcılık, kötüye kullanım, taciz, tehlikeli veya aldatıcı amaçlarla kullanmak",
             "İzin olmadan veri kazımak, taramak, hasat etmek veya erişimi otomatikleştirmek",
             "Zorunlu hukukun açıkça izin verdiği durumlar dışında tersine mühendislik yapmak",
             "Abonelik, güvenlik, hız sınırları, erişim kontrolleri veya teknik kısıtlamaları aşmak",
@@ -183,15 +183,15 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
             "Kötü amaçlı yazılım eklemek, güvenlik açıklarından yararlanmak veya hizmete müdahale etmek",
             "Gerekli haklar olmadan içerik yüklemek",
             "Başkalarının kimliğine bürünmek veya sahte kimlik vermek",
-            "Uygulanabilir olduğu yerlerde yazılı izin olmadan rakip ürün geliştirmek veya kıyaslamak için Kaify'ı kullanmak",
+            "Uygulanabilir olduğu yerlerde yazılı izin olmadan rakip ürün geliştirmek veya kıyaslamak için Kaify Ai'ı kullanmak",
             "Veri kümeleri, antrenman kütüphaneleri, istemler, çıktı koleksiyonları veya modeller çıkarmak",
-            "Kaify'ı klinik veya acil karar verme için kullanmak",
+            "Kaify Ai'ı klinik veya acil karar verme için kullanmak",
             "Chargeback dolandırıcılığı, iade kötüye kullanımı veya promosyon kötüye kullanımı yapmak",
           ],
         },
         {
           type: "p",
-          text: "Kaify ihlaller için soruşturma yapabilir, hesapları kısıtlayabilir, askıya alabilir veya sonlandırabilir.",
+          text: "Kaify Ai ihlaller için soruşturma yapabilir, hesapları kısıtlayabilir, askıya alabilir veya sonlandırabilir.",
         },
       ],
     },
@@ -201,7 +201,7 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: `Kaify ve lisans verenleri; yazılım (kaynak ve nesne kodu dahil), marka, ticari markalar, tasarımlar, arayüz, grafikler, metinler, videolar, antrenmanlar, programlar, veritabanları, metodolojiler, algoritmalar, istemler, derlemeler ve lisanslı üçüncü taraf içerik üzerindeki tüm haklara sahiptir. Yukarıdaki sınırlı lisans dışında size hiçbir hak devredilmez.`,
+          text: `Kaify Ai ve lisans verenleri; yazılım (kaynak ve nesne kodu dahil), marka, ticari markalar, tasarımlar, arayüz, grafikler, metinler, videolar, antrenmanlar, programlar, veritabanları, metodolojiler, algoritmalar, istemler, derlemeler ve lisanslı üçüncü taraf içerik üzerindeki tüm haklara sahiptir. Yukarıdaki sınırlı lisans dışında size hiçbir hak devredilmez.`,
         },
       ],
     },
@@ -211,11 +211,11 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Gönderdiğiniz içeriğin (mesajlar, fotoğraflar, profil verileri, notlar) mülkiyeti sizde kalır. Kaify'a; hizmeti işletmek ve iyileştirmek için içeriği barındırma, işleme, çoğaltma, uyarlama, iletme, görüntüleme, güvenceye alma, denetleme ve Gizlilik Politikasının izin verdiği yerlerde anonimleştirilmiş veya toplu analitik dahil olmak üzere dünya çapında, münhasır olmayan, telifsiz bir lisans verirsiniz. Bu lisans içeriğinizin mülkiyetini devretmez.",
+          text: "Gönderdiğiniz içeriğin (mesajlar, fotoğraflar, profil verileri, notlar) mülkiyeti sizde kalır. Kaify Ai'a; hizmeti işletmek ve iyileştirmek için içeriği barındırma, işleme, çoğaltma, uyarlama, iletme, görüntüleme, güvenceye alma, denetleme ve Gizlilik Politikasının izin verdiği yerlerde anonimleştirilmiş veya toplu analitik dahil olmak üzere dünya çapında, münhasır olmayan, telifsiz bir lisans verirsiniz. Bu lisans içeriğinizin mülkiyetini devretmez.",
         },
         {
           type: "p",
-          text: "İçeriğiniz için gerekli hak ve izinlere sahip olduğunuzu garanti edersiniz. Kaify içeriği kaldırabilir veya kısıtlayabilir ancak tüm içeriği izlemekle yükümlü değildir. Kaify kullanıcı içeriğini onaylamaz. Kaify açıkça bir yedekleme özelliği sunmadıkça yedeklerinizden siz sorumlusunuz.",
+          text: "İçeriğiniz için gerekli hak ve izinlere sahip olduğunuzu garanti edersiniz. Kaify Ai içeriği kaldırabilir veya kısıtlayabilir ancak tüm içeriği izlemekle yükümlü değildir. Kaify Ai kullanıcı içeriğini onaylamaz. Kaify Ai açıkça bir yedekleme özelliği sunmadıkça yedeklerinizden siz sorumlusunuz.",
         },
       ],
     },
@@ -225,7 +225,7 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "İki ilişki geçerlidir: (1) Kaify ürünü ve hizmeti sağlar ve lisanslar; (2) Paddle, ödeme işlemi için Kayıtlı Satıcı (Merchant of Record) ve yetkili yeniden satıcı olarak hareket eder. Satın alma ilgili Paddle tüzel kişisi tarafından işlenir. Ödeme işlemlerine Paddle'ın Alıcı Koşulları, İade Politikası ve Gizlilik Bildirimi uygulanır:",
+          text: "İki ilişki geçerlidir: (1) Kaify Ai ürünü ve hizmeti sağlar ve lisanslar; (2) Paddle, ödeme işlemi için Kayıtlı Satıcı (Merchant of Record) ve yetkili yeniden satıcı olarak hareket eder. Satın alma ilgili Paddle tüzel kişisi tarafından işlenir. Ödeme işlemlerine Paddle'ın Alıcı Koşulları, İade Politikası ve Gizlilik Bildirimi uygulanır:",
         },
         {
           type: "ul",
@@ -240,10 +240,10 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
           items: [
             "Paddle uygulanabilir vergileri hesaplayıp tahsil edebilir ve makbuz düzenleyebilir.",
             "Paddle desteklenen ödeme yöntemlerini yönetir; kimlik doğrulama, dolandırıcılık önleme, yeniden deneme ve chargeback prosedürleri kullanabilir.",
-            "Kaify genellikle tam ödeme kartı numaralarını veya tam kart ayrıntılarını almaz.",
+            "Kaify Ai genellikle tam ödeme kartı numaralarını veya tam kart ayrıntılarını almaz.",
             "Paddle'daki faturalama ve iletişim bilgilerinizi güncel tutun.",
             "İşlem uyuşmazlıkları, iadeler ve faturalama desteği Paddle'a yönlendirilebilir (paddle.net dahil).",
-            "Kaify ürün erişimi konularında yardımcı olabilir ancak Paddle'ın yasal veya ödeme yükümlülüklerini geçersiz kılamaz.",
+            "Kaify Ai ürün erişimi konularında yardımcı olabilir ancak Paddle'ın yasal veya ödeme yükümlülüklerini geçersiz kılamaz.",
           ],
         },
       ],
@@ -259,7 +259,7 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
         {
           type: "ul",
           items: [
-            "İptal için Paddle Müşteri Portalı / Ayarlar'daki Faturalamayı yönet (veya Kaify'ın açıkladığı diğer yöntemler) kullanılır.",
+            "İptal için Paddle Müşteri Portalı / Ayarlar'daki Faturalamayı yönet (veya Kaify Ai'ın açıkladığı diğer yöntemler) kullanılır.",
             "İptal genellikle gelecek yenilemeyi durdurur; erişim, anında iptalin geçerli olduğu durumlar (örneğin hesap silme) dışında genellikle ödenen dönemin sonuna kadar devam eder.",
             "Başarısız ödemeler gecikmiş durum, yeniden denemeler, yapılandırılmışsa süre tanıma ve ücretli özelliklerin kaybına yol açabilir.",
             "Yükseltme, düşürme, duraklatma ve orantılı ücretlendirme Paddle Billing kurallarına ve onay öncesi gösterilen önizlemeye tabidir.",
@@ -282,7 +282,7 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
         },
         {
           type: "p",
-          text: "İadeler ve yasal cayma / düşünme süresi hakları (dijital içerik veya hizmetlere uygulanabildiği yerlerde) Paddle'ın Alıcı Koşulları ve İade Politikası kapsamında işlenir. Kaify takdirî yardım sağlayabilir ancak yürürlükteki hukuk ve Paddle'ın onaylı süreci dışında iade vaat etmez. Dolandırıcılık, kötüye kullanım, manipülasyon veya tekrarlayan iade suistimali için iadeler, yasaya tabi olarak reddedilebilir. Başarılı bir iade veya chargeback, ilgili ücretli erişimin askıya alınması veya kaldırılmasıyla sonuçlanabilir.",
+          text: "İadeler ve yasal cayma / düşünme süresi hakları (dijital içerik veya hizmetlere uygulanabildiği yerlerde) Paddle'ın Alıcı Koşulları ve İade Politikası kapsamında işlenir. Kaify Ai takdirî yardım sağlayabilir ancak yürürlükteki hukuk ve Paddle'ın onaylı süreci dışında iade vaat etmez. Dolandırıcılık, kötüye kullanım, manipülasyon veya tekrarlayan iade suistimali için iadeler, yasaya tabi olarak reddedilebilir. Başarılı bir iade veya chargeback, ilgili ücretli erişimin askıya alınması veya kaldırılmasıyla sonuçlanabilir.",
         },
         {
           type: "p",
@@ -296,11 +296,11 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Kaify yeni planlar sunabilir ve gelecek fatura dönemleri için abonelik fiyatlarını değiştirebilir. Fiyat değişiklikleri zaten ödenmiş bir fatura dönemini geriye dönük etkilemez. Mevcut yinelenen bir abonelik için artan fiyat, Kaify, Paddle veya her ikisi aracılığıyla bildirimin ardından gelecek bir yenilemede yürürlüğe girebilir. Yürürlükteki hukuk olumlu onay gerektiriyorsa, artan fiyat bu onay olmadan tahsil edilmez. Yeni fiyatı kabul etmezseniz abonelik Kaify'ın izin verdiği yerde mevcut fiyatta kalabilir veya o sıradaki fatura döneminin sonunda sona erebilir. Yeni fiyat yürürlüğe girmeden önce iptal edebilirsiniz. Vergiler, döviz çevrimi ve ödeme yöntemi ücretleri izin verilen yerlerde bağımsız olarak değişebilir.",
+          text: "Kaify Ai yeni planlar sunabilir ve gelecek fatura dönemleri için abonelik fiyatlarını değiştirebilir. Fiyat değişiklikleri zaten ödenmiş bir fatura dönemini geriye dönük etkilemez. Mevcut yinelenen bir abonelik için artan fiyat, Kaify Ai, Paddle veya her ikisi aracılığıyla bildirimin ardından gelecek bir yenilemede yürürlüğe girebilir. Yürürlükteki hukuk olumlu onay gerektiriyorsa, artan fiyat bu onay olmadan tahsil edilmez. Yeni fiyatı kabul etmezseniz abonelik Kaify Ai'ın izin verdiği yerde mevcut fiyatta kalabilir veya o sıradaki fatura döneminin sonunda sona erebilir. Yeni fiyat yürürlüğe girmeden önce iptal edebilirsiniz. Vergiler, döviz çevrimi ve ödeme yöntemi ücretleri izin verilen yerlerde bağımsız olarak değişebilir.",
         },
         {
           type: "p",
-          text: "Yeni bir katalog fiyatı oluşturmak mevcut abonelikleri otomatik değiştirmez. Güncellemeler uygun Paddle Billing sürecini kullanmalıdır. Kaify, kullanıcı başlatımlı plan değişikliklerinden önce orantılı ücretlendirmeyi önizlemelidir. Koşul metni tek başına gerekli bildirimlerin veya onayın yerine geçmez.",
+          text: "Yeni bir katalog fiyatı oluşturmak mevcut abonelikleri otomatik değiştirmez. Güncellemeler uygun Paddle Billing sürecini kullanmalıdır. Kaify Ai, kullanıcı başlatımlı plan değişikliklerinden önce orantılı ücretlendirmeyi önizlemelidir. Koşul metni tek başına gerekli bildirimlerin veya onayın yerine geçmez.",
         },
       ],
     },
@@ -310,7 +310,7 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Kaify; Koşul ihlalleri, ödeme yapılmaması, chargeback veya şüpheli ödeme kötüye kullanımı, dolandırıcılık veya güvenlik tehditleri, tehlikeli veya yasa dışı davranış, fikri mülkiyet kötüye kullanımı, Paddle talepleri, yasal veya düzenleyici yükümlülükler, Kaify/kullanıcılar/üçüncü taraflara risk, açıklanan yerlerde uzun süreli hareketsizlik veya hizmetin sonlandırılması nedeniyle erişimi askıya alabilir veya sonlandırabilir. Ciddi güvenlik, dolandırıcılık, güvenlik veya yasal tehditlerde derhal işlem yapılabilir. Makul ve yasal olarak gerekli olduğunda Kaify bildirim yapar ve " +
+          text: "Kaify Ai; Koşul ihlalleri, ödeme yapılmaması, chargeback veya şüpheli ödeme kötüye kullanımı, dolandırıcılık veya güvenlik tehditleri, tehlikeli veya yasa dışı davranış, fikri mülkiyet kötüye kullanımı, Paddle talepleri, yasal veya düzenleyici yükümlülükler, Kaify Ai/kullanıcılar/üçüncü taraflara risk, açıklanan yerlerde uzun süreli hareketsizlik veya hizmetin sonlandırılması nedeniyle erişimi askıya alabilir veya sonlandırabilir. Ciddi güvenlik, dolandırıcılık, güvenlik veya yasal tehditlerde derhal işlem yapılabilir. Makul ve yasal olarak gerekli olduğunda Kaify Ai bildirim yapar ve " +
             SUPPORT_EMAIL +
             " üzerinden itiraz kanalı sağlar.",
         },
@@ -354,11 +354,11 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: `Kaify'ı ticari sıfatla kullanıyorsanız, yasanın izin verdiği ölçüde, yasa dışı kullanımınız, Koşul ihlalleriniz, kullanıcı içeriğiniz, üçüncü taraf haklarının ihlali, dolandırıcılık, hesap kötüye kullanımı veya davranışınızdan kaynaklanan düzenleyici taleplerden doğan iddialara karşı ${LEGAL_ENTITY}'yi ve yöneticilerini, yetkililerini, çalışanlarını ve temsilcilerini tazmin eder ve zarar görmemelerini sağlarsınız.`,
+          text: `Kaify Ai'ı ticari sıfatla kullanıyorsanız, yasanın izin verdiği ölçüde, yasa dışı kullanımınız, Koşul ihlalleriniz, kullanıcı içeriğiniz, üçüncü taraf haklarının ihlali, dolandırıcılık, hesap kötüye kullanımı veya davranışınızdan kaynaklanan düzenleyici taleplerden doğan iddialara karşı ${LEGAL_ENTITY}'yi ve yöneticilerini, yetkililerini, çalışanlarını ve temsilcilerini tazmin eder ve zarar görmemelerini sağlarsınız.`,
         },
         {
           type: "p",
-          text: "Tüketiciler için tazmin yükümlülükleri yalnızca yetki alanınızda uygulanabilir olduğu ölçüde geçerlidir ve yasaklandığı yerlerde Kaify'ın kendi kusurunu size kaydırmaz.",
+          text: "Tüketiciler için tazmin yükümlülükleri yalnızca yetki alanınızda uygulanabilir olduğu ölçüde geçerlidir ve yasaklandığı yerlerde Kaify Ai'ın kendi kusurunu size kaydırmaz.",
         },
       ],
     },
@@ -372,7 +372,7 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
         },
         {
           type: "p",
-          text: `Önce 30 gün içinde gayriresmî çözüm denemek için ${SUPPORT_EMAIL} adresinden iletişime geçin. Kaify bu Koşullarda küresel bir toplu dava feragati veya zorunlu ABD tarzı tahkim dayatmaz. Herhangi bir tahkim veya toplu dava hükmü yalnızca varsa hukuk müşavirliği onaylı bölgesel eklerde yer alır.`,
+          text: `Önce 30 gün içinde gayriresmî çözüm denemek için ${SUPPORT_EMAIL} adresinden iletişime geçin. Kaify Ai bu Koşullarda küresel bir toplu dava feragati veya zorunlu ABD tarzı tahkim dayatmaz. Herhangi bir tahkim veya toplu dava hükmü yalnızca varsa hukuk müşavirliği onaylı bölgesel eklerde yer alır.`,
         },
       ],
     },
@@ -386,9 +386,9 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
             "Tam sözleşme: bu Koşullar ile dahil edilen politikalar (Gizlilik, Çerezler, Tıbbi Feragat) ve sipariş/ödeme koşulları, zorunlu hukuka tabi olarak sözleşmeyi oluşturur.",
             "Bölünebilirlik: geçersiz hükümler gerekli asgari ölçüde düzeltilir; geri kalanı yürürlükte kalır.",
             "Feragat yok: bir hükmü uygulamamak feragat sayılmaz.",
-            "Devir: Kaify bağlı kuruluşa, halefe, alıcıya veya devralana devredebilir; siz, zorunlu hukukun izin verdiği durumlar dışında onay olmadan devredemezsiniz.",
+            "Devir: Kaify Ai bağlı kuruluşa, halefe, alıcıya veya devralana devredebilir; siz, zorunlu hukukun izin verdiği durumlar dışında onay olmadan devredemezsiniz.",
             "Elektronik iletişim: bildirimleri elektronik almayı kabul edersiniz.",
-            "Mücbir sebep: Kaify makul kontrolü dışındaki gecikmelerden sorumlu değildir.",
+            "Mücbir sebep: Kaify Ai makul kontrolü dışındaki gecikmelerden sorumlu değildir.",
             "Bağımsız yükleniciler: ortaklık veya istihdam ilişkisi doğmaz.",
             "Üçüncü taraf lehtar yok; açıkça belirtilenler hariç (uygulanabilir olduğu yerlerde 1. ve 18. Bölümlerin sınırlı lehtarları olarak korunan bireyler dahil).",
             "İngilizce esas alınır: Bu Koşulların birincil dili İngilizcedir; zorunlu yerel dil bildiriminin gerekli olduğu durumlar dışında çeviriler kolaylık içindir.",

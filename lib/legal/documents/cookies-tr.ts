@@ -8,7 +8,7 @@ import type { LegalDocument } from "./types";
 export const COOKIES_DOCUMENT_TR: LegalDocument = {
   title: "Çerez Politikası",
   subtitle: `Son güncelleme: 21 Ağustos 2026 · Sürüm ${COOKIES_VERSION}`,
-  intro: `Bu Çerez Politikası, Kaify'ın (${LEGAL_URL}) çerezleri, pikselleri, etiketleri, yerel depolamayı (local storage), oturum depolamasını (session storage) ve benzer tarayıcı teknolojilerini nasıl kullandığını açıklar. Yerel mobil SDK'lar (örneğin push token'ları) çerez değildir ve Gizlilik Politikasında açıklanır.`,
+  intro: `Bu Çerez Politikası, Kaify Ai'ın (${LEGAL_URL}) çerezleri, pikselleri, etiketleri, yerel depolamayı (local storage), oturum depolamasını (session storage) ve benzer tarayıcı teknolojilerini nasıl kullandığını açıklar. Yerel mobil SDK'lar (örneğin push token'ları) çerez değildir ve Gizlilik Politikasında açıklanır.`,
   sections: [
     {
       id: "overview",
@@ -57,7 +57,7 @@ export const COOKIES_DOCUMENT_TR: LegalDocument = {
           type: "ul",
           items: [
             "Vercel Analytics / Speed Insights — anonim veya takma adlı kullanım ve performans ölçümleri (yalnızca isteğe bağlı çerez kabulünden sonra yüklenir; yerel uygulama kabuğunda atlanır)",
-            "Birinci taraf ürün analitikleri (Kaify veritabanlarında saklanan antrenman/yemek toplulaştırmaları) tarayıcı reklam çerezleri değildir; Gizlilik Politikasına bakın",
+            "Birinci taraf ürün analitikleri (Kaify Ai veritabanlarında saklanan antrenman/yemek toplulaştırmaları) tarayıcı reklam çerezleri değildir; Gizlilik Politikasına bakın",
           ],
         },
       ],

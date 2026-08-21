@@ -8,7 +8,7 @@ import type { LegalDocument } from "./types";
 export const COOKIES_DOCUMENT: LegalDocument = {
   title: "Cookie Policy",
   subtitle: `Last updated: August 21, 2026 · Version ${COOKIES_VERSION}`,
-  intro: `This Cookie Policy explains how Kaify (${LEGAL_URL}) uses cookies, pixels, tags, local storage, session storage, and similar browser technologies. Native mobile SDKs (for example push tokens) are not cookies and are described in the Privacy Policy.`,
+  intro: `This Cookie Policy explains how Kaify Ai (${LEGAL_URL}) uses cookies, pixels, tags, local storage, session storage, and similar browser technologies. Native mobile SDKs (for example push tokens) are not cookies and are described in the Privacy Policy.`,
   sections: [
     {
       id: "overview",
@@ -57,7 +57,7 @@ export const COOKIES_DOCUMENT: LegalDocument = {
           type: "ul",
           items: [
             "Vercel Analytics / Speed Insights — anonymous or pseudonymous usage and performance metrics (loaded only after optional cookie acceptance; skipped on native app shell)",
-            "First-party product analytics (workout/meal aggregates stored in Kaify databases) are not browser advertising cookies; see Privacy Policy",
+            "First-party product analytics (workout/meal aggregates stored in Kaify Ai databases) are not browser advertising cookies; see Privacy Policy",
           ],
         },
       ],
