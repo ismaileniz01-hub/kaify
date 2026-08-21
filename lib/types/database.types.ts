@@ -475,7 +475,9 @@ export type ProcessReferralResult = {
   referrer_id: string;
   referral_id?: string;
   discount_applied?: boolean;
+  referrer_rewarded?: boolean;
   bonus?: number;
+  skin_reward?: string;
 };
 
 export type GlobalLeaderboardEntry = {

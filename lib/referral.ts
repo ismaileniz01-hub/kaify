@@ -66,7 +66,7 @@ export async function copyReferralCode(): Promise<boolean> {
 /** Kodu paylaş (Web Share API) */
 export async function shareReferralCode(): Promise<boolean> {
   const code = getReferralCode();
-  const text = `🎫 Join me on Kaify Ai! Use my referral code: ${code}\n\n${referralShareUrl(code)}`;
+  const text = `Join me on Kaify Ai! Use my referral code: ${code}\nWe both get the Thunder Kai skin.\n\n${referralShareUrl(code)}`;
   
   try {
     if (navigator.share) {

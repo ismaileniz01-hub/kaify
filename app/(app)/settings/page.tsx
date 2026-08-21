@@ -28,6 +28,7 @@ import type { UserSettingsDTO } from "@/lib/services/settings.service";
 import { UsageQuotaSection } from "@/components/settings/UsageQuotaSection";
 import { AppHeader } from "@/components/navigation/AppHeader";
 import { DeleteAccountSection } from "@/components/settings/DeleteAccountSection";
+import { MarketAuraPreview } from "@/components/market/MarketAuraPreview";
 import { MotionDialog } from "@/components/ui/MotionDialog";
 import { StepUpChallenge } from "@/components/auth/StepUpChallenge";
 import { useBillingPortal } from "@/components/billing/useBillingPortal";
@@ -666,25 +667,33 @@ export default function SettingsPage() {
         </section>
 
         <section className="animate-in mt-5" style={{ animationDelay: "0.5s" }}>
-          <div className="rounded-2xl border border-white/5 bg-white/[0.03]">
-            <div className="flex items-center gap-3 px-4 py-3.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5">
-                <Gift className="h-4 w-4 text-zinc-400" strokeWidth={1.5} />
+          <div className="relative overflow-hidden rounded-2xl border border-sky-400/20 bg-gradient-to-br from-sky-950/40 via-white/[0.03] to-indigo-950/30">
+            <div className="pointer-events-none absolute -right-1 -top-1 z-10 scale-90 opacity-95 sm:scale-100">
+              <MarketAuraPreview auraId="thunder" />
+            </div>
+            <div className="flex items-start gap-3 px-4 py-3.5 pr-24 sm:pr-28">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-500/15">
+                <Gift className="h-4 w-4 text-sky-300" strokeWidth={1.5} />
               </div>
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="text-sm font-medium text-white">{t("settings.referral")}</span>
-                <span className="text-[11px] text-zinc-500">{t("settings.referral.desc")}</span>
+                <span className="text-[11px] leading-snug text-zinc-400">
+                  {t("settings.referral.desc")}
+                </span>
+                <span className="mt-1 text-[10px] font-medium uppercase tracking-wide text-sky-300/90">
+                  {t("settings.referral.reward_hint")}
+                </span>
               </div>
             </div>
             <div className="flex items-center justify-between border-t border-white/5 px-4 py-3">
-              <span className="font-mono text-base font-bold tracking-wider text-purple-400">
+              <span className="font-mono text-base font-bold tracking-wider text-sky-300">
                 {referralCode || "......"}
               </span>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => void handleCopyReferral()}
-                  className="text-xs text-purple-400 hover:text-purple-300"
+                  className="text-xs text-sky-300 hover:text-sky-200"
                 >
                   {referralCopied ? t("settings.referral.copied") : t("settings.referral.copy")}
                 </button>
@@ -692,7 +701,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => void handleShareReferral()}
-                  className="text-xs text-purple-400 hover:text-purple-300"
+                  className="text-xs text-sky-300 hover:text-sky-200"
                 >
                   {t("settings.referral.share")}
                 </button>
