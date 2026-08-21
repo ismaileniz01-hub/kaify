@@ -140,6 +140,23 @@ Forma dikkat, ego yapma.
       }),
     ).toBe("casual");
     expect(
+      resolveIntent({
+        coach: "alex",
+        message: "merci",
+        previousAssistantMessage: `
+Lundi – Pec
+• Bench Press: 4x8
+• Incline: 3x10
+Mardi – Dos
+• Deadlift: 4x6
+• Row: 4x10
+Mercredi – Jambes
+• Squat: 4x8
+`.trim(),
+        hasRecentHistory: true,
+      }),
+    ).toBe("casual");
+    expect(
       needsStructuredOutput(
         resolveIntent({
           coach: "alex",
@@ -419,5 +436,25 @@ describe("needsStructuredOutput / outputBudgetFor", () => {
     expect(outputBudgetFor("casual", "hi")).toBe(80);
     expect(outputBudgetFor("casual", "bugün de aynı boktan gün")).toBe(120);
     expect(outputBudgetFor("unknown", "hatırlıyor musun geçen hafta")).toBe(180);
+  });
+});
+
+describe("food log vs nutrition Q", () => {
+  it("does not treat dish names or 'I had a question' as food logs", () => {
+    expect(
+      resolveIntent({ coach: "maya", message: "is pizza okay on a cut?" }),
+    ).toBe("nutrition_question");
+    expect(
+      resolveIntent({ coach: "maya", message: "I had a question about protein" }),
+    ).toBe("nutrition_question");
+    expect(
+      resolveIntent({ coach: "maya", message: "what's for dinner?" }),
+    ).toBe("nutrition_question");
+  });
+
+  it("still treats eat verbs as food logs", () => {
+    expect(
+      resolveIntent({ coach: "maya", message: "1 hatay doner gomdum" }),
+    ).toBe("nutrition_question");
   });
 });

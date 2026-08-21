@@ -47,13 +47,18 @@ export type QuotaParams = {
 export async function checkQuotaGuard(
   params: QuotaParams,
 ): Promise<UsageCheckResult> {
-  const result = await checkAndIncrementUsage({
+  const result = await peekQuota(params);
+  assertAllowed(result, params.resource, params.locale);
+  return result;
+}
+
+/** Current usage without throwing when the user is already at cap. */
+export async function peekQuota(params: QuotaParams): Promise<UsageCheckResult> {
+  return checkAndIncrementUsage({
     userId: params.userId,
     resource: params.resource,
     amount: 0,
   });
-  assertAllowed(result, params.resource, params.locale);
-  return result;
 }
 
 /**

@@ -11,7 +11,7 @@ import { canUseTeamChat } from "@/lib/billing/team-chat-access";
 import { ModelRouter } from "@/lib/ai/model-router";
 import { TOKEN_BUDGET } from "@/lib/ai/budget";
 import {
-  checkQuotaGuard,
+  peekQuota,
   refundQuota,
   reserveQuota,
   settleQuota,
@@ -103,6 +103,15 @@ export async function getTeamChatHistory(userId: string): Promise<ChatMessageDTO
     throw new ApiError("INTERNAL_ERROR", "Takım sohbeti yüklenemedi.");
   }
   return (data ?? []).map(mapChatMessageRow);
+}
+
+async function releaseTeamMeetingWeek(userId: string, weekStart: string): Promise<void> {
+  const admin = createAdminSupabaseClient();
+  await admin
+    .from("team_meeting_weeks")
+    .delete()
+    .eq("user_id", userId)
+    .eq("week_start", weekStart);
 }
 
 async function claimTeamMeetingWeek(userId: string, weekStart: string): Promise<boolean> {
@@ -222,6 +231,7 @@ export async function runCouncilTurn(params: {
   const isOpening = !params.userMessage?.trim();
   const alreadyStarted = history.some((m) => m.messageType === "team_meeting");
 
+  let weekClaimed = false;
   if (isOpening) {
     if (alreadyStarted) {
       // Resume: if last payload awaits user, do not regenerate opening.
@@ -233,8 +243,8 @@ export async function runCouncilTurn(params: {
           true;
       return { messages: history, awaitUser: Boolean(awaitUser), decisionComplete: false };
     }
-    const claimed = await claimTeamMeetingWeek(params.userId, weekStart);
-    if (!claimed) {
+    weekClaimed = await claimTeamMeetingWeek(params.userId, weekStart);
+    if (!weekClaimed) {
       throw new ApiError("CONFLICT", "Bu hafta takım toplantısı zaten yapıldı.");
     }
   } else if (!alreadyStarted) {
@@ -306,11 +316,16 @@ export async function runCouncilTurn(params: {
     .join("\n");
 
   const tokenReserve = TOKEN_BUDGET.teamChat;
-  await reserveQuota({
-    userId: params.userId,
-    resource: "text_tokens",
-    amount: tokenReserve,
-  });
+  try {
+    await reserveQuota({
+      userId: params.userId,
+      resource: "text_tokens",
+      amount: tokenReserve,
+    });
+  } catch (error) {
+    if (weekClaimed) await releaseTeamMeetingWeek(params.userId, weekStart);
+    throw error;
+  }
 
   const phase = isOpening
     ? "OPENING: Kai opens briefly, invite the user to check in. Set await_user=true. At most 2 speakers. Do NOT invent the user's reply."
@@ -422,6 +437,7 @@ export async function runCouncilTurn(params: {
       resource: "text_tokens",
       amount: tokenReserve,
     });
+    if (weekClaimed) await releaseTeamMeetingWeek(params.userId, weekStart);
     throw new ApiError("INTERNAL_ERROR", "Takım mesajları kaydedilemedi.");
   }
 
@@ -450,7 +466,7 @@ export async function runCouncilTurn(params: {
       amount: -extra,
     });
   } else {
-    await checkQuotaGuard({ userId: params.userId, resource: "text_tokens" });
+    await peekQuota({ userId: params.userId, resource: "text_tokens" });
   }
 
   return {

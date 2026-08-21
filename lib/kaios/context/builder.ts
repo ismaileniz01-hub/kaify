@@ -1,6 +1,8 @@
 ﻿import { selectCacheStableCapsules, intentToCapsuleTask } from "@/lib/kaios/capsules";
 import {
   looksLikeFoodConsumption,
+  looksLikeHydrationLog,
+  looksLikeMealSaveFollowUp,
   outputBudgetFor,
   resolveIntent,
   type Intent,
@@ -148,8 +150,18 @@ export function buildRuntimeContext(
 
   const capsules = [...selectCacheStableCapsules(input.coach)];
   let activeTask = intentToCapsuleTask(intent);
-  if (input.coach === "maya" && looksLikeFoodConsumption(input.message)) {
-    activeTask = "food_log";
+  if (input.coach === "maya") {
+    if (
+      looksLikeHydrationLog(input.message) &&
+      !looksLikeFoodConsumption(input.message)
+    ) {
+      activeTask = "hydration";
+    } else if (
+      looksLikeFoodConsumption(input.message) ||
+      looksLikeMealSaveFollowUp(input.message)
+    ) {
+      activeTask = "food_log";
+    }
   }
   if (shortTurn.needsContinuation && input.coach === "kai") {
     activeTask = `${activeTask}+continuation`;

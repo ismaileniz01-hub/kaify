@@ -12,7 +12,7 @@ import {
 } from "@/lib/ai/chat-context";
 import { loadCrossCoachSnapshot } from "@/lib/kaios/context/coach-snapshot";
 import { prioritizeTeamFactLines } from "@/lib/kaios/context/physique-summary";
-import { checkQuotaGuard, refundQuota, settleQuota } from "@/lib/ai/quota-guard";
+import { peekQuota, refundQuota, settleQuota } from "@/lib/ai/quota-guard";
 import { AiError, toApiError } from "@/lib/ai/errors";
 import { getCoachOrThrow } from "@/lib/services/coach.service";
 import { syncAgents } from "@/lib/services/coaching.service";
@@ -24,7 +24,7 @@ import {
   orchestrateCoachChat,
   type OrchestrateResultMeta,
 } from "@/lib/kaios/orchestrator";
-import { prepareMemoriesForContext, extractUserMemoryFacts } from "@/lib/kaios/memory";
+import { prepareMemoriesForContext, extractUserMemoryFacts, sanitizeMemories } from "@/lib/kaios/memory";
 import { resolveActiveLocale } from "@/lib/kaios/localization/resolve";
 import { resolveKaiFamiliarityStage } from "@/lib/kaios/kai/familiarity";
 import { linkPendingConfirmationToMessage } from "@/lib/services/analytics-confirmation.service";
@@ -434,7 +434,7 @@ async function settleChatQuota(params: {
         resource: "text_tokens",
         amount: extraTokens,
       })) ??
-      (await checkQuotaGuard({
+      (await peekQuota({
         userId: params.userId,
         resource: "text_tokens",
         locale: params.locale,
@@ -448,7 +448,7 @@ async function settleChatQuota(params: {
       amount: -extraTokens,
     });
   }
-  return checkQuotaGuard({
+  return peekQuota({
     userId: params.userId,
     resource: "text_tokens",
     locale: params.locale,
@@ -525,7 +525,14 @@ async function* streamKaiosCoachReply(
       previousAssistantMessage: previousAssistant ?? undefined,
       hasRecentHistory: history.length > 0,
     });
-    const extractedFacts = extractUserMemoryFacts(cleanMessage);
+    const extractedFacts = sanitizeMemories(
+      extractUserMemoryFacts(cleanMessage).map((fact) => ({
+        kind: "fact",
+        source: "user_message",
+        fact,
+        text: `${fact.key}: ${fact.value}`,
+      })),
+    ).flatMap((item) => (item.fact ? [item.fact] : []));
     const storedMemory = prepareMemoriesForContext(memories, {
       coach: coachId,
       intent,
@@ -1169,7 +1176,7 @@ export async function* streamCoachReply(
 
     const reserved = params.tokensReserved ?? 0;
     const extraTokens = totalTokens - reserved;
-    let usage: Awaited<ReturnType<typeof checkQuotaGuard>>;
+    let usage: Awaited<ReturnType<typeof peekQuota>>;
 
     if (extraTokens > 0) {
       usage =
@@ -1178,16 +1185,16 @@ export async function* streamCoachReply(
           resource: "text_tokens",
           amount: extraTokens,
         })) ??
-        (await checkQuotaGuard({ userId: params.userId, resource: "text_tokens" }));
+        (await peekQuota({ userId: params.userId, resource: "text_tokens" }));
     } else if (extraTokens < 0) {
       await refundQuota({
         userId: params.userId,
         resource: "text_tokens",
         amount: -extraTokens,
       });
-      usage = await checkQuotaGuard({ userId: params.userId, resource: "text_tokens" });
+      usage = await peekQuota({ userId: params.userId, resource: "text_tokens" });
     } else {
-      usage = await checkQuotaGuard({ userId: params.userId, resource: "text_tokens" });
+      usage = await peekQuota({ userId: params.userId, resource: "text_tokens" });
     }
     quotaSettled = true;
 

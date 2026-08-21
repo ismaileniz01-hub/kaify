@@ -64,6 +64,9 @@
     "app/api/v1/profile/export/route.ts": {
       "maxDuration": 60
     },
+    "app/api/webhooks/paddle/route.ts": {
+      "maxDuration": 60
+    },
     "app/api/**/route.ts": {
       "maxDuration": 10
     }

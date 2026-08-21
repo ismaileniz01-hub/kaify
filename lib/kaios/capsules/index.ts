@@ -85,7 +85,7 @@ export function intentToCapsuleTask(intent: Intent): string {
     case "council_decision":
       return "decision";
     case "nutrition_question":
-      return "meal_planning";
+      return "nutrition";
     case "tool_action":
       return "casual";
     default:

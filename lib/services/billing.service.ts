@@ -323,13 +323,15 @@ type BillingEventsDb = {
         value: string,
       ) => {
         maybeSingle: () => Promise<{
-          data: { processed_at: string | null } | null;
+          data: { processed_at: string | null; created_at?: string | null } | null;
           error: { code?: string; message: string } | null;
         }>;
       };
     };
   };
 };
+
+const STALE_BILLING_CLAIM_MS = 2 * 60 * 1000;
 
 /**
  * Acquires a webhook event claim with processed_at=null.
@@ -345,26 +347,42 @@ async function claimBillingEvent(
 ): Promise<ClaimResult> {
   const billingDb = admin as unknown as BillingEventsDb;
 
-  const { error } = await billingDb.from("billing_events").insert({
-    provider_event_id: eventId,
-    event_name: eventType,
-    user_id: userId,
-    payload: minimizeBillingPayload(payload),
-    subscription_id: extras?.subscriptionId ?? null,
-    customer_email: null,
-    processed_at: null,
-  });
+  const insertRow = () =>
+    billingDb.from("billing_events").insert({
+      provider_event_id: eventId,
+      event_name: eventType,
+      user_id: userId,
+      payload: minimizeBillingPayload(payload),
+      subscription_id: extras?.subscriptionId ?? null,
+      customer_email: null,
+      processed_at: null,
+    });
+
+  const { error } = await insertRow();
 
   if (!error) return "acquired";
   if (error.code !== "23505") throw error;
 
   const { data: existing, error: readError } = await billingDb
     .from("billing_events")
-    .select("processed_at")
+    .select("processed_at, created_at")
     .eq("provider_event_id", eventId)
     .maybeSingle();
   if (readError) throw readError;
   if (existing?.processed_at) return "already_done";
+
+  const created = Date.parse(String(existing?.created_at ?? ""));
+  if (Number.isFinite(created) && Date.now() - created > STALE_BILLING_CLAIM_MS) {
+    await billingDb
+      .from("billing_events")
+      .delete()
+      .eq("provider_event_id", eventId)
+      .is("processed_at", null);
+    const retry = await insertRow();
+    if (!retry.error) return "acquired";
+    if (retry.error.code === "23505") return "retry";
+    throw retry.error;
+  }
   return "retry";
 }
 
@@ -427,9 +445,27 @@ function expiresAtFromData(data: Record<string, unknown>): string | null {
 function priceIdFromData(data: Record<string, unknown>): string | undefined {
   const items = Array.isArray(data.items) ? data.items : [];
   const first = asRecord(items[0]);
-  if (!first) return undefined;
-  const price = asRecord(first.price);
-  return pickString(price?.id);
+  const price = first ? asRecord(first.price) : null;
+  const details = asRecord(data.details);
+  const lineItems = Array.isArray(details?.lineItems)
+    ? details.lineItems
+    : Array.isArray(details?.line_items)
+      ? details.line_items
+      : [];
+  const line = asRecord(lineItems[0]);
+  const linePrice = line ? asRecord(line.price) : null;
+  return pickString(
+    price?.id,
+    first?.priceId,
+    first?.price_id,
+    price?.priceId,
+    price?.price_id,
+    linePrice?.id,
+    line?.priceId,
+    line?.price_id,
+    data.priceId,
+    data.price_id,
+  );
 }
 
 function productIdFromData(data: Record<string, unknown>): string {
@@ -765,11 +801,6 @@ export async function handleNormalizedPaddleEvent(
     return { ok: false as const, reason, retryable: true };
   };
 
-  const failPermanent = async (reason: string) => {
-    await finalizeBillingEvent(admin, eventId);
-    return { ok: false as const, reason, retryable: false };
-  };
-
   try {
     if (subscriptionEventTypes().has(eventType)) {
       const stale = await isStaleSubscriptionEvent(admin, subscriptionId, {
@@ -816,9 +847,7 @@ export async function handleNormalizedPaddleEvent(
         if (subscriptionGrantsAccess(status)) {
           const result = await provisionFromPrice(userId, data);
           if (!result.ok) {
-            return result.reason === "unknown_price"
-              ? failPermanent(result.reason)
-              : failRetryable(result.reason);
+            return failRetryable(result.reason);
           }
         } else if (subscriptionIsCanceled(status)) {
           await revokeSubscription(userId);
@@ -852,9 +881,7 @@ export async function handleNormalizedPaddleEvent(
         if (!userId) return failRetryable("user_not_found");
         const result = await provisionFromPrice(userId, data);
         if (!result.ok) {
-          return result.reason === "unknown_price"
-            ? failPermanent(result.reason)
-            : failRetryable(result.reason);
+          return failRetryable(result.reason);
         }
         break;
       }

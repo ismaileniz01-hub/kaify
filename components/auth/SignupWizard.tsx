@@ -153,7 +153,13 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
   const alreadyAuthedNeedsProfile =
     isAuthenticated && !isLoading && profile?.onboardingStatus === "PAID";
 
-  const flow = alreadyAuthedNeedsProfile ? AUTHED_FLOW : FULL_FLOW;
+  const [flowKind, setFlowKind] = useState<"pending" | "full" | "authed">("pending");
+  useEffect(() => {
+    if (isLoading || flowKind !== "pending") return;
+    setFlowKind(alreadyAuthedNeedsProfile ? "authed" : "full");
+  }, [alreadyAuthedNeedsProfile, flowKind, isLoading]);
+
+  const flow = flowKind === "authed" ? AUTHED_FLOW : FULL_FLOW;
 
   const [stepIndex, setStepIndex] = useState(0);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
@@ -427,7 +433,6 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     setBusy(true);
     setError(null);
     try {
-      await refreshSession();
       const code = getPendingReferral();
       let referralApplied = false;
       if (code) {
@@ -444,6 +449,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
         buildPayload(),
         referralApplied || Boolean(getPendingReferral()) ? "/welcome" : undefined,
       );
+      await refreshSession();
     } catch {
       setError(t("onboarding.error"));
       setBusy(false);

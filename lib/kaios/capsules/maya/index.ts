@@ -166,8 +166,7 @@ export function selectMayaCapsules(task: string): string[] {
   }
   if (
     t === "meal_planning" ||
-    t.includes("nutrition") ||
-    (t.includes("plan") && !t.includes("food_log"))
+    (t.includes("plan") && !t.includes("food_log") && !t.includes("nutrition"))
   ) {
     out.push(MAYA_MEAL_PLANNING);
   }

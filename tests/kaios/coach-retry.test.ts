@@ -61,7 +61,7 @@ describe("isSoftCoachFailure", () => {
   it("turns INTERNAL_ERROR into a coach retry", () => {
     expect(isSoftCoachFailure("INTERNAL_ERROR")).toBe(true);
     expect(isSoftCoachFailure("STREAM_ERROR")).toBe(true);
-    expect(isSoftCoachFailure("FORBIDDEN")).toBe(true);
+    expect(isSoftCoachFailure("FORBIDDEN")).toBe(false);
   });
 
   it("keeps quota and auth as real errors", () => {

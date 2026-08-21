@@ -94,8 +94,8 @@ describe("buildChatSystemPrompt (Kai)", () => {
 
     expect(prompt).toContain("KAI ACCOUNTABILITY");
     expect(prompt).toContain("DO NOT say 'okay skip it'");
-    expect(prompt).toContain("latest message");
-    expect(prompt).toContain(`app locale is "${locale}"`);
+    expect(prompt).toContain("Settings language");
+    expect(prompt).toContain(`"${locale}"`);
     expect(prompt).toContain("consecutive days without gym: 5");
     expect(prompt).not.toContain("kanka");
     expect(prompt).not.toContain("nasılsın");

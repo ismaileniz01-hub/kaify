@@ -70,9 +70,13 @@ export function extractUserMemoryFacts(message: string): StructuredMemoryFact[] 
   const dislike = folded.match(
     /\b([a-z0-9çğıöşü][a-z0-9çğıöşü\s-]{1,32}?)\s+(?:sevmiyorum|yemiyorum|yemem|yiyemem|don't like|dont like|can't eat|cant eat)\b/,
   );
-  if (dislike?.[1] && !/\b(antrenman|spor|salon|workout|gym|gitmek)\b/.test(dislike[1])) {
+  if (dislike?.[1] && !/\b(antrenman|spor|salon|workout|gym|gitmek|program)\b/.test(dislike[1])) {
     push(facts, seen, "disliked_food", dislike[1]);
   }
+  const enDislike = folded.match(
+    /\b(?:don't like|dont like|can't eat|cant eat)\s+([a-z0-9][a-z0-9\s-]{1,32})/,
+  );
+  if (enDislike?.[1]) push(facts, seen, "disliked_food", enDislike[1]);
 
   const daysHit = folded.match(/haftada\s+(\d{1,2})/i);
   if (daysHit?.[1]) {
@@ -87,7 +91,7 @@ export function extractUserMemoryFacts(message: string): StructuredMemoryFact[] 
   }
 
   if (
-    /\b(evde calisiyorum|home gym|sadece dambil|sadece dumbbell|no gym|salon yok|ekipmanim yok)\b/.test(
+    /\b(evde calisiyorum|home gym|sadece dambil|sadece dumbbell|salon yok|ekipmanim yok)\b/.test(
       folded,
     )
   ) {
@@ -118,10 +122,10 @@ export function extractUserMemoryFacts(message: string): StructuredMemoryFact[] 
   }
 
   if (
-    /\b(?:is|iş|work|mesai|seyahat|travel|sinav|exam|hasta).{0,36}(?:gidemem|gidemiyorum|can't go|cant go|skip)\b/.test(
+    /\b(?:yuzunden|mesai|work|seyahat|travel|sinav|exam|hasta).{0,36}(?:gidemem|gidemiyorum|can't go|cant go|skip)\b/.test(
       folded,
     ) ||
-    /\b(?:gidemem|gidemiyorum|can't go|cant go).{0,36}(?:is|iş|work|mesai|seyahat|sinav)\b/.test(
+    /\b(?:gidemem|gidemiyorum|can't go|cant go).{0,36}(?:yuzunden|mesai|work|seyahat|sinav)\b/.test(
       folded,
     )
   ) {

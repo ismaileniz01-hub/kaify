@@ -159,6 +159,13 @@ export async function condenseMemory(params: {
   await resetCounter(admin, params.userId);
 }
 
+function isMissingFactKeyColumn(error: { code?: string; message?: string }): boolean {
+  if (error.code === "23505") return false;
+  return /PGRST204|schema cache|column .*fact_key|could not find.*fact_key/i.test(
+    error.message ?? "",
+  );
+}
+
 async function upsertOneKeyedFact(input: {
   userId: string;
   coachId?: string | null;
@@ -186,6 +193,7 @@ async function upsertOneKeyedFact(input: {
     .select("id, summary, key_facts")
     .eq("user_id", input.userId)
     .gte("created_at", ninetyDaysAgoIso())
+    .not("key_facts", "eq", "{}")
     .order("created_at", { ascending: false })
     .limit(KEYED_FETCH_LIMIT);
 
@@ -211,6 +219,7 @@ async function upsertOneKeyedFact(input: {
       .update({
         summary,
         key_facts: keyFacts,
+        fact_key: input.fact.key,
         coach_id: input.coachId ?? null,
         source_message_id: input.sourceMessageId ?? null,
         created_at: now,
@@ -234,14 +243,15 @@ async function upsertOneKeyedFact(input: {
     fact_key: input.fact.key,
   });
   if (!withKey.error) return;
-  if (!/fact_key/i.test(withKey.error.message)) {
+  if (withKey.error.code === "23505") return;
+  if (!isMissingFactKeyColumn(withKey.error)) {
     logger.warn("[memory.service] keyed insert failed", {
       error: withKey.error.message,
     });
     return;
   }
   const fallback = await admin.from("coaching_memory").insert(base);
-  if (fallback.error) {
+  if (fallback.error && fallback.error.code !== "23505") {
     logger.warn("[memory.service] keyed insert failed", {
       error: fallback.error.message,
     });
@@ -284,22 +294,65 @@ export async function getRecentMemories(
 ): Promise<RecentMemory[]> {
   const admin = createAdminSupabaseClient();
   const cutoff = ninetyDaysAgoIso();
-  const fetchLimit = Math.min(KEYED_FETCH_LIMIT, Math.max(limit, 24));
 
-  const { data, error } = await admin
+  const keyedQuery = admin
     .from("coaching_memory")
     .select("summary, created_at, key_facts")
     .eq("user_id", userId)
     .gte("created_at", cutoff)
+    .not("key_facts", "eq", "{}")
     .order("created_at", { ascending: false })
-    .limit(fetchLimit);
+    .limit(40);
+  const restQuery = admin
+    .from("coaching_memory")
+    .select("summary, created_at, key_facts")
+    .eq("user_id", userId)
+    .gte("created_at", cutoff)
+    .eq("key_facts", "{}")
+    .order("created_at", { ascending: false })
+    .limit(8);
 
-  if (error) {
-    logger.error("[memory.service] getRecentMemories error", { error: error.message });
-    return [];
+  const [keyedRes, restRes] = await Promise.all([keyedQuery, restQuery]);
+
+  if (keyedRes.error) {
+    logger.warn("[memory.service] keyed memory filter failed; using mixed fetch", {
+      error: keyedRes.error.message,
+    });
+    const mixed = await admin
+      .from("coaching_memory")
+      .select("summary, created_at, key_facts")
+      .eq("user_id", userId)
+      .gte("created_at", cutoff)
+      .order("created_at", { ascending: false })
+      .limit(80);
+    if (mixed.error) {
+      logger.error("[memory.service] getRecentMemories error", {
+        error: mixed.error.message,
+      });
+      return [];
+    }
+    const mapped = mapMemoryRows(mixed.data);
+    const keyed = mapped.filter((row) => row.factKey);
+    const rest = mapped.filter((row) => !row.factKey);
+    return [...keyed, ...rest].slice(0, limit);
   }
 
-  const mapped = (data ?? []).map((row) => {
+  if (restRes.error) {
+    logger.warn("[memory.service] event memory fetch failed", {
+      error: restRes.error.message,
+    });
+  }
+
+  return [...mapMemoryRows(keyedRes.data), ...mapMemoryRows(restRes.data)].slice(
+    0,
+    limit,
+  );
+}
+
+function mapMemoryRows(
+  rows: { summary: string; created_at: string; key_facts: unknown }[] | null,
+): RecentMemory[] {
+  return (rows ?? []).map((row) => {
     const keyFacts = asStringMap(row.key_facts);
     const factKey = keyFacts ? Object.keys(keyFacts)[0] : undefined;
     return {
@@ -309,8 +362,4 @@ export async function getRecentMemories(
       keyFacts,
     };
   });
-
-  const keyed = mapped.filter((row) => row.factKey);
-  const rest = mapped.filter((row) => !row.factKey);
-  return [...keyed, ...rest].slice(0, limit);
 }

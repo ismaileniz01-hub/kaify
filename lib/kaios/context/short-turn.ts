@@ -33,7 +33,7 @@ const ELLIPTICAL_BOOSTERS =
   /^(?:bilmiyorum|bilemedim|emin değilim|emin degilim|olmaz|belki|boşver|bosver|neyse|zor|istemiyorum|istemem|yapamam|olmaz ya|i don'?t know|i dont know|idk|dunno|maybe|nah|nope|forget it|not sure|i can'?t|cant|don'?t want|dont want|weiß nicht|weiss nicht|vielleicht|nee|lass mal|keine ahnung|geht nicht|will nicht|je sais pas|j'sais pas|peut-être|peut-etre|bof|laisse tomber|pas sûr|pas sur|j'ai pas envie|no sé|no se|quizá|quiza|déjalo|dejalo|no estoy seguro|no quiero|non lo so|boh|forse|lascia stare|non sono sicuro|non voglio|ما أدري|ما ادري|مش عارف|مش عارفة|يمكن|خلاص|ما أبغى|ما ابغى|لا أريد|لا اريد|مش عايز|مقدرش)[\s!.?…]*$/iu;
 
 const CONFIRM_BOOSTERS =
-  /^(?:ok|okay|tamam|tamamdır|tamamdir|evet|yes|yep|yeah|sí|si|ja|oui|va bene|تمام|أوكي|اوكي|sure|olur|yapalım|yapalim|let'?s go|do it|dale|sa[gğ]ol(?:ar)?|teşekkür(?:ler)?|tesekkur(?:ler)?|thanks|ty|thx|eyvallah)[\s!.?…]*$/iu;
+  /^(?:ok|okay|tamam|tamamdır|tamamdir|evet|yes|yep|yeah|sí|si|ja|oui|va bene|تمام|أوكي|اوكي|sure|olur|yapalım|yapalim|let'?s go|do it|dale|sa[gğ]ol(?:ar)?|teşekkür(?:ler)?|tesekkur(?:ler)?|thanks|ty|thx|merci|danke|gracias|grazie|eyvallah)[\s!.?…]*$/iu;
 
 const REJECT_BOOSTERS =
   /^(?:no|nope|nah|hayır|hayir|olmaz|yok|nee|non|لا|never|asla)[\s!.?…]*$/iu;

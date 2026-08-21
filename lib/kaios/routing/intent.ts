@@ -149,17 +149,23 @@ const PROGRAM_RE =
 const NUTRITION_Q_RE =
   /\b(protein|carbs?|calories?|macro|kalori|besin|nutrition|diet|diyet|kilo|bulk|cut|surplus|deficit|ne yesem|kaç kalori|kac kalori)\b/i;
 
-/** User reporting food they ate (slang / short logs) — needs macro headroom, not casual. */
-const FOOD_CONSUMPTION_RE =
-  /\b(yedim|yuttum|gomdum|gömdüm|gom|i ate|i had|just ate|had a|devoured|scoffed|ate a|ate an|doner|döner|durum|dürüm|wrap|burger|pizza|kebab|lahmacun|pide|tost|sandwich|breakfast|lunch|dinner|brunch|snack|öğün|ogun|yemek yedim|meal i|food log|sutlac|sütlaç|pudding|muhallebi|tavuk|simit|çiğköfte|cigkofte|sufle|souffle)\b/i;
+/** User reporting food they ate — needs an eat/log verb, not a dish name alone. */
+const FOOD_EAT_VERB_RE =
+  /\b(yedim|yuttum|gomdum|gömdüm|\bgom\b|i ate|just ate|ate a|ate an|devoured|scoffed|j'ai mangé|jai mange|ich habe gegessen)\b/i;
+const FOOD_DISH_RE =
+  /\b(doner|döner|durum|dürüm|wrap|burger|pizza|kebab|lahmacun|pide|tost|sandwich|breakfast|lunch|dinner|brunch|snack|öğün|ogun|sutlac|sütlaç|tavuk|simit|çiğköfte|cigkofte)\b/i;
 
 export function looksLikeFoodConsumption(message: string): boolean {
-  return FOOD_CONSUMPTION_RE.test(normalizeMessage(message));
+  const msg = normalizeMessage(message);
+  if (FOOD_EAT_VERB_RE.test(msg)) return true;
+  if (/\b(i had|had a)\b/i.test(msg) && FOOD_DISH_RE.test(msg)) return true;
+  if (/\b(yemek yedim|food log|meal i)\b/i.test(msg)) return true;
+  return false;
 }
 
 /** Asking if the prior meal was saved, or re-pasting the macro estimate. */
 const MEAL_SAVE_FOLLOWUP_RE =
-  /\b(ekledin\s*mi|kaydettin\s*mi|analize\s*ekle(?:din)?|yeme[gğ]i\s*analize|did you (?:add|save)|add(?:ed)? (?:it|this|the meal)|save(?:d)? (?:it|this|the meal))\b/i;
+  /\b(ekledin\s*mi|kaydettin\s*mi|analize\s*ekle(?:din)?|yeme[gğ]i\s*analize|did you (?:add|save)|add(?:ed)? (?:it|this|the meal)|save(?:d)? (?:it|this|the meal)|tu l['’]as (?:ajouté|ajoute|enregistré|enregistre)|hast du (?:es )?(?:gespeichert|eingetragen)|lo (?:guardaste|añadiste|anadiste))\b/i;
 
 export function looksLikeMealSaveFollowUp(message: string): boolean {
   const msg = normalizeMessage(message);
@@ -190,7 +196,7 @@ const HYDRATION_RE =
 
 /** Avoid bare "schedule" — it false-positives programming phrases like "PPL schedule". */
 const TOOL_RE =
-  /\b(log (?:my )?(?:workout|meal|weight)|set reminder|schedule (?:a |my )?(?:workout|session|reminder|meeting)|kaydet|hatırlat|hatirlat|update (?:my )?(?:goal|weight))\b/i;
+  /\b(log (?:my )?(?:workout|meal|weight)|set reminder|schedule (?:a |my )?(?:workout|session|reminder|meeting)|hatırlat|hatirlat|update (?:my )?(?:goal|weight))\b/i;
 
 const COUNCIL_DECISION_RE =
   /\b(decide|decision|final plan|council decision|karar ver|sonuç|sonuc|oybirliği|oybirligi)\b/i;
@@ -200,32 +206,24 @@ function looksLikeDeliveredWorkoutProgram(previousAssistant?: string): boolean {
   if (!prev || prev.length < 80) return false;
   const dayHits =
     prev.match(
-      /\b(pazartesi|sal[ıi]|çarşamba|carsamba|perşembe|persembe|cuma|cumartesi|pazar|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi,
+      /\b(pazartesi|sal[ıi]|çarşamba|carsamba|perşembe|persembe|cuma|cumartesi|pazar|monday|tuesday|wednesday|thursday|friday|saturday|sunday|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|lunes|martes|mi[eé]rcoles|miercoles|jueves|viernes|s[áa]bado|sabado|domingo|(?:gün|gun|day)\s*[1-7])\b/gi,
     )?.length ?? 0;
   const setRep =
     /\b\d+\s*[x×]\s*\d+\b/i.test(prev) ||
-    /\b\d+\s*(?:sets?|set)\b/i.test(prev);
+    /\b\d+\s*(?:sets?|set)\b/i.test(prev) ||
+    /\b\d+\s*set\s+\d+\s*(?:tekrar|rep)/i.test(prev);
   return dayHits >= 2 && setRep;
 }
 
 function looksLikeThanksOrSocialAck(message: string): boolean {
-  return /^(?:sa[gğ]ol(?:ar(?:ım|im)?)?|teşekkür(?:ler)?|tesekkur(?:ler)?|thanks(?:\s+you)?|thank\s+you|ty|thx|eyvallah|süper|super|harika|efsane|tamamdır|tamamdir)[\s!.?…❤🙏❤️]*$/iu.test(
+  return /^(?:sa[gğ]ol(?:ar(?:ım|im)?)?(?:\s+\w{2,12})?|teşekkür(?:ler| ederim)?|tesekkur(?:ler| ederim)?|thanks(?:\s+\w{2,12})?|thank you|ty|thx|merci(?:\s+\w{2,12})?|danke(?:\s+\w{2,12})?|gracias(?:\s+\w{2,12})?|grazie|eyvallah|süper|super|harika|efsane|tamamdır|tamamdir)[\s!.?…❤🙏❤️]*$/iu.test(
     message.trim(),
   );
 }
 
 function looksLikeBareConfirm(message: string): boolean {
-  return /^(?:ok|okay|tamam|evet|yes|yep|yeah|olur|sure|kral)[\s!.?…]*$/iu.test(
+  return /^(?:ok|okay|tamam|evet|yes|yep|yeah|oui|ja|sí|si|olur|sure|kral|d'accord|daccord)[\s!.?…]*$/iu.test(
     message.trim(),
-  );
-}
-
-function previousStillAskingProgramQuestion(previousAssistant?: string): boolean {
-  const prev = previousAssistant?.trim() ?? "";
-  if (!prev) return false;
-  if (/[?؟]\s*$/u.test(prev)) return true;
-  return /\b(kaç\s*gün|kac\s*gun|how many days|ekipman|equipment|hangi gün|hangi gun|kaç kez|kac kez)\b/i.test(
-    prev,
   );
 }
 
@@ -316,7 +314,7 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
   const prev = input.previousAssistantMessage ?? "";
   if (
     input.coach === "maya" &&
-    /^(?:ok|okay|tamam|evet|yes|yep|yeah|olur|içtim|ictim|sure)[\s!.?…]*$/iu.test(
+    /^(?:ok|okay|tamam|evet|yes|yep|yeah|oui|ja|sí|si|olur|içtim|ictim|sure|d'accord|daccord)[\s!.?…]*$/iu.test(
       msg,
     ) &&
     /\b(su|suyu|water|hydrat|bardak)\b/i.test(prev)
@@ -341,6 +339,12 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
   if (input.coach === "maya" && looksLikeMealSaveFollowUp(msg)) {
     return "nutrition_question";
   }
+  if (
+    input.coach === "maya" &&
+    /^(?:kaydet|ekle|save(?: it)?|save this)[\s!.?…]*$/iu.test(msg)
+  ) {
+    return "nutrition_question";
+  }
 
   // Elliptical replies after a prior proposal are NOT standalone casual.
   const shortTurn = classifyShortTurn({
@@ -353,7 +357,6 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
     if (
       input.coach === "alex" &&
       looksLikeDeliveredWorkoutProgram(prevMsg) &&
-      !previousStillAskingProgramQuestion(prevMsg) &&
       (looksLikeThanksOrSocialAck(msg) || looksLikeBareConfirm(msg))
     ) {
       return "casual";
