@@ -16,6 +16,14 @@ export function isWebOnlyPath(pathname: string): boolean {
   );
 }
 
+/** Native fallback when a website-only route is opened in the store app. */
+export function nativeFallbackForWebOnlyPath(pathname: string): string {
+  if (pathname === "/pricing" || pathname.startsWith("/pricing/")) {
+    return "/myaccount";
+  }
+  return NATIVE_ENTRY_PATH;
+}
+
 /**
  * URL baked into the Capacitor shell at `cap sync` time.
  * Local dev keeps the dev-server root; production opens the app hub.

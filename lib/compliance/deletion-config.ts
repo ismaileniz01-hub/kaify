@@ -95,13 +95,19 @@ export const EXPLICIT_CLEANUP: readonly DeletionTableSpec[] = [
     behavior: "explicit_cleanup",
     notes: "auth.admin.deleteUser triggers profile CASCADE",
   },
+  {
+    table: "paddle:subscriptions",
+    column: "user_id",
+    behavior: "explicit_cleanup",
+    notes: "cancelUserSubscriptionsImmediately() before auth delete so MoR billing stops",
+  },
 ] as const;
 
 /** Third-party systems — see docs/compliance/sentry-retention.md */
 export const THIRD_PARTY_POST_DELETE = [
   "Sentry (scrubbed events, vendor retention ~90d)",
   "Vercel logs (HTTP, vendor retention)",
-  "Paddle (MoR billing records)",
+  "Paddle (MoR billing records; live subscriptions canceled immediately on account delete)",
 ] as const;
 
 export function allUserOwnedExportTablesCovered(): string[] {

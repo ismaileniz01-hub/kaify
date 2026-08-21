@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   NATIVE_ENTRY_PATH,
   isWebOnlyPath,
+  nativeFallbackForWebOnlyPath,
 } from "@/lib/native/app-entry";
 
 describe("native consumption-only route policy", () => {
@@ -22,4 +23,10 @@ describe("native consumption-only route policy", () => {
       expect(isWebOnlyPath(path)).toBe(false);
     },
   );
+
+  it("sends native /pricing to My account instead of a login loop", () => {
+    expect(nativeFallbackForWebOnlyPath("/pricing")).toBe("/myaccount");
+    expect(nativeFallbackForWebOnlyPath("/")).toBe(NATIVE_ENTRY_PATH);
+    expect(nativeFallbackForWebOnlyPath("/signup")).toBe(NATIVE_ENTRY_PATH);
+  });
 });

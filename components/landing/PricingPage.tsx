@@ -12,10 +12,14 @@ import { StoreDownloadButtons } from "./StoreDownloadButtons";
 import { PlanSavingsCard } from "./PlanSavingsCard";
 import { PricingBillingToggle } from "./PricingBillingToggle";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
+import { InlineAlert } from "@/components/InlineAlert";
+import { StepUpChallenge } from "@/components/auth/StepUpChallenge";
 import { usePaddle } from "@/components/billing/PaddleProvider";
+import { useBillingPortal } from "@/components/billing/useBillingPortal";
 import { useSessionOptional } from "@/lib/session-contexts";
 import { useNativeApp } from "@/lib/native/platform";
 import { NATIVE_CHECKOUT_RETURN_URL } from "@/lib/billing/native-web-checkout";
+import { hasActiveSubscription } from "@/lib/auth/post-auth-redirect";
 import { useLang } from "@/lib/lang-context";
 import {
   PLAN_COMPARISON,
@@ -128,11 +132,15 @@ function PlanCheckoutButton({
   interval,
   className,
   children,
+  hasPlan,
+  onManagePlan,
 }: {
   plan: PricingPlan;
   interval: BillingInterval;
   className: string;
   children: ReactNode;
+  hasPlan: boolean;
+  onManagePlan: () => void;
 }) {
   const router = useRouter();
   const { paddle, ready, configured } = usePaddle();
@@ -141,21 +149,27 @@ function PlanCheckoutButton({
   const profile = session?.profile ?? null;
   const native = useNativeApp();
   const { t } = useLang();
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const handleClick = useCallback(() => {
     void (async () => {
+      setCheckoutError(null);
       const { shouldOpenPaddleCheckoutInApp } = await import(
         "@/lib/billing/native-web-checkout"
       );
       if (!(await shouldOpenPaddleCheckoutInApp())) {
         return;
       }
-      const priceId =
-        interval === "yearly" ? plan.paddlePriceIdYearly : plan.paddlePriceId;
       if (!isAuthenticated || !profile?.id) {
         router.push("/signup?next=/pricing");
         return;
       }
+      if (hasPlan) {
+        onManagePlan();
+        return;
+      }
+      const priceId =
+        interval === "yearly" ? plan.paddlePriceIdYearly : plan.paddlePriceId;
       if (configured && ready && paddle && priceId) {
         paddle.Checkout.open({
           items: [{ priceId, quantity: 1 }],
@@ -164,29 +178,43 @@ function PlanCheckoutButton({
             showAddDiscounts: true,
           },
         });
+        return;
       }
+      setCheckoutError(t("pricing.checkout_unavailable"));
     })();
   }, [
     configured,
+    hasPlan,
     interval,
     isAuthenticated,
+    onManagePlan,
     paddle,
     plan.paddlePriceId,
     plan.paddlePriceIdYearly,
     profile?.id,
     ready,
     router,
+    t,
   ]);
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={native !== false}
-      className={className}
-    >
-      {native ? t("pricing.available_on_web") : children}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={native !== false}
+        className={className}
+      >
+        {native
+          ? t("pricing.available_on_web")
+          : hasPlan
+            ? t("pricing.cta.manage_plan")
+            : children}
+      </button>
+      {checkoutError ? (
+        <p className="mt-2 text-center text-xs text-amber-300/90">{checkoutError}</p>
+      ) : null}
+    </>
   );
 }
 
@@ -194,6 +222,15 @@ export function PricingPage() {
   const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly");
   const native = useNativeApp();
   const { lang, t } = useLang();
+  const session = useSessionOptional();
+  const hasPlan = hasActiveSubscription(session?.profile?.tier);
+  const {
+    openPortal,
+    portalLoading,
+    needsStepUp,
+    setNeedsStepUp,
+    portalError,
+  } = useBillingPortal();
 
   // Defense in depth: NativeAppEntry redirects this route to /login. Until
   // native detection completes, never paint prices or an external purchase CTA.
@@ -260,6 +297,24 @@ export function PricingPage() {
             <ScrollReveal className="flex justify-center">
               <PricingBillingToggle value={billingInterval} onChange={setBillingInterval} />
             </ScrollReveal>
+            {(portalError || needsStepUp) && (
+              <div className="mx-auto mt-6 max-w-lg">
+                {portalError ? (
+                  <InlineAlert variant="error" message={portalError} />
+                ) : null}
+                {needsStepUp ? (
+                  <div className="mt-3">
+                    <StepUpChallenge
+                      onCancel={() => setNeedsStepUp(false)}
+                      onVerified={() => {
+                        setNeedsStepUp(false);
+                        void openPortal();
+                      }}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            )}
 
             <div className="pricing-cards mt-10">
               {PRICING_PLANS_WITH_PADDLE.map((plan, index) => {
@@ -331,9 +386,11 @@ export function PricingPage() {
                         <PlanCheckoutButton
                           plan={plan}
                           interval={billingInterval}
+                          hasPlan={hasPlan}
+                          onManagePlan={() => void openPortal()}
                           className={`landing-btn mt-8 w-full ${
                             plan.popular ? "landing-btn--primary" : "landing-btn--ghost"
-                          }`}
+                          } ${portalLoading && hasPlan ? "opacity-70" : ""}`}
                         >
                           {plan.popular
                             ? t("pricing.cta.start_pro")

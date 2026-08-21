@@ -11,6 +11,7 @@ import {
 import { fetchOwnedRowPage, fetchOwnedRowsPaged } from "@/lib/compliance/export-stream";
 import { createDomainEvent } from "@/lib/events/types";
 import { emitDomainEvent } from "@/lib/events/emit";
+import { cancelUserSubscriptionsImmediately } from "@/lib/services/billing-portal.service";
 
 /**
  * KVKK/GDPR account services.
@@ -245,6 +246,8 @@ async function exportUserDataHeaderAndStreamTables(
  * covered by the FK cascade and are removed explicitly.
  */
 export async function deleteUserAccount(userId: string): Promise<void> {
+  await cancelUserSubscriptionsImmediately(userId);
+
   const admin = createAdminSupabaseClient();
 
   try {

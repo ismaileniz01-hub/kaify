@@ -6,6 +6,7 @@ import {
   hasActiveSubscription,
   requiresActiveSubscription,
 } from "@/lib/auth/post-auth-redirect";
+import { isNativePlatform } from "@/lib/native/platform";
 import { useSession } from "@/lib/session-context";
 
 /**
@@ -20,7 +21,9 @@ export function SubscriptionGate() {
     if (isLoading || !isAuthenticated || !profile) return;
     if (!requiresActiveSubscription(pathname)) return;
     if (hasActiveSubscription(profile.tier)) return;
-    router.replace("/pricing");
+    void isNativePlatform().then((native) => {
+      router.replace(native ? "/myaccount" : "/pricing");
+    });
   }, [isAuthenticated, isLoading, pathname, profile, router]);
 
   return null;

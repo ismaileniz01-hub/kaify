@@ -9,6 +9,17 @@ describe("account deletion cache purge (PRIV-001)", () => {
     expect(EXPLICIT_CLEANUP.some((t) => t.table === "cache:user")).toBe(true);
   });
 
+  it("deleteUserAccount cancels Paddle billing before auth deletion", () => {
+    const src = readFileSync(
+      join(process.cwd(), "lib/services/account.service.ts"),
+      "utf8",
+    );
+    const cancel = src.indexOf("cancelUserSubscriptionsImmediately");
+    const authDelete = src.indexOf("admin.auth.admin.deleteUser");
+    expect(cancel).toBeGreaterThan(-1);
+    expect(authDelete).toBeGreaterThan(cancel);
+  });
+
   it("deleteUserAccount calls purgeUserCaches after auth deletion", () => {
     const src = readFileSync(
       join(process.cwd(), "lib/services/account.service.ts"),

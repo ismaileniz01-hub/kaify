@@ -11,6 +11,7 @@ import {
   Shield,
   LayoutDashboard,
   MessageCircle,
+  CreditCard,
   User,
   Volume2,
   Check,
@@ -28,6 +29,8 @@ import { UsageQuotaSection } from "@/components/settings/UsageQuotaSection";
 import { AppHeader } from "@/components/navigation/AppHeader";
 import { DeleteAccountSection } from "@/components/settings/DeleteAccountSection";
 import { MotionDialog } from "@/components/ui/MotionDialog";
+import { StepUpChallenge } from "@/components/auth/StepUpChallenge";
+import { useBillingPortal } from "@/components/billing/useBillingPortal";
 
 type SettingItem = {
   icon: typeof Bell;
@@ -114,6 +117,13 @@ const SETTINGS_GROUPS: { title: string; items: SettingItem[] }[] = [
     title: "settings.account",
     items: [
       {
+        icon: CreditCard,
+        label: "settings.billing",
+        description: "settings.billing.desc",
+        type: "link",
+        value: "settings.billing.action",
+      },
+      {
         icon: MessageCircle,
         label: "settings.contact",
         description: "settings.contact.desc",
@@ -179,6 +189,13 @@ export default function SettingsPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const {
+    openPortal,
+    portalLoading,
+    needsStepUp: needsBillingStepUp,
+    setNeedsStepUp: setNeedsBillingStepUp,
+    portalError,
+  } = useBillingPortal();
   const [toggles, setToggles] = useState<Record<string, boolean>>({
     "settings.workout": true,
     "settings.water": false,
@@ -393,6 +410,25 @@ export default function SettingsPage() {
             dismissLabel={t("common.dismiss")}
           />
         )}
+        {portalError && (
+          <InlineAlert
+            className="mt-2"
+            variant="error"
+            message={portalError}
+            dismissLabel={t("common.dismiss")}
+          />
+        )}
+        {needsBillingStepUp && (
+          <div className="mt-3">
+            <StepUpChallenge
+              onCancel={() => setNeedsBillingStepUp(false)}
+              onVerified={() => {
+                setNeedsBillingStepUp(false);
+                void openPortal();
+              }}
+            />
+          </div>
+        )}
         {saveError && (
           <InlineAlert
             className="mt-2"
@@ -575,6 +611,15 @@ export default function SettingsPage() {
                           className="text-xs font-medium text-purple-400 transition hover:text-purple-300 disabled:opacity-50"
                         >
                           {logoutLoading ? "…" : t(item.value || "")}
+                        </button>
+                      ) : item.label === "settings.billing" ? (
+                        <button
+                          type="button"
+                          onClick={() => void openPortal()}
+                          disabled={portalLoading}
+                          className="text-xs font-medium text-purple-400 transition hover:text-purple-300 disabled:opacity-50"
+                        >
+                          {portalLoading ? "…" : t(item.value || "")}
                         </button>
                       ) : item.href ? (
                         <Link

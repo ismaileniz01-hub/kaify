@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { isWebOnlyPath, NATIVE_ENTRY_PATH } from "@/lib/native/app-entry";
+import { isWebOnlyPath, nativeFallbackForWebOnlyPath } from "@/lib/native/app-entry";
 import { isNativePlatform } from "@/lib/native/platform";
 
 /**
@@ -19,7 +19,7 @@ export function NativeAppEntry() {
     void (async () => {
       if (!(await isNativePlatform())) return;
       if (cancelled || !isWebOnlyPath(pathname)) return;
-      router.replace(NATIVE_ENTRY_PATH);
+      router.replace(nativeFallbackForWebOnlyPath(pathname));
     })();
     return () => {
       cancelled = true;

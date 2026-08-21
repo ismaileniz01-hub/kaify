@@ -28,6 +28,7 @@ describe("deletion completeness", () => {
     expect(targets).toContain("storage:avatars");
     expect(targets).toContain("cache:user");
     expect(targets).toContain("auth.users");
+    expect(targets).toContain("paddle:subscriptions");
   });
 
   it("lists third-party post-delete retention", () => {

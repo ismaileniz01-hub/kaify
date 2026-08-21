@@ -30,17 +30,16 @@ import { FloatingOrbs } from "@/components/landing/FloatingOrbs";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { InlineAlert } from "@/components/InlineAlert";
-import { apiPost } from "@/lib/api/client";
-import {
-  StepUpChallenge,
-  isStepUpRequiredError,
-} from "@/components/auth/StepUpChallenge";
+import { StepUpChallenge } from "@/components/auth/StepUpChallenge";
+import { useBillingPortal } from "@/components/billing/useBillingPortal";
 import { formatTierLabel } from "@/lib/billing/tier-labels";
 import { hasActiveSubscription } from "@/lib/auth/post-auth-redirect";
 import { parseGenderInput } from "@/lib/profile-mapper";
 import { useLang } from "@/lib/lang-context";
 import { formatNumber } from "@/lib/i18n/format";
 import { useSession } from "@/lib/session-context";
+import { useNativeApp } from "@/lib/native/platform";
+import { WEB_PRICING_URL } from "@/lib/billing/native-web-checkout";
 import type { UserProfile } from "@/lib/user";
 
 function experienceLabel(
@@ -104,14 +103,20 @@ export function MyAccountPage() {
     referralCode,
   } = useSession();
 
+  const native = useNativeApp();
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
-  const [needsBillingStepUp, setNeedsBillingStepUp] = useState(false);
+  const {
+    openPortal,
+    portalLoading,
+    needsStepUp: needsBillingStepUp,
+    setNeedsStepUp: setNeedsBillingStepUp,
+    portalError,
+  } = useBillingPortal();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -135,7 +140,6 @@ export function MyAccountPage() {
 
   const avatarSrc = avatarPreview ?? userProfile.avatar;
   const hasPlan = hasActiveSubscription(profile.tier);
-  const appHref = hasPlan ? "/welcome" : "/pricing";
 
   const persistProfile = async (next: UserProfile) => {
     setSaving(true);
@@ -179,30 +183,6 @@ export function MyAccountPage() {
     setNameDraft(userProfile.name);
     setEditingName(false);
     setSaveError(null);
-  };
-
-  const openBillingPortal = async () => {
-    if (portalLoading) return;
-    setPortalLoading(true);
-    setSaveError(null);
-    try {
-      const { url } = await apiPost<{ url: string }>("/api/billing/portal", {});
-      const { isNativePlatform } = await import("@/lib/native/platform");
-      if (await isNativePlatform()) {
-        const { openExternalUrl } = await import("@/lib/native/open-external");
-        await openExternalUrl(url);
-        setPortalLoading(false);
-        return;
-      }
-      window.location.assign(url);
-    } catch (err) {
-      if (isStepUpRequiredError(err)) {
-        setNeedsBillingStepUp(true);
-      } else {
-        setSaveError(t("myaccount.portal_error"));
-      }
-      setPortalLoading(false);
-    }
   };
 
   const infoRows = [
@@ -360,10 +340,13 @@ export function MyAccountPage() {
                     })}
                   </p>
 
-                  {(saveError || saveSuccess) && (
+                  {(saveError || portalError || saveSuccess) && (
                     <div className="mt-4 w-full max-w-md">
                       {saveError && (
                         <InlineAlert variant="error" message={saveError} />
+                      )}
+                      {portalError && !saveError && (
+                        <InlineAlert variant="error" message={portalError} />
                       )}
                       {saveSuccess && (
                         <InlineAlert variant="success" message={t("myaccount.saved")} />
@@ -429,13 +412,31 @@ export function MyAccountPage() {
                 ) : null}
 
                 <div className="flex flex-col gap-3 border-t border-white/8 px-6 py-6 sm:flex-row sm:flex-wrap sm:px-10">
-                  <Link href={appHref} className="account-btn account-btn--primary flex-1 justify-center">
-                    {hasPlan ? t("myaccount.open_app") : t("myaccount.choose_plan")}
-                  </Link>
+                  {hasPlan ? (
+                    <Link href="/welcome" className="account-btn account-btn--primary flex-1 justify-center">
+                      {t("myaccount.open_app")}
+                    </Link>
+                  ) : native ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void import("@/lib/native/open-external").then(({ openExternalUrl }) =>
+                          openExternalUrl(WEB_PRICING_URL),
+                        );
+                      }}
+                      className="account-btn account-btn--primary flex-1 justify-center"
+                    >
+                      {t("myaccount.choose_plan")}
+                    </button>
+                  ) : (
+                    <Link href="/pricing" className="account-btn account-btn--primary flex-1 justify-center">
+                      {t("myaccount.choose_plan")}
+                    </Link>
+                  )}
                   {hasPlan ? (
                     <button
                       type="button"
-                      onClick={() => void openBillingPortal()}
+                      onClick={() => void openPortal()}
                       disabled={portalLoading}
                       className="account-btn account-btn--ghost flex-1 justify-center"
                     >
@@ -465,7 +466,7 @@ export function MyAccountPage() {
                       onCancel={() => setNeedsBillingStepUp(false)}
                       onVerified={() => {
                         setNeedsBillingStepUp(false);
-                        void openBillingPortal();
+                        void openPortal();
                       }}
                     />
                   </div>

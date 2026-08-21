@@ -904,7 +904,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             variant={errorUpgrade ? "info" : "error"}
             message={error}
             dismissLabel={t("common.dismiss")}
-            actionHref={errorUpgrade ? "/pricing" : undefined}
+            actionHref={errorUpgrade ? "/myaccount" : undefined}
             actionLabel={errorUpgrade ? t("usage.upgrade") : undefined}
             onDismiss={() => {
               setError(null);

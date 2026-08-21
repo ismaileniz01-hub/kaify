@@ -6,6 +6,11 @@ import { apiGet } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
 import { formatNumber } from "@/lib/i18n/format";
 import { formatTierLabel } from "@/lib/billing/tier-labels";
+import { WEB_PRICING_URL } from "@/lib/billing/native-web-checkout";
+import { useNativeApp } from "@/lib/native/platform";
+import { useBillingPortal } from "@/components/billing/useBillingPortal";
+import { StepUpChallenge } from "@/components/auth/StepUpChallenge";
+import { InlineAlert } from "@/components/InlineAlert";
 import type { UsageStatusDTO } from "@/lib/types/domain.types";
 
 function UsageBar({
@@ -60,8 +65,16 @@ function UsageBar({
 
 export function UsageQuotaSection() {
   const { t } = useLang();
+  const native = useNativeApp();
   const [usage, setUsage] = useState<UsageStatusDTO | null>(null);
   const [loading, setLoading] = useState(true);
+  const {
+    openPortal,
+    portalLoading,
+    needsStepUp,
+    setNeedsStepUp,
+    portalError,
+  } = useBillingPortal();
 
   useEffect(() => {
     void apiGet<UsageStatusDTO>("/api/usage")
@@ -80,7 +93,13 @@ export function UsageQuotaSection() {
 
   if (!usage) return null;
 
+  const hasPlan = Boolean(usage.tier);
   const showUpgrade = !usage.tier || usage.tier === "essential";
+
+  const openWebPricing = async () => {
+    const { openExternalUrl } = await import("@/lib/native/open-external");
+    await openExternalUrl(WEB_PRICING_URL);
+  };
 
   return (
     <section className="animate-in mt-5">
@@ -137,12 +156,47 @@ export function UsageQuotaSection() {
         {showUpgrade && (
           <div className="border-t border-white/5 pt-3">
             <p className="text-[11px] text-zinc-500">{t("usage.upgrade_hint")}</p>
-            <Link
-              href="/pricing"
-              className="mt-2 inline-flex text-xs font-semibold text-purple-300 underline-offset-2 hover:underline"
-            >
-              {t("usage.upgrade")}
-            </Link>
+            {hasPlan ? (
+              <button
+                type="button"
+                onClick={() => void openPortal()}
+                disabled={portalLoading}
+                className="mt-2 inline-flex text-xs font-semibold text-purple-300 underline-offset-2 hover:underline disabled:opacity-50"
+              >
+                {portalLoading ? t("profile.saving") : t("usage.upgrade")}
+              </button>
+            ) : native ? (
+              <button
+                type="button"
+                onClick={() => void openWebPricing()}
+                className="mt-2 inline-flex text-xs font-semibold text-purple-300 underline-offset-2 hover:underline"
+              >
+                {t("usage.upgrade")}
+              </button>
+            ) : (
+              <Link
+                href="/pricing"
+                className="mt-2 inline-flex text-xs font-semibold text-purple-300 underline-offset-2 hover:underline"
+              >
+                {t("usage.upgrade")}
+              </Link>
+            )}
+            {portalError ? (
+              <div className="mt-2">
+                <InlineAlert variant="error" message={portalError} />
+              </div>
+            ) : null}
+            {needsStepUp ? (
+              <div className="mt-3">
+                <StepUpChallenge
+                  onCancel={() => setNeedsStepUp(false)}
+                  onVerified={() => {
+                    setNeedsStepUp(false);
+                    void openPortal();
+                  }}
+                />
+              </div>
+            ) : null}
           </div>
         )}
       </div>
