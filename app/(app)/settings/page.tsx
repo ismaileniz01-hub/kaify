@@ -487,19 +487,24 @@ export default function SettingsPage() {
                         type="button"
                         disabled={isAuthenticated && !settingsLoaded}
                         onClick={() => void toggleSwitch(item.label)}
-                        className={`touch-44 relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
-                          toggles[item.label] ? "bg-purple-500" : "bg-zinc-700"
-                        }`}
+                        className="flex min-h-11 min-w-11 items-center justify-end"
                         aria-pressed={toggles[item.label]}
                         aria-label={t(item.label)}
                       >
                         <span
-                          className={`absolute start-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
-                            toggles[item.label]
-                              ? "translate-x-5 rtl:-translate-x-5"
-                              : "translate-x-0"
-                          }`}
-                        />
+                          className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 transition-colors ${
+                            toggles[item.label] ? "bg-purple-500" : "bg-zinc-700"
+                          } ${isAuthenticated && !settingsLoaded ? "opacity-50" : ""}`}
+                          aria-hidden
+                        >
+                          <span
+                            className={`block h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                              toggles[item.label]
+                                ? "translate-x-5 rtl:-translate-x-5"
+                                : "translate-x-0"
+                            }`}
+                          />
+                        </span>
                       </button>
                     )}
                     {item.type === "select" && item.label === "settings.lang" && (

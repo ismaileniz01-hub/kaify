@@ -139,6 +139,7 @@ function PlanCheckoutButton({
   children,
   hasPlan,
   onManagePlan,
+  discountCode,
 }: {
   plan: PricingPlan;
   interval: BillingInterval;
@@ -146,6 +147,7 @@ function PlanCheckoutButton({
   children: ReactNode;
   hasPlan: boolean;
   onManagePlan: () => void;
+  discountCode?: string;
 }) {
   const router = useRouter();
   const { paddle, ready, configured } = usePaddle();
@@ -176,9 +178,11 @@ function PlanCheckoutButton({
       const priceId =
         interval === "yearly" ? plan.paddlePriceIdYearly : plan.paddlePriceId;
       if (configured && ready && paddle && priceId) {
+        const code = discountCode?.trim();
         paddle.Checkout.open({
           items: [{ priceId, quantity: 1 }],
           customData: { user_id: profile.id },
+          ...(code ? { discountCode: code } : {}),
           settings: {
             showAddDiscounts: true,
           },
@@ -189,6 +193,7 @@ function PlanCheckoutButton({
     })();
   }, [
     configured,
+    discountCode,
     hasPlan,
     interval,
     isAuthenticated,
@@ -225,6 +230,7 @@ function PlanCheckoutButton({
 
 export function PricingPage() {
   const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly");
+  const [discountCode, setDiscountCode] = useState("");
   const native = useNativeApp();
   const { lang, t } = useLang();
   const session = useSessionOptional();
@@ -302,6 +308,29 @@ export function PricingPage() {
             <ScrollReveal className="flex justify-center">
               <PricingBillingToggle value={billingInterval} onChange={setBillingInterval} />
             </ScrollReveal>
+
+            {!hasPlan ? (
+              <ScrollReveal delay={80} className="mx-auto mt-6 max-w-md">
+                <label className="block text-left">
+                  <span className="mb-1.5 block text-xs font-medium text-zinc-400">
+                    {t("pricing.discount_code.label")}
+                  </span>
+                  <input
+                    type="text"
+                    value={discountCode}
+                    onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                    placeholder={t("pricing.discount_code.placeholder")}
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-sm tracking-wider text-white outline-none placeholder:text-zinc-600 focus:border-purple-500/40"
+                  />
+                  <span className="mt-1.5 block text-[11px] leading-snug text-zinc-500">
+                    {t("pricing.discount_code.hint")}
+                  </span>
+                </label>
+              </ScrollReveal>
+            ) : null}
+
             {(portalError || needsStepUp) && (
               <div className="mx-auto mt-6 max-w-lg">
                 {portalError ? (
@@ -392,6 +421,7 @@ export function PricingPage() {
                           plan={plan}
                           interval={billingInterval}
                           hasPlan={hasPlan}
+                          discountCode={discountCode}
                           onManagePlan={() => void openPortal()}
                           className={`landing-btn mt-8 w-full ${
                             plan.popular ? "landing-btn--primary" : "landing-btn--ghost"

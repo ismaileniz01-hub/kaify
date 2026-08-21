@@ -43,6 +43,15 @@ export default function ContactSupportPage() {
     }
   };
 
+  const retry = () => {
+    setError(null);
+    if (message.trim()) {
+      void send();
+      return;
+    }
+    load();
+  };
+
   return (
     <div className="phone-shell analytics-gradient relative flex flex-col">
       <AppHeader
@@ -76,10 +85,7 @@ export default function ContactSupportPage() {
           <InlineAlert
             variant="error"
             message={error}
-            onRetry={() => {
-              setError(null);
-              load();
-            }}
+            onRetry={retry}
             onDismiss={() => setError(null)}
           />
         )}

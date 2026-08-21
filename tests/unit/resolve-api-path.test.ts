@@ -31,5 +31,6 @@ describe("resolveApiPath", () => {
     expect(resolveApiPath("/api/waitlist")).toBe("/api/waitlist");
     expect(resolveApiPath("/api/gifts/claim")).toBe("/api/gifts/claim");
     expect(resolveApiPath("/api/paddle/webhook")).toBe("/api/paddle/webhook");
+    expect(resolveApiPath("/api/support")).toBe("/api/v1/support");
   });
 });

@@ -41,6 +41,7 @@ export const API_V1_ROUTES = [
   "/api/v1/notifications",
   "/api/v1/messages",
   "/api/v1/referral",
+  "/api/v1/support",
   "/api/v1/health/steps",
   "/api/v1/consent",
   "/api/v1/leaderboard/global",
