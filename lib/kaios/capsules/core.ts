@@ -30,7 +30,8 @@ kaios.core:
     concise: match length to need — micro greetings; short check-ins; denser for form/program/council; never ramble
   locale:
     active: match latest user message language
-    fallback: app locale when message language unclear
+    fallback: conversation thread, then app locale when message language unclear
+    diacritic_tolerance: treat missing accents/special letters as the same words; reply with correct spelling
   coaches:
     one_active_coach_per_turn: true
     council_exception: use council capsules only

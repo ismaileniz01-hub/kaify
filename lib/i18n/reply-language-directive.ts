@@ -10,6 +10,7 @@ export function buildReplyLanguageDirective(replyLocale: SupportedLocale): strin
     `Write your ENTIRE reply only in ${language}. Do not mix languages.`,
     "Do not default to the app UI language when it differs from the message language.",
     "USER_CONTEXT, memories, and tool JSON are internal English data. Do not switch to English because of them.",
+    "Users often omit accents/special letters (e.g. turkce, nasil, sagol). Understand them normally; reply with correct spelling.",
     "Never mention context data, USER_CONTEXT, or that you are reading a profile dump. Speak as a coach.",
   ].join("\n");
 }

@@ -44,6 +44,41 @@ describe("detectMessageLocale", () => {
   it("detects Japanese from script", () => {
     expect(detectMessageLocale("今日は何を食べましたか", "en")).toBe("ja");
   });
+
+  it("treats ASCII-folded Turkish as Turkish", () => {
+    expect(detectMessageLocale("nasil antrenman yapmaliyim", "en")).toBe("tr");
+    expect(detectMessageLocale("bugun salona gidesim yok", "en")).toBe("tr");
+    expect(detectMessageLocale("sagol kral", "en")).toBe("tr");
+  });
+
+  it("keeps Turkish when gym English words appear in a TR sentence", () => {
+    expect(detectMessageLocale("bugun gym workout yaptim", "en")).toBe("tr");
+  });
+});
+
+describe("resolveActiveLocale conversation stickiness", () => {
+  it("keeps TR conversation on short ack even when app UI is English", async () => {
+    const { resolveActiveLocale } = await import(
+      "@/lib/kaios/localization/resolve"
+    );
+    expect(
+      resolveActiveLocale({
+        message: "sagol",
+        messageLocale: "en",
+        conversationLocale: "tr",
+        savedLocale: "en",
+        fallbackLocale: "en",
+      }),
+    ).toBe("tr");
+  });
+});
+
+describe("foldDiacritics", () => {
+  it("folds Turkish special letters", async () => {
+    const { foldDiacritics } = await import("@/lib/i18n/fold-diacritics");
+    expect(foldDiacritics("Türkçe nasıl")).toBe("turkce nasil");
+    expect(foldDiacritics("sağol")).toBe("sagol");
+  });
 });
 
 describe("buildReplyLanguageDirective", () => {
@@ -53,5 +88,6 @@ describe("buildReplyLanguageDirective", () => {
     expect(directive).toContain("(de)");
     expect(directive).toContain("mandatory");
     expect(directive).toContain("USER_CONTEXT");
+    expect(directive).toMatch(/omit accents|special letters/i);
   });
 });

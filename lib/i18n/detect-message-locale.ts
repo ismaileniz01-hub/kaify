@@ -4,6 +4,7 @@ import {
   resolveLocale,
   type SupportedLocale,
 } from "@/lib/i18n/dictionary";
+import { foldDiacritics } from "@/lib/i18n/fold-diacritics";
 
 /** ISO 639-3 (franc-min) → Kaify Ai locale. Unmapped codes are skipped. */
 const FRANC_TO_LOCALE: Record<string, SupportedLocale> = {
@@ -56,7 +57,11 @@ function isAmbiguousShortMessage(text: string): boolean {
 
 /** Global English gym/internet slang — often the whole message (e.g. "broo", "ohh cute"). */
 const ENGLISH_SLANG =
-  /\b(bro{1,4}|bruh|dude|man|yeah|yep|nope|nah|lol|lmao|wtf|idk|tbh|ngl|sup|hey|hi|hello|ok|okay|cool|nice|cute|aww|awww|ohh|oh|omg|wow|haha|hahaha|thanks|thx|pls|please|yo|lets|let's|go|gym|workout|legday|push|pull|rest|day|love|sweet|adorable|damn|shit|sorry|yup|sure|fine|same|true|facts|bet|lit|fire|slay)\b/i;
+  /\b(bro{1,4}|bruh|dude|man|yeah|yep|nope|nah|lol|lmao|wtf|idk|tbh|ngl|sup|hey|hi|hello|cool|nice|cute|aww|awww|ohh|oh|omg|wow|haha|hahaha|thanks|thx|pls|please|yo|legday|love|sweet|adorable|damn|shit|sorry|yup|fine|same|true|facts|bet|lit|fire|slay)\b/i;
+
+/** Shared acks are not English evidence — keep thread/app language. */
+const SHARED_ACK_ONLY =
+  /^(?:ok|okay|yes|no|sure|yep|yeah|nope|nah|ty|thx)[\s!.?…]*$/iu;
 
 /** Skip franc on tiny strings — it often mislabels casual Latin chat (e.g. "ohh cute" → French). */
 const FRANC_MIN_CHARS = 20;
@@ -76,7 +81,10 @@ const TURKISH_PAST_OR_FOOD =
   /\b[a-zçğıöşü]{2,}(?:dım|dim|dum|düm|tım|tim|tum|tüm|mış|miş|muş|müş)\b/iu;
 
 function localeFromEnglishSlang(text: string): SupportedLocale | null {
-  return ENGLISH_SLANG.test(normalizeForDetection(text)) ? "en" : null;
+  const cleaned = normalizeForDetection(text);
+  if (SHARED_ACK_ONLY.test(cleaned)) return null;
+  if (looksLikeTurkishChat(cleaned)) return null;
+  return ENGLISH_SLANG.test(cleaned) ? "en" : null;
 }
 const WORD_HINTS: Array<{ locale: SupportedLocale; pattern: RegExp }> = [
   {
@@ -92,7 +100,7 @@ const WORD_HINTS: Array<{ locale: SupportedLocale; pattern: RegExp }> = [
   {
     locale: "tr",
     pattern:
-      /\b(ben|sen|ve|bir|bi|bu|ne|nasıl|nasil|bugün|bugun|yemek|merhaba|lütfen|lutfen|neden|için|icin|var|yok|mı|mi|mu|mü|yedim|yedin|yedik|içtim|ictim|yaptım|yaptim|kase|sutlac|sütlaç|çorba|corba|pilav|tekrar|bilgi|kontrol|istiyorum|antrenman|kahvaltı|kahvalti|öğün|ogun|kaydet|misin|musun|mısın)\b/i,
+      /\b(ben|sen|ve|bir|bi|bu|ne|nasıl|nasil|bugün|bugun|yemek|merhaba|lütfen|lutfen|neden|için|icin|var|yok|mı|mi|mu|mü|yedim|yedin|yedik|içtim|ictim|yaptım|yaptim|kase|sutlac|sütlaç|çorba|corba|pilav|tekrar|bilgi|kontrol|istiyorum|antrenman|kahvaltı|kahvalti|öğün|ogun|kaydet|misin|musun|mısın|sagol|sağol|tesekkur|teşekkür|tamam|tamamdir|tamamdır|kral|reis|program|gunluk|günlük|haftalik|haftalık|koc|koç|turkce|türkçe|yazamiyorum|yazamıyorum|anlamadin|anlamadın|anladim|anladım)\b/i,
   },
   {
     locale: "fr",
@@ -132,8 +140,10 @@ const TURKISH_WORD_HINT =
 export function looksLikeTurkishChat(text: string): boolean {
   const cleaned = normalizeForDetection(text);
   if (!cleaned) return false;
+  const folded = foldDiacritics(cleaned);
   if (countPatternHits(cleaned, TURKISH_WORD_HINT) > 0) return true;
-  return TURKISH_PAST_OR_FOOD.test(cleaned);
+  if (countPatternHits(folded, TURKISH_WORD_HINT) > 0) return true;
+  return TURKISH_PAST_OR_FOOD.test(cleaned) || TURKISH_PAST_OR_FOOD.test(folded);
 }
 
 function localeFromWordHints(text: string): SupportedLocale | null {
@@ -178,10 +188,12 @@ function detectWithoutFallback(text: string): SupportedLocale | null {
   const cleaned = normalizeForDetection(text);
   if (!cleaned || !HAS_LETTERS.test(cleaned)) return null;
 
+  const folded = foldDiacritics(cleaned);
   return (
     localeFromScript(cleaned) ??
     localeFromEnglishSlang(cleaned) ??
     localeFromWordHints(cleaned) ??
+    localeFromWordHints(folded) ??
     localeFromFranc(cleaned)
   );
 }
@@ -203,9 +215,14 @@ export function detectMessageLocale(
   const cleaned = normalizeForDetection(text);
   if (!cleaned || !HAS_LETTERS.test(cleaned)) return fallback;
 
-  const direct = detectWithoutFallback(text);
+  const folded = foldDiacritics(cleaned);
+  const direct = detectWithoutFallback(cleaned);
   if (direct) {
     if (direct !== "tr" && FRANC_UNSTABLE_SHORT.has(direct) && looksLikeTurkishChat(cleaned)) {
+      return "tr";
+    }
+    // Gym English tokens inside ASCII-Turkish must not flip the reply language.
+    if (direct === "en" && looksLikeTurkishChat(cleaned)) {
       return "tr";
     }
     return direct;
@@ -219,5 +236,20 @@ export function detectMessageLocale(
     if (fromThread) return fromThread;
   }
 
+  // Folded Turkish without diacritics often fails franc; keep TR when hints match.
+  if (looksLikeTurkishChat(folded) || looksLikeTurkishChat(cleaned)) {
+    return "tr";
+  }
+
   return fallback;
+}
+
+/**
+ * Language of the ongoing user thread (ignores coach turns).
+ * Used so short acks keep the chat language even when the app UI locale differs.
+ */
+export function detectConversationLocale(
+  recentUserMessages: string[] = [],
+): SupportedLocale | null {
+  return inheritLocaleFromPriorMessages(recentUserMessages);
 }

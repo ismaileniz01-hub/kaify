@@ -345,6 +345,18 @@ describe("locale resolution + short ack", () => {
     }
   });
 
+  it("short acks prefer conversation language over app UI locale", () => {
+    expect(
+      resolveActiveLocale({
+        message: "sagol",
+        messageLocale: "en",
+        conversationLocale: "tr",
+        savedLocale: "en",
+        fallbackLocale: "en",
+      }),
+    ).toBe("tr");
+  });
+
   it("meaningful language switch still uses message locale", () => {
     expect(
       resolveActiveLocale({

@@ -4,7 +4,7 @@ import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
 import { ModelRouter } from "@/lib/ai/model-router";
 import { resolveLocale } from "@/lib/i18n/dictionary";
-import { detectMessageLocale } from "@/lib/i18n/detect-message-locale";
+import { detectConversationLocale, detectMessageLocale } from "@/lib/i18n/detect-message-locale";
 import { buildReplyLanguageDirective } from "@/lib/i18n/reply-language-directive";
 import { buildChatSystemPrompt } from "@/lib/ai/personas";
 import {
@@ -510,6 +510,7 @@ async function* streamKaiosCoachReply(
       .filter((turn) => turn.role === "user")
       .map((turn) => turn.content);
     const recentThreadTexts = history.map((turn) => turn.content);
+    const conversationLocale = detectConversationLocale(recentUserTexts);
     const messageLocale = detectMessageLocale(
       cleanMessage,
       profileMeta.savedLocale,
@@ -519,6 +520,7 @@ async function* streamKaiosCoachReply(
     locale = resolveActiveLocale({
       message: cleanMessage,
       messageLocale,
+      conversationLocale,
       savedLocale: profileMeta.savedLocale,
       fallbackLocale: "en",
     });
@@ -980,13 +982,20 @@ export async function* streamCoachReply(
       .filter((turn) => turn.role === "user")
       .map((turn) => turn.content);
     const recentThreadTexts = history.map((turn) => turn.content);
-    const replyLocale = detectMessageLocale(
-      cleanMessage,
-      locale,
-      recentUserTexts,
-      recentThreadTexts,
-    );
-    const currentTurn = `${buildCanaryReminder(canary)}\n\n${buildReplyLanguageDirective(replyLocale)}\n\n${wrapUntrustedInput(
+    const conversationLocale = detectConversationLocale(recentUserTexts);
+    const replyLocale = resolveActiveLocale({
+      message: cleanMessage,
+      messageLocale: detectMessageLocale(
+        cleanMessage,
+        locale,
+        recentUserTexts,
+        recentThreadTexts,
+      ),
+      conversationLocale,
+      savedLocale: locale,
+      fallbackLocale: "en",
+    });
+    const currentTurn = `${buildCanaryReminder(canary)}\n\n${buildReplyLanguageDirective(resolveLocale(replyLocale))}\n\n${wrapUntrustedInput(
       "USER_MESSAGE",
       cleanMessage,
     )}`;

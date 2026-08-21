@@ -3,6 +3,7 @@
   looksLikeFitnessCoachingProposal,
 } from "@/lib/kaios/context/short-turn";
 import { looksLikeWorkoutCompletion } from "@/lib/kaios/analytics/workout-log";
+import { foldChatMessage } from "@/lib/i18n/fold-diacritics";
 
 /**
  * Deterministic intent routing for KAIOS (no LLM).
@@ -230,7 +231,7 @@ function continuedDomainIntent(
 }
 
 function normalizeMessage(message: string): string {
-  return message.trim().replace(/\s+/g, " ");
+  return foldChatMessage(message);
 }
 
 function routeHint(route?: string, workflow?: string): string {

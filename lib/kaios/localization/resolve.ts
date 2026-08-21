@@ -4,6 +4,8 @@
  * behavior for tests and optional product callers.
  */
 
+import { foldDiacritics } from "@/lib/i18n/fold-diacritics";
+
 const SHORT_EXPRESSIONS = new Set(
   [
     "ok",
@@ -57,7 +59,7 @@ const SHORT_EXPRESSIONS = new Set(
     "اوكي",
     "شكرا",
     "dale",
-  ].map((s) => s.toLowerCase()),
+  ].map((s) => foldDiacritics(s)),
 );
 
 const EMOJI_OR_SYMBOL_ONLY = /^[\p{Emoji}\p{P}\p{S}\s0-9]+$/u;
@@ -67,6 +69,11 @@ export type ResolveActiveLocaleInput = {
   explicitLocale?: string | null;
   /** Detected meaningful language of the current user message (BCP-47). */
   messageLocale?: string | null;
+  /**
+   * Ongoing chat language from recent user turns.
+   * Short acks prefer this over the app UI locale so EN UI + TR chat stays TR.
+   */
+  conversationLocale?: string | null;
   /** Saved app language preference. */
   savedLocale?: string | null;
   /** Device / system locale. */
@@ -84,10 +91,7 @@ export function isNonSwitchingExpression(message: string): boolean {
   const trimmed = message.trim();
   if (!trimmed) return true;
   if (EMOJI_OR_SYMBOL_ONLY.test(trimmed)) return true;
-  const normalized = trimmed
-    .toLowerCase()
-    .replace(/[!?.…,]+$/g, "")
-    .trim();
+  const normalized = foldDiacritics(trimmed.replace(/[!?.…,]+$/g, "").trim());
   if (SHORT_EXPRESSIONS.has(normalized)) return true;
   // Single common exercise / brand tokens
   if (/^[a-z][a-z0-9_-]{1,24}$/i.test(trimmed) && trimmed.length <= 16) {
@@ -100,7 +104,7 @@ export function isNonSwitchingExpression(message: string): boolean {
 
 /**
  * Resolve active reply locale using KAIOS priority order.
- * Short expressions keep the saved/app locale instead of switching.
+ * Short expressions keep conversation/saved language — they must not invent a switch.
  */
 export function resolveActiveLocale(input: ResolveActiveLocaleInput): string {
   const fallback = (input.fallbackLocale || "en").trim() || "en";
@@ -109,6 +113,7 @@ export function resolveActiveLocale(input: ResolveActiveLocaleInput): string {
   const message = input.message ?? "";
   if (message && isNonSwitchingExpression(message)) {
     return (
+      input.conversationLocale?.trim() ||
       input.savedLocale?.trim() ||
       input.deviceLocale?.trim() ||
       fallback
@@ -116,6 +121,7 @@ export function resolveActiveLocale(input: ResolveActiveLocaleInput): string {
   }
 
   if (input.messageLocale?.trim()) return input.messageLocale.trim();
+  if (input.conversationLocale?.trim()) return input.conversationLocale.trim();
   if (input.savedLocale?.trim()) return input.savedLocale.trim();
   if (input.deviceLocale?.trim()) return input.deviceLocale.trim();
   return fallback;
