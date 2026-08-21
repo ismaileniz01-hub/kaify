@@ -37,12 +37,12 @@ export function LandingStreak() {
           <div className="landing-streak-stage focus-visible:outline-2 focus-visible:outline-purple-400 focus-visible:outline-offset-4" tabIndex={0}>
             <div className="landing-streak-badge landing-streak-badge--lv1">
               <Flame className="h-4 w-4" />
-              {t("landing.streak.level", { level: 2 })}
+              {t("landing.streak.level", { level: 1 })}
             </div>
             <div className="landing-streak-glow landing-streak-glow--lv1" aria-hidden />
             <Image
-              src="/avatars/kai-level-2.webp"
-              alt={t("landing.streak.kai_alt", { level: 2 })}
+              src="/avatars/kai-level-1.webp"
+              alt={t("landing.streak.kai_alt", { level: 1 })}
               width={280}
               height={280}
               className="landing-streak-kai landing-streak-kai--lv1"

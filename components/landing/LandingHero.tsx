@@ -28,7 +28,7 @@ export function LandingHero() {
   const kaiShift = allowParallax ? -parallaxFast : 0;
 
   return (
-    <section className="landing-hero relative min-h-[100dvh] overflow-hidden lg:min-h-screen">
+    <section className="landing-hero relative overflow-hidden lg:min-h-screen">
       <div
         className="absolute inset-0"
         style={{ transform: bgShift ? `translateY(${bgShift}px)` : undefined }}
@@ -39,10 +39,10 @@ export function LandingHero() {
       <FloatingOrbs />
       <div className="landing-hero-glow" aria-hidden />
 
-      <div className="landing-container relative z-10 flex min-h-[100dvh] flex-col items-center justify-center pb-16 pt-28 sm:pb-24 sm:pt-48">
+      <div className="landing-container relative z-10 flex flex-col items-center justify-center pb-10 pt-24 sm:pb-24 sm:pt-48 lg:min-h-[100dvh]">
         <div className="grid w-full items-center gap-6 lg:grid-cols-2 lg:gap-16">
           {/* Mobilde Kai önce gelsin — order ile sıralama */}
-          <div className="relative isolate flex max-h-[42vh] items-center justify-center overflow-hidden lg:order-2 lg:max-h-none">
+          <div className="relative isolate flex max-h-[34vh] items-center justify-center overflow-hidden sm:max-h-[42vh] lg:order-2 lg:max-h-none">
             <div
               className="absolute h-56 w-56 rounded-full bg-purple-500/20 blur-[100px] sm:h-72 sm:w-72"
               style={{
@@ -105,12 +105,12 @@ export function LandingHero() {
             </ScrollReveal>
 
             <ScrollReveal delay={240}>
-              <p className="mt-8 max-w-lg text-lg leading-relaxed text-zinc-400 sm:mt-6">
+              <p className="mt-5 max-w-lg text-base leading-relaxed text-zinc-400 sm:mt-6 sm:text-lg">
                 {t("landing.hero.description")}
               </p>
             </ScrollReveal>
 
-            <ScrollReveal delay={320} className="relative z-20 mt-8 flex w-full flex-col items-center gap-4 sm:mt-10 sm:gap-4 lg:items-start">
+            <ScrollReveal delay={320} className="relative z-20 mt-6 flex w-full flex-col items-center gap-3 sm:mt-10 sm:gap-4 lg:items-start">
               <Link
                 href="/pricing"
                 className="landing-btn landing-btn--primary landing-btn--lg w-full max-w-sm sm:w-auto"

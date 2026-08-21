@@ -111,14 +111,14 @@ export function CookieConsentBanner() {
           <button
             type="button"
             onClick={() => choose("rejected")}
-            className="rounded-full border border-white/15 px-4 py-2.5 text-xs font-medium text-zinc-300 hover:bg-white/5"
+            className="min-h-11 flex-1 rounded-full border border-white/15 px-4 py-2.5 text-xs font-medium text-zinc-300 hover:bg-white/5 sm:flex-none"
           >
             {t("cookies.banner.reject")}
           </button>
           <button
             type="button"
             onClick={() => choose("accepted")}
-            className="rounded-full bg-emerald-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-emerald-500"
+            className="min-h-11 flex-1 rounded-full bg-emerald-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-emerald-500 sm:flex-none"
           >
             {t("cookies.banner.accept")}
           </button>

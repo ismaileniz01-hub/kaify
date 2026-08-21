@@ -59,7 +59,7 @@ export function LandingCoaches() {
           <p className="mt-6 text-lg text-zinc-400">{t("landing.coaches.intro")}</p>
         </ScrollReveal>
 
-        <div className="mt-12 space-y-20 sm:mt-20 sm:space-y-32">
+        <div className="mt-12 space-y-12 sm:mt-20 sm:space-y-32">
           {COACHES.map((coach, i) => {
             const reversed = i % 2 === 1;
             const heroSrc = publicAssetUrl(coach.hero);

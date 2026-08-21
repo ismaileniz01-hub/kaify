@@ -60,7 +60,7 @@ export function LandingPricingCTA() {
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
               </Link>
               <Link href="/signup" className="landing-btn landing-btn--ghost landing-btn--lg w-full justify-center sm:w-auto">
-                {t("landing.nav.login")}
+                {t("landing.nav.signup")}
               </Link>
             </div>
           </div>

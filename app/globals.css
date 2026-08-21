@@ -4181,6 +4181,7 @@ html:not([data-theme="light"]) .text-zinc-600 {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(8, 4, 16, 0.8);
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 
 .pricing-table {
