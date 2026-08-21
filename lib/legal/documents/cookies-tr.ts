@@ -1,46 +1,103 @@
-import { COOKIES_VERSION, LEGAL_URL } from "@/lib/legal/constants";
+import {
+  COOKIES_VERSION,
+  LEGAL_URL,
+  PRIVACY_PATH,
+} from "@/lib/legal/constants";
 import type { LegalDocument } from "./types";
 
 export const COOKIES_DOCUMENT_TR: LegalDocument = {
   title: "Çerez Politikası",
-  subtitle: `Son güncelleme: 5 Temmuz 2026 · Sürüm ${COOKIES_VERSION}`,
+  subtitle: `Son güncelleme: 21 Ağustos 2026 · Sürüm ${COOKIES_VERSION}`,
+  intro: `Bu Çerez Politikası, Kaify'ın (${LEGAL_URL}) çerezleri, pikselleri, etiketleri, yerel depolamayı (local storage), oturum depolamasını (session storage) ve benzer tarayıcı teknolojilerini nasıl kullandığını açıklar. Yerel mobil SDK'lar (örneğin push token'ları) çerez değildir ve Gizlilik Politikasında açıklanır.`,
   sections: [
     {
       id: "overview",
-      title: "1. Genel Bakış",
-      blocks: [{ type: "p", text: `Bu Çerez Politikası, Kaify Ai'ın (${LEGAL_URL}) çerezleri ve benzer teknolojileri nasıl kullandığını açıklar. Çerez bildiriminde Kabul Et'e bastığınızda isteğe bağlı analiz çerezleri etkinleştirilebilir. İsteğe bağlıları reddetmek yalnızca zorunlu çerezleri korur.` }],
+      title: "1. Genel bakış ve rıza",
+      blocks: [
+        {
+          type: "p",
+          text: "Kesinlikle gerekli teknolojiler, talep ettiğiniz hizmeti sunmak için çalışır. Zorunlu olmayan analiz veya pazarlama teknolojileri yalnızca çerez bildirimimizde kabul ettiğinizde etkinleşir (Tümünü kabul et / İsteğe bağlıları reddet / Tercihleri yönet, sunulduğu yerde). İsteğe bağlı kategoriler önceden etkinleştirilmez. Tercihleri kaify_cookie_consent kaydını temizleyerek veya Çerez Tercihleri bağlantılarını kullanarak değiştirebilirsiniz. Global Privacy Control, yasal olarak gerekli ve teknik olarak desteklendiği yerlerde onurlandırılır.",
+        },
+      ],
     },
     {
       id: "essential",
-      title: "2. Zorunlu Çerezler",
+      title: "2. Kesinlikle gerekli",
       blocks: [
-        { type: "p", text: "Bunlar uygulamanın çalışması için gereklidir ve devre dışı bırakılamaz:" },
-        { type: "ul", items: [
-          "Supabase kimlik doğrulama çerezleri — güvenli biçimde oturumunuzun açık kalmasını sağlar",
-          "kaify_csrf — hesap silme, veri dışa aktarma ve satın alma işlemlerini siteler arası saldırılardan korur",
-        ] },
+        {
+          type: "ul",
+          items: [
+            "Supabase kimlik doğrulama çerezleri — oturum / giriş durumu (birinci taraf; süre kimlik doğrulama SDK'sına göre)",
+            "kaify_csrf — hassas işlemler için CSRF koruması (birinci taraf çerez)",
+            "kaify_stepup — yükseltmeli MFA penceresi (birinci taraf çerez)",
+            "kaify_admin_hub — geçerli olduğunda yönetici merkezi oturumu (birinci taraf çerez)",
+            "kaify-lang — dil tercihi (çerez ve/veya localStorage)",
+            "kaify_cookie_consent — çerez tercihinizi, sürümü ve zaman damgasını saklar (localStorage)",
+            "kaify_legal_pending — geçici kimlik doğrulama öncesi Koşul/Gizlilik kabul eşitlemesi (localStorage)",
+            "Paddle Checkout teknolojileri — talep ettiğiniz ödemeyi açmak ve güvenceye almak için gerekli (üçüncü taraf; satıcı kontrollü)",
+          ],
+        },
       ],
     },
     {
-      id: "optional",
-      title: "3. İsteğe Bağlı Çerezler",
+      id: "functional",
+      title: "3. İşlevsel (ürün tercihleri)",
       blocks: [
-        { type: "p", text: "Yalnızca isteğe bağlı çerezleri kabul ederseniz yüklenir:" },
-        { type: "ul", items: [
-          "Vercel Analytics / Speed Insights — anonim kullanım ölçümleri",
-          "Sender.net — pazarlama ve bekleme listesi e-postası (yalnızca tanıtım sayfası)",
-        ] },
+        {
+          type: "p",
+          text: "Bunlar kullanıcı deneyimini iyileştirir ve genellikle birinci taraf localStorage'dır (reklam değildir). Örnekler: kaify-theme, kaify-unit, ses tercihleri, seri/oyunlaştırma istemci durumu, yönlendirme kodları, OTP devamı (sessionStorage), analitik önbellek paketi (sessionStorage). Verilerinizi satmak için kullanılmazlar.",
+        },
       ],
     },
     {
-      id: "third-party",
-      title: "4. Üçüncü Taraf Çerezleri",
-      blocks: [{ type: "p", text: "Google reCAPTCHA, bekleme listesi formunda çerez ayarlayabilir. Termly, gömülü olduğu durumlarda yasal politika sayfalarında çerez ayarlayabilir. Alt işleyenler için Gizlilik Politikamıza bakın." }],
+      id: "analytics",
+      title: "4. Analitik (isteğe bağlı — uygulanabildiği yerde rıza gerekir)",
+      blocks: [
+        {
+          type: "ul",
+          items: [
+            "Vercel Analytics / Speed Insights — anonim veya takma adlı kullanım ve performans ölçümleri (yalnızca isteğe bağlı çerez kabulünden sonra yüklenir; yerel uygulama kabuğunda atlanır)",
+            "Birinci taraf ürün analitikleri (Kaify veritabanlarında saklanan antrenman/yemek toplulaştırmaları) tarayıcı reklam çerezleri değildir; Gizlilik Politikasına bakın",
+          ],
+        },
+      ],
+    },
+    {
+      id: "marketing",
+      title: "5. Pazarlama / üçüncü taraf (isteğe bağlı veya bağlamsal)",
+      blocks: [
+        {
+          type: "ul",
+          items: [
+            "Sender.net — isteğe bağlı analitik/pazarlama yolu kabul edildiğinde bekleme listesi/pazarlama e-posta araçları (üçüncü taraf çerez/betik ayarlayabilir)",
+            "Google reCAPTCHA — bekleme listesi formlarında bot koruması (çerez ayarlayabilir; o formun kötüye kullanım koruması için gereklidir)",
+          ],
+        },
+        {
+          type: "p",
+          text: "Termly gömmeleri kanonik Gizlilik Politikası barındırıcısı değildir; ortam yapılandırması ile bir Termly betiği etkinleştirilirse yasal sayfalarda çerez ayarlayabilir. Tercihen depo içi Gizlilik Politikasını /privacy adresinde kullanın.",
+        },
+      ],
+    },
+    {
+      id: "sentry",
+      title: "6. Hata izleme",
+      blocks: [
+        {
+          type: "p",
+          text: "Sentry hata izleme, güvenilirlik ve güvenlik için başlatılır. Hizmeti çalıştırmak için operasyonel gereklilik olarak değerlendirilir; yapılandırıldığı yerlerde yükler belirgin kişisel verilerden arındırılır. Hukuk müşavirliği belirli bir yetki alanında Sentry'yi zorunlu olmayan olarak sınıflandırırsa yükleme rıza arkasına alınmalıdır — LEGAL_IMPLEMENTATION_CHECKLIST'te izlenir.",
+        },
+      ],
     },
     {
       id: "manage",
-      title: "5. Tercihleri Yönetme",
-      blocks: [{ type: "p", text: `Çerez bildirimini yeniden görmek için tarayıcınızdaki site verilerini temizleyin veya yerel depolamadan kaify_cookie_consent kaydını silin. Uygulamayı kullandığınızda zorunlu çerezler yeniden yüklenir. Sürüm: ${COOKIES_VERSION}.` }],
+      title: "7. Tercihleri yönetme",
+      blocks: [
+        {
+          type: "p",
+          text: `Çerez bildirimi kontrollerini kullanın, site verilerini temizleyin veya sıfırlamak için yerel depolamadan kaify_cookie_consent kaydını silin. Yalnızca tarayıcı ayarları tek geri çekme yöntemi değildir. Ayrıca bkz. ${PRIVACY_PATH}. Sürüm: ${COOKIES_VERSION}.`,
+        },
+      ],
     },
   ],
 };

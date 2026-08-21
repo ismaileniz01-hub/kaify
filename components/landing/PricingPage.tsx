@@ -22,6 +22,11 @@ import { NATIVE_CHECKOUT_RETURN_URL } from "@/lib/billing/native-web-checkout";
 import { hasActiveSubscription } from "@/lib/auth/post-auth-redirect";
 import { useLang } from "@/lib/lang-context";
 import {
+  PADDLE_BUYER_TERMS_URL,
+  PADDLE_PRIVACY_URL,
+  PADDLE_REFUND_POLICY_URL,
+} from "@/lib/legal/constants";
+import {
   PLAN_COMPARISON,
   PRICING_PLANS_WITH_PADDLE,
   formatPrice,
@@ -406,6 +411,53 @@ export function PricingPage() {
                 );
               })}
             </div>
+
+            <ScrollReveal delay={200} className="mx-auto mt-10 max-w-3xl">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4 text-sm leading-relaxed text-zinc-400">
+                <p>{t("pricing.legal_disclosure")}</p>
+                <p className="mt-2 text-xs text-zinc-500">
+                  {t("pricing.health_warning_short")}
+                </p>
+                <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                  <a
+                    href={PADDLE_BUYER_TERMS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-400/90 underline-offset-2 hover:underline"
+                  >
+                    {t("pricing.paddle_buyer_terms")}
+                  </a>
+                  <a
+                    href={PADDLE_REFUND_POLICY_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-400/90 underline-offset-2 hover:underline"
+                  >
+                    {t("pricing.paddle_refund_policy")}
+                  </a>
+                  <a
+                    href={PADDLE_PRIVACY_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-400/90 underline-offset-2 hover:underline"
+                  >
+                    {t("pricing.paddle_privacy")}
+                  </a>
+                  <Link
+                    href="/terms"
+                    className="text-emerald-400/90 underline-offset-2 hover:underline"
+                  >
+                    {t("legal.terms")}
+                  </Link>
+                  <Link
+                    href="/disclaimer"
+                    className="text-emerald-400/90 underline-offset-2 hover:underline"
+                  >
+                    {t("legal.disclaimer")}
+                  </Link>
+                </p>
+              </div>
+            </ScrollReveal>
           </div>
         </section>
 

@@ -13,7 +13,14 @@ import {
 import { COOKIES_PATH, TERMS_PATH } from "@/lib/legal/constants";
 import { MOTION_EXIT_MS, usePresence } from "@/lib/motion/use-presence";
 
-const LEGAL_ONLY_PREFIXES = ["/privacy", "/terms", "/terms&conditions", "/cookies"];
+const LEGAL_ONLY_PREFIXES = [
+  "/privacy",
+  "/terms",
+  "/terms&conditions",
+  "/cookies",
+  "/kvkk",
+  "/disclaimer",
+];
 
 /**
  * Site-wide cookie banner (accept / reject non-essential cookies).
@@ -115,6 +122,12 @@ export function CookieConsentBanner() {
           >
             {t("cookies.banner.reject")}
           </button>
+          <Link
+            href={COOKIES_PATH}
+            className="min-h-11 flex flex-1 items-center justify-center rounded-full border border-white/15 px-4 py-2.5 text-xs font-medium text-zinc-300 hover:bg-white/5 sm:flex-none"
+          >
+            {t("cookies.banner.manage")}
+          </Link>
           <button
             type="button"
             onClick={() => choose("accepted")}

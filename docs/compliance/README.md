@@ -12,7 +12,8 @@ Security: **support@kaifyai.org** · [security.txt](https://kaifyai.org/.well-kn
 | Page | URL |
 |------|-----|
 | Privacy Policy | `/privacy` |
-| Terms & Conditions | `/terms&conditions` |
+| Terms & Conditions | `/terms` |
+| Medical & Fitness Disclaimer | `/disclaimer` |
 | Cookie Policy | `/cookies` |
 | KVKK Aydınlatma | `/kvkk` |
 

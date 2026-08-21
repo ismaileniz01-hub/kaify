@@ -74,23 +74,31 @@ export function LegalConsentCheckbox({ checked, onChange }: LegalConsentProps) {
   const { t } = useLang();
 
   return (
-    <label className="auth-legal-consent">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="auth-legal-consent__input"
-      />
-      <span className="auth-legal-consent__text">
-        {t("login.legal_prefix")}{" "}
-        <Link href="/terms" className="auth-legal-consent__link">
-          {t("login.terms_link")}
-        </Link>{" "}
-        {t("login.legal_and")}{" "}
-        <Link href="/privacy" className="auth-legal-consent__link">
-          {t("login.privacy_link")}
-        </Link>
-      </span>
-    </label>
+    <div className="flex flex-col gap-2">
+      <label className="auth-legal-consent">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          className="auth-legal-consent__input"
+        />
+        <span className="auth-legal-consent__text">
+          {t("login.legal_prefix")}{" "}
+          <Link href="/terms" className="auth-legal-consent__link">
+            {t("login.terms_link")}
+          </Link>
+          {", "}
+          <Link href="/privacy" className="auth-legal-consent__link">
+            {t("login.privacy_link")}
+          </Link>
+          {", "}
+          <Link href="/disclaimer" className="auth-legal-consent__link">
+            {t("login.disclaimer_link")}
+          </Link>
+          {". "}
+          {t("login.legal_age_guardian")}
+        </span>
+      </label>
+    </div>
   );
 }

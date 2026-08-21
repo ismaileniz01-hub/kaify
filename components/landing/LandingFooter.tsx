@@ -48,6 +48,9 @@ export function LandingFooter() {
           <Link href="/cookies" className="transition hover:text-white">
             {t("legal.cookies")}
           </Link>
+          <Link href="/disclaimer" className="transition hover:text-white">
+            {t("legal.disclaimer")}
+          </Link>
           <Link href="/kvkk" className="transition hover:text-white">
             {t("legal.kvkk")}
           </Link>

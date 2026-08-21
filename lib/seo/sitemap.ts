@@ -26,7 +26,7 @@ export const SITEMAP_PAGE_META: Record<SeoIndexablePath, SitemapMeta> = {
     priority: 1,
   },
   "/pricing": {
-    lastModified: "2026-08-14",
+    lastModified: "2026-08-21",
     changeFrequency: "weekly",
     priority: 0.9,
   },
@@ -36,7 +36,7 @@ export const SITEMAP_PAGE_META: Record<SeoIndexablePath, SitemapMeta> = {
     priority: 0.5,
   },
   "/terms": {
-    lastModified: "2026-07-05",
+    lastModified: "2026-08-21",
     changeFrequency: "monthly",
     priority: 0.5,
   },
@@ -46,7 +46,12 @@ export const SITEMAP_PAGE_META: Record<SeoIndexablePath, SitemapMeta> = {
     priority: 0.5,
   },
   "/kvkk": {
-    lastModified: "2026-07-05",
+    lastModified: "2026-08-21",
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
+  "/disclaimer": {
+    lastModified: "2026-08-21",
     changeFrequency: "monthly",
     priority: 0.5,
   },
