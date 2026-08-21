@@ -344,7 +344,7 @@ export const TERMS_DOCUMENT: LegalDocument = {
         },
         {
           type: "p",
-          text: "Nothing excludes or limits liability for death or personal injury caused by legally actionable negligence, fraud, willful misconduct, or any other liability that cannot be limited under applicable law (including EU/UK/Turkey mandatory consumer rights).",
+          text: "Nothing excludes or limits liability for death or personal injury caused by legally actionable negligence, fraud, willful misconduct, or any other liability that cannot be limited under applicable law (including EU/UK/Türkiye mandatory consumer rights).",
         },
       ],
     },

@@ -15,7 +15,7 @@ export default function PrivacyPage() {
     <LegalPageShell
       title="Privacy Policy"
       titleKey="legal.privacy_policy"
-      subtitle={`Last updated: August 21, 2026 · Version ${PRIVACY_VERSION}`}
+      subtitle={`Last updated: August 22, 2026 · Version ${PRIVACY_VERSION}`}
     >
       <PrivacyLocaleRedirect />
       <PrivacyPolicyContent />

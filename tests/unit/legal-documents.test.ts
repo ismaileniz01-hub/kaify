@@ -18,7 +18,7 @@ import { buildSitemap } from "@/lib/seo/sitemap";
 describe("legal document pack v2", () => {
   it("bumps versions for re-consent", () => {
     expect(TERMS_VERSION).toBe("2.0.0");
-    expect(PRIVACY_VERSION).toBe("2026-08-21");
+    expect(PRIVACY_VERSION).toBe("2026-08-22");
     expect(COOKIES_VERSION).toBe("2026-08-21");
   });
 
@@ -38,12 +38,20 @@ describe("legal document pack v2", () => {
     expect(trIds).toEqual(enIds);
   });
 
-  it("keeps Privacy global (not KVKK-only) and separates Paddle role", () => {
+  it("keeps Privacy global and lists only core subprocessors", () => {
     const blob = JSON.stringify(PRIVACY_DOCUMENT);
     expect(blob).toContain("Global English");
     expect(blob).toContain("independent controller");
     expect(blob).toContain("DeepSeek");
     expect(blob).toContain("Upstash");
+    expect(blob).toContain("Türkiye");
+    expect(blob).not.toContain("Turkey");
+    expect(blob).not.toContain("veri sorumlusu");
+    expect(blob).not.toContain("Sender.net");
+    expect(blob).not.toContain("reCAPTCHA");
+    expect(blob).not.toContain("Firebase");
+    expect(blob).toContain("support@kaifyai.org");
+    expect(blob).not.toContain("privacy@kaifyai.org");
   });
 
   it("documents cookie inventory essentials", () => {

@@ -1,7 +1,7 @@
 /** Legal document versions — bump when policy text changes (triggers re-consent). */
 
 export const TERMS_VERSION = "2.0.0";
-export const PRIVACY_VERSION = "2026-08-21";
+export const PRIVACY_VERSION = "2026-08-22";
 export const COOKIES_VERSION = "2026-08-21";
 export const MEDICAL_DISCLAIMER_VERSION = "2026-08-21";
 
@@ -22,12 +22,13 @@ export const COOKIES_PATH = "/cookies";
 export const KVKK_PATH = "/kvkk";
 export const MEDICAL_DISCLAIMER_PATH = "/disclaimer";
 export const SUPPORT_EMAIL = "support@kaifyai.org";
-export const PRIVACY_EMAIL = "privacy@kaifyai.org";
-export const LEGAL_CONTACT_EMAIL = "kaifyai.org@gmail.com";
+/** Public privacy contact — same mailbox as support. */
+export const PRIVACY_EMAIL = "support@kaifyai.org";
+export const LEGAL_CONTACT_EMAIL = "support@kaifyai.org";
 
 /** Operational address currently published (verify with counsel). */
 export const LEGAL_OPERATIONAL_ADDRESS =
-  "Toros Mah., Çukurova, Adana 01150, Turkey";
+  "Toros Mah., Çukurova, Adana 01150, Türkiye";
 
 /**
  * Provisional governing-law wording currently published.

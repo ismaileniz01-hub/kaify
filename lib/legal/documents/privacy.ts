@@ -3,7 +3,6 @@ import {
   LEGAL_OPERATIONAL_ADDRESS,
   LEGAL_URL,
   PADDLE_PRIVACY_URL,
-  PRIVACY_EMAIL,
   PRIVACY_VERSION,
   SUPPORT_EMAIL,
 } from "@/lib/legal/constants";
@@ -11,8 +10,8 @@ import type { LegalDocument } from "./types";
 
 export const PRIVACY_DOCUMENT: LegalDocument = {
   title: "Privacy Policy",
-  subtitle: `Last updated: August 21, 2026 · Version ${PRIVACY_VERSION} · Global English primary`,
-  intro: `${LEGAL_ENTITY} ("Kaify", "we", "us") operates ${LEGAL_URL}. This Privacy Policy explains how we process personal data for our global fitness and wellness service. It is not a KVKK-only document. Regional modules (including Turkish KVKK disclosures at /kvkk) supplement this Policy where applicable. English is the primary text.`,
+  subtitle: `Last updated: August 22, 2026 · Version ${PRIVACY_VERSION} · Global English primary`,
+  intro: `${LEGAL_ENTITY} ("Kaify", "we", "us") operates ${LEGAL_URL}. This Privacy Policy explains how we process personal data for our global fitness and wellness service. English is the primary text.`,
   sections: [
     {
       id: "controller",
@@ -20,11 +19,11 @@ export const PRIVACY_DOCUMENT: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: `Controller (veri sorumlusu / data controller) for Kaify product data: ${LEGAL_ENTITY}. Operational address currently published: ${LEGAL_OPERATIONAL_ADDRESS}. Formal registered company name, registration number, DPO (if appointed), and EU/UK representative remain subject to counsel confirmation — see LEGAL_FACTS_REQUIRED.`,
+          text: `Data controller for Kaify product data: ${LEGAL_ENTITY}. Operational address currently published: ${LEGAL_OPERATIONAL_ADDRESS}. Formal registered company name, registration number, DPO (if appointed), and EU/UK representative remain subject to counsel confirmation.`,
         },
         {
           type: "p",
-          text: `Privacy contact: ${PRIVACY_EMAIL}. Support: ${SUPPORT_EMAIL}.`,
+          text: `Contact: ${SUPPORT_EMAIL}.`,
         },
         {
           type: "p",
@@ -56,7 +55,7 @@ export const PRIVACY_DOCUMENT: LegalDocument = {
             "Photographs and analysis: meal or physique photos you upload and model-derived observations/scores (images processed for analysis; storage practices follow product design)",
             "AI: prompts, chat messages, coaching memory summaries, inferred preferences used to personalize coaching",
             "Device/technical: IP (security/rate limits), browser/device type, session and security cookies/logs",
-            "Analytics and attribution: first-party product analytics; optional Vercel Analytics/Speed Insights if cookie consent given; marketing tools only if enabled",
+            "Analytics and attribution: first-party product analytics; optional Vercel Analytics/Speed Insights if cookie consent given",
             "Support communications and consent records",
             "Paddle-related: customer/subscription/transaction/entitlement identifiers and billing email as received from Paddle — not full card numbers",
           ],
@@ -84,7 +83,6 @@ export const PRIVACY_DOCUMENT: LegalDocument = {
             "Process subscriptions and entitlements with Paddle (contract; legal obligation for tax/accounting where applicable)",
             "Security, fraud prevention, abuse detection (legitimate interests / legal obligation)",
             "Health/fitness coaching features, meal and physique analysis, and related AI processing (explicit consent where required for special-category/sensitive data — GDPR Art. 9 and analogous laws)",
-            "Optional marketing email (consent; withdraw anytime)",
             "Improve features using aggregated or deidentified data where permitted (legitimate interests)",
             "Comply with law, enforce Terms, handle disputes (legal obligation / legitimate interests)",
           ],
@@ -101,7 +99,7 @@ export const PRIVACY_DOCUMENT: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Fitness and health-related information is treated as sensitive. Kaify is not a covered entity under HIPAA and does not claim HIPAA compliance. Where US state consumer health data laws (for example Washington My Health My Data Act) apply to you, additional notices or consents may be required; see PRIVACY_LAW_MATRIX and any Consumer Health Data notice if published.",
+          text: "Fitness and health-related information is treated as sensitive. Kaify is not a covered entity under HIPAA and does not claim HIPAA compliance. Where US state consumer health data laws (for example Washington My Health My Data Act) apply to you, additional notices or consents may be required.",
         },
         {
           type: "p",
@@ -115,7 +113,7 @@ export const PRIVACY_DOCUMENT: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Kaify sends prompts and, where relevant, images to AI providers (currently Google Gemini for vision-related analysis and DeepSeek for conversational coaching) to generate outputs. Providers process data as service providers/subprocessors under their terms and our instructions to the extent contractually available. International transfers may occur (including to the United States and, for DeepSeek, routes that may involve China/US infrastructure). Safeguards may include contractual clauses where available; transfer status is tracked for counsel in transfer-signing-checklist.md.",
+          text: "Kaify sends prompts and, where relevant, images to AI providers (currently Google Gemini for vision-related analysis and DeepSeek for conversational coaching) to generate outputs. Providers process data as service providers/subprocessors under their terms and our instructions to the extent contractually available. International transfers may occur (including to the United States and, for DeepSeek, routes that may involve China/US infrastructure). Safeguards may include contractual clauses where available.",
         },
         {
           type: "p",
@@ -138,22 +136,15 @@ export const PRIVACY_DOCUMENT: LegalDocument = {
       title: "9. Recipients and subprocessors",
       blocks: [
         {
-          type: "p",
-          text: "We share data with service providers needed to operate Kaify. Current list (confirm live status in docs/compliance/subprocessors.md):",
-        },
-        {
           type: "ul",
           items: [
-            "Supabase — database, auth, storage (EU Frankfurt hosting claimed)",
+            "Supabase — database, auth, storage (EU Frankfurt)",
             "Vercel — hosting and edge",
             "Google Gemini — AI vision/text",
             "DeepSeek — AI conversational text",
             "Sentry — error monitoring (PII scrubbing applied)",
             "Paddle — payments MoR",
-            "Google reCAPTCHA — bot protection on waitlist",
-            "Sender.net — optional marketing/waitlist email when enabled",
-            "Upstash — Redis rate limiting/caching [CONFIRMATION: operational]",
-            "Firebase Cloud Messaging / Web Push — native or web push delivery when enabled",
+            "Upstash — Redis rate limiting/caching",
           ],
         },
         {
@@ -168,7 +159,7 @@ export const PRIVACY_DOCUMENT: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Data may be processed in the EEA, UK, US, Turkey, and other countries where providers operate. Where required, we rely on adequacy decisions, standard contractual clauses, or other lawful transfer mechanisms. DeepSeek-related transfers require ongoing counsel review.",
+          text: "Data may be processed in the EEA, UK, US, Türkiye, and other countries where providers operate. Where required, we rely on adequacy decisions, standard contractual clauses, or other lawful transfer mechanisms. DeepSeek-related transfers require ongoing counsel review.",
         },
       ],
     },
@@ -178,7 +169,7 @@ export const PRIVACY_DOCUMENT: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "We retain data while your account is active and thereafter according to our retention schedule (docs/compliance/retention-policy.md), including approximately: chat/coaching memory up to 24 months after last activity; health/analytics metrics up to 36 months; billing events up to 7 years for accounting; consent evidence targeted for multi-year retention where legally required. Account deletion removes primary account data via cascade, while certain billing audit rows may be retained with user identifiers removed. Exact periods marked for confirmation appear in LEGAL_FACTS_REQUIRED.",
+          text: "We retain data while your account is active and thereafter according to our retention schedule, including approximately: chat/coaching memory up to 24 months after last activity; health/analytics metrics up to 36 months; billing events up to 7 years for accounting; consent evidence targeted for multi-year retention where legally required. Account deletion removes primary account data via cascade, while certain billing audit rows may be retained with user identifiers removed.",
         },
       ],
     },
@@ -202,7 +193,7 @@ export const PRIVACY_DOCUMENT: LegalDocument = {
         },
         {
           type: "p",
-          text: `Submit requests to ${PRIVACY_EMAIL}. We may verify identity before acting. Authorized agents may submit requests where law requires. Appeals processes will be provided where mandated.`,
+          text: `Submit requests to ${SUPPORT_EMAIL}. We may verify identity before acting. Authorized agents may submit requests where law requires. Appeals processes will be provided where mandated.`,
         },
       ],
     },
@@ -212,7 +203,7 @@ export const PRIVACY_DOCUMENT: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Kaify is not adults-only; the minimum age is 16. Users aged 16–17 may still be minors. We apply high-privacy defaults where feasible: minimize unnecessary collection, avoid targeted advertising to minors, avoid manipulative consent design, and restrict unnecessary profiling and sharing. Accounts discovered to belong to users under 16 will be deleted. UK Children's Code and similar youth-design duties are assessed in PRIVACY_LAW_MATRIX.",
+          text: "Kaify is not adults-only; the minimum age is 16. Users aged 16–17 may still be minors. We apply high-privacy defaults where feasible: minimize unnecessary collection, avoid targeted advertising to minors, avoid manipulative consent design, and restrict unnecessary profiling and sharing. Accounts discovered to belong to users under 16 will be deleted.",
         },
       ],
     },
@@ -232,7 +223,7 @@ export const PRIVACY_DOCUMENT: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "EEA/UK/Switzerland: GDPR/UK GDPR rights and Art. 9 conditions for health data as described above. Turkey: see /kvkk for Turkish-language KVKK module. Brazil/Canada/Australia and US states: rights apply when those laws apply to you; see PRIVACY_LAW_MATRIX. Local-language notices may be mandatory in some jurisdictions even though English is primary.",
+          text: "EEA/UK/Switzerland: GDPR/UK GDPR rights and Art. 9 conditions for health data as described above. Türkiye: see /kvkk for the regional disclosure module. Brazil/Canada/Australia and US states: rights apply when those laws apply to you. Local-language notices may be mandatory in some jurisdictions even though English is primary.",
         },
       ],
     },
@@ -247,5 +238,5 @@ export const PRIVACY_DOCUMENT: LegalDocument = {
       ],
     },
   ],
-  footer: `Contact: ${PRIVACY_EMAIL}`,
+  footer: `Contact: ${SUPPORT_EMAIL}`,
 };

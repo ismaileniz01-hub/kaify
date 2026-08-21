@@ -111,7 +111,7 @@ export function isProtectedProductPath(pathname: string): boolean {
 export const SEO_CONTENT_DATES = {
   "/": "2026-08-14",
   "/pricing": "2026-08-21",
-  "/privacy": "2026-08-21",
+  "/privacy": "2026-08-22",
   "/terms": "2026-08-21",
   "/cookies": "2026-08-21",
   "/kvkk": "2026-08-21",
