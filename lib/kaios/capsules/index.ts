@@ -174,6 +174,63 @@ export function selectActiveCapsules(
   }
 }
 
+function uniqueCapsules(parts: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of parts) {
+    if (!part || seen.has(part)) continue;
+    seen.add(part);
+    out.push(part);
+  }
+  return out;
+}
+
+/**
+ * Coach capsules that never change mid-conversation. DeepSeek prefix cache
+ * requires this block to be byte-identical for a given coach (locale is applied
+ * in the compiler). Task/intent steering lives in the volatile turn block.
+ */
+export function selectCacheStableCapsules(coach: CoachId): string[] {
+  switch (coach) {
+    case "alex":
+      return uniqueCapsules([
+        ...selectAlexCapsules("form"),
+        ...selectAlexCapsules("programming"),
+        ...selectAlexCapsules("motivation"),
+        ...selectAlexCapsules("safety"),
+      ]);
+    case "maya":
+      return uniqueCapsules([
+        ...selectMayaCapsules("food_log"),
+        ...selectMayaCapsules("food_analysis"),
+        ...selectMayaCapsules("meal_planning"),
+        ...selectMayaCapsules("hydration"),
+      ]);
+    case "leo":
+      return uniqueCapsules([
+        ...selectLeoCapsules("scoring"),
+        ...selectLeoCapsules("trend"),
+        ...selectLeoCapsules("posture"),
+        ...selectLeoCapsules("image_quality"),
+      ]);
+    case "kai":
+      return uniqueCapsules([
+        ...selectKaiCapsules("casual"),
+        ...selectKaiCapsules("motivation"),
+        ...selectKaiCapsules("continuation"),
+        ...selectKaiCapsules("emotional"),
+        ...selectKaiCapsules("celebration"),
+        ...selectKaiCapsules("health"),
+        ...selectKaiCapsules("memory"),
+        ...selectKaiCapsules("council"),
+      ]);
+    case "council":
+      return uniqueCapsules(selectCouncilCapsules("turn"));
+    default:
+      return [];
+  }
+}
+
 /** @deprecated Prefer selectActiveCapsules; kept for capsule unit tests. */
 export function coachCapsules(coach: CoachId): string[] {
   return selectActiveCapsules(coach, "casual");

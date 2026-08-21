@@ -88,7 +88,8 @@ describe("KAIOS personality prompt contracts", () => {
         locale: "en",
       });
       expect(blob).toContain("kai.mode.casual");
-      expect(blob).not.toContain("kai.mode.motivation");
+      expect(blob).toMatch(/active_task:\s*casual/i);
+      expect(blob).not.toMatch(/active_task:\s*motivation/i);
       expect(blob).toMatch(/permanent motivation mode/i);
       expect(blob).toMatch(/street|close buddy texting/i);
     });
@@ -250,7 +251,7 @@ describe("KAIOS personality prompt contracts", () => {
         ],
       });
       expect(blob).toMatch(/maya\.mode\.food_log|no greeting reset/i);
-      expect(blob).not.toContain("maya.mode.meal_planning");
+      expect(blob).toMatch(/active_task:\s*food_log/i);
       expect(blob).toMatch(/feminine_coach|male_user/i);
       expect(blob).toMatch(/four labeled macros|confirmation/i);
       expect(blob).toMatch(/after_every_meal|glass of water|bardak su/i);

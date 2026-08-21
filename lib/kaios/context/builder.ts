@@ -1,5 +1,6 @@
-﻿import { selectActiveCapsules } from "@/lib/kaios/capsules";
+﻿import { selectCacheStableCapsules, intentToCapsuleTask } from "@/lib/kaios/capsules";
 import {
+  looksLikeFoodConsumption,
   outputBudgetFor,
   resolveIntent,
   type Intent,
@@ -145,18 +146,18 @@ export function buildRuntimeContext(
   const tier = resolveTier(intent, input, shortTurn.needsContinuation);
   const locale = input.locale?.trim() || "en";
 
-  let capsuleTaskMessage = input.message;
+  const capsules = [...selectCacheStableCapsules(input.coach)];
+  let activeTask = intentToCapsuleTask(intent);
+  if (input.coach === "maya" && looksLikeFoodConsumption(input.message)) {
+    activeTask = "food_log";
+  }
   if (shortTurn.needsContinuation && input.coach === "kai") {
-    capsuleTaskMessage = `${input.message} +continuation`;
+    activeTask = `${activeTask}+continuation`;
     if (looksLikeFitnessCoachingProposal(previousAssistant)) {
-      capsuleTaskMessage += "+motivation";
+      activeTask = `${activeTask}+motivation`;
     }
   }
-  const capsules = [
-    ...selectActiveCapsules(input.coach, intent, capsuleTaskMessage),
-  ];
   const contHint = continuationHint(shortTurn, previousAssistant);
-  if (contHint) capsules.push(contHint);
 
   const maxTokens = outputBudgetFor(intent, input.message, {
     needsContinuation: shortTurn.needsContinuation,
@@ -209,7 +210,7 @@ export function buildRuntimeContext(
     tier >= 1 ? compactTeamFacts(input.teamFacts) : undefined;
 
   const knowledge =
-    input.knowledge && input.knowledge.length > 0
+    tier >= 2 && input.knowledge && input.knowledge.length > 0
       ? input.knowledge
           .map((k) => k.trim())
           .filter(Boolean)
@@ -265,6 +266,8 @@ export function buildRuntimeContext(
     locale,
     tier,
     capsules,
+    activeTask,
+    continuationHint: contHint || undefined,
     userState,
     memoryItems,
     teamFacts,

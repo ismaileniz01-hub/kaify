@@ -10,8 +10,11 @@ export type RuntimeContext = {
   intent: Intent;
   locale: string;
   tier: ContextTier;
-  /** Active coach + task capsules (CORE/SAFETY applied in the compiler). */
+  /** Cache-stable coach capsules (CORE/SAFETY/locale applied in the compiler). */
   capsules: string[];
+  /** Intent/task steering for the volatile turn block — not part of the cache prefix. */
+  activeTask: string;
+  continuationHint?: string;
   userState?: string;
   memoryItems?: string[];
   /** Compact structured teammate facts — never full other-coach personalities. */

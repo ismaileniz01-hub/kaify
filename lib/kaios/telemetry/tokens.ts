@@ -15,6 +15,8 @@ export type TokenBreakdown = {
   outputHint: number;
   history: number;
   userMessage: number;
+  cachePad: number;
+  prefix: number;
   total: number;
 };
 
@@ -53,19 +55,21 @@ export function estimateTextTokens(text: string): number {
 }
 
 export function buildTokenBreakdown(
-  parts: Omit<TokenBreakdown, "total">,
+  parts: Omit<TokenBreakdown, "total" | "prefix" | "cachePad"> & {
+    cachePad?: number;
+  },
 ): TokenBreakdown {
+  const cachePad = parts.cachePad ?? 0;
+  const prefix =
+    parts.core + parts.safety + parts.capsules + parts.locale + cachePad;
   const total =
-    parts.core +
-    parts.safety +
-    parts.capsules +
-    parts.locale +
+    prefix +
     parts.trusted +
     parts.knowledge +
     parts.outputHint +
     parts.history +
     parts.userMessage;
-  return { ...parts, total };
+  return { ...parts, cachePad, prefix, total };
 }
 
 export function providerUsageFromTokenUsage(

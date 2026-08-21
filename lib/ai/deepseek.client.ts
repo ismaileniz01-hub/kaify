@@ -11,9 +11,9 @@ import { recordAiUsage } from "@/lib/ai/usage-ledger";
  * Role in the hybrid engine: ALL logic, reasoning, economic analysis and
  * persona-based text synthesis (Markdown, human-friendly, motivating).
  *
- * Context caching: DeepSeek performs automatic server-side prefix caching, so
- * we keep the system prompt + memory as a stable leading message to maximize
- * cache hits and reduce token cost. No client-side cache key is required.
+ * Context caching: DeepSeek automatic prefix cache (64-token chunks). The
+ * KAIOS compiler keeps a coach+locale-stable system prefix so warm hits cover
+ * ≥80% of input tokens. No client-side cache key is required.
  */
 
 const DEFAULT_TIMEOUT_MS = 60_000;

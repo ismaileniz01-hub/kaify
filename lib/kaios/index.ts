@@ -10,6 +10,7 @@ export {
   getLocalePack,
   loadCoachCapsules,
   selectActiveCapsules,
+  selectCacheStableCapsules,
   intentToCapsuleTask,
   coachCapsules,
   selectAlexCapsules,

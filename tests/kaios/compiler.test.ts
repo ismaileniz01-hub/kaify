@@ -41,7 +41,8 @@ describe("compilePrompt (casual kai)", () => {
     expect(blob).not.toMatch(/^maya\.identity:\s*$/m);
     expect(blob).not.toMatch(/^leo\.identity:\s*$/m);
 
-    expect(compiled.breakdown.total).toBeLessThan(4000);
+    expect(compiled.cache.hitRatio).toBeGreaterThanOrEqual(0.8);
+    expect(compiled.breakdown.total).toBeLessThan(9000);
     expect(compiled.canary).toMatch(/^KFY-/);
 
     // Message order: system first, then current user (no history at tier 0).

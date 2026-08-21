@@ -7,8 +7,8 @@
       "coach": "kai",
       "message": "Selam, nasılsın?",
       "locale": "tr",
-      "mustIncludeInPrompt": ["kai.mode.casual", "permanent motivation mode"],
-      "mustNotIncludeInPrompt": ["kai.mode.motivation"],
+      "mustIncludeInPrompt": ["kai.mode.casual", "permanent motivation mode", "active_task: casual"],
+      "mustNotIncludeInPrompt": ["active_task: motivation"],
       "notes": "Bare TR greeting → casual mode, no motivation capsule"
     },
     {
@@ -16,8 +16,8 @@
       "coach": "kai",
       "message": "Hey, what's up?",
       "locale": "en",
-      "mustIncludeInPrompt": ["kai.mode.casual", "friend first"],
-      "mustNotIncludeInPrompt": ["kai.mode.motivation"],
+      "mustIncludeInPrompt": ["kai.mode.casual", "friend first", "active_task: casual"],
+      "mustNotIncludeInPrompt": ["active_task: motivation"],
       "notes": "Bare EN greeting"
     },
     {
@@ -26,7 +26,7 @@
       "message": "Hallo, wie geht's?",
       "locale": "de",
       "mustIncludeInPrompt": ["kai.mode.casual", "kai.voice"],
-      "mustNotIncludeInPrompt": ["kai.mode.motivation"],
+      "mustNotIncludeInPrompt": ["active_task: motivation"],
       "notes": "DE greeting with de locale pack"
     },
     {
@@ -35,7 +35,7 @@
       "message": "مرحبا، كيف حالك؟",
       "locale": "ar",
       "mustIncludeInPrompt": ["kai.mode.casual", "kai.identity"],
-      "mustNotIncludeInPrompt": ["kai.mode.motivation"],
+      "mustNotIncludeInPrompt": ["active_task: motivation"],
       "notes": "AR greeting"
     },
     {
