@@ -169,6 +169,40 @@ const TOOL_RE =
 const COUNCIL_DECISION_RE =
   /\b(decide|decision|final plan|council decision|karar ver|sonuç|sonuc|oybirliği|oybirligi)\b/i;
 
+function looksLikeDeliveredWorkoutProgram(previousAssistant?: string): boolean {
+  const prev = previousAssistant?.trim() ?? "";
+  if (!prev || prev.length < 80) return false;
+  const dayHits =
+    prev.match(
+      /\b(pazartesi|sal[ıi]|çarşamba|carsamba|perşembe|persembe|cuma|cumartesi|pazar|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi,
+    )?.length ?? 0;
+  const setRep =
+    /\b\d+\s*[x×]\s*\d+\b/i.test(prev) ||
+    /\b\d+\s*(?:sets?|set)\b/i.test(prev);
+  return dayHits >= 2 && setRep;
+}
+
+function looksLikeThanksOrSocialAck(message: string): boolean {
+  return /^(?:sa[gğ]ol(?:ar(?:ım|im)?)?|teşekkür(?:ler)?|tesekkur(?:ler)?|thanks(?:\s+you)?|thank\s+you|ty|thx|eyvallah|süper|super|harika|efsane|tamamdır|tamamdir)[\s!.?…❤🙏❤️]*$/iu.test(
+    message.trim(),
+  );
+}
+
+function looksLikeBareConfirm(message: string): boolean {
+  return /^(?:ok|okay|tamam|evet|yes|yep|yeah|olur|sure|kral)[\s!.?…]*$/iu.test(
+    message.trim(),
+  );
+}
+
+function previousStillAskingProgramQuestion(previousAssistant?: string): boolean {
+  const prev = previousAssistant?.trim() ?? "";
+  if (!prev) return false;
+  if (/[?؟]\s*$/u.test(prev)) return true;
+  return /\b(kaç\s*gün|kac\s*gun|how many days|ekipman|equipment|hangi gün|hangi gun|kaç kez|kac kez)\b/i.test(
+    prev,
+  );
+}
+
 function continuedDomainIntent(
   coach: CoachId,
   previousAssistant?: string,
@@ -274,6 +308,17 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
     hasRecentHistory: input.hasRecentHistory,
   });
   if (shortTurn.needsContinuation && shortTurn.continuePreviousTopic) {
+    const prevMsg = input.previousAssistantMessage ?? "";
+    // Thanks / "ok" after a FULL weekly program already delivered → short ack,
+    // never rewrite the split (structured programming would regenerate it).
+    if (
+      input.coach === "alex" &&
+      looksLikeDeliveredWorkoutProgram(prevMsg) &&
+      !previousStillAskingProgramQuestion(prevMsg) &&
+      (looksLikeThanksOrSocialAck(msg) || looksLikeBareConfirm(msg))
+    ) {
+      return "casual";
+    }
     return (
       continuedDomainIntent(input.coach, input.previousAssistantMessage) ??
       "unknown"

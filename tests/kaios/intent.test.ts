@@ -100,6 +100,57 @@ describe("resolveIntent", () => {
     ).toBe("programming");
   });
 
+  it("does not re-program when user thanks or oks after a delivered weekly list", () => {
+    const delivered = `
+Kral, işte 5 günlük programın:
+
+Pazartesi – Göğüs + Triceps
+• Bench Press: 4x8
+• Incline Dumbbell Press: 3x10
+
+Salı – Sırt + Biceps
+• Deadlift: 4x6
+• Lat Pulldown: 4x10
+
+Perşembe – Omuz + Karın
+• Overhead Press: 4x8
+
+Cuma – Bacak + Karın
+• Squat: 4x8
+
+Cumartesi – Üst Vücut
+• Bench Press: 3x8
+
+Forma dikkat, ego yapma.
+`.trim();
+    expect(
+      resolveIntent({
+        coach: "alex",
+        message: "sagol",
+        previousAssistantMessage: delivered,
+        hasRecentHistory: true,
+      }),
+    ).toBe("casual");
+    expect(
+      resolveIntent({
+        coach: "alex",
+        message: "tamamdir",
+        previousAssistantMessage: delivered,
+        hasRecentHistory: true,
+      }),
+    ).toBe("casual");
+    expect(
+      needsStructuredOutput(
+        resolveIntent({
+          coach: "alex",
+          message: "sağol",
+          previousAssistantMessage: delivered,
+          hasRecentHistory: true,
+        }),
+      ),
+    ).toBe(false);
+  });
+
   it("routes Turkish weekly menu phrasing to meal_plan for Maya", () => {
     expect(
       resolveIntent({
