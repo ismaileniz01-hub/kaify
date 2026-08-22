@@ -124,6 +124,8 @@ describe("SEO contract", () => {
     expect(isProtectedProductPath("/robots.txt")).toBe(false);
     expect(isMarketingPath("/sitemap.xml")).toBe(true);
     expect(isMarketingPath("/robots.txt")).toBe(true);
+    expect(isMarketingPath("/delete-account")).toBe(true);
+    expect(isProtectedProductPath("/delete-account")).toBe(false);
   });
 
   it("canonical terms path is /terms, not the legacy alias", () => {

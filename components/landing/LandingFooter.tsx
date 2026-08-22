@@ -54,6 +54,9 @@ export function LandingFooter() {
           <Link href="/kvkk" className="transition hover:text-white">
             {t("legal.kvkk")}
           </Link>
+          <Link href="/delete-account" className="transition hover:text-white">
+            {t("legal.delete_account")}
+          </Link>
         </nav>
 
         <p className="text-xs text-zinc-600">{t("landing.hero.eyebrow")}</p>

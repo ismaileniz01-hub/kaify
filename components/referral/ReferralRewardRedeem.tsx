@@ -33,6 +33,7 @@ const SKIP_PREFIXES = [
   "/cookies",
   "/disclaimer",
   "/kvkk",
+  "/delete-account",
   "/api/",
 ];
 

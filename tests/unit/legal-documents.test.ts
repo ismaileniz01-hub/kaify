@@ -74,4 +74,12 @@ describe("legal document pack v2", () => {
     const urls = buildSitemap().map((e) => e.url);
     expect(urls.some((u) => u.endsWith("/disclaimer"))).toBe(true);
   });
+
+  it("indexes the Play account-deletion URL", () => {
+    expect(SEO_INDEXABLE_PATHS).toContain("/delete-account");
+    const blob = JSON.stringify(PRIVACY_DOCUMENT);
+    expect(blob).toContain("https://kaifyai.org/delete-account");
+    const urls = buildSitemap().map((e) => e.url);
+    expect(urls.some((u) => u.endsWith("/delete-account"))).toBe(true);
+  });
 });

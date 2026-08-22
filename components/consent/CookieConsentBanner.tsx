@@ -20,6 +20,7 @@ const LEGAL_ONLY_PREFIXES = [
   "/cookies",
   "/kvkk",
   "/disclaimer",
+  "/delete-account",
   "/admin",
 ];
 

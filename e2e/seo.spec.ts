@@ -43,6 +43,13 @@ const INDEXABLE = [
     canonical: "https://kaifyai.org/kvkk",
     jsonLd: false,
   },
+  {
+    path: "/delete-account",
+    title: /Delete your Kaify Ai account/i,
+    description: /deletion|account/i,
+    canonical: "https://kaifyai.org/delete-account",
+    jsonLd: false,
+  },
 ] as const;
 
 const PRIVATE = [
@@ -136,6 +143,8 @@ test.describe("rendered public SEO", () => {
       "https://kaifyai.org/terms",
       "https://kaifyai.org/cookies",
       "https://kaifyai.org/kvkk",
+      "https://kaifyai.org/disclaimer",
+      "https://kaifyai.org/delete-account",
     ]);
     expect(xml.match(/<lastmod>/g)?.length).toBe(locs.length);
     expect(xml).not.toContain("http://kaifyai.org");

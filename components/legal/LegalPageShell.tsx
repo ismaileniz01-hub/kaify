@@ -43,6 +43,9 @@ export function LegalPageShell({
             <Link href="/disclaimer" className="hover:text-zinc-300">
               {t("legal.disclaimer")}
             </Link>
+            <Link href="/delete-account" className="hover:text-zinc-300">
+              {t("legal.delete_account")}
+            </Link>
           </div>
         </div>
       </header>

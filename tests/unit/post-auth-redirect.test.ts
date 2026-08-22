@@ -11,6 +11,13 @@ describe("post-auth-redirect", () => {
     expect(resolvePostAuthRedirect({ tier: null }, "/welcome")).toBe("/pricing");
   });
 
+  it("lets unpaid users reach Settings to delete their account", () => {
+    expect(resolvePostAuthRedirect({ tier: null }, "/settings")).toBe("/settings");
+    expect(resolvePostAuthRedirect({ tier: null }, "/settings/security")).toBe(
+      "/settings/security",
+    );
+  });
+
   it("honours requested path when subscribed", () => {
     expect(resolvePostAuthRedirect({ tier: "pro" }, "/welcome")).toBe("/welcome");
   });

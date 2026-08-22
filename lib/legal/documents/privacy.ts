@@ -213,7 +213,7 @@ export const PRIVACY_DOCUMENT: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "You may delete your account in Settings. Deletion cancels live Paddle subscriptions immediately when the cancel call succeeds, then deletes account data. Subscription cancellation alone (via Manage billing) stops renewal but keeps your account. Deletion does not automatically create a refund.",
+          text: `You may delete your account in Settings, or request deletion at ${LEGAL_URL}/delete-account (also usable if the app is uninstalled). Deletion cancels live Paddle subscriptions immediately when the cancel call succeeds, then deletes account data. Subscription cancellation alone (via Manage billing) stops renewal but keeps your account. Deletion does not automatically create a refund. If you cannot sign in, email ${SUPPORT_EMAIL} from the address on the account.`,
         },
       ],
     },

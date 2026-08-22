@@ -21,6 +21,8 @@ export const PRIVACY_PATH = "/privacy";
 export const COOKIES_PATH = "/cookies";
 export const KVKK_PATH = "/kvkk";
 export const MEDICAL_DISCLAIMER_PATH = "/disclaimer";
+/** Public Play Console / store account-deletion request URL. */
+export const DELETE_ACCOUNT_PATH = "/delete-account";
 export const SUPPORT_EMAIL = "support@kaifyai.org";
 /** Public privacy contact — same mailbox as support. */
 export const PRIVACY_EMAIL = "support@kaifyai.org";

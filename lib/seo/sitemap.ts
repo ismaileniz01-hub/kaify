@@ -55,6 +55,11 @@ export const SITEMAP_PAGE_META: Record<SeoIndexablePath, SitemapMeta> = {
     changeFrequency: "monthly",
     priority: 0.5,
   },
+  "/delete-account": {
+    lastModified: "2026-08-22",
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
 };
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;

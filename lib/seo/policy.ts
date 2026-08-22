@@ -13,6 +13,7 @@ export const SEO_INDEXABLE_PATHS = [
   "/cookies",
   "/kvkk",
   "/disclaimer",
+  "/delete-account",
 ] as const;
 
 export type SeoIndexablePath = (typeof SEO_INDEXABLE_PATHS)[number];
@@ -84,7 +85,9 @@ export function isMarketingPath(pathname: string): boolean {
     pathname === "/kvkk" ||
     pathname.startsWith("/kvkk/") ||
     pathname === "/disclaimer" ||
-    pathname.startsWith("/disclaimer/")
+    pathname.startsWith("/disclaimer/") ||
+    pathname === "/delete-account" ||
+    pathname.startsWith("/delete-account/")
   );
 }
 
@@ -117,4 +120,5 @@ export const SEO_CONTENT_DATES = {
   "/cookies": "2026-08-21",
   "/kvkk": "2026-08-21",
   "/disclaimer": "2026-08-21",
+  "/delete-account": "2026-08-22",
 } as const;

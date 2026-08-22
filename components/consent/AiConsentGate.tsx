@@ -15,7 +15,7 @@ import { useLang } from "@/lib/lang-context";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import { MotionDialog } from "@/components/ui/MotionDialog";
 
-const SKIP_PREFIXES = ["/login", "/signup", "/privacy", "/terms", "/cookies", "/api/"];
+const SKIP_PREFIXES = ["/login", "/signup", "/privacy", "/terms", "/cookies", "/kvkk", "/disclaimer", "/delete-account", "/api/"];
 
 type ConsentStatus = {
   termsPrivacy: boolean;
