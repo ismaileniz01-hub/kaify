@@ -18,7 +18,9 @@ export function AppChrome({ children }: { children: ReactNode }) {
     pathname.startsWith("/login") ||
     pathname === "/signup" ||
     pathname.startsWith("/signup") ||
-    pathname === "/pricing";
+    pathname === "/pricing" ||
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/");
   const authPending = Boolean(session?.isLoading) && !publicChrome;
 
   return (

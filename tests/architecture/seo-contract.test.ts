@@ -116,6 +116,8 @@ describe("SEO contract", () => {
     expect(isProtectedProductPath("/welcome")).toBe(true);
     expect(isProtectedProductPath("/chat/kai")).toBe(true);
     expect(isProtectedProductPath("/pricing")).toBe(false);
+    expect(isProtectedProductPath("/admin")).toBe(false);
+    expect(isProtectedProductPath("/admin/costs")).toBe(false);
     expect(isProtectedProductPath("/login")).toBe(false);
     expect(isProtectedProductPath("/")).toBe(false);
     expect(isProtectedProductPath("/opengraph-image")).toBe(false);

@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { redirect } from "next/navigation";
+import { AdminDecoy } from "@/components/admin/AdminDecoy";
 import { AdminHubGate } from "@/components/admin/AdminHubGate";
 import { resolveIsHubAdmin } from "@/lib/auth/admin-access";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function AdminLayout({
   children,
@@ -14,13 +19,8 @@ export default async function AdminLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/login");
-  }
-
-  const isHubAdmin = await resolveIsHubAdmin(user.id);
-  if (!isHubAdmin) {
-    redirect("/welcome");
+  if (!user || !(await resolveIsHubAdmin(user.id))) {
+    return <AdminDecoy />;
   }
 
   return <AdminHubGate>{children}</AdminHubGate>;

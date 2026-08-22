@@ -53,7 +53,6 @@ const PRIVATE = [
   "/leaderboard",
   "/market",
   "/myaccount",
-  "/admin",
 ] as const;
 
 test.describe("rendered public SEO", () => {
@@ -150,7 +149,7 @@ test.describe("rendered public SEO", () => {
     request,
   }) => {
     const xml = await (await request.get("/sitemap.xml")).text();
-    for (const path of [...PRIVATE, "/login", "/signup"]) {
+    for (const path of [...PRIVATE, "/admin", "/login", "/signup"]) {
       expect(xml).not.toContain(path);
     }
     for (const path of PRIVATE) {
@@ -158,6 +157,13 @@ test.describe("rendered public SEO", () => {
       expect(res?.status()).toBeLessThan(400);
       await expect(page).toHaveURL(/\/login/);
     }
+  });
+
+  test("/admin is a public decoy image", async ({ page }) => {
+    const res = await page.goto("/admin");
+    expect(res?.status()).toBe(200);
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.locator('img[src="/nice-try-diddy.png"]')).toBeVisible();
   });
 
   test("login and signup are noindex", async ({ page }) => {

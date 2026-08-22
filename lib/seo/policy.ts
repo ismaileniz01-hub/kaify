@@ -65,6 +65,7 @@ export function isPublicAuthPath(pathname: string): boolean {
 
 export function isPublicAppPath(pathname: string): boolean {
   if (isPublicAuthPath(pathname)) return true;
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) return true;
   return pathname === "/pricing";
 }
 
