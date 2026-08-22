@@ -28,6 +28,10 @@ describe("cache keys registry", () => {
     expect(CacheTTL.coachesCatalog).toBeGreaterThan(CacheTTL.homeBundle);
   });
 
+  it("scopes session gem cache per user (v2 materialized balance)", () => {
+    expect(CacheKeys.sessionGems("u1")).toBe("session:gems:v2:u1");
+  });
+
   it("scopes home bundle per user and day (locale-free v3)", () => {
     expect(CacheKeys.homeBundle("u1", "2026-07-05")).toBe(
       "home:bundle:v3:u1:2026-07-05",

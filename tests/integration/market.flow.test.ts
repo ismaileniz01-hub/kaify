@@ -11,6 +11,10 @@ vi.mock("@/lib/cache", () => ({
   cached: vi.fn((_key, _ttl, producer) => producer()),
 }));
 
+vi.mock("@/lib/cache/invalidate", () => ({
+  invalidateSessionSliceCaches: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/lib/events/emit", () => ({
   emitDomainEvent: vi.fn(),
 }));

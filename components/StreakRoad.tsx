@@ -58,7 +58,7 @@ function getProgressInSegment(streak: number, segment: RoadSegment): number {
 
 export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
   const { t } = useLang();
-  const session = useSession();
+  const { isAuthenticated, applyGemBalance } = useSession();
   const { unlockLevel } = useKai();
   const { play } = useSound();
   const [claimedMilestones, setClaimedMilestones] = useState<Set<number>>(new Set());
@@ -148,25 +148,27 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
 
   // Server-authoritative streak gem rewards (replaces client-only earn).
   useEffect(() => {
-    if (!hydrated || !session.isAuthenticated || serverRewardsSynced) return;
+    if (!hydrated || !isAuthenticated || serverRewardsSynced) return;
     if (currentStreak <= 0) {
       setServerRewardsSynced(true);
       return;
     }
 
-    void apiPost<{ totalAwarded: number }>("/api/streak/rewards", {})
+    void apiPost<{ totalAwarded: number; gemBalance: number }>("/api/streak/rewards", {})
       .then((result) => {
+        if (typeof result.gemBalance === "number") {
+          applyGemBalance(result.gemBalance);
+        }
         if (result.totalAwarded > 0) {
           setJustClaimed({ type: "milestone", value: currentStreak });
           setTimeout(() => setJustClaimed(null), 2000);
-          void session.refreshSession();
         }
       })
       .catch(() => {
         // Non-fatal — UI still renders; user can retry on next visit.
       })
       .finally(() => setServerRewardsSynced(true));
-  }, [hydrated, session.isAuthenticated, serverRewardsSynced, currentStreak, session]);
+  }, [hydrated, isAuthenticated, serverRewardsSynced, currentStreak, applyGemBalance]);
 
   // Milestone / station UI state from localStorage (display only).
   useEffect(() => {

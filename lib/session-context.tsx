@@ -217,13 +217,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [profile, isAuthenticated],
   );
 
+  const applyGemBalance = useCallback((balance: number) => {
+    setGemBalance((prev) => ({ ...prev, balance }));
+  }, []);
+
   const applyChestClaim = useCallback(
     (balances: { gemBalance: number; freezieBalance: number }) => {
-      setGemBalance((prev) => ({ ...prev, balance: balances.gemBalance }));
+      applyGemBalance(balances.gemBalance);
       setStreak((prev) => ({ ...prev, freezieBalance: balances.freezieBalance }));
       syncFreezieBalanceFromServer(balances.freezieBalance);
     },
-    [],
+    [applyGemBalance],
   );
 
   const refreshHome = useCallback(async (locale?: string) => {
@@ -297,6 +301,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       kai,
       referralCode,
       refreshHome,
+      applyGemBalance,
       applyChestClaim,
       updateProfile,
       checkIn,
@@ -311,6 +316,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       kai,
       referralCode,
       refreshHome,
+      applyGemBalance,
       applyChestClaim,
       updateProfile,
       checkIn,

@@ -6,6 +6,10 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminSupabaseClient: () => ({ rpc }),
 }));
 
+vi.mock("@/lib/cache/invalidate", () => ({
+  invalidateSessionSliceCaches: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { earnGems, spendGems } from "@/lib/services/gem.service";
 import { ApiError } from "@/lib/api/errors";
 

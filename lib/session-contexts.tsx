@@ -30,6 +30,7 @@ export type SessionDataValue = {
   kai: KaiStateDTO | null;
   referralCode: string;
   refreshHome: (locale?: string) => Promise<void>;
+  applyGemBalance: (balance: number) => void;
   applyChestClaim: (balances: { gemBalance: number; freezieBalance: number }) => void;
   updateProfile: (form: UserProfile) => Promise<void>;
   checkIn: () => Promise<CheckInDTO>;

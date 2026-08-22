@@ -43,7 +43,7 @@ export const CacheKeys = {
    */
   homeBundle: (userId: string, day = utcDayKey()) =>
     `home:bundle:v3:${userId}:${day}`,
-  sessionGems: (userId: string) => `session:gems:v1:${userId}`,
+  sessionGems: (userId: string) => `session:gems:v2:${userId}`,
   sessionStreak: (userId: string) => `session:streak:v1:${userId}`,
   sessionKai: (userId: string) => `session:kai:v1:${userId}`,
   coachesCatalog: () => "coaches:catalog:v1",
