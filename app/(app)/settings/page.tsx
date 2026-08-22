@@ -173,6 +173,28 @@ function saveBoolean(key: string, value: boolean) {
   localStorage.setItem(key, value ? "true" : "false");
 }
 
+async function copyTextToClipboard(value: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    try {
+      const el = document.createElement("textarea");
+      el.value = value;
+      el.setAttribute("readonly", "");
+      el.style.position = "fixed";
+      el.style.left = "-9999px";
+      document.body.appendChild(el);
+      el.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(el);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
@@ -279,34 +301,25 @@ export default function SettingsPage() {
   }, [isAuthenticated, profile?.locale, setLang]);
 
   const handleCopyReferral = async () => {
-    try {
-      await navigator.clipboard.writeText(referralCode);
+    if (!referralCode || referralCode === "......") return;
+    const ok = await copyTextToClipboard(referralCode);
+    if (ok) {
       setReferralCopied(true);
       setTimeout(() => setReferralCopied(false), 2000);
-    } catch {
-      if (!isAuthenticated) {
-        const { copyReferralCode } = await import("@/lib/referral");
-        const success = await copyReferralCode();
-        if (success) {
-          setReferralCopied(true);
-          setTimeout(() => setReferralCopied(false), 2000);
-        }
-      }
     }
   };
 
   const handleCopyUserId = async () => {
     if (!profile?.id) return;
-    try {
-      await navigator.clipboard.writeText(profile.id);
+    const ok = await copyTextToClipboard(profile.id);
+    if (ok) {
       setUserIdCopied(true);
       setTimeout(() => setUserIdCopied(false), 2000);
-    } catch {
-      // clipboard unavailable
     }
   };
 
   const handleShareReferral = async () => {
+    if (!referralCode || referralCode === "......") return;
     const text = t("settings.referral.share_text", { code: referralCode });
     try {
       if (navigator.share) {
@@ -314,11 +327,12 @@ export default function SettingsPage() {
         return;
       }
     } catch {
-      // fall through
+      // fall through to copy
     }
-    if (!isAuthenticated) {
-      const { shareReferralCode } = await import("@/lib/referral");
-      await shareReferralCode();
+    const ok = await copyTextToClipboard(text);
+    if (ok) {
+      setReferralCopied(true);
+      setTimeout(() => setReferralCopied(false), 2000);
     }
   };
 

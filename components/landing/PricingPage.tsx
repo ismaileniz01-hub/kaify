@@ -165,6 +165,11 @@ function PlanCheckoutButton({
         "@/lib/billing/native-web-checkout"
       );
       if (!(await shouldOpenPaddleCheckoutInApp())) {
+        const { WEB_PRICING_URL } = await import(
+          "@/lib/billing/native-web-checkout"
+        );
+        const { openExternalUrl } = await import("@/lib/native/open-external");
+        await openExternalUrl(WEB_PRICING_URL);
         return;
       }
       if (!isAuthenticated || !profile?.id) {
@@ -212,7 +217,6 @@ function PlanCheckoutButton({
       <button
         type="button"
         onClick={handleClick}
-        disabled={native !== false}
         className={className}
       >
         {native

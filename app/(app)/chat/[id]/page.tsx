@@ -237,11 +237,10 @@ export default function ChatPage() {
               input={inputValue}
               onInputChange={setInputValue}
               onSend={handleSend}
-              showCamera={contactId !== "kai" && contactId !== "alex"}
-              onCameraClick={() => {
-                if (!isAuthenticated) return;
-                setShowImagePicker(true);
-              }}
+              showCamera={
+                isAuthenticated && contactId !== "kai" && contactId !== "alex"
+              }
+              onCameraClick={() => setShowImagePicker(true)}
               compactSend
               accentColor={contact.color.primary}
             />

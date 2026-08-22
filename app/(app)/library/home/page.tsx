@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, ChevronRight } from "lucide-react";
+import { Home } from "lucide-react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { useLang } from "@/lib/lang-context";
 import { AppHeader } from "@/components/navigation/AppHeader";
@@ -65,17 +65,16 @@ export default function HomeLibraryPage() {
                 {group.exercises.map((exercise, ei) => (
                   <div
                     key={exercise.key}
-                    className="group flex items-center justify-between px-4 py-2.5 transition-all duration-200 hover:bg-white/[0.04]"
+                    className="flex items-center px-4 py-2.5"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
                         <span className="text-[10px] font-bold text-zinc-500">{ei + 1}</span>
                       </div>
-                      <span className="text-sm text-zinc-300 transition-colors duration-200 group-hover:text-white">
+                      <span className="text-sm text-zinc-300">
                         {t(exercise.key)}
                       </span>
                     </div>
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-zinc-600 transition-all duration-200 group-hover:text-amber-400 group-hover:translate-x-0.5" />
                   </div>
                 ))}
               </div>
