@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, CheckCircle2, Mail, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Lock, Mail, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useState } from "react";
@@ -9,6 +9,7 @@ import { LegalConsentCheckbox } from "@/components/auth/AuthModeToggle";
 import {
   sendEmailLoginCode,
   verifyEmailLoginCode,
+  signInWithEmailPassword,
   isCompleteOtp,
 } from "@/lib/auth/email-otp";
 import { maskEmail } from "@/lib/auth/mask-email";
@@ -67,6 +68,7 @@ export function EmailOtpLogin({
   const { isAuthenticated, isLoading, profile, refreshSession } = useSession();
   const idPrefix = useId();
   const emailId = `${idPrefix}-email`;
+  const passwordId = `${idPrefix}-password`;
   const errorId = `${idPrefix}-error`;
 
   const safeRedirect = sanitizeAuthRedirect(redirectTo);
@@ -75,7 +77,9 @@ export function EmailOtpLogin({
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState<"otp" | "password" | null>(null);
+  const loading = busy !== null;
   const [error, setError] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
   const [legalAccepted, setLegalAccepted] = useState(false);
@@ -126,6 +130,11 @@ export function EmailOtpLogin({
     otpSendSchema.safeParse({ email: email.trim() }).success &&
     (!isSignup || legalAccepted);
 
+  const canPasswordSignIn =
+    !isSignup &&
+    otpSendSchema.safeParse({ email: email.trim() }).success &&
+    password.length >= 8;
+
   const sendCode = useCallback(async () => {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) return;
@@ -134,7 +143,7 @@ export function EmailOtpLogin({
       return;
     }
 
-    setLoading(true);
+    setBusy("otp");
     setError(null);
     try {
       storePendingLegalConsent();
@@ -156,7 +165,7 @@ export function EmailOtpLogin({
     } catch {
       setError(t("login.error.failed"));
     } finally {
-      setLoading(false);
+      setBusy(null);
     }
   }, [captchaRef, email, goToStep, isSignup, lang, legalAccepted, t]);
 
@@ -178,7 +187,7 @@ export function EmailOtpLogin({
     async (token = code) => {
       if (!isCompleteOtp(token)) return;
 
-      setLoading(true);
+      setBusy("otp");
       setError(null);
       try {
         const result = await verifyEmailLoginCode(email, token);
@@ -197,11 +206,48 @@ export function EmailOtpLogin({
       } catch {
         setError(t("login.error.otp_invalid"));
       } finally {
-        setLoading(false);
+        setBusy(null);
       }
     },
     [applyPendingReferral, code, email, onAuthSuccess, refreshSession, router, safeRedirect, skipAutoRedirect, t],
   );
+
+  const signInWithPassword = useCallback(async () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || password.length < 8) return;
+
+    setBusy("password");
+    setError(null);
+    try {
+      storePendingLegalConsent();
+      const result = await signInWithEmailPassword(trimmed, password);
+      if (!result.ok) {
+        setError(t("login.error.password_invalid"));
+        return;
+      }
+      await refreshSession();
+      const referralReady = await applyPendingReferral();
+      if (skipAutoRedirect) {
+        onAuthSuccess?.();
+        return;
+      }
+      router.replace(referralReady ? "/welcome" : safeRedirect);
+    } catch {
+      setError(t("login.error.password_invalid"));
+    } finally {
+      setBusy(null);
+    }
+  }, [
+    applyPendingReferral,
+    email,
+    onAuthSuccess,
+    password,
+    refreshSession,
+    router,
+    safeRedirect,
+    skipAutoRedirect,
+    t,
+  ]);
 
   if (isLoading) {
     return (
@@ -286,7 +332,7 @@ export function EmailOtpLogin({
           disabled={loading || !isCompleteOtp(code)}
           className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-violet-600 px-6 py-4 text-sm font-semibold text-white shadow-[0_12px_40px_rgba(124,58,237,0.45)] transition hover:from-purple-400 hover:to-violet-500 disabled:opacity-45"
         >
-          {loading
+          {busy === "otp"
             ? t("login.otp.verifying")
             : isSignup
               ? t("login.signup.verify")
@@ -373,13 +419,52 @@ export function EmailOtpLogin({
         disabled={loading || !canSendCode}
         className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-4 text-sm font-semibold text-zinc-900 shadow-xl transition hover:bg-zinc-100 disabled:opacity-50"
       >
-        {loading
+        {busy === "otp"
           ? t("login.otp.loading")
           : isSignup
             ? t("login.signup.submit")
             : t("login.otp.submit")}
         <ArrowRight className="h-5 w-5 rtl:rotate-180" />
       </button>
+
+      {!isSignup && (
+        <>
+          <p className="text-center text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+            {t("login.password.or")}
+          </p>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor={passwordId} className="sr-only">
+              {t("login.password.placeholder")}
+            </label>
+            <div className="flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-4 py-3.5 shadow-inner shadow-black/20 backdrop-blur-sm">
+              <Lock className="h-4 w-4 shrink-0 text-purple-300/80" aria-hidden />
+              <input
+                id={passwordId}
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && canPasswordSignIn) void signInWithPassword();
+                }}
+                placeholder={t("login.password.placeholder")}
+                autoComplete="current-password"
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? errorId : undefined}
+                className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => void signInWithPassword()}
+            disabled={loading || !canPasswordSignIn}
+            className="flex w-full items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-6 py-4 text-sm font-semibold text-white transition hover:bg-white/[0.1] disabled:opacity-50"
+          >
+            {busy === "password" ? t("login.otp.verifying") : t("login.password.submit")}
+            <ArrowRight className="h-5 w-5 rtl:rotate-180" />
+          </button>
+        </>
+      )}
 
       {error && (
         <p

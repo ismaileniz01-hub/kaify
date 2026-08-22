@@ -38,6 +38,7 @@ export const MUTATION_IDEMPOTENCY_MATRIX: readonly MutationMatrixRow[] = [
   { endpoint: "POST /api/onboarding", method: "POST", retryable: true, clientKey: true, serverDedupe: false, dbUniqueness: true, class: "B", safeIfRepeated: true, note: "complete_onboarding once" },
   { endpoint: "POST /api/support", method: "POST", retryable: true, clientKey: true, serverDedupe: true, dbUniqueness: false, class: "A", safeIfRepeated: true, note: "withIdempotency prevents double ticket messages" },
   { endpoint: "POST /api/auth/otp/send", method: "POST", retryable: false, clientKey: false, serverDedupe: false, dbUniqueness: false, class: "C", safeIfRepeated: false, note: "Rate-limited OTP; not mutation of canonical fitness state" },
+  { endpoint: "POST /api/auth/password", method: "POST", retryable: false, clientKey: false, serverDedupe: false, dbUniqueness: false, class: "C", safeIfRepeated: false, note: "Password session for store reviewers; rate-limited" },
 ];
 
 export function unsafeRetryMutations(): MutationMatrixRow[] {

@@ -48,4 +48,23 @@ export async function verifyEmailLoginCode(
   }
 }
 
+/** Password sign-in (store review / accounts that have a password set). */
+export async function signInWithEmailPassword(
+  email: string,
+  password: string,
+): Promise<{ ok: true } | { ok: false; code: string; message: string }> {
+  try {
+    await apiPost<{ verified: true }>("/api/auth/password", {
+      email: email.trim().toLowerCase(),
+      password,
+    });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiClientError) {
+      return { ok: false, code: error.code, message: error.message };
+    }
+    return { ok: false, code: "INTERNAL_ERROR", message: "failed" };
+  }
+}
+
 export { normalizeOtpInput, isCompleteOtp } from "@/lib/auth/otp";

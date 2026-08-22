@@ -55,7 +55,8 @@
     "cap:copy": "npx cap copy",
     "auth:otp-template": "node scripts/apply-supabase-otp-email-template.mjs",
     "paddle:vercel-env": "node scripts/setup-paddle-vercel-env.mjs",
-    "paddle:setup": "node scripts/setup-paddle-complete.mjs"
+    "paddle:setup": "node scripts/setup-paddle-complete.mjs",
+    "play:review-account": "node scripts/ops/provision-play-review-account.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
