@@ -15,6 +15,7 @@ export type AccountSnapshot = {
   displayName: string;
   avatarUrl: string | null;
   tier: SubscriptionTier | null;
+  tierStartedAt: string | null;
 };
 
 export function useAccountSnapshot(isAuthenticated: boolean): AccountSnapshot {
@@ -36,6 +37,7 @@ export function useAccountSnapshot(isAuthenticated: boolean): AccountSnapshot {
           displayName: profile.displayName ?? "",
           avatarUrl: profile.avatarUrl,
           tier: profile.tier,
+          tierStartedAt: profile.tierStartedAt,
         });
       })
       .catch(() => {
@@ -48,13 +50,14 @@ export function useAccountSnapshot(isAuthenticated: boolean): AccountSnapshot {
   }, [isAuthenticated, session?.profile]);
 
   if (!isAuthenticated) {
-    return { displayName: "", avatarUrl: null, tier: null };
+    return { displayName: "", avatarUrl: null, tier: null, tierStartedAt: null };
   }
 
   return {
     displayName: session?.displayName || fetched?.displayName || "",
     avatarUrl: session?.profile?.avatarUrl || fetched?.avatarUrl || null,
     tier: session?.profile?.tier ?? fetched?.tier ?? null,
+    tierStartedAt: session?.profile?.tierStartedAt ?? fetched?.tierStartedAt ?? null,
   };
 }
 

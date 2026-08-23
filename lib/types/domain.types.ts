@@ -46,6 +46,7 @@ export type ProfileDTO = {
   role: ProfileRole;
   onboardingStatus: Database["public"]["Enums"]["onboarding_status"];
   tier: Database["public"]["Enums"]["subscription_tier"] | null;
+  tierStartedAt: string | null;
   billingCycle: BillingCycle;
   referralCode: string;
   referredByCode: string | null;
@@ -72,6 +73,7 @@ export function mapProfileRow(row: ProfileRow): ProfileDTO {
     role: row.role,
     onboardingStatus: row.onboarding_status,
     tier: resolveTier(row),
+    tierStartedAt: row.tier_started_at ?? null,
     billingCycle: row.billing_cycle,
     referralCode: row.referral_code,
     referredByCode: row.referred_by_code ?? null,

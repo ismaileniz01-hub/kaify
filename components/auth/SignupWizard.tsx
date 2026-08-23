@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import {
   ArrowLeft,
@@ -23,13 +22,8 @@ import {
   InvisibleRecaptcha,
   useInvisibleRecaptchaRef,
 } from "@/components/security/InvisibleRecaptcha";
-import {
-  hasActiveSubscription,
-  resolvePostAuthRedirect,
-} from "@/lib/auth/post-auth-redirect";
+import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
 import { redirectToWebCheckoutAfterSignup } from "@/lib/billing/native-web-checkout";
-import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
-import { isNativePlatform } from "@/lib/native/platform";
 import {
   PENDING_LEGAL_CONSENT_KEY,
   PRIVACY_VERSION,
@@ -146,11 +140,9 @@ function storePendingLegalConsent(): void {
   );
 }
 
-export function SignupWizard({ redirectTo = "/pricing" }: Props) {
+export function SignupWizard({ redirectTo: _redirectTo = "/pricing" }: Props) {
   const { lang, t } = useLang();
-  const router = useRouter();
   const { isAuthenticated, isLoading, profile, refreshSession } = useSession();
-  const safeRedirect = sanitizeAuthRedirect(redirectTo, "/pricing");
   const idPrefix = useId();
   const errorId = `${idPrefix}-error`;
   const fid = (name: string) => `${idPrefix}-${name}`;
@@ -231,8 +223,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
       setDisplayName(profile.displayName);
     }
     if (isAuthenticated && profile && profile.onboardingStatus !== "PAID") {
-      if (hasActiveSubscription(profile.tier)) {
-        router.replace(resolvePostAuthRedirect(profile, safeRedirect));
+      if (hasPaidPlan(profile)) {
         return;
       }
       void redirectToWebCheckoutAfterSignup();
@@ -242,8 +233,6 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     isAuthenticated,
     isLoading,
     profile,
-    router,
-    safeRedirect,
   ]);
 
   const buildPayload = useCallback((): OnboardingInput => {
@@ -288,16 +277,12 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
 
   const completeOnboarding = useCallback(
     async (data: OnboardingInput) => {
-      const saved = await apiPost<ProfileDTO>("/api/onboarding", data);
+      await apiPost<ProfileDTO>("/api/onboarding", data);
       await refreshSession();
-      if (hasActiveSubscription(saved.tier)) {
-        const native = await isNativePlatform();
-        router.replace(resolvePostAuthRedirect(saved, "/welcome", { native }));
-        return;
-      }
+      // Always collect payment on the website. Do not open /welcome unpaid.
       await redirectToWebCheckoutAfterSignup();
     },
-    [refreshSession, router],
+    [refreshSession],
   );
 
   const canContinue = useMemo(() => {

@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth/email-otp";
 import { maskEmail } from "@/lib/auth/mask-email";
 import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
+import { fetchWebCheckoutProfile } from "@/lib/billing/web-checkout-profile";
 import type { AuthMode } from "@/lib/auth/safe-redirect";
 import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 import { isNativePlatform } from "@/lib/native/platform";
@@ -191,6 +192,18 @@ export function EmailOtpLogin({
     }
   }, []);
 
+  const goAfterAuth = useCallback(async () => {
+    await applyPendingReferral();
+    sessionStorage.removeItem(PENDING_OTP_EMAIL_KEY);
+    if (skipAutoRedirect) {
+      onAuthSuccess?.();
+      return;
+    }
+    const me = await fetchWebCheckoutProfile();
+    const native = await isNativePlatform();
+    router.replace(resolvePostAuthRedirect(me, safeRedirect, { native }));
+  }, [applyPendingReferral, onAuthSuccess, router, safeRedirect, skipAutoRedirect]);
+
   const verifyCode = useCallback(
     async (token = code) => {
       if (!isCompleteOtp(token)) return;
@@ -204,20 +217,14 @@ export function EmailOtpLogin({
           return;
         }
         await refreshSession();
-        const referralReady = await applyPendingReferral();
-        sessionStorage.removeItem(PENDING_OTP_EMAIL_KEY);
-        if (skipAutoRedirect) {
-          onAuthSuccess?.();
-          return;
-        }
-        router.replace(referralReady ? "/welcome" : safeRedirect);
+        await goAfterAuth();
       } catch {
         setError(t("login.error.otp_invalid"));
       } finally {
         setBusy(null);
       }
     },
-    [applyPendingReferral, code, email, onAuthSuccess, refreshSession, router, safeRedirect, skipAutoRedirect, t],
+    [code, email, goAfterAuth, refreshSession, t],
   );
 
   const signInWithPassword = useCallback(async () => {
@@ -234,28 +241,13 @@ export function EmailOtpLogin({
         return;
       }
       await refreshSession();
-      const referralReady = await applyPendingReferral();
-      if (skipAutoRedirect) {
-        onAuthSuccess?.();
-        return;
-      }
-      router.replace(referralReady ? "/welcome" : safeRedirect);
+      await goAfterAuth();
     } catch {
       setError(t("login.error.password_invalid"));
     } finally {
       setBusy(null);
     }
-  }, [
-    applyPendingReferral,
-    email,
-    onAuthSuccess,
-    password,
-    refreshSession,
-    router,
-    safeRedirect,
-    skipAutoRedirect,
-    t,
-  ]);
+  }, [email, goAfterAuth, password, refreshSession, t]);
 
   if (isLoading) {
     return (

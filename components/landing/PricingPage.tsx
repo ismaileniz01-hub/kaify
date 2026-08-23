@@ -18,8 +18,8 @@ import { usePaddle } from "@/components/billing/PaddleProvider";
 import { useBillingPortal } from "@/components/billing/useBillingPortal";
 import { useSessionOptional } from "@/lib/session-contexts";
 import { useNativeApp } from "@/lib/native/platform";
-import { NATIVE_CHECKOUT_RETURN_URL } from "@/lib/billing/native-web-checkout";
-import { hasActiveSubscription } from "@/lib/auth/post-auth-redirect";
+import { openInstalledAppOrWebsite } from "@/lib/billing/native-web-checkout";
+import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
 import { useLang } from "@/lib/lang-context";
 import {
   PADDLE_BUYER_TERMS_URL,
@@ -108,7 +108,7 @@ function PaddleCheckoutResume() {
       if (!priceId) return;
 
       let userId = session?.profile?.id ?? null;
-      let subscribed = hasActiveSubscription(session?.profile?.tier);
+      let subscribed = hasPaidPlan(session?.profile);
       if (!userId) {
         const { fetchWebCheckoutProfile } = await import(
           "@/lib/billing/web-checkout-profile"
@@ -121,7 +121,7 @@ function PaddleCheckoutResume() {
         }
         if (cancelled || !fetched) return;
         userId = fetched.id;
-        subscribed = hasActiveSubscription(fetched.tier);
+        subscribed = hasPaidPlan(fetched);
       }
       if (subscribed) return;
 
@@ -136,7 +136,7 @@ function PaddleCheckoutResume() {
     return () => {
       cancelled = true;
     };
-  }, [paddle, ready, searchParams, session?.profile?.id, session?.profile?.tier]);
+  }, [paddle, ready, searchParams, session?.profile]);
 
   return null;
 }
@@ -157,12 +157,21 @@ function WebCheckoutReturn() {
       <p className="mt-1 text-sm leading-relaxed text-zinc-300">
         {t("pricing.checkout.return_hint")}
       </p>
-      <a
-        href={NATIVE_CHECKOUT_RETURN_URL}
-        className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-500 px-6 text-sm font-bold text-zinc-950 transition hover:bg-emerald-400"
-      >
-        {t("pricing.checkout.open_app")}
-      </a>
+      <div className="mt-4 flex flex-col items-center gap-2">
+        <button
+          type="button"
+          onClick={() => openInstalledAppOrWebsite()}
+          className="inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-500 px-6 text-sm font-bold text-zinc-950 transition hover:bg-emerald-400"
+        >
+          {t("pricing.checkout.open_app")}
+        </button>
+        <Link
+          href="/welcome"
+          className="text-xs font-medium text-zinc-400 underline-offset-2 hover:text-white hover:underline"
+        >
+          {t("pricing.checkout.continue_web")}
+        </Link>
+      </div>
     </div>
   );
 }
@@ -207,7 +216,7 @@ function PlanCheckoutButton({
         return;
       }
       let userId = profile?.id ?? null;
-      let subscribed = hasPlan || hasActiveSubscription(profile?.tier);
+      let subscribed = hasPlan || hasPaidPlan(profile);
       if (!userId) {
         const { fetchWebCheckoutProfile } = await import(
           "@/lib/billing/web-checkout-profile"
@@ -218,7 +227,7 @@ function PlanCheckoutButton({
           return;
         }
         userId = fetched.id;
-        subscribed = hasActiveSubscription(fetched.tier);
+        subscribed = hasPaidPlan(fetched);
       }
       if (subscribed) {
         onManagePlan();
@@ -282,7 +291,7 @@ export function PricingPage() {
   const native = useNativeApp();
   const { lang, t } = useLang();
   const session = useSessionOptional();
-  const hasPlan = hasActiveSubscription(session?.profile?.tier);
+  const hasPlan = hasPaidPlan(session?.profile);
   const {
     openPortal,
     portalLoading,

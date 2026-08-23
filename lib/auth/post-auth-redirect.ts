@@ -9,7 +9,20 @@ export function hasActiveSubscription(
 
 type ProfileLike = {
   tier?: SubscriptionTier | null;
+  /** Set only by Paddle `apply_subscription`. Missing = never paid. */
+  tierStartedAt?: string | null;
 };
+
+/** True when Paddle actually granted a plan — not a leftover default tier. */
+export function hasPaidPlan(
+  profile: ProfileLike | null | undefined,
+): boolean {
+  if (profile?.tier == null) return false;
+  if (profile.tierStartedAt === undefined) {
+    return true;
+  }
+  return profile.tierStartedAt != null;
+}
 
 type PostAuthOptions = {
   /** Store binary: never open website checkout routes. */
@@ -26,7 +39,7 @@ export function resolvePostAuthRedirect(
   if (safe === "/settings" || safe.startsWith("/settings/")) {
     return safe;
   }
-  if (!hasActiveSubscription(profile?.tier)) {
+  if (!hasPaidPlan(profile)) {
     return options?.native ? "/myaccount" : "/pricing";
   }
   return safe;

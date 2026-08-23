@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   hasActiveSubscription,
+  hasPaidPlan,
   requiresActiveSubscription,
   resolvePostAuthRedirect,
 } from "@/lib/auth/post-auth-redirect";
@@ -26,6 +27,19 @@ describe("post-auth-redirect", () => {
 
   it("honours requested path when subscribed", () => {
     expect(resolvePostAuthRedirect({ tier: "pro" }, "/welcome")).toBe("/welcome");
+  });
+
+  it("does not treat a leftover unpaid tier as access to /welcome", () => {
+    expect(
+      resolvePostAuthRedirect(
+        { tier: "essential", tierStartedAt: null },
+        "/welcome",
+      ),
+    ).toBe("/pricing");
+    expect(hasPaidPlan({ tier: "essential", tierStartedAt: null })).toBe(false);
+    expect(
+      hasPaidPlan({ tier: "pro", tierStartedAt: "2026-08-23T00:00:00.000Z" }),
+    ).toBe(true);
   });
 
   it("detects subscription-gated routes", () => {

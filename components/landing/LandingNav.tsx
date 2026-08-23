@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { hasBrowserAuthCookie } from "@/lib/auth/browser-auth-hint";
-import { hasActiveSubscription } from "@/lib/auth/post-auth-redirect";
+import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
 import { useLang } from "@/lib/lang-context";
 import { useSessionOptional } from "@/lib/session-contexts";
 import { LandingAccountMenu, useAccountSnapshot } from "./LandingAccountMenu";
@@ -50,7 +50,7 @@ export function LandingNav({
 
   const homePrefix = pricingPage ? "/" : "";
   const appHref =
-    isAuthenticated && hasActiveSubscription(snapshot.tier) ? "/welcome" : "/pricing";
+    isAuthenticated && hasPaidPlan(snapshot) ? "/welcome" : "/pricing";
 
   const primaryCtaHref = isLoading
     ? "#"

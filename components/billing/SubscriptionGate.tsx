@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  hasActiveSubscription,
+  hasPaidPlan,
   requiresActiveSubscription,
 } from "@/lib/auth/post-auth-redirect";
 import { isNativePlatform } from "@/lib/native/platform";
@@ -20,7 +20,7 @@ export function SubscriptionGate() {
   useEffect(() => {
     if (isLoading || !isAuthenticated || !profile) return;
     if (!requiresActiveSubscription(pathname)) return;
-    if (hasActiveSubscription(profile.tier)) return;
+    if (hasPaidPlan(profile)) return;
     void isNativePlatform().then((native) => {
       router.replace(native ? "/myaccount" : "/pricing");
     });

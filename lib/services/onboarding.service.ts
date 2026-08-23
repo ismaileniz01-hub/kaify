@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
+import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
 import { mapProfileRow, type ProfileDTO } from "@/lib/types/domain.types";
 import type { OnboardingInput } from "@/lib/validations/onboarding.schema";
 
@@ -64,8 +65,8 @@ export async function completeOnboarding(
 
   // Paid users who finish forms after checkout would otherwise stay
   // FORMS_COMPLETED forever (apply_subscription only promotes when already
-  // past PAID). Promote immediately when a plan is already on the profile.
-  if (profile.tier) {
+  // past PAID). Never treat a default/unpaid tier as a real plan.
+  if (hasPaidPlan(profile)) {
     return (await tryActivateUser(profile)) ?? profile;
   }
 

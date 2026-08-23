@@ -33,7 +33,7 @@ import { InlineAlert } from "@/components/InlineAlert";
 import { StepUpChallenge } from "@/components/auth/StepUpChallenge";
 import { useBillingPortal } from "@/components/billing/useBillingPortal";
 import { formatTierLabel } from "@/lib/billing/tier-labels";
-import { hasActiveSubscription } from "@/lib/auth/post-auth-redirect";
+import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
 import { parseGenderInput } from "@/lib/profile-mapper";
 import { useLang } from "@/lib/lang-context";
 import { formatNumber } from "@/lib/i18n/format";
@@ -139,7 +139,7 @@ export function MyAccountPage() {
   }
 
   const avatarSrc = avatarPreview ?? userProfile.avatar;
-  const hasPlan = hasActiveSubscription(profile.tier);
+  const hasPlan = hasPaidPlan(profile);
 
   const persistProfile = async (next: UserProfile) => {
     setSaving(true);

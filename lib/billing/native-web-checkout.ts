@@ -10,6 +10,18 @@ export const POST_SIGNUP_CHECKOUT_URL = `${CANONICAL_APP_URL}${POST_SIGNUP_CHECK
 /** Website checkout return target for the installed app. */
 export const NATIVE_CHECKOUT_RETURN_URL = `${NATIVE_URL_SCHEME}://login`;
 
+/** Try the installed app, then continue in the website app if it did not open. */
+export function openInstalledAppOrWebsite(): void {
+  if (typeof window === "undefined") return;
+  const started = Date.now();
+  window.location.assign(NATIVE_CHECKOUT_RETURN_URL);
+  window.setTimeout(() => {
+    if (document.visibilityState === "visible" && Date.now() - started < 2500) {
+      window.location.assign("/welcome");
+    }
+  }, 1200);
+}
+
 export async function shouldOpenPaddleCheckoutInApp(): Promise<boolean> {
   return !(await isNativePlatform());
 }
