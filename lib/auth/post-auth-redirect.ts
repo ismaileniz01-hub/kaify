@@ -11,17 +11,23 @@ type ProfileLike = {
   tier?: SubscriptionTier | null;
 };
 
-/** After auth, send users without a paid plan to pricing — except Settings, which must stay reachable for account deletion. */
+type PostAuthOptions = {
+  /** Store binary: never open website checkout routes. */
+  native?: boolean;
+};
+
+/** After auth, send users without a paid plan to pricing — except Settings, which must stay reachable for account deletion. Native shells go to My account instead of /pricing. */
 export function resolvePostAuthRedirect(
   profile: ProfileLike | null | undefined,
   requested?: string | null,
+  options?: PostAuthOptions,
 ): string {
   const safe = sanitizeAuthRedirect(requested);
   if (safe === "/settings" || safe.startsWith("/settings/")) {
     return safe;
   }
   if (!hasActiveSubscription(profile?.tier)) {
-    return "/pricing";
+    return options?.native ? "/myaccount" : "/pricing";
   }
   return safe;
 }

@@ -16,6 +16,7 @@ import { maskEmail } from "@/lib/auth/mask-email";
 import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
 import type { AuthMode } from "@/lib/auth/safe-redirect";
 import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
+import { isNativePlatform } from "@/lib/native/platform";
 import { useLang } from "@/lib/lang-context";
 import {
   PENDING_LEGAL_CONSENT_KEY,
@@ -108,7 +109,11 @@ export function EmailOtpLogin({
         onAuthSuccess?.();
         return;
       }
-      router.replace(resolvePostAuthRedirect(profile, safeRedirect));
+      void isNativePlatform().then((native) => {
+        router.replace(
+          resolvePostAuthRedirect(profile, safeRedirect, { native }),
+        );
+      });
     }
   }, [
     isAuthenticated,

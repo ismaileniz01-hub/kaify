@@ -11,6 +11,12 @@ describe("post-auth-redirect", () => {
     expect(resolvePostAuthRedirect({ tier: null }, "/welcome")).toBe("/pricing");
   });
 
+  it("sends unpaid native users to My account, not pricing", () => {
+    expect(
+      resolvePostAuthRedirect({ tier: null }, "/welcome", { native: true }),
+    ).toBe("/myaccount");
+  });
+
   it("lets unpaid users reach Settings to delete their account", () => {
     expect(resolvePostAuthRedirect({ tier: null }, "/settings")).toBe("/settings");
     expect(resolvePostAuthRedirect({ tier: null }, "/settings/security")).toBe(
