@@ -25,6 +25,7 @@ import {
 } from "@/components/security/InvisibleRecaptcha";
 import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
 import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
+import { isNativePlatform } from "@/lib/native/platform";
 import {
   PENDING_LEGAL_CONSENT_KEY,
   PRIVACY_VERSION,
@@ -278,12 +279,13 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
   ]);
 
   const completeOnboarding = useCallback(
-    async (data: OnboardingInput, nextPath?: string) => {
-      await apiPost<ProfileDTO>("/api/onboarding", data);
+    async (data: OnboardingInput) => {
+      const saved = await apiPost<ProfileDTO>("/api/onboarding", data);
       await refreshSession();
-      router.replace(nextPath ?? safeRedirect);
+      const native = await isNativePlatform();
+      router.replace(resolvePostAuthRedirect(saved, "/pricing", { native }));
     },
-    [refreshSession, router, safeRedirect],
+    [refreshSession, router],
   );
 
   const canContinue = useMemo(() => {
@@ -349,10 +351,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
       if (alreadyAuthedNeedsProfile) {
         setBusy(true);
         try {
-          await completeOnboarding(
-            buildPayload(),
-            code ? "/welcome" : undefined,
-          );
+          await completeOnboarding(buildPayload());
         } catch {
           setError(t("onboarding.error"));
           setBusy(false);
@@ -433,23 +432,18 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     setBusy(true);
     setError(null);
     try {
+      await refreshSession();
       const code = getPendingReferral();
-      let referralApplied = false;
       if (code) {
         try {
           await apiPost("/api/referral", { code });
-          clearPendingReferral();
-          referralApplied = true;
           window.dispatchEvent(new Event(REFERRAL_APPLIED_EVENT));
         } catch {
-          // Keep pending code; ReferralApplySync retries in the app shell
+          // Invalid / unknown codes must not skip checkout.
         }
+        clearPendingReferral();
       }
-      await completeOnboarding(
-        buildPayload(),
-        referralApplied || Boolean(getPendingReferral()) ? "/welcome" : undefined,
-      );
-      await refreshSession();
+      await completeOnboarding(buildPayload());
     } catch {
       setError(t("onboarding.error"));
       setBusy(false);
@@ -1095,6 +1089,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                     type="button"
                     onClick={() => {
                       setReferralCodeInput("");
+                      setError(null);
                       void finishReferralStep(null);
                     }}
                     disabled={busy}
