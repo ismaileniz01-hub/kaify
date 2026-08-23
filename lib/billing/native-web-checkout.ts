@@ -4,8 +4,8 @@ import type { PlanId } from "@/lib/marketing/pricing-plans";
 
 /** ADR 019 — Paddle Checkout only on the public website. */
 export const WEB_PRICING_URL = `${CANONICAL_APP_URL}/pricing`;
-/** After website signup, land on pricing and auto-open the popular plan. */
-export const POST_SIGNUP_CHECKOUT_PATH = "/pricing?checkout=pro";
+/** After website signup, land on pricing so the user picks a plan. */
+export const POST_SIGNUP_CHECKOUT_PATH = "/pricing";
 export const POST_SIGNUP_CHECKOUT_URL = `${CANONICAL_APP_URL}${POST_SIGNUP_CHECKOUT_PATH}`;
 /** Website checkout return target for the installed app. */
 export const NATIVE_CHECKOUT_RETURN_URL = `${NATIVE_URL_SCHEME}://login`;

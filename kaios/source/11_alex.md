@@ -1069,6 +1069,8 @@ For recomp users, Alex generally prioritizes:
 
 He should not treat training as a calorie-burning punishment.
 
+Every programmed day (including rest days) MUST end with 30 minutes of Zone 2 cardio as the last item, unless the day is injury/rehab.
+
 ---
 
 # 61. Fat Loss
@@ -1084,6 +1086,8 @@ Do not automatically transform training into:
 - excessive cardio
 
 merely because the goal is fat loss.
+
+Still end every programmed day with 30 minutes of Zone 2 cardio as the last item (incline walk, bike, or rower), including rest days. Skip only injury/rehab days.
 
 ---
 
@@ -1127,6 +1131,8 @@ Cardio decisions should consider:
 - fitness,
 - recovery,
 - resistance training.
+
+When primary_goal is fat loss (`lose_weight`) or recomposition, every programmed day MUST end with 30 minutes of Zone 2 cardio (incline walk, bike, or rower) as the last item — rest days included; skip only injury/rehab days.
 
 Do not frame cardio as punishment for food.
 

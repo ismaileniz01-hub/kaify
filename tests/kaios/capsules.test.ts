@@ -149,6 +149,8 @@ describe("KAIOS capsules", () => {
     expect(ALEX_PROGRAMMING).toContain("spoken_program");
     expect(ALEX_PROGRAMMING).toContain("leo_lagging");
     expect(ALEX_PROGRAMMING).toContain("maya_fuel");
+    expect(ALEX_PROGRAMMING).toMatch(/30 min Zone 2 cardio/);
+    expect(ALEX_CORE).toMatch(/30 min Zone 2 cardio/);
     expect(ALEX_CORE).toContain("teammate_work");
     expect(MAYA_MEAL_PLANNING).toContain("calorie_goal");
     expect(MAYA_MEAL_PLANNING).toContain("alex_last_plan");

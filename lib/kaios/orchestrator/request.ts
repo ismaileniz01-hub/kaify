@@ -52,6 +52,7 @@ import {
 } from "@/lib/kaios/tools/dispatch";
 import { maybeQueueCoachLogConfirmation } from "@/lib/kaios/analytics/chat-log";
 import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
+import { ensureAlexDailyCardio } from "@/lib/kaios/alex/daily-cardio";
 import { ensureMayaMealSaveAsk } from "@/lib/kaios/maya/meal-save-ask";
 import { ensureMayaAlexHandoff } from "@/lib/kaios/maya/alex-handoff";
 import { ensureMayaAnalyticsSavedAck } from "@/lib/kaios/maya/analytics-ack";
@@ -204,7 +205,7 @@ function structuredSystemHint(intent: Intent): string {
       '", "data":{}, "ui":{}, "actions":[] }',
     "Omit unused fields. message is localized natural coach speech.",
     intent === "programming"
-      ? 'For weekly training plans, ui.cardType MUST be "workout_plan" and ui.days MUST list every training day with lifts, sets, and reps. The spoken message MUST also list those days and lifts (name + sets x reps) so the user can read the program without the card. After the list, add short form cues — never replace the schedule with cues-only. If they ask to write the days, write them.'
+      ? 'For weekly training plans, ui.cardType MUST be "workout_plan" and ui.days MUST list every training day with lifts, sets, and reps. The spoken message MUST also list those days and lifts (name + sets x reps) so the user can read the program without the card. After the list, add short form cues — never replace the schedule with cues-only. If they ask to write the days, write them. If USER_CONTEXT primary_goal is lose_weight or recomposition, every ui.days item MUST end with 30 min Zone 2 cardio as the last exercise.'
       : "The spoken message must still contain the user-facing plan (meals, numbers, days). data/ui is a card extra, never a substitute for the message.",
     "No generic closing. Answer directly.",
     actionTruthHintForPrompt(),
@@ -622,6 +623,14 @@ export async function* orchestrateCoachChat(
     ui: envelope.ui,
     data: envelope.data,
   });
+  envelope = ensureAlexDailyCardio({
+    coachId: input.coachId,
+    intent,
+    locale: input.locale,
+    userState: input.userState,
+    envelope: { ...envelope, message: assistantText },
+  });
+  assistantText = envelope.message;
   assistantText = ensureMayaAnalyticsSavedAck({
     text: assistantText,
     locale: input.locale,
