@@ -23,7 +23,11 @@ import {
   InvisibleRecaptcha,
   useInvisibleRecaptchaRef,
 } from "@/components/security/InvisibleRecaptcha";
-import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
+import {
+  hasActiveSubscription,
+  resolvePostAuthRedirect,
+} from "@/lib/auth/post-auth-redirect";
+import { redirectToWebCheckoutAfterSignup } from "@/lib/billing/native-web-checkout";
 import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 import { isNativePlatform } from "@/lib/native/platform";
 import {
@@ -227,7 +231,11 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
       setDisplayName(profile.displayName);
     }
     if (isAuthenticated && profile && profile.onboardingStatus !== "PAID") {
-      router.replace(resolvePostAuthRedirect(profile, safeRedirect));
+      if (hasActiveSubscription(profile.tier)) {
+        router.replace(resolvePostAuthRedirect(profile, safeRedirect));
+        return;
+      }
+      void redirectToWebCheckoutAfterSignup();
     }
   }, [
     alreadyAuthedNeedsProfile,
@@ -282,8 +290,12 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     async (data: OnboardingInput) => {
       const saved = await apiPost<ProfileDTO>("/api/onboarding", data);
       await refreshSession();
-      const native = await isNativePlatform();
-      router.replace(resolvePostAuthRedirect(saved, "/pricing", { native }));
+      if (hasActiveSubscription(saved.tier)) {
+        const native = await isNativePlatform();
+        router.replace(resolvePostAuthRedirect(saved, "/welcome", { native }));
+        return;
+      }
+      await redirectToWebCheckoutAfterSignup();
     },
     [refreshSession, router],
   );

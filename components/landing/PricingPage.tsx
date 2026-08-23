@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Minus, Sparkles, Shield, Zap, Crown } from "lucide-react";
 import { LandingNav } from "./LandingNav";
@@ -81,11 +81,13 @@ function PlanIcon({ id }: { id: PlanId }) {
 function PaddleCheckoutResume() {
   const searchParams = useSearchParams();
   const { paddle, ready } = usePaddle();
+  const session = useSessionOptional();
+  const openedPlan = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const { shouldOpenPaddleCheckoutInApp } = await import(
+      const { shouldOpenPaddleCheckoutInApp, parseCheckoutPlanParam } = await import(
         "@/lib/billing/native-web-checkout"
       );
       if (cancelled || !(await shouldOpenPaddleCheckoutInApp())) return;
@@ -96,12 +98,45 @@ function PaddleCheckoutResume() {
         searchParams.get("transactionId");
       if (txn) {
         paddle.Checkout.open({ transactionId: txn });
+        return;
       }
+
+      const planId = parseCheckoutPlanParam(searchParams.get("checkout"));
+      if (!planId || openedPlan.current) return;
+      const plan = PRICING_PLANS_WITH_PADDLE.find((item) => item.id === planId);
+      const priceId = plan?.paddlePriceId;
+      if (!priceId) return;
+
+      let userId = session?.profile?.id ?? null;
+      let subscribed = hasActiveSubscription(session?.profile?.tier);
+      if (!userId) {
+        const { fetchWebCheckoutProfile } = await import(
+          "@/lib/billing/web-checkout-profile"
+        );
+        let fetched = await fetchWebCheckoutProfile();
+        if (!fetched) {
+          await new Promise((resolve) => setTimeout(resolve, 400));
+          if (cancelled) return;
+          fetched = await fetchWebCheckoutProfile();
+        }
+        if (cancelled || !fetched) return;
+        userId = fetched.id;
+        subscribed = hasActiveSubscription(fetched.tier);
+      }
+      if (subscribed) return;
+
+      openedPlan.current = true;
+      paddle.Checkout.open({
+        items: [{ priceId, quantity: 1 }],
+        customData: { user_id: userId },
+        settings: { showAddDiscounts: true },
+      });
+      window.history.replaceState(null, "", "/pricing");
     })();
     return () => {
       cancelled = true;
     };
-  }, [paddle, ready, searchParams]);
+  }, [paddle, ready, searchParams, session?.profile?.id, session?.profile?.tier]);
 
   return null;
 }
@@ -152,7 +187,6 @@ function PlanCheckoutButton({
   const router = useRouter();
   const { paddle, ready, configured } = usePaddle();
   const session = useSessionOptional();
-  const isAuthenticated = session?.isAuthenticated ?? false;
   const profile = session?.profile ?? null;
   const native = useNativeApp();
   const { t } = useLang();
@@ -172,11 +206,21 @@ function PlanCheckoutButton({
         await openExternalUrl(WEB_PRICING_URL);
         return;
       }
-      if (!isAuthenticated || !profile?.id) {
-        router.push("/signup?next=/pricing");
-        return;
+      let userId = profile?.id ?? null;
+      let subscribed = hasPlan || hasActiveSubscription(profile?.tier);
+      if (!userId) {
+        const { fetchWebCheckoutProfile } = await import(
+          "@/lib/billing/web-checkout-profile"
+        );
+        const fetched = await fetchWebCheckoutProfile();
+        if (!fetched) {
+          router.push("/signup?next=/pricing");
+          return;
+        }
+        userId = fetched.id;
+        subscribed = hasActiveSubscription(fetched.tier);
       }
-      if (hasPlan) {
+      if (subscribed) {
         onManagePlan();
         return;
       }
@@ -186,7 +230,7 @@ function PlanCheckoutButton({
         const code = discountCode?.trim();
         paddle.Checkout.open({
           items: [{ priceId, quantity: 1 }],
-          customData: { user_id: profile.id },
+          customData: { user_id: userId },
           ...(code ? { discountCode: code } : {}),
           settings: {
             showAddDiscounts: true,
@@ -201,12 +245,12 @@ function PlanCheckoutButton({
     discountCode,
     hasPlan,
     interval,
-    isAuthenticated,
     onManagePlan,
     paddle,
     plan.paddlePriceId,
     plan.paddlePriceIdYearly,
     profile?.id,
+    profile?.tier,
     ready,
     router,
     t,

@@ -813,7 +813,7 @@
   "signup.profile.continue": "Continue to verification",
   "signup.profile.email": "Email address",
   "signup.verify.title": "Verify your email",
-  "signup.verify.subtitle": "Last step — enter the 6-digit code we sent to your inbox.",
+  "signup.verify.subtitle": "Last step — enter the 6-digit code. Next we take you to checkout.",
   "signup.verify.submit": "Create account",
   "signup.verify.back": "Edit profile",
   "signup.verify.sent_hint": "We sent a 6-digit code to complete your signup.",
