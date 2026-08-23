@@ -77,14 +77,14 @@ async function verifyCsrfToken(token: string): Promise<boolean> {
 
 export function csrfCookieOptions(): {
   httpOnly: boolean;
-  sameSite: "strict";
+  sameSite: "lax";
   secure: boolean;
   path: string;
   maxAge: number;
 } {
   return {
     httpOnly: false,
-    sameSite: "strict",
+    sameSite: "lax",
     secure: secureCookiesEnabled(),
     path: "/",
     maxAge: CSRF_MAX_AGE_SEC,

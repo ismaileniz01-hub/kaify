@@ -90,6 +90,12 @@ describe("isAllowedOrigin", () => {
     const req = fakeRequest({ referer: "https://www.kaify.org/welcome" }, "POST");
     expect(isAllowedOrigin(req)).toBe(true);
   });
+
+  it("allows Capacitor https://localhost origin in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const req = fakeRequest({ origin: "https://localhost" }, "POST");
+    expect(isAllowedOrigin(req)).toBe(true);
+  });
 });
 
 describe("checkDisposableEmail", () => {

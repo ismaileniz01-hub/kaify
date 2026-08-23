@@ -8,6 +8,7 @@ import { sendAuthEmailOtp } from "@/lib/auth/send-otp-server";
 import { SupabaseEnvError } from "@/lib/supabase/env";
 import { otpSendSchema } from "@/lib/validations/auth-otp.schema";
 import { logger } from "@/lib/logger";
+import { isNativeWebViewRequest } from "@/lib/native/webview-request";
 
 export const runtime = "nodejs";
 
@@ -23,7 +24,10 @@ export const POST = defineRouteRaw(
       );
     }
 
-    const captchaOk = await validateRecaptcha(parsed.data.recaptchaToken ?? "");
+    const skipCaptcha = isNativeWebViewRequest(request);
+    const captchaOk = skipCaptcha
+      ? true
+      : await validateRecaptcha(parsed.data.recaptchaToken ?? "");
     if (!captchaOk) {
       return fail(new ApiError("FORBIDDEN", "reCAPTCHA doğrulaması başarısız."));
     }

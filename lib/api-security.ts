@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDisposableRisk } from "./disposable-domains";
 import { logger } from "@/lib/logger";
 import { validateRecaptcha as verifyRecaptchaToken } from "@/lib/security/recaptcha";
+import { isNativeShellOrigin } from "@/lib/native/webview-request";
 
 // ──────────────────────────────────────────────
 // 1. Zod Schemas — Tüm API route'ları için
@@ -160,6 +161,20 @@ export function isAllowedOrigin(request: NextRequest): boolean {
   // Origin kontrolü (regex yok, includes ile tam eşleşme)
   if (origin && allowedOrigins.includes(origin)) {
     return true;
+  }
+
+  // Capacitor Android WebView origin is often https://localhost.
+  if (isNativeShellOrigin(origin)) {
+    return true;
+  }
+  if (referer) {
+    try {
+      if (isNativeShellOrigin(new URL(referer).origin)) {
+        return true;
+      }
+    } catch {
+      // Invalid URL
+    }
   }
 
   // Referer fallback

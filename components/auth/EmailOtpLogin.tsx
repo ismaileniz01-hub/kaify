@@ -152,7 +152,10 @@ export function EmailOtpLogin({
     setError(null);
     try {
       storePendingLegalConsent();
-      const recaptchaToken = await executeInvisibleRecaptcha(captchaRef);
+      const native = await isNativePlatform();
+      const recaptchaToken = native
+        ? undefined
+        : await executeInvisibleRecaptcha(captchaRef);
       const result = await sendEmailLoginCode(
         trimmed,
         recaptchaToken,
