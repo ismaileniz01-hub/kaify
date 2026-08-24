@@ -55,7 +55,8 @@
     "cap:copy": "npx cap copy",
     "auth:otp-template": "node scripts/apply-supabase-otp-email-template.mjs",
     "paddle:vercel-env": "node scripts/setup-paddle-vercel-env.mjs",
-    "paddle:setup": "node scripts/setup-paddle-complete.mjs"
+    "paddle:setup": "node scripts/setup-paddle-complete.mjs",
+    "build:cap": "cross-env IS_CAPACITOR=true next build"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
@@ -101,6 +102,7 @@
     "@types/react-google-recaptcha": "^2.1.9",
     "@types/web-push": "^3.6.4",
     "@vitest/coverage-v8": "^4.1.9",
+    "cross-env": "^10.1.0",
     "eslint": "^9.27.0",
     "eslint-config-next": "^15.3.3",
     "google-translate-api-x": "^10.7.3",
