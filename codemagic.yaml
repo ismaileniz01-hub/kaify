@@ -59,4 +59,5 @@ workflows:
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
 
     publishing:
-      app_store_connect: "Kaify"
+      app_store_connect:
+        auth: integration
