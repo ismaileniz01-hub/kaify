@@ -15,12 +15,10 @@ workflows:
         NEXT_PUBLIC_API_BASE_URL: "https://kaifyai.org"
         NEXT_PUBLIC_SUPABASE_URL: "https://urnetodzvszmddzdazdj.supabase.co"
         NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVybmV0b2R6dnN6bWRkemRhemRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MDQ3NTQsImV4cCI6MjA5ODM4MDc1NH0.EemHnCv-3wf36S-6u5-GxGRJ-1P4uYCOJ-Zl0U-BKxQ"
-        XCODE_WORKSPACE: "App.xcworkspace"
+        XCODE_PROJECT: "App.xcodeproj"
         XCODE_SCHEME: "App"
       node: 22
       xcode: latest
-      cocoapods: default
-
     scripts:
       - name: Install dependencies
         script: |
@@ -37,20 +35,16 @@ workflows:
           fi
           npx cap sync ios
 
-      - name: Install CocoaPods
-        script: |
-          cd ios/App
-          pod install
 
       - name: Configure Apple signing
         script: |
-          xcode-project use-profiles
+          xcode-project use-profiles --project ios/App/App.xcodeproj
 
       - name: Build signed IPA
         script: |
           cd ios/App
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
 
     artifacts:
