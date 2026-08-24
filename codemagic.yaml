@@ -12,6 +12,9 @@ workflows:
         distribution_type: app_store
         bundle_identifier: org.kaifyai.app
       vars:
+        NEXT_PUBLIC_API_BASE_URL: "https://kaifyai.org"
+        NEXT_PUBLIC_SUPABASE_URL: ""
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ""
         XCODE_WORKSPACE: "App.xcworkspace"
         XCODE_SCHEME: "App"
       node: 22
