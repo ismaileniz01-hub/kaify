@@ -19,6 +19,8 @@ const BASE: OnboardingNutritionInput = {
 
 const calories = (patch: Partial<OnboardingNutritionInput> = {}) =>
   recommendOnboardingNutrition({ ...BASE, ...patch }, TODAY).calorieTarget;
+const maintenance = (patch: Partial<OnboardingNutritionInput> = {}) =>
+  recommendOnboardingNutrition({ ...BASE, ...patch }, TODAY).maintenanceCalories;
 
 describe("onboarding nutrition recommendation", () => {
   it("uses ordered Mifflin sex terms and a shared neutral term", () => {
@@ -40,24 +42,27 @@ describe("onboarding nutrition recommendation", () => {
     expect(new Set(targets).size).toBe(targets.length);
   });
 
-  it("increases monotonically for every additional training day", () => {
-    const targets = Array.from({ length: 8 }, (_, trainingDaysPerWeek) =>
-      calories({ trainingDaysPerWeek }),
+  it("keeps maintenance and calorie targets independent of planned training", () => {
+    const recommendations = Array.from({ length: 8 }, (_, trainingDaysPerWeek) =>
+      recommendOnboardingNutrition({ ...BASE, trainingDaysPerWeek }, TODAY),
     );
-    expect(targets).toEqual([...targets].sort((a, b) => a - b));
-    expect(new Set(targets).size).toBe(targets.length);
+    expect(new Set(recommendations.map((item) => item.maintenanceCalories))).toEqual(
+      new Set([recommendations[0].maintenanceCalories]),
+    );
+    expect(new Set(recommendations.map((item) => item.calorieTarget))).toEqual(
+      new Set([recommendations[0].calorieTarget]),
+    );
+    expect(recommendations[7].workoutsTarget).toBe(7);
   });
 
-  it("keeps combined activity uplift conservative", () => {
-    const low = calories({
-      activityLevel: "sedentary",
-      trainingDaysPerWeek: 0,
-    });
-    const high = calories({
-      activityLevel: "athlete",
-      trainingDaysPerWeek: 7,
-    });
-    expect(high / low).toBeLessThan(1.5);
+  it("derives the goal-adjusted target from returned maintenance", () => {
+    expect(calories({ primaryGoal: "lose_weight" })).toBe(
+      Math.round(maintenance() * 0.85),
+    );
+    expect(calories({ primaryGoal: "stay_fit" })).toBe(maintenance());
+    expect(calories({ primaryGoal: "build_muscle" })).toBe(
+      Math.round(maintenance() * 1.1),
+    );
   });
 
   it("applies all goal adjustments in the documented order", () => {

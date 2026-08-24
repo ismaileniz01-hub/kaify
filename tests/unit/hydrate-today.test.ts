@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   hydrateTodaySnapshot,
+  localCalendarWeekKeys,
   localDateKeysEnding,
   sumWeekWorkouts,
 } from "@/lib/analytics/hydrate-today";
@@ -64,6 +65,17 @@ describe("week helpers", () => {
       "2026-08-18",
       "2026-08-19",
     ]);
+  });
+
+  it("builds a Monday-through-today calendar week", () => {
+    expect(localCalendarWeekKeys("2026-08-24")).toEqual(["2026-08-24"]);
+    expect(localCalendarWeekKeys("2026-08-27")).toEqual([
+      "2026-08-24",
+      "2026-08-25",
+      "2026-08-26",
+      "2026-08-27",
+    ]);
+    expect(localCalendarWeekKeys("2026-08-30")).toHaveLength(7);
   });
 
   it("sums this week's workouts including yesterday", () => {

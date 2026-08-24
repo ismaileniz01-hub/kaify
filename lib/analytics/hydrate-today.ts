@@ -5,6 +5,7 @@
 
 export type DailySnapshotLike = {
   weightKg: number | null;
+  maintenanceCalories?: number | null;
   calorieGoal: number;
   workoutsCompleted: number;
   workoutsTarget: number;
@@ -15,6 +16,7 @@ export type DailySnapshotLike = {
 };
 
 export type LastKnownGoals = {
+  maintenanceCalories?: number | null;
   calorieGoal?: number | null;
   workoutsTarget?: number | null;
   waterGoalLiters?: number | null;
@@ -39,6 +41,14 @@ export function localDateKeysEnding(today: string, days = 7): string[] {
     keys.push(d.toISOString().slice(0, 10));
   }
   return keys;
+}
+
+/** Monday-through-today keys for a local YYYY-MM-DD calendar date. */
+export function localCalendarWeekKeys(today: string): string[] {
+  const date = new Date(`${today}T12:00:00.000Z`);
+  const weekday = date.getUTCDay();
+  const daysSinceMonday = (weekday + 6) % 7;
+  return localDateKeysEnding(today, daysSinceMonday + 1);
 }
 
 export function sumWeekWorkouts(
@@ -67,12 +77,14 @@ export function hydrateTodaySnapshot<T extends DailySnapshotLike>(
   const next = { ...today, weightKg: today.weightKg ?? lastWeight };
 
   if (!input.hasTodayRow) {
+    const maintenance = finitePositive(goals.maintenanceCalories ?? null);
     const calorieGoal = finitePositive(goals.calorieGoal ?? null);
     const workoutsTarget = finitePositive(goals.workoutsTarget ?? null);
     const waterGoal = finitePositive(goals.waterGoalLiters ?? null);
     const proteinGoal = finitePositive(goals.proteinGoalG ?? null);
     const carbsGoal = finitePositive(goals.carbsGoalG ?? null);
     const fatGoal = finitePositive(goals.fatGoalG ?? null);
+    if (maintenance != null) next.maintenanceCalories = Math.round(maintenance);
     if (calorieGoal != null) next.calorieGoal = Math.round(calorieGoal);
     if (workoutsTarget != null) next.workoutsTarget = Math.round(workoutsTarget);
     if (waterGoal != null) next.waterGoalLiters = waterGoal;

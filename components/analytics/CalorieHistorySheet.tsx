@@ -45,7 +45,8 @@ export function CalorieHistorySheet({
         ) : (
           <ul className="flex flex-col gap-2">
             {[...days].reverse().map((day) => {
-              const net = day.caloriesConsumed - day.caloriesBurned;
+              const totalBurn = day.maintenanceCalories + day.caloriesBurned;
+              const net = day.caloriesConsumed - totalBurn;
               return (
                 <li
                   key={day.date}
@@ -56,15 +57,30 @@ export function CalorieHistorySheet({
                     {t("analytics.history.eaten")}: {formatNumber(day.caloriesConsumed, lang)}{" "}
                     kcal
                   </p>
+                  <p className="text-xs text-orange-200">
+                    {t("analytics.history.intake_target")}:{" "}
+                    {formatNumber(day.calorieGoal, lang)} kcal
+                  </p>
+                  <p className="text-xs text-zinc-400">
+                    {t("analytics.history.maintenance")}:{" "}
+                    {formatNumber(day.maintenanceCalories, lang)} kcal
+                  </p>
                   <p className="text-xs text-emerald-300">
-                    {t("analytics.history.burned")}: {formatNumber(day.caloriesBurned, lang)}{" "}
-                    kcal
+                    {t("analytics.history.workout_burn")}:{" "}
+                    {formatNumber(day.caloriesBurned, lang)} kcal
                     {day.workoutsCompleted > 0
                       ? ` · ${t("analytics.history.workouts")}: ${day.workoutsCompleted}`
                       : ""}
                   </p>
+                  <p className="text-xs text-emerald-200">
+                    {t("analytics.history.total_burn")}: {formatNumber(totalBurn, lang)} kcal
+                  </p>
                   <p className="text-[11px] text-zinc-500">
-                    {t("analytics.history.net")}: {formatNumber(net, lang)} kcal
+                    {day.foodLogged
+                      ? `${t("analytics.history.net")}: ${
+                          net > 0 ? "+" : ""
+                        }${formatNumber(net, lang)} kcal`
+                      : t("analytics.history.no_food_log")}
                   </p>
                 </li>
               );

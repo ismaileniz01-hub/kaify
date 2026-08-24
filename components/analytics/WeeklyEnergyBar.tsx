@@ -10,85 +10,93 @@ import type { CalorieDayDTO } from "@/lib/services/analytics.service";
 type Props = {
   days?: CalorieDayDTO[] | null;
   calorieGoal: number;
+  maintenanceCalories?: number | null;
   onOpenHistory?: () => void;
 };
 
 function formatKg(kgDelta: number, unit: UnitSystem, lang: LangCode) {
-  const absKg = Math.abs(kgDelta);
   const suffix = unit === "imperial" ? "lb" : "kg";
-  if (absKg < 0.05) return `0.0 ${suffix}`;
-  const value = formatNumber(unit === "imperial" ? absKg * 2.205 : absKg, lang, {
+  const value = formatNumber(unit === "imperial" ? kgDelta * 2.205 : kgDelta, lang, {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });
-  return `${kgDelta < 0 ? "▼" : "▲"} ${value} ${suffix}`;
+  return `${kgDelta > 0 ? "+" : ""}${value} ${suffix}`;
 }
 
-export function WeeklyEnergyBar({ days, calorieGoal, onOpenHistory }: Props) {
+export function WeeklyEnergyBar({
+  days,
+  calorieGoal,
+  maintenanceCalories,
+  onOpenHistory,
+}: Props) {
   const { t, lang, unit } = useLang();
-  const summary = summarizeWeeklyEnergy(days, calorieGoal);
+  const summary = summarizeWeeklyEnergy(days, {
+    calorieGoal,
+    maintenanceCalories,
+  });
   const clickable = Boolean(onOpenHistory);
 
-  const cells = [
-    {
-      key: "eaten",
-      label: t("analytics.weekly_energy.eaten"),
-      value: formatNumber(summary.eaten, lang),
-      unitLabel: "kcal",
-      background: "linear-gradient(to top, #4a1a0a 0%, #120c1e 55%, #0a0612 100%)",
-      accent: "text-orange-200",
-    },
-    {
-      key: "burned",
-      label: t("analytics.weekly_energy.burned"),
-      value: formatNumber(summary.burned, lang),
-      unitLabel: "kcal",
-      background: "linear-gradient(to top, #0f2e18 0%, #0e160e 55%, #0a0612 100%)",
-      accent: "text-emerald-200",
-    },
-    {
-      key: "kg",
-      label: t("analytics.weekly_energy.kg"),
-      value: formatKg(summary.kgDelta, unit, lang),
-      unitLabel: "",
-      background: "linear-gradient(to top, #1e2a4a 0%, #120c1e 55%, #0a0612 100%)",
-      accent: "text-blue-200",
-    },
-  ] as const;
-
   const body = (
-    <div className="flex min-h-[92px] overflow-hidden rounded-2xl border border-white/10">
-      {cells.map((cell, index) => (
-        <div
-          key={cell.key}
-          className={`relative flex min-w-0 flex-1 flex-col justify-center gap-1 px-2.5 py-3 text-center ${
-            index > 0 ? "border-l border-white/10" : ""
-          }`}
-          style={{ background: cell.background }}
-        >
-          <span
-            aria-hidden
-            className={`absolute inset-x-0 top-0 h-1 ${
-              cell.key === "eaten"
-                ? "bg-orange-500"
-                : cell.key === "burned"
-                  ? "bg-emerald-500"
-                  : "bg-blue-500"
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/80">
+      <section className="border-b border-white/10 p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-orange-300">
+              {t("analytics.weekly_energy.budget_title")}
+            </p>
+            <p className="mt-1 text-base font-semibold text-white">
+              {formatNumber(summary.consumed, lang)} /{" "}
+              {formatNumber(summary.budgetTargetToDate, lang)} kcal
+            </p>
+          </div>
+          <p
+            className={`mt-1 text-xs font-medium ${
+              summary.over > 0 ? "text-rose-300" : "text-emerald-300"
             }`}
-          />
-          <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
-            {cell.label}
-          </p>
-          <p className={`text-[15px] font-semibold leading-tight tracking-tight ${cell.accent}`}>
-            {cell.value}
-            {cell.unitLabel ? (
-              <span className="ml-0.5 text-[10px] font-medium text-zinc-500">
-                {cell.unitLabel}
-              </span>
-            ) : null}
+          >
+            {summary.over > 0
+              ? t("analytics.weekly_energy.over", {
+                  value: formatNumber(summary.over, lang),
+                })
+              : t("analytics.weekly_energy.remaining", {
+                  value: formatNumber(summary.remaining, lang),
+                })}
           </p>
         </div>
-      ))}
+      </section>
+      <section className="p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+              {t("analytics.weekly_energy.balance_title")}
+            </p>
+            <p className="mt-1 text-sm text-zinc-200">
+              {t("analytics.weekly_energy.burn_total")}:{" "}
+              <strong>{formatNumber(summary.energyBurned, lang)} kcal</strong>
+            </p>
+            <p className="text-xs text-zinc-400">
+              {t("analytics.weekly_energy.net")}:{" "}
+              <span className={summary.energyBalance > 0 ? "text-rose-300" : "text-blue-200"}>
+                {summary.energyBalance > 0 ? "+" : ""}
+                {formatNumber(summary.energyBalance, lang)} kcal
+              </span>
+            </p>
+          </div>
+          <p className="rounded-full bg-white/5 px-2 py-1 text-[10px] text-zinc-400">
+            {t("analytics.weekly_energy.logged_days", {
+              logged: summary.loggedDays,
+              elapsed: summary.elapsedDays,
+            })}
+          </p>
+        </div>
+        <p className="mt-2 text-[11px] text-zinc-500">
+          {summary.estimatedWeightChangeKg == null
+            ? t("analytics.weekly_energy.estimate_unavailable")
+            : t("analytics.weekly_energy.estimate", {
+                value: formatKg(summary.estimatedWeightChangeKg, unit, lang),
+              })}
+        </p>
+      </section>
     </div>
   );
 

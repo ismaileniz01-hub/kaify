@@ -55,25 +55,49 @@ export async function completeOnboarding(
     p_health_conditions: input.healthConditions,
     p_country_code: input.countryCode,
   };
-  let { data, error } = await supabase.rpc("complete_onboarding", {
+  const persistedTargetArgs = {
     ...legacyArgs,
     p_equipment_access: input.equipmentAccess,
     p_calorie_goal: recommendation.calorieTarget,
     p_workouts_target: recommendation.workoutsTarget,
+  };
+  let { data, error } = await supabase.rpc("complete_onboarding", {
+    ...persistedTargetArgs,
+    p_maintenance_calorie_goal: recommendation.maintenanceCalories,
   });
 
-  // During a rolling deploy, PostgREST may still expose the previous RPC
-  // signature. Keep signup working; the additive migration enables atomic
-  // personalized targets as soon as it is applied.
+  // Rolling deploy stage one: maintenance migration is not visible yet, but
+  // the calorie/equipment persistence migration is.
   if (
     error &&
     (error.code === "PGRST202" ||
-      /p_equipment_access|p_calorie_goal|schema cache/i.test(error.message))
+      /p_maintenance_calorie_goal|schema cache/i.test(error.message))
   ) {
-    logger.warn("[onboarding.service:complete] using pre-migration RPC signature");
-    const legacy = await supabase.rpc("complete_onboarding", legacyArgs);
-    data = legacy.data;
-    error = legacy.error;
+    logger.warn(
+      "[onboarding.service:complete] using pre-maintenance RPC signature",
+    );
+    const previous = await supabase.rpc(
+      "complete_onboarding",
+      persistedTargetArgs,
+    );
+    data = previous.data;
+    error = previous.error;
+  }
+
+  // Rolling deploy stage two: neither persistence migration is visible yet.
+  if (
+    error &&
+    (error.code === "PGRST202" ||
+      /p_equipment_access|p_calorie_goal|p_workouts_target|schema cache/i.test(
+        error.message,
+      ))
+  ) {
+    logger.warn(
+      "[onboarding.service:complete] using pre-persistence RPC signature",
+    );
+    const oldest = await supabase.rpc("complete_onboarding", legacyArgs);
+    data = oldest.data;
+    error = oldest.error;
   }
 
   if (error) {

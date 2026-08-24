@@ -15,6 +15,7 @@ export type OnboardingNutritionInput = {
 };
 
 export type OnboardingNutritionRecommendation = {
+  maintenanceCalories: number;
   calorieTarget: number;
   workoutsTarget: number;
 };
@@ -47,14 +48,7 @@ const LIFESTYLE_MULTIPLIER: Record<ActivityLevel, number> = {
   athlete: 1.52,
 };
 
-/**
- * Each planned training day adds 2.5% of BMR to average daily expenditure.
- * At seven days this is +17.5%, keeping the combined range conservative while
- * making every training-day increase monotonic.
- */
-const TRAINING_DAY_BMR_FRACTION = 0.025;
-
-/** Goal adjustments are conservative percentages applied after TDEE. */
+/** Goal adjustments are conservative percentages applied after maintenance. */
 const GOAL_MULTIPLIER: Record<PrimaryGoal, number> = {
   lose_weight: 0.85,
   build_muscle: 1.1,
@@ -90,13 +84,19 @@ export function recommendOnboardingNutrition(
     6.25 * input.heightCm -
     5 * age +
     MIFFLIN_SEX_TERM[input.gender];
-  const tdee =
-    bmr *
-    (LIFESTYLE_MULTIPLIER[input.activityLevel] +
-      input.trainingDaysPerWeek * TRAINING_DAY_BMR_FRACTION);
-  const adjusted = Math.round(tdee * GOAL_MULTIPLIER[input.primaryGoal]);
+  const maintenanceCalories = Math.min(
+    ONBOARDING_CALORIE_MAX,
+    Math.max(
+      ONBOARDING_CALORIE_MIN,
+      Math.round(bmr * LIFESTYLE_MULTIPLIER[input.activityLevel]),
+    ),
+  );
+  const adjusted = Math.round(
+    maintenanceCalories * GOAL_MULTIPLIER[input.primaryGoal],
+  );
 
   return {
+    maintenanceCalories,
     calorieTarget: Math.min(
       ONBOARDING_CALORIE_MAX,
       Math.max(ONBOARDING_CALORIE_MIN, adjusted),

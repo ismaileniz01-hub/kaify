@@ -229,6 +229,7 @@ type CompleteOnboardingArgs = {
   p_activity_level?: string | null;
   p_training_days_per_week?: number | null;
   p_equipment_access?: EquipmentAccess | null;
+  p_maintenance_calorie_goal?: number | null;
   p_calorie_goal?: number | null;
   p_workouts_target?: number | null;
   p_dietary_preference?: string | null;
@@ -639,6 +640,7 @@ export type Database = {
           weight_kg: number | null;
           calories_consumed: number;
           calories_burned: number;
+          maintenance_calorie_goal: number | null;
           calorie_goal: number;
           workouts_completed: number;
           workouts_target: number;

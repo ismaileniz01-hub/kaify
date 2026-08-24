@@ -11,6 +11,7 @@ import {
   readPreviousWeightKg,
   readLatestWeightKg,
   readLatestGoalRow,
+  readNutritionRecommendationProfile,
   readProfileWeightKg,
   readUserTimezone,
   readWeeklyAnalyticsSummary,
@@ -24,15 +25,28 @@ import {
 } from "@/lib/repositories/analytics-write.repository";
 import {
   hydrateTodaySnapshot,
+  localCalendarWeekKeys,
   localDateKeysEnding,
   sumWeekWorkouts,
 } from "@/lib/analytics/hydrate-today";
 import { effectiveDailyBurned } from "@/lib/analytics/resting-burn";
+import { recommendOnboardingNutrition } from "@/lib/nutrition/onboarding-recommendation";
+import {
+  ACTIVITY_LEVELS,
+  GENDERS,
+  type ActivityLevel,
+  type Gender,
+} from "@/lib/validations/onboarding.schema";
+import {
+  PRIMARY_GOALS,
+  type PrimaryGoal,
+} from "@/lib/validations/goals.schema";
 export type AnalyticsDailyDTO = {
   entryDate: string;
   weightKg: number | null;
   caloriesConsumed: number;
   caloriesBurned: number;
+  maintenanceCalories: number | null;
   calorieGoal: number;
   workoutsCompleted: number;
   workoutsTarget: number;
@@ -55,7 +69,11 @@ export type WeeklyStepsDTO = {
 export type CalorieDayDTO = {
   date: string;
   caloriesConsumed: number;
+  /** Logged workout calories only. */
   caloriesBurned: number;
+  calorieGoal: number;
+  maintenanceCalories: number;
+  foodLogged: boolean;
   workoutsCompleted: number;
 };
 
@@ -93,6 +111,7 @@ function mapRow(row: AnalyticsRow): AnalyticsDailyDTO {
     weightKg: row.weight_kg,
     caloriesConsumed: row.calories_consumed,
     caloriesBurned: row.calories_burned,
+    maintenanceCalories: row.maintenance_calorie_goal ?? null,
     calorieGoal: row.calorie_goal,
     workoutsCompleted: Number(row.workouts_completed),
     workoutsTarget: row.workouts_target,
@@ -115,6 +134,7 @@ function defaultToday(entryDate?: string): AnalyticsDailyDTO {
     weightKg: null,
     caloriesConsumed: 0,
     caloriesBurned: 0,
+    maintenanceCalories: null,
     calorieGoal: 2100,
     workoutsCompleted: 0,
     workoutsTarget: 5,
@@ -128,6 +148,36 @@ function defaultToday(entryDate?: string): AnalyticsDailyDTO {
     carbsGoalG: 250,
     fatGoalG: 65,
   };
+}
+
+function derivedMaintenanceCalories(
+  profile: Awaited<ReturnType<typeof readNutritionRecommendationProfile>>,
+  today: string,
+): number | null {
+  if (
+    !profile?.birthDate ||
+    profile.heightCm == null ||
+    profile.weightKg == null ||
+    !GENDERS.includes(profile.gender as Gender) ||
+    !ACTIVITY_LEVELS.includes(profile.activityLevel as ActivityLevel)
+  ) {
+    return null;
+  }
+  const primaryGoal = PRIMARY_GOALS.includes(profile.primaryGoal as PrimaryGoal)
+    ? (profile.primaryGoal as PrimaryGoal)
+    : "stay_fit";
+  return recommendOnboardingNutrition(
+    {
+      gender: profile.gender as Gender,
+      birthDate: profile.birthDate,
+      heightCm: Number(profile.heightCm),
+      weightKg: Number(profile.weightKg),
+      activityLevel: profile.activityLevel as ActivityLevel,
+      trainingDaysPerWeek: Number(profile.trainingDaysPerWeek) || 0,
+      primaryGoal,
+    },
+    new Date(`${today}T12:00:00.000Z`),
+  ).maintenanceCalories;
 }
 
 function extractBodyScoreFromPayload(payload: Json | null): number | null {
@@ -243,6 +293,7 @@ async function loadTodayNutritionSnapshot(userId: string): Promise<AnalyticsDail
     lastWeightKg: lastWeightKg ?? profileWeightKg,
     lastGoals: lastGoalRow
       ? {
+          maintenanceCalories: lastGoalRow.maintenance_calorie_goal,
           calorieGoal: lastGoalRow.calorie_goal,
           workoutsTarget: lastGoalRow.workouts_target,
           waterGoalLiters: Number(lastGoalRow.water_goal_liters),
@@ -269,19 +320,21 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
   const timezone = await resolveUserTimezone(userId);
   const today = localTodayDate(timezone);
 
-  const weekAgo = new Date(`${today}T12:00:00.000Z`);
-  weekAgo.setUTCDate(weekAgo.getUTCDate() - 6);
-  const weekStart = weekAgo.toISOString().slice(0, 10);
+  const rollingStepDates = localDateKeysEnding(today, 7);
+  const calendarWeekDates = localCalendarWeekKeys(today);
+  const stepStart = rollingStepDates[0];
+  const weekStart = calendarWeekDates[0];
 
-  const [todayRow, weekRows, prevWeightKg, weekNutrition, lastWeightKg, lastGoalRow, profileWeightKg] =
+  const [todayRow, weekRows, prevWeightKg, weekNutrition, lastWeightKg, lastGoalRow, profileWeightKg, nutritionProfile] =
     await Promise.all([
       readAnalyticsDailyRow(readClient, userId, today),
-      readHealthStepsRange(readClient, userId, weekStart, today),
+      readHealthStepsRange(readClient, userId, stepStart, today),
       readPreviousWeightKg(readClient, userId, today),
       readWeeklyAnalyticsSummary(readClient, userId, weekStart, today),
       readLatestWeightKg(readClient, userId, today),
       readLatestGoalRow(readClient, userId, today),
       readProfileWeightKg(readClient, userId).catch(() => null),
+      readNutritionRecommendationProfile(readClient, userId).catch(() => null),
     ]);
 
   const storedDto = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today);
@@ -290,6 +343,7 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
     lastWeightKg: lastWeightKg ?? profileWeightKg,
     lastGoals: lastGoalRow
       ? {
+          maintenanceCalories: lastGoalRow.maintenance_calorie_goal,
           calorieGoal: lastGoalRow.calorie_goal,
           workoutsTarget: lastGoalRow.workouts_target,
           waterGoalLiters: Number(lastGoalRow.water_goal_liters),
@@ -299,6 +353,12 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
         }
       : null,
   });
+  todayDto = {
+    ...todayDto,
+    maintenanceCalories:
+      todayDto.maintenanceCalories ??
+      derivedMaintenanceCalories(nutritionProfile, today),
+  };
 
   if (weekRows && weekRows.length > 0) {
     const stepSum = weekRows.reduce((sum, r) => sum + (r.steps ?? 0), 0);
@@ -309,13 +369,15 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
 
   todayDto = {
     ...todayDto,
-    caloriesBurned: effectiveDailyBurned(todayDto.caloriesBurned, todayDto.calorieGoal, {
-      includeResting: true,
-    }),
+    caloriesBurned: effectiveDailyBurned(
+      todayDto.caloriesBurned,
+      todayDto.maintenanceCalories,
+      { includeResting: true },
+    ),
   };
 
   const weeklySteps: WeeklyStepsDTO = [];
-  for (const key of localDateKeysEnding(today, 7)) {
+  for (const key of rollingStepDates) {
     const found = weekRows?.find((r) => r.entry_date === key);
     weeklySteps.push({ date: key, steps: found?.steps ?? 0 });
   }
@@ -327,21 +389,46 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
   }
 
   const calorieHistory: CalorieDayDTO[] = [];
-  for (const key of localDateKeysEnding(today, 7)) {
+  for (const key of calendarWeekDates) {
     const found = weekNutrition.find((r) => r.entry_date === key) as
       | {
           calories_consumed?: number;
           calories_burned?: number;
+          calorie_goal?: number;
+          maintenance_calorie_goal?: number | null;
+          protein_g?: number;
+          carbs_g?: number;
+          fat_g?: number;
           workouts_completed?: number;
         }
       | undefined;
+    const caloriesConsumed =
+      key === today
+        ? Math.max(Number(found?.calories_consumed) || 0, todayDto.caloriesConsumed)
+        : Number(found?.calories_consumed) || 0;
+    const proteinG =
+      key === today
+        ? Math.max(Number(found?.protein_g) || 0, todayDto.proteinG)
+        : Number(found?.protein_g) || 0;
+    const carbsG =
+      key === today
+        ? Math.max(Number(found?.carbs_g) || 0, todayDto.carbsG)
+        : Number(found?.carbs_g) || 0;
+    const fatG =
+      key === today
+        ? Math.max(Number(found?.fat_g) || 0, todayDto.fatG)
+        : Number(found?.fat_g) || 0;
     calorieHistory.push({
       date: key,
-      caloriesConsumed:
-        key === today
-          ? Math.max(Number(found?.calories_consumed) || 0, todayDto.caloriesConsumed)
-          : Number(found?.calories_consumed) || 0,
+      caloriesConsumed,
       caloriesBurned: Number(found?.calories_burned) || 0,
+      calorieGoal: Number(found?.calorie_goal) || todayDto.calorieGoal,
+      maintenanceCalories:
+        Number(found?.maintenance_calorie_goal) ||
+        todayDto.maintenanceCalories ||
+        todayDto.calorieGoal,
+      foodLogged:
+        caloriesConsumed > 0 || proteinG > 0 || carbsG > 0 || fatG > 0,
       workoutsCompleted: Number(found?.workouts_completed) || 0,
     });
   }

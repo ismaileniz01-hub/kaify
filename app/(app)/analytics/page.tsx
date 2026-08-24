@@ -16,7 +16,6 @@ import { InlineAlert } from "@/components/InlineAlert";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import { formatTime } from "@/lib/i18n/format";
 import { apiGet } from "@/lib/api/client";
-import { summarizeWeeklyEnergy } from "@/lib/analytics/weekly-energy";
 import type { AnalyticsBundleDTO } from "@/lib/services/analytics.service";
 import { AppHeader } from "@/components/navigation/AppHeader";
 
@@ -69,25 +68,22 @@ export default function AnalyticsPage() {
     data?.calorieHistory?.reduce((sum, day) => sum + day.workoutsCompleted, 0) ??
     today?.workoutsCompleted ??
     0;
-  const weeklyEnergy = summarizeWeeklyEnergy(
-    data?.calorieHistory,
-    today?.calorieGoal ?? 2100,
-  );
-  const displayWeightKg =
-    today?.weightKg != null
-      ? Math.round((today.weightKg + weeklyEnergy.kgDelta) * 10) / 10
-      : null;
   const weightVal =
-    displayWeightKg != null
+    today?.weightKg != null
       ? unit === "metric"
-        ? `${displayWeightKg} kg`
-        : `${(displayWeightKg * 2.205).toFixed(1)} lb`
+        ? `${today.weightKg} kg`
+        : `${(today.weightKg * 2.205).toFixed(1)} lb`
       : "—";
 
   const weightTrend =
-    weeklyEnergy.kgDelta !== 0
-      ? `${weeklyEnergy.kgDelta > 0 ? "▲" : "▼"} ${Math.abs(weeklyEnergy.kgDelta).toFixed(1)} kg`
-      : today?.weightKg != null
+    data?.weightTrendKg != null && data.weightTrendKg !== 0
+      ? t("analytics.weight_change", {
+          value:
+            unit === "metric"
+              ? `${data.weightTrendKg > 0 ? "+" : ""}${data.weightTrendKg.toFixed(1)} kg`
+              : `${data.weightTrendKg > 0 ? "+" : ""}${(data.weightTrendKg * 2.205).toFixed(1)} lb`,
+        })
+      : data?.weightTrendKg === 0
         ? t("analytics.weight_stable")
         : t("analytics.no_trend");
 
@@ -184,7 +180,7 @@ export default function AnalyticsPage() {
             value={weightVal}
             trend={weightTrend}
             barColor="#3b82f6"
-            barPercent={displayWeightKg ? 62 : 0}
+            barPercent={today?.weightKg ? 62 : 0}
             gradient="blue"
           />
           <StatCard
@@ -236,6 +232,7 @@ export default function AnalyticsPage() {
         <WeeklyEnergyBar
           days={data?.calorieHistory}
           calorieGoal={today?.calorieGoal ?? 2100}
+          maintenanceCalories={today?.maintenanceCalories}
           onOpenHistory={today ? () => setHistoryOpen(true) : undefined}
         />
 

@@ -8,6 +8,7 @@ export type AnalyticsDailyRow = {
   weight_kg: number | null;
   calories_consumed: number;
   calories_burned: number;
+  maintenance_calorie_goal: number | null;
   calorie_goal: number;
   workouts_completed: number;
   workouts_target: number;
@@ -114,6 +115,7 @@ export async function readLatestGoalRow(
   userId: string,
   onOrBeforeDate: string,
 ): Promise<{
+  maintenance_calorie_goal?: number | null;
   calorie_goal: number;
   workouts_target: number;
   water_goal_liters: number;
@@ -121,6 +123,20 @@ export async function readLatestGoalRow(
   carbs_goal_g: number;
   fat_goal_g: number;
 } | null> {
+  const withMaintenance = await client
+    .from("analytics_daily")
+    .select(
+      "maintenance_calorie_goal, calorie_goal, workouts_target, water_goal_liters, protein_goal_g, carbs_goal_g, fat_goal_g",
+    )
+    .eq("user_id", userId)
+    .lte("entry_date", onOrBeforeDate)
+    .order("entry_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!withMaintenance.error) return withMaintenance.data;
+
+  // Preserve goal lookup while PostgREST still exposes the pre-migration
+  // analytics_daily shape during a rolling deploy.
   const { data } = await client
     .from("analytics_daily")
     .select(
@@ -153,15 +169,63 @@ export async function readWeeklyAnalyticsSummary(
   weekStart: string,
   today: string,
 ) {
+  const withMaintenance = await client
+    .from("analytics_daily")
+    .select(
+      "entry_date, calories_consumed, calories_burned, calorie_goal, maintenance_calorie_goal, protein_g, carbs_g, fat_g, protein_goal_g, workouts_completed",
+    )
+    .eq("user_id", userId)
+    .gte("entry_date", weekStart)
+    .lte("entry_date", today);
+  if (!withMaintenance.error) return withMaintenance.data ?? [];
+
   const { data } = await client
     .from("analytics_daily")
     .select(
-      "entry_date, calories_consumed, calories_burned, calorie_goal, protein_g, protein_goal_g, workouts_completed",
+      "entry_date, calories_consumed, calories_burned, calorie_goal, protein_g, carbs_g, fat_g, protein_goal_g, workouts_completed",
     )
     .eq("user_id", userId)
     .gte("entry_date", weekStart)
     .lte("entry_date", today);
   return data ?? [];
+}
+
+export async function readNutritionRecommendationProfile(
+  client: SupabaseClient,
+  userId: string,
+): Promise<{
+  gender: string | null;
+  birthDate: string | null;
+  heightCm: number | null;
+  weightKg: number | null;
+  activityLevel: string | null;
+  trainingDaysPerWeek: number | null;
+  primaryGoal: string | null;
+} | null> {
+  const [profile, settings] = await Promise.all([
+    client
+      .from("profiles")
+      .select(
+        "gender, birth_date, height_cm, weight_kg, activity_level, training_days_per_week",
+      )
+      .eq("id", userId)
+      .maybeSingle(),
+    client
+      .from("user_settings")
+      .select("primary_goal")
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
+  if (!profile.data) return null;
+  return {
+    gender: profile.data.gender,
+    birthDate: profile.data.birth_date,
+    heightCm: profile.data.height_cm,
+    weightKg: profile.data.weight_kg,
+    activityLevel: profile.data.activity_level,
+    trainingDaysPerWeek: profile.data.training_days_per_week,
+    primaryGoal: settings.data?.primary_goal ?? null,
+  };
 }
 
 export async function readMayaAnalysisMessages(

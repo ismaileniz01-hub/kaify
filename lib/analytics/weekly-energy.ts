@@ -1,21 +1,28 @@
-/**
- * Weekly eaten vs burned kcal, plus kg from this week's energy balance.
- * ~7700 kcal net deficit ≈ 1 kg body fat.
- */
 export const KCAL_PER_KG = 7700;
-const KG_CAP = 5;
+const WEEKLY_KG_ESTIMATE_CAP = 2;
 
 export type WeeklyEnergyDay = {
+  date?: string;
   caloriesConsumed?: number | null;
+  /** Workout calories only; maintenance is deliberately separate. */
   caloriesBurned?: number | null;
+  calorieGoal?: number | null;
+  maintenanceCalories?: number | null;
+  /** Explicit meal-presence signal from persisted nutrition fields. */
+  foodLogged?: boolean;
 };
 
 export type WeeklyEnergySummary = {
-  eaten: number;
-  /** Logged + resting burn for days that have any energy data. */
-  burned: number;
-  /** Negative = estimated loss ("verilen kg"). */
-  kgDelta: number;
+  budgetTargetToDate: number;
+  consumed: number;
+  remaining: number;
+  over: number;
+  energyBurned: number;
+  energyBalance: number;
+  loggedDays: number;
+  elapsedDays: number;
+  /** Only available after >=4 complete elapsed days. Negative means estimated loss. */
+  estimatedWeightChangeKg: number | null;
 };
 
 function kcal(value: unknown): number {
@@ -23,48 +30,63 @@ function kcal(value: unknown): number {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
-/**
- * Sum eaten vs effective burned. Resting TDEE (calorieGoal) fills days that
- * already have a food or workout log, and always fills "today" so verilen
- * is not stuck at 7700 while alınan stays 0.
- */
 export function summarizeWeeklyEnergy(
   history: WeeklyEnergyDay[] | null | undefined,
-  calorieGoal: number,
-  opts?: { todayIndex?: number },
+  fallback: {
+    calorieGoal: number;
+    maintenanceCalories: number | null | undefined;
+  },
 ): WeeklyEnergySummary {
   const days = history ?? [];
-  const goal =
-    Number.isFinite(calorieGoal) && calorieGoal > 0 ? calorieGoal : 2100;
-  const todayIndex =
-    typeof opts?.todayIndex === "number" ? opts.todayIndex : days.length - 1;
+  const fallbackGoal = kcal(fallback.calorieGoal) || 2100;
+  const fallbackMaintenance =
+    kcal(fallback.maintenanceCalories) || fallbackGoal;
 
-  const eaten = Math.round(
+  let budgetTargetToDate = 0;
+  let consumed = 0;
+  let energyBurned = 0;
+  let loggedDays = 0;
+
+  for (const day of days) {
+    const dayConsumed = kcal(day.caloriesConsumed);
+    const workout = kcal(day.caloriesBurned);
+    budgetTargetToDate += kcal(day.calorieGoal) || fallbackGoal;
+    const hasFoodLog = day.foodLogged ?? dayConsumed > 0;
+    if (!hasFoodLog) continue;
+    loggedDays += 1;
+    energyBurned +=
+      (kcal(day.maintenanceCalories) || fallbackMaintenance) + workout;
+  }
+
+  consumed = Math.round(
     days.reduce((sum, day) => sum + kcal(day.caloriesConsumed), 0),
   );
+  budgetTargetToDate = Math.round(budgetTargetToDate);
+  energyBurned = Math.round(energyBurned);
+  const energyBalance = consumed - energyBurned;
+  const budgetDelta = budgetTargetToDate - consumed;
 
-  let burned = 0;
-  let counted = 0;
-  days.forEach((day, index) => {
-    const consumed = kcal(day.caloriesConsumed);
-    const workout = kcal(day.caloriesBurned);
-    const isToday = index === todayIndex;
-    if (!isToday && consumed <= 0 && workout <= 0) return;
-    burned += goal + workout;
-    counted += 1;
-  });
-
-  if (counted === 0) {
-    return { eaten: 0, burned: Math.round(goal), kgDelta: 0 };
+  let estimatedWeightChangeKg: number | null = null;
+  if (days.length >= 4 && loggedDays === days.length) {
+    const raw = energyBalance / KCAL_PER_KG;
+    estimatedWeightChangeKg =
+      Math.round(
+        Math.max(
+          -WEEKLY_KG_ESTIMATE_CAP,
+          Math.min(WEEKLY_KG_ESTIMATE_CAP, raw),
+        ) * 10,
+      ) / 10;
   }
 
-  burned = Math.round(burned);
-  if (eaten <= 0 && days.every((day) => kcal(day.caloriesBurned) <= 0)) {
-    return { eaten: 0, burned, kgDelta: 0 };
-  }
-
-  const net = eaten - burned;
-  const raw = net / KCAL_PER_KG;
-  const kgDelta = Math.max(-KG_CAP, Math.min(KG_CAP, Math.round(raw * 10) / 10));
-  return { eaten, burned, kgDelta };
+  return {
+    budgetTargetToDate,
+    consumed,
+    remaining: Math.max(0, budgetDelta),
+    over: Math.max(0, -budgetDelta),
+    energyBurned,
+    energyBalance,
+    loggedDays,
+    elapsedDays: days.length,
+    estimatedWeightChangeKg,
+  };
 }
