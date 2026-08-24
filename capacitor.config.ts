@@ -19,7 +19,7 @@ const serverUrl = resolveNativeServerUrl();
 const isLocal = serverUrl.startsWith("http://");
 
 const config: CapacitorConfig = {
-  appId: "org.kaify.app",
+  appId: 'org.kaifyai.app',
   appName: "Kaify Ai",
   webDir: "public",
   loggingBehavior: isLocal ? "debug" : "none",
