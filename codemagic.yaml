@@ -5,14 +5,12 @@ workflows:
     max_build_duration: 120
 
     integrations:
-      app_store_connect: KaifyApple
+      app_store_connect: Kaify
 
     environment:
       ios_signing:
-        provisioning_profiles:
-          - kaify_appstore_profile
-        certificates:
-          - kaify_distribution
+        distribution_type: app_store
+        bundle_identifier: org.kaifyai.app
       vars:
         XCODE_WORKSPACE: "App.xcworkspace"
         XCODE_SCHEME: "App"
