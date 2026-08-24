@@ -70,6 +70,7 @@
     "@capacitor/push-notifications": "^8.1.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
+    "@capgo/capacitor-health": "^8.10.4",
     "@capgo/capacitor-speech-recognition": "^8.1.9",
     "@paddle/paddle-js": "^1.6.4",
     "@paddle/paddle-node-sdk": "^3.8.0",

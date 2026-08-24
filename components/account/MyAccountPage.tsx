@@ -485,17 +485,29 @@ export function MyAccountPage() {
                       {t("myaccount.open_app")}
                     </Link>
                   ) : native ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void import("@/lib/native/open-external").then(({ openExternalUrl }) =>
-                          openExternalUrl(WEB_PRICING_URL),
-                        );
-                      }}
-                      className="account-btn account-btn--primary flex-1 justify-center"
-                    >
-                      {t("myaccount.choose_plan")}
-                    </button>
+                    <div className="flex w-full flex-col gap-2">
+                      <p className="text-center text-xs leading-relaxed text-zinc-400">
+                        {t("myaccount.pay_in_browser")}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void import("@/lib/native/open-external").then(({ openExternalUrl }) =>
+                            openExternalUrl(WEB_PRICING_URL),
+                          );
+                        }}
+                        className="account-btn account-btn--primary w-full justify-center"
+                      >
+                        {t("myaccount.choose_plan")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void refreshSession()}
+                        className="account-btn account-btn--ghost w-full justify-center"
+                      >
+                        {t("myaccount.refresh_subscription")}
+                      </button>
+                    </div>
                   ) : (
                     <Link href="/pricing" className="account-btn account-btn--primary flex-1 justify-center">
                       {t("myaccount.choose_plan")}

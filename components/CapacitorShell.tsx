@@ -129,6 +129,16 @@ export function CapacitorShell() {
               })
             : undefined;
 
+        const appStateHandle = await App.addListener(
+          "appStateChange",
+          (state) => {
+            if (!state.isActive) return;
+            void import("@/lib/native/health-steps").then((mod) =>
+              mod.syncNativeHealthSteps().catch(() => undefined),
+            );
+          },
+        );
+
         removeListeners = () => {
           unbindNavigation();
           void keyboardShow.remove();
@@ -137,6 +147,7 @@ export function CapacitorShell() {
           void regErrHandle.remove();
           void actionHandle.remove();
           void appUrlHandle.remove();
+          void appStateHandle.remove();
           void backHandle?.remove();
           setKeyboardOffset(0);
           clearNativeAppRoot();

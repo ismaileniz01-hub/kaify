@@ -1,25 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { apiPost } from "@/lib/api/client";
+import { apiPost, ApiClientError } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
 import { notifyAnalyticsUpdated } from "@/lib/analytics-client-cache";
-
-type ConfirmationPayload = {
-  pendingId: string;
-  summary: string;
-};
+import {
+  resolvedConfirmationStatus,
+  type ChatConfirmationPayload,
+} from "@/lib/analytics/confirmation-payload";
 
 export function AnalyticsConfirmationCard({
   payload,
   onResolved,
 }: {
-  payload: ConfirmationPayload;
-  onResolved?: () => void;
+  payload: ChatConfirmationPayload;
+  onResolved?: (status: "confirmed" | "rejected") => void;
 }) {
   const { t } = useLang();
+  const initial = resolvedConfirmationStatus(payload);
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<"confirmed" | "rejected" | null>(null);
+  const [done, setDone] = useState<"confirmed" | "rejected" | null>(initial);
   const [failed, setFailed] = useState(false);
   const [pendingAction, setPendingAction] = useState<"confirm" | "reject" | null>(null);
 
@@ -33,11 +33,19 @@ export function AnalyticsConfirmationCard({
         pendingId: payload.pendingId,
         action,
       });
-      setDone(action === "confirm" ? "confirmed" : "rejected");
+      const status = action === "confirm" ? "confirmed" : "rejected";
+      setDone(status);
       notifyAnalyticsUpdated();
-      onResolved?.();
-    } catch {
-      setFailed(true);
+      onResolved?.(status);
+    } catch (error) {
+      if (error instanceof ApiClientError && error.code === "NOT_FOUND") {
+        const status = action === "confirm" ? "confirmed" : "rejected";
+        setDone(status);
+        notifyAnalyticsUpdated();
+        onResolved?.(status);
+      } else {
+        setFailed(true);
+      }
     } finally {
       setBusy(false);
     }

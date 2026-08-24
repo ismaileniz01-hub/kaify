@@ -15,6 +15,7 @@ type GoalsValues = {
   calorieGoal: number;
   workoutsTarget: number;
   waterGoalLiters: number;
+  maintenanceCalories?: number | null;
 };
 
 type Props = {
@@ -93,6 +94,13 @@ export function GoalsEditor({ initial, onSaved, onCancel }: Props) {
           <p className="mt-1 text-xs leading-relaxed text-zinc-400">
             {t("goals.subtitle")}
           </p>
+          {initial.maintenanceCalories ? (
+            <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+              {t("goals.maintenance", { value: initial.maintenanceCalories })}
+              {" "}
+              {t("goals.maintenance_hint")}
+            </p>
+          ) : null}
         </div>
         {onCancel && (
           <button

@@ -1093,6 +1093,13 @@ export type Database = {
         };
         Returns: undefined;
       };
+      increment_analytics_workouts: {
+        Args: {
+          p_user_id: string;
+          p_entry_date: string;
+        };
+        Returns: undefined;
+      };
       confirm_analytics_pending: {
         Args: { p_user_id: string; p_pending_id: string };
         Returns: undefined;

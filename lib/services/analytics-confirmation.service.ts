@@ -6,6 +6,8 @@ import { invalidateHomeBundleCache, invalidateUserReadCaches } from "@/lib/cache
 import { sanitizeAnalyticsPatch, sanitizeMealMacros } from "@/lib/analytics/bounds";
 import { patchAnalyticsDaily } from "@/lib/services/analytics.service";
 import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
+import { mergeConfirmationStamp } from "@/lib/analytics/confirmation-payload";
+import { logger } from "@/lib/logger";
 import type { Json } from "@/lib/types/database.types";
 
 /** Pending meal/analytics confirmations expire after 24h (application-enforced). */
@@ -87,6 +89,57 @@ export async function confirmLatestPendingAnalytics(
   return payload;
 }
 
+async function stampConfirmationOnChatMessages(params: {
+  admin: SupabaseClient;
+  userId: string;
+  pendingId: string;
+  status: "confirmed" | "rejected";
+  messageId?: string | null;
+  sourceMessageId?: string | null;
+}): Promise<void> {
+  try {
+    const ids = new Set<string>();
+    if (params.messageId) ids.add(params.messageId);
+    if (params.sourceMessageId) ids.add(params.sourceMessageId);
+
+    const stampRow = async (messageId: string, payload: unknown) => {
+      const next = mergeConfirmationStamp(payload, params.status);
+      await params.admin
+        .from("chat_messages")
+        .update({ payload: next as Json })
+        .eq("id", messageId)
+        .eq("user_id", params.userId);
+    };
+
+    if (ids.size > 0) {
+      const { data: rows } = await params.admin
+        .from("chat_messages")
+        .select("id, payload")
+        .eq("user_id", params.userId)
+        .in("id", [...ids]);
+      for (const row of rows ?? []) {
+        if (row?.id) await stampRow(String(row.id), row.payload);
+      }
+      if ((rows?.length ?? 0) > 0) return;
+    }
+
+    const { data: matched } = await params.admin
+      .from("chat_messages")
+      .select("id, payload")
+      .eq("user_id", params.userId)
+      .eq("payload->confirmation->>pendingId", params.pendingId)
+      .limit(8);
+    for (const row of matched ?? []) {
+      if (row?.id) await stampRow(String(row.id), row.payload);
+    }
+  } catch (error) {
+    logger.warn("[analytics-confirmation] failed to stamp chat payload", {
+      pendingId: params.pendingId,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+  }
+}
+
 export async function confirmPendingAnalytics(
   userId: string,
   pendingId: string,
@@ -94,12 +147,36 @@ export async function confirmPendingAnalytics(
   const admin = createAdminSupabaseClient() as SupabaseClient;
   const { data: pending } = await admin
     .from("analytics_pending_confirmations")
-    .select("payload")
+    .select("payload, message_id, source_message_id, status")
     .eq("id", pendingId)
     .eq("user_id", userId)
     .maybeSingle();
 
+  const alreadyResolved =
+    pending?.status === "confirmed" || pending?.status === "rejected"
+      ? (pending.status as "confirmed" | "rejected")
+      : null;
+  if (alreadyResolved) {
+    await stampConfirmationOnChatMessages({
+      admin,
+      userId,
+      pendingId,
+      status: alreadyResolved,
+      messageId: pending?.message_id,
+      sourceMessageId: pending?.source_message_id,
+    });
+    return;
+  }
+
   await writeConfirmAnalyticsPending(userId, pendingId);
+  await stampConfirmationOnChatMessages({
+    admin,
+    userId,
+    pendingId,
+    status: "confirmed",
+    messageId: pending?.message_id,
+    sourceMessageId: pending?.source_message_id,
+  });
   void Promise.all([
     invalidateUserReadCaches(userId),
     invalidateHomeBundleCache(userId),
@@ -167,14 +244,39 @@ export async function rejectPendingAnalytics(
     .eq("id", pendingId)
     .eq("user_id", userId)
     .eq("status", "pending")
-    .select("id");
+    .select("id, message_id, source_message_id");
 
   if (error) {
     throw new ApiError("INTERNAL_ERROR", "Onay reddedilemedi.");
   }
   if (!data || data.length === 0) {
+    const { data: existing } = await admin
+      .from("analytics_pending_confirmations")
+      .select("status, message_id, source_message_id")
+      .eq("id", pendingId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (existing?.status === "confirmed" || existing?.status === "rejected") {
+      await stampConfirmationOnChatMessages({
+        admin,
+        userId,
+        pendingId,
+        status: existing.status,
+        messageId: existing.message_id,
+        sourceMessageId: existing.source_message_id,
+      });
+      return;
+    }
     throw new ApiError("NOT_FOUND", "Onay bekleyen kayıt bulunamadı.");
   }
+  await stampConfirmationOnChatMessages({
+    admin,
+    userId,
+    pendingId,
+    status: "rejected",
+    messageId: data[0]?.message_id,
+    sourceMessageId: data[0]?.source_message_id,
+  });
 }
 
 export async function linkPendingConfirmationToMessage(params: {

@@ -21,6 +21,7 @@ import {
   invalidateAnalyticsUserCache,
   writeAnalyticsDailyPatch,
   writeAnalyticsMealIncrement,
+  writeAnalyticsWorkoutIncrement,
   writeHealthStepsBatch,
 } from "@/lib/repositories/analytics-write.repository";
 import {
@@ -29,7 +30,6 @@ import {
   localDateKeysEnding,
   sumWeekWorkouts,
 } from "@/lib/analytics/hydrate-today";
-import { effectiveDailyBurned } from "@/lib/analytics/resting-burn";
 import { recommendOnboardingNutrition } from "@/lib/nutrition/onboarding-recommendation";
 import {
   ACTIVITY_LEVELS,
@@ -320,9 +320,10 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
   const timezone = await resolveUserTimezone(userId);
   const today = localTodayDate(timezone);
 
-  const rollingStepDates = localDateKeysEnding(today, 7);
+  const chartStepDates = localDateKeysEnding(today, 90);
+  const lastSevenDates = new Set(localDateKeysEnding(today, 7));
   const calendarWeekDates = localCalendarWeekKeys(today);
-  const stepStart = rollingStepDates[0];
+  const stepStart = chartStepDates[0];
   const weekStart = calendarWeekDates[0];
 
   const [todayRow, weekRows, prevWeightKg, weekNutrition, lastWeightKg, lastGoalRow, profileWeightKg, nutritionProfile] =
@@ -360,26 +361,17 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
       derivedMaintenanceCalories(nutritionProfile, today),
   };
 
-  if (weekRows && weekRows.length > 0) {
-    const stepSum = weekRows.reduce((sum, r) => sum + (r.steps ?? 0), 0);
-    const todaySteps =
-      weekRows.find((r) => r.entry_date === today)?.steps ?? stepSum;
-    todayDto = { ...todayDto, steps: todaySteps };
+  const stepsByDate = new Map(
+    (weekRows ?? []).map((row) => [row.entry_date, Number(row.steps) || 0]),
+  );
+  if (stepsByDate.has(today)) {
+    todayDto = { ...todayDto, steps: stepsByDate.get(today) ?? 0 };
   }
 
-  todayDto = {
-    ...todayDto,
-    caloriesBurned: effectiveDailyBurned(
-      todayDto.caloriesBurned,
-      todayDto.maintenanceCalories,
-      { includeResting: true },
-    ),
-  };
-
   const weeklySteps: WeeklyStepsDTO = [];
-  for (const key of rollingStepDates) {
-    const found = weekRows?.find((r) => r.entry_date === key);
-    weeklySteps.push({ date: key, steps: found?.steps ?? 0 });
+  for (const key of chartStepDates) {
+    if (!lastSevenDates.has(key) && !stepsByDate.has(key)) continue;
+    weeklySteps.push({ date: key, steps: stepsByDate.get(key) ?? 0 });
   }
 
   let weightTrendKg: number | null = null;
@@ -524,6 +516,34 @@ export async function addMealToAnalytics(
 
   await writeAnalyticsMealIncrement(userId, date, add);
   await invalidateAnalyticsCache(userId);
+}
+
+/**
+ * Atomically logs one completed workout for the user's local today.
+ * Falls back to a snapshot + patch if the increment RPC is not deployed yet.
+ */
+export async function incrementTodayWorkout(userId: string): Promise<number> {
+  const timezone = await resolveUserTimezone(userId);
+  const date = localTodayDate(timezone);
+
+  try {
+    await writeAnalyticsWorkoutIncrement(userId, date);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!/does not exist|42883|PGRST202|schema cache|not find the function/i.test(message)) {
+      throw error;
+    }
+    const snapshot = await getTodayNutritionSnapshot(userId);
+    await patchAnalyticsDaily(
+      userId,
+      { workoutsCompleted: (snapshot.workoutsCompleted ?? 0) + 1 },
+      date,
+    );
+  }
+
+  await invalidateAnalyticsCache(userId);
+  const next = await getTodayNutritionSnapshot(userId);
+  return next.workoutsCompleted;
 }
 
 export async function syncHealthSteps(

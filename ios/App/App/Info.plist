@@ -68,5 +68,9 @@
 	<string>K.AIFY accesses your photo library so you can choose meal or form photos for coach analysis and set a profile avatar.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>K.AIFY may save images you choose to share with your coaching team when you export or download them.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>K.AIFY reads your step count from Apple Health so your weekly activity chart stays accurate.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>K.AIFY does not write workouts or body metrics to Apple Health; this permission is required by HealthKit when step access is requested.</string>
 </dict>
 </plist>

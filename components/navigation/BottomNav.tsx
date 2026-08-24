@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Flame, Home, MessageCircle, ShoppingBag } from "lucide-react";
+import { BarChart3, BookOpen, Flame, Home, MessageCircle } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
 import { shouldShowBottomNav } from "@/lib/navigation/bottom-nav";
 
@@ -21,16 +21,22 @@ const TABS = [
       path === "/messages" || path.startsWith("/messages/"),
   },
   {
+    href: "/analytics",
+    labelKey: "nav.analytics" as const,
+    icon: BarChart3,
+    isActive: (path: string) => path.startsWith("/analytics"),
+  },
+  {
+    href: "/library",
+    labelKey: "nav.library" as const,
+    icon: BookOpen,
+    isActive: (path: string) => path.startsWith("/library"),
+  },
+  {
     href: "/streak",
     labelKey: "nav.streak" as const,
     icon: Flame,
     isActive: (path: string) => path.startsWith("/streak"),
-  },
-  {
-    href: "/trophy-road",
-    labelKey: "nav.market" as const,
-    icon: ShoppingBag,
-    isActive: (path: string) => path.startsWith("/trophy-road"),
   },
 ] as const;
 

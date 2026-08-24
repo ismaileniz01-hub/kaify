@@ -7,7 +7,8 @@ describe("shouldShowBottomNav", () => {
     expect(shouldShowBottomNav("/messages")).toBe(true);
     expect(shouldShowBottomNav("/streak")).toBe(true);
     expect(shouldShowBottomNav("/trophy-road")).toBe(true);
-    expect(shouldShowBottomNav("/settings")).toBe(true);
+    expect(shouldShowBottomNav("/analytics")).toBe(true);
+    expect(shouldShowBottomNav("/library")).toBe(true);
   });
 
   it("hides on chat, auth, and marketing paths", () => {

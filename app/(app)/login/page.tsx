@@ -9,29 +9,30 @@ import { EmailOtpLogin } from "@/components/auth/EmailOtpLogin";
 import { useLang } from "@/lib/lang-context";
 import { parseAuthMode, sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 import { captureReferralFromUrl } from "@/lib/referral";
+import { useNativeApp } from "@/lib/native/platform";
 
 function LoginPageContent() {
   const { t } = useLang();
   const searchParams = useSearchParams();
   const mode = parseAuthMode(searchParams.get("mode"));
   const redirectTo = sanitizeAuthRedirect(searchParams.get("next"));
+  const native = useNativeApp();
   const [step, setStep] = useState<"email" | "code">("email");
 
   useEffect(() => {
     captureReferralFromUrl(searchParams);
   }, [searchParams]);
 
-  // Sign-up lives on the marketing site at /signup
+  // Sign-up lives on the marketing site at /signup. Native shells stay on login.
   useEffect(() => {
-    if (mode === "signup") {
-      const params = new URLSearchParams();
-      if (redirectTo !== "/welcome") params.set("next", redirectTo);
-      const q = params.toString();
-      window.location.replace(q ? `/signup?${q}` : "/signup");
-    }
-  }, [mode, redirectTo]);
+    if (mode !== "signup" || native === true || native === null) return;
+    const params = new URLSearchParams();
+    if (redirectTo !== "/welcome") params.set("next", redirectTo);
+    const q = params.toString();
+    window.location.replace(q ? `/signup?${q}` : "/signup");
+  }, [mode, native, redirectTo]);
 
-  if (mode === "signup") {
+  if (mode === "signup" && native !== true) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-black">
         <div className="h-9 w-9 animate-spin rounded-full border-2 border-white/15 border-t-purple-400" />

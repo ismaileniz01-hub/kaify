@@ -42,6 +42,7 @@ import {
   DIETARY_PREFERENCES,
   EQUIPMENT_ACCESS_OPTIONS,
   EXPERIENCE_LEVELS,
+  GENDERS,
   type ActivityLevel,
   type DietaryPreference,
   type EquipmentAccess,
@@ -111,7 +112,6 @@ const AUTHED_FLOW: WizardStepId[] = [
   "referral",
 ];
 
-const SIGNUP_GENDERS = ["male", "female"] as const satisfies readonly Gender[];
 const TRAINING_DAY_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7] as const;
 
 type UnitSystem = "metric" | "imperial";
@@ -598,7 +598,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
 
                 {currentStep === "gender" && (
                   <div className="signup-wizard-options">
-                    {SIGNUP_GENDERS.map((g) => (
+                    {GENDERS.map((g) => (
                       <button
                         key={g}
                         type="button"

@@ -37,6 +37,12 @@ import {
   shouldReuseIdempotencyKeyOnRetry,
   type MessageDeliveryStatus,
 } from "@/lib/chat/message-lifecycle";
+import { consumeAlexDraft } from "@/lib/chat/alex-draft";
+import {
+  dequeueOfflineChats,
+  enqueueOfflineChat,
+  offlineQueueCount,
+} from "@/lib/chat/offline-queue";
 import {
   findLatestPinnableMessage,
   pinnedCardMetric,
@@ -195,6 +201,10 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const streamTextRef = useRef("");
   const streamRafRef = useRef<number | null>(null);
   const transferredPreviewRef = useRef<Set<string>>(new Set());
+  const sendTextMessageRef = useRef<(text: string) => Promise<void>>(
+    async () => undefined,
+  );
+  const [queueNotice, setQueueNotice] = useState(false);
 
   useEffect(() => {
     const previewUrls = transferredPreviewRef.current;
@@ -276,10 +286,28 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   }, [coachId]);
 
   useEffect(() => {
-    const list = listRef.current;
-    if (!list) return;
-    list.scrollTop = list.scrollHeight;
-  }, [messages, sending]);
+    if (coachId !== "alex") return;
+    const draft = consumeAlexDraft();
+    if (draft) setInput((current) => current || draft);
+  }, [coachId]);
+
+  useEffect(() => {
+    setQueueNotice(offlineQueueCount(coachId) > 0);
+    const flush = () => {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+      const queued = dequeueOfflineChats(coachId);
+      if (queued.length === 0) return;
+      setQueueNotice(false);
+      void (async () => {
+        for (const item of queued) {
+          await sendTextMessageRef.current(item.text);
+        }
+      })();
+    };
+    window.addEventListener("online", flush);
+    flush();
+    return () => window.removeEventListener("online", flush);
+  }, [coachId]);
 
   const sendTextMessage = async (
     text: string,
@@ -289,6 +317,12 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     },
   ) => {
     if (!text || sending) return;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      enqueueOfflineChat(coachId, text);
+      setQueueNotice(true);
+      setError(t("chat.queued"));
+      return;
+    }
 
     setSending(true);
     setError(null);
@@ -490,6 +524,14 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
       setSending(false);
     }
   };
+
+  sendTextMessageRef.current = sendTextMessage;
+
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    list.scrollTop = list.scrollHeight;
+  }, [messages, sending]);
 
   const handleSend = async () => {
     if (sending) return;
@@ -1093,10 +1135,36 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                         "confirmation" in (msg.payload as object) ? (
                           <AnalyticsConfirmationCard
                             payload={
-                              (msg.payload as { confirmation: { pendingId: string; summary: string } })
-                                .confirmation
+                              (msg.payload as {
+                                confirmation: {
+                                  pendingId: string;
+                                  summary: string;
+                                  status?: "pending" | "confirmed" | "rejected";
+                                };
+                              }).confirmation
                             }
-                            onResolved={() => {
+                            onResolved={(status) => {
+                              setMessages((prev) =>
+                                prev.map((item) => {
+                                  if (item.id !== msg.id || !item.payload || typeof item.payload !== "object") {
+                                    return item;
+                                  }
+                                  const payload = item.payload as {
+                                    confirmation?: Record<string, unknown>;
+                                  };
+                                  return {
+                                    ...item,
+                                    payload: {
+                                      ...payload,
+                                      saved: status === "confirmed",
+                                      confirmation: {
+                                        ...(payload.confirmation ?? {}),
+                                        status,
+                                      },
+                                    },
+                                  };
+                                }),
+                              );
                               void refreshHome();
                             }}
                           />
@@ -1189,6 +1257,12 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           </div>
         </div>
       ) : (
+      <>
+      {queueNotice ? (
+        <p className="px-4 py-2 text-center text-xs text-amber-200">
+          {t("chat.queued")}
+        </p>
+      ) : null}
       <ChatComposer
         input={input}
         onInputChange={setInput}
@@ -1201,6 +1275,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         onRemoveAttachment={() => setComposerPhoto(null)}
         accentColor={primary}
       />
+      </>
       )}
     </div>
   );

@@ -69,7 +69,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 vi.mock("@/lib/activation/today-job", () => ({
   resolveTodayJob: vi.fn().mockReturnValue({
-    kind: "chat_kai",
+    kind: "continue",
     href: "/chat/kai",
     titleKey: "t",
     bodyKey: "b",

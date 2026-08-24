@@ -146,7 +146,7 @@ export default function MessagesPage() {
 
         {planAllowsTeam && (
           <Link
-            href={teamUnlocked ? "/chat/team" : "/streak"}
+            href={teamUnlocked ? "/chat/team" : "/myaccount"}
             className={`animate-in mt-4 flex min-h-[76px] items-center gap-3 rounded-2xl border px-4 py-3.5 shadow-lg shadow-black/15 ${
               teamUnlocked
                 ? "border-purple-400/20 bg-gradient-to-r from-purple-500/10 to-violet-950/10 hover:border-purple-400/30 hover:from-purple-500/15"

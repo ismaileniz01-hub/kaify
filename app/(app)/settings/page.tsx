@@ -26,6 +26,7 @@ import { useSession } from "@/lib/session-context";
 import { apiGet, apiPatch } from "@/lib/api/client";
 import type { UserSettingsDTO } from "@/lib/services/settings.service";
 import { UsageQuotaSection } from "@/components/settings/UsageQuotaSection";
+import { HealthStepsSection } from "@/components/settings/HealthStepsSection";
 import { AppHeader } from "@/components/navigation/AppHeader";
 import { DeleteAccountSection } from "@/components/settings/DeleteAccountSection";
 import { MarketAuraPreview } from "@/components/market/MarketAuraPreview";
@@ -462,6 +463,7 @@ export default function SettingsPage() {
         )}
 
         {isAuthenticated && <UsageQuotaSection />}
+        {isAuthenticated && <HealthStepsSection />}
 
         {isAuthenticated && <PushToggle />}
 

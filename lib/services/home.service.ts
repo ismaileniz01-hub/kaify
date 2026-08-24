@@ -117,10 +117,9 @@ export async function getHomeCoreData(
     todayJob: resolveTodayJob({
       checkedInToday,
       goalsConfigured,
-      streakAtRisk:
-        streakStatus.currentStreak >= 1 &&
-        Boolean(streakStatus.lastCheckInDate) &&
-        !checkedInToday,
+      mealLogged: (todayNutrition?.caloriesConsumed ?? 0) > 0,
+      workoutLogged: (todayNutrition?.workoutsCompleted ?? 0) > 0,
+      waterLogged: (todayNutrition?.waterLiters ?? 0) > 0,
     }),
     firstTask: {
       checkInDone: checkedInToday || streakStatus.currentStreak > 0,

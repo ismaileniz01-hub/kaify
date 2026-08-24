@@ -4,12 +4,8 @@ import { Home } from "lucide-react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { useLang } from "@/lib/lang-context";
 import { AppHeader } from "@/components/navigation/AppHeader";
-import {
-  HOME_EXERCISE_GROUPS,
-  groupColors,
-  groupGradients,
-  groupIcons,
-} from "@/lib/exercise-library";
+import { ExerciseGroupList } from "@/components/library/ExerciseGroupList";
+import { HOME_EXERCISE_GROUPS } from "@/lib/exercise-library";
 
 export default function HomeLibraryPage() {
   const { t } = useLang();
@@ -46,40 +42,8 @@ export default function HomeLibraryPage() {
           </p>
         </section>
 
-        {/* Groups */}
-        <section className="animate-in animate-in--3 mt-6 px-4 pb-10 space-y-4">
-          {HOME_EXERCISE_GROUPS.map((group, gi) => (
-            <div
-              key={group.id}
-              className={`relative overflow-hidden rounded-2xl border-2 bg-gradient-to-b shadow-xl shadow-black/40 transition-all duration-300 ${groupGradients[group.id]}`}
-              style={{ animationDelay: `${(gi + 1) * 80}ms` }}
-            >
-              {/* Group header */}
-              <div className={`flex items-center gap-3 border-b border-white/[0.06] px-4 py-3 ${groupColors[group.id]}`}>
-                <span className="text-lg">{groupIcons[group.id]}</span>
-                <h2 className="text-sm font-bold text-white">{t(`exercise.${group.id}`)}</h2>
-              </div>
-
-              {/* Exercise list */}
-              <div className="divide-y divide-white/[0.04]">
-                {group.exercises.map((exercise, ei) => (
-                  <div
-                    key={exercise.key}
-                    className="flex items-center px-4 py-2.5"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
-                        <span className="text-[10px] font-bold text-zinc-500">{ei + 1}</span>
-                      </div>
-                      <span className="text-sm text-zinc-300">
-                        {t(exercise.key)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+        <section className="animate-in animate-in--3 mt-6 space-y-4 px-4 pb-10">
+          <ExerciseGroupList groups={HOME_EXERCISE_GROUPS} place="home" />
         </section>
       </main>
     </div>

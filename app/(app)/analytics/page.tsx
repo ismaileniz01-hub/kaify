@@ -18,6 +18,7 @@ import { formatTime } from "@/lib/i18n/format";
 import { apiGet } from "@/lib/api/client";
 import type { AnalyticsBundleDTO } from "@/lib/services/analytics.service";
 import { AppHeader } from "@/components/navigation/AppHeader";
+import { syncNativeHealthSteps } from "@/lib/native/health-steps";
 
 export default function AnalyticsPage() {
   const { t, lang, unit } = useLang();
@@ -40,7 +41,6 @@ export default function AnalyticsPage() {
         setLastUpdated(new Date());
       })
       .catch((err) => {
-        setData(null);
         setLoadError(errorToMessage(err, t) || t("analytics.error.load"));
       })
       .finally(() => setRefreshing(false));
@@ -48,6 +48,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     loadAnalytics();
+    void syncNativeHealthSteps().catch(() => undefined);
   }, [loadAnalytics]);
 
   useEffect(() => {
@@ -152,6 +153,7 @@ export default function AnalyticsPage() {
                     today?.workoutsTarget ?? home?.goals.workoutsTarget ?? 5,
                   waterGoalLiters:
                     today?.waterGoalLiters ?? home?.goals.waterGoalLiters ?? 2.5,
+                  maintenanceCalories: today?.maintenanceCalories ?? null,
                 }}
                 onCancel={() => setGoalsOpen(false)}
                 onSaved={async () => {
@@ -180,7 +182,7 @@ export default function AnalyticsPage() {
             value={weightVal}
             trend={weightTrend}
             barColor="#3b82f6"
-            barPercent={today?.weightKg ? 62 : 0}
+            barPercent={today?.weightKg != null ? 100 : 0}
             gradient="blue"
           />
           <StatCard
@@ -206,7 +208,7 @@ export default function AnalyticsPage() {
           />
           <StatCard
             icon={Dumbbell}
-            label={t("analytics.workouts")}
+            label={t("analytics.workouts_week")}
             value={
               today
                 ? `${weekWorkouts} / ${today.workoutsTarget}`
@@ -222,7 +224,11 @@ export default function AnalyticsPage() {
             icon={Droplets}
             label={t("analytics.hydration")}
             value={today ? `${today.waterLiters} L` : "—"}
-            trend={today ? `▲ ${waterPct}% of goal` : t("analytics.no_trend")}
+            trend={
+              today
+                ? t("analytics.hydration.trend", { percent: waterPct })
+                : t("analytics.no_trend")
+            }
             barColor="#06b6d4"
             barPercent={waterPct}
             gradient="water"

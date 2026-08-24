@@ -51,6 +51,26 @@ export async function writeAnalyticsMealIncrement(
   }
 }
 
+/** Atomic +1 workout count — no read-modify-write. */
+export async function writeAnalyticsWorkoutIncrement(
+  userId: string,
+  entryDate: string,
+): Promise<void> {
+  const admin = createAdminSupabaseClient();
+  const { error } = await admin.rpc("increment_analytics_workouts", {
+    p_user_id: userId,
+    p_entry_date: entryDate,
+  });
+
+  if (error) {
+    logger.error("[analytics-write] workout increment error", {
+      error: error.message,
+      code: error.code,
+    });
+    throw new ApiError("INTERNAL_ERROR", error.message);
+  }
+}
+
 /** Claim + apply pending confirmation in one DB transaction. */
 export async function writeConfirmAnalyticsPending(
   userId: string,

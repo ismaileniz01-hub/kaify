@@ -25,11 +25,11 @@ vi.mock("@/lib/services/home.service", () => ({
     stats: { steps: null, streak: 3, goalPercent: null },
     kaiLevel: 2,
     todayJob: {
-      kind: "chat_kai",
+      kind: "continue",
       href: "/chat/kai",
-      titleKey: "home.today_job.chat.title",
-      bodyKey: "home.today_job.chat.body",
-      ctaKey: "home.today_job.chat.cta",
+      titleKey: "home.today_job.continue.title",
+      bodyKey: "home.today_job.continue.body",
+      ctaKey: "home.today_job.continue.cta",
     },
     firstTask: { checkInDone: true, goalsDone: true, chatDone: false },
     goals: {
@@ -50,11 +50,11 @@ vi.mock("@/lib/services/home.service", () => ({
     stats: { steps: null, streak: 3, goalPercent: null },
     kaiLevel: 2,
     todayJob: {
-      kind: "chat_kai",
+      kind: "continue",
       href: "/chat/kai",
-      titleKey: "home.today_job.chat.title",
-      bodyKey: "home.today_job.chat.body",
-      ctaKey: "home.today_job.chat.cta",
+      titleKey: "home.today_job.continue.title",
+      bodyKey: "home.today_job.continue.body",
+      ctaKey: "home.today_job.continue.cta",
     },
     firstTask: { checkInDone: true, goalsDone: true, chatDone: false },
     goals: {

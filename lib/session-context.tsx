@@ -124,6 +124,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
               kaiUnlockedLevel: result.kaiUnlockedLevel,
             }));
             syncFreezieBalanceFromServer(result.freezieBalance);
+            void apiGet<HomeDTO>("/api/home")
+              .then((homeData) => setHome(homeData))
+              .catch(() => undefined);
           })
           .catch(() => undefined);
       }

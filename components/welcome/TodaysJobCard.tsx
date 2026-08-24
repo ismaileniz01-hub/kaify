@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Flame, MessageCircle, Target } from "lucide-react";
+import { ArrowRight, Droplets, Dumbbell, Flame, MessageCircle, Target, Utensils } from "lucide-react";
 import type { TodayJob } from "@/lib/activation/today-job";
 import { useLang } from "@/lib/lang-context";
 import { hapticSelection } from "@/lib/native/haptics";
@@ -9,8 +9,10 @@ import { hapticSelection } from "@/lib/native/haptics";
 const ICONS = {
   check_in: Flame,
   set_goals: Target,
-  chat_kai: MessageCircle,
-  continue: ArrowRight,
+  log_meal: Utensils,
+  log_workout: Dumbbell,
+  log_water: Droplets,
+  continue: MessageCircle,
 } as const;
 
 type Props = {
