@@ -28,7 +28,7 @@ workflows:
 
       - name: Build web application
         script: |
-          npm run build:cap
+          IS_CAPACITOR=true npm run build
 
       - name: Create and synchronize iOS project
         script: |
