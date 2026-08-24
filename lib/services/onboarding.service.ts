@@ -36,7 +36,7 @@ export async function completeOnboarding(
   const supabase = await createServerSupabaseClient();
   const recommendation = recommendOnboardingNutrition(input, new Date());
 
-  const { data, error } = await supabase.rpc("complete_onboarding", {
+  const legacyArgs = {
     p_display_name: input.displayName,
     p_gender: input.gender,
     p_height_cm: input.heightCm,
@@ -49,15 +49,32 @@ export async function completeOnboarding(
     p_primary_goal: input.primaryGoal,
     p_activity_level: input.activityLevel,
     p_training_days_per_week: input.trainingDaysPerWeek,
-    p_equipment_access: input.equipmentAccess,
-    p_calorie_goal: recommendation.calorieTarget,
-    p_workouts_target: recommendation.workoutsTarget,
     p_dietary_preference: input.dietaryPreference,
     p_allergies: input.allergies,
     p_disliked_foods: input.dislikedFoods,
     p_health_conditions: input.healthConditions,
     p_country_code: input.countryCode,
+  };
+  let { data, error } = await supabase.rpc("complete_onboarding", {
+    ...legacyArgs,
+    p_equipment_access: input.equipmentAccess,
+    p_calorie_goal: recommendation.calorieTarget,
+    p_workouts_target: recommendation.workoutsTarget,
   });
+
+  // During a rolling deploy, PostgREST may still expose the previous RPC
+  // signature. Keep signup working; the additive migration enables atomic
+  // personalized targets as soon as it is applied.
+  if (
+    error &&
+    (error.code === "PGRST202" ||
+      /p_equipment_access|p_calorie_goal|schema cache/i.test(error.message))
+  ) {
+    logger.warn("[onboarding.service:complete] using pre-migration RPC signature");
+    const legacy = await supabase.rpc("complete_onboarding", legacyArgs);
+    data = legacy.data;
+    error = legacy.error;
+  }
 
   if (error) {
     throw mapRpcError("onboarding.service:complete", error);

@@ -260,14 +260,21 @@ export async function runCouncilTurn(params: {
     );
   }
 
-  const [analytics, streak, { data: profile }, { data: settings }, teammate] =
+  const [
+    analytics,
+    streak,
+    { data: profile },
+    { data: settings },
+    { data: equipment },
+    teammate,
+  ] =
     await Promise.all([
       getAnalyticsBundle(params.userId),
       getStreakStatus(params.userId),
       admin
         .from("profiles")
         .select(
-          "display_name, locale, gender, experience_level, training_days_per_week, activity_level, dietary_preference, allergies, health_conditions, disliked_foods, height_cm, weight_kg, equipment_access",
+          "display_name, locale, gender, experience_level, training_days_per_week, activity_level, dietary_preference, allergies, health_conditions, disliked_foods, height_cm, weight_kg",
         )
         .eq("id", params.userId)
         .single(),
@@ -275,6 +282,11 @@ export async function runCouncilTurn(params: {
         .from("user_settings")
         .select("primary_goal")
         .eq("user_id", params.userId)
+        .maybeSingle(),
+      admin
+        .from("profiles")
+        .select("equipment_access")
+        .eq("id", params.userId)
         .maybeSingle(),
       loadCrossCoachSnapshot(params.userId).catch(() => ""),
     ]);
@@ -302,7 +314,7 @@ export async function runCouncilTurn(params: {
       dietaryPreference: profile?.dietary_preference ?? null,
       dislikedFoods: profile?.disliked_foods ?? null,
       healthConditions: profile?.health_conditions ?? null,
-      equipmentAccess: profile?.equipment_access ?? null,
+      equipmentAccess: equipment?.equipment_access ?? null,
     }),
     userGender ? `user_gender: ${userGender}` : "",
     typeof profile?.allergies === "string" && profile.allergies.trim()

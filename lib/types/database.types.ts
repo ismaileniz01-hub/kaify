@@ -228,9 +228,9 @@ type CompleteOnboardingArgs = {
   p_primary_goal?: string | null;
   p_activity_level?: string | null;
   p_training_days_per_week?: number | null;
-  p_equipment_access: EquipmentAccess;
-  p_calorie_goal: number;
-  p_workouts_target: number;
+  p_equipment_access?: EquipmentAccess | null;
+  p_calorie_goal?: number | null;
+  p_workouts_target?: number | null;
   p_dietary_preference?: string | null;
   p_allergies?: string | null;
   p_disliked_foods?: string | null;

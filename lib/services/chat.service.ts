@@ -151,11 +151,11 @@ async function getProfileLocaleAndSafety(
   equipmentAccess: string | null;
   primaryGoal: string | null;
 }> {
-  const [{ data }, { data: settings }] = await Promise.all([
+  const [{ data }, { data: settings }, { data: equipment }] = await Promise.all([
     admin
       .from("profiles")
       .select(
-        "locale, allergies, created_at, gender, experience_level, training_days_per_week, activity_level, height_cm, weight_kg, dietary_preference, disliked_foods, health_conditions, equipment_access",
+        "locale, allergies, created_at, gender, experience_level, training_days_per_week, activity_level, height_cm, weight_kg, dietary_preference, disliked_foods, health_conditions",
       )
       .eq("id", userId)
       .maybeSingle(),
@@ -163,6 +163,12 @@ async function getProfileLocaleAndSafety(
       .from("user_settings")
       .select("primary_goal")
       .eq("user_id", userId)
+      .maybeSingle(),
+    // Separate query keeps chat compatible while the additive migration rolls out.
+    admin
+      .from("profiles")
+      .select("equipment_access")
+      .eq("id", userId)
       .maybeSingle(),
   ]);
   const parsed = data?.gender ? parseGenderInput(data.gender) : null;
@@ -206,8 +212,8 @@ async function getProfileLocaleAndSafety(
         ? data.health_conditions
         : null,
     equipmentAccess:
-      typeof data?.equipment_access === "string"
-        ? data.equipment_access
+      typeof equipment?.equipment_access === "string"
+        ? equipment.equipment_access
         : null,
     primaryGoal:
       typeof settings?.primary_goal === "string" && settings.primary_goal.trim()
