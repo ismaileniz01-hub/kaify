@@ -22,6 +22,7 @@ import type { ChatTurn } from "@/lib/ai/types";
 import { mapChatMessageRow, type ChatMessageDTO } from "@/lib/types/domain.types";
 import { CHAT_MESSAGE_LIST_COLUMNS } from "@/lib/services/chat-message-columns";
 import { resolveLocale } from "@/lib/i18n/dictionary";
+import { buildReplyLanguageDirective } from "@/lib/i18n/reply-language-directive";
 import { getAnalyticsBundle } from "@/lib/services/analytics.service";
 import { getStreakStatus } from "@/lib/services/streak-status.service";
 import { teamMeetingWeekKey } from "@/lib/team/meeting-week";
@@ -36,7 +37,12 @@ import {
   parseCouncilTurnResponse,
 } from "@/lib/kaios/schemas/envelope";
 import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
-import { sanitizeCoachVisibleText } from "@/lib/kaios/coach-retry";
+import {
+  coachRetryLine,
+  sanitizeCoachVisibleText,
+  scrubAlexGenderedAddress,
+} from "@/lib/kaios/coach-retry";
+import { isReplyLanguageMismatch } from "@/lib/i18n/reply-language-guard";
 import type { Json } from "@/lib/types/database.types";
 
 export { teamMeetingWeekKey } from "@/lib/team/meeting-week";
@@ -261,7 +267,7 @@ export async function runCouncilTurn(params: {
       admin
         .from("profiles")
         .select(
-          "display_name, locale, experience_level, training_days_per_week, activity_level, dietary_preference, allergies, health_conditions, disliked_foods, height_cm, weight_kg",
+          "display_name, locale, gender, experience_level, training_days_per_week, activity_level, dietary_preference, allergies, health_conditions, disliked_foods, height_cm, weight_kg, equipment_access",
         )
         .eq("id", params.userId)
         .single(),
@@ -279,6 +285,10 @@ export async function runCouncilTurn(params: {
     fallbackLocale: "en",
   });
   const name = sanitizeUserText(profile?.display_name ?? "User", 60) || "User";
+  const userGender =
+    profile?.gender === "male" || profile?.gender === "female"
+      ? profile.gender
+      : null;
   const profileFacts = [
     typeof settings?.primary_goal === "string" && settings.primary_goal
       ? `primary_goal: ${settings.primary_goal}`
@@ -292,7 +302,9 @@ export async function runCouncilTurn(params: {
       dietaryPreference: profile?.dietary_preference ?? null,
       dislikedFoods: profile?.disliked_foods ?? null,
       healthConditions: profile?.health_conditions ?? null,
+      equipmentAccess: profile?.equipment_access ?? null,
     }),
+    userGender ? `user_gender: ${userGender}` : "",
     typeof profile?.allergies === "string" && profile.allergies.trim()
       ? `allergies: ${profile.allergies.trim()}`
       : "",
@@ -338,7 +350,7 @@ export async function runCouncilTurn(params: {
     COUNCIL_ROLE_DIGESTS,
     KAI_MODE_COUNCIL,
     phase,
-    `Locale: ${locale}. Generate user-facing text in that locale.`,
+    buildReplyLanguageDirective(resolveLocale(locale)),
     `Return ONLY JSON: { "schema_version":"${SCHEMA_VERSION}", "coach":"council", "message":"<short kai transition or summary>", "intent":"council_turn", "data": { "await_user": true|false, "speakers":[{ "coach":"kai"|"alex"|"maya"|"leo", "message":"..." }], "decision": null|object } }`,
   ].join("\n\n");
 
@@ -404,13 +416,24 @@ export async function runCouncilTurn(params: {
   const decision = parsed?.decision ?? null;
   const rows = speakers.map((s, i) => {
     const isLast = i === speakers.length - 1;
+    let visible = sanitizeCoachVisibleText(s.text, locale, s.coachId);
+    if (isReplyLanguageMismatch(visible, locale)) {
+      visible = coachRetryLine(locale);
+    }
+    if (s.coachId === "alex") {
+      visible = scrubAlexGenderedAddress({
+        text: visible,
+        locale,
+        userGender,
+      });
+    }
     return {
       user_id: params.userId,
       coach_id: s.coachId,
       thread_type: "team" as const,
       sender: "coach" as const,
       message_type: "team_meeting" as const,
-      content: sanitizeCoachVisibleText(s.text, locale, s.coachId),
+      content: visible,
       payload: {
         schema_version: SCHEMA_VERSION,
         coach: "council",

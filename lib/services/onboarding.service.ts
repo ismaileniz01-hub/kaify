@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
 import { mapProfileRow, type ProfileDTO } from "@/lib/types/domain.types";
 import type { OnboardingInput } from "@/lib/validations/onboarding.schema";
+import { recommendOnboardingNutrition } from "@/lib/nutrition/onboarding-recommendation";
 
 /**
  * Maps a Postgres RPC error (raised via RAISE ... USING ERRCODE) to an ApiError.
@@ -33,6 +34,7 @@ export async function completeOnboarding(
   input: OnboardingInput,
 ): Promise<ProfileDTO> {
   const supabase = await createServerSupabaseClient();
+  const recommendation = recommendOnboardingNutrition(input, new Date());
 
   const { data, error } = await supabase.rpc("complete_onboarding", {
     p_display_name: input.displayName,
@@ -47,6 +49,9 @@ export async function completeOnboarding(
     p_primary_goal: input.primaryGoal,
     p_activity_level: input.activityLevel,
     p_training_days_per_week: input.trainingDaysPerWeek,
+    p_equipment_access: input.equipmentAccess,
+    p_calorie_goal: recommendation.calorieTarget,
+    p_workouts_target: recommendation.workoutsTarget,
     p_dietary_preference: input.dietaryPreference,
     p_allergies: input.allergies,
     p_disliked_foods: input.dislikedFoods,

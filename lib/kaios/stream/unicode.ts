@@ -32,10 +32,9 @@ export function isStreamCompletionSuspicious(input: {
   if (input.aborted) return true;
   if (hasBrokenUtf16(input.text)) return true;
   if (input.sawDelta && input.text.trim().length === 0) return true;
-  // Hit max_tokens: keep a long usable reply (weekly plans often complete the
-  // spoken message then get cut in JSON). Only retry short truncated scraps.
-  if (input.finishReason === "length" && input.text.trim().length < 120) {
-    return true;
-  }
+  // Provider explicitly reports that max_tokens cut the generation. Length is
+  // not evidence of completeness: long Kai replies and JSON tails can both end
+  // mid-sentence, so the caller must repair or fail closed.
+  if (input.finishReason === "length") return true;
   return false;
 }

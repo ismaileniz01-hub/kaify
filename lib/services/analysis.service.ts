@@ -51,6 +51,7 @@ export type AnalyzePhotoParams = {
   imageBase64: string;
   mimeType: AnalysisMimeType;
   note?: string;
+  explicitLocale?: string;
   clientMessageId?: string;
   signal?: AbortSignal;
 };
@@ -120,16 +121,25 @@ function extractQuality(payload: Json | null): ImageQuality | null {
 async function getLocale(
   admin: AdminClient,
   userId: string,
-  _note?: string,
+  explicitLocale?: string,
 ): Promise<string> {
   const { data } = await admin
     .from("profiles")
     .select("locale")
     .eq("id", userId)
     .maybeSingle();
-  const saved = resolveLocale(data?.locale);
+  const savedLocale = resolveLocale(data?.locale);
+  const requestedLocale = explicitLocale
+    ? resolveLocale(explicitLocale)
+    : savedLocale;
+  if (explicitLocale && requestedLocale !== savedLocale) {
+    await admin
+      .from("profiles")
+      .update({ locale: requestedLocale })
+      .eq("id", userId);
+  }
   return resolveActiveLocale({
-    savedLocale: saved,
+    savedLocale: requestedLocale,
     fallbackLocale: "en",
   });
 }
@@ -295,7 +305,7 @@ export async function analyzePhoto(
   const fingerprint = fingerprintVisionImage(vision.base64, vision.mimeType);
 
   const [locale, previousScores, priorRows, photoUserState] = await Promise.all([
-    getLocale(admin, params.userId, params.note),
+    getLocale(admin, params.userId, params.explicitLocale),
     persona.kind === "body"
       ? getPreviousScores(admin, params.userId, params.coachId)
       : Promise.resolve(null),

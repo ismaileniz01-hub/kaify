@@ -2,6 +2,7 @@
 import {
   needsStructuredOutput,
   outputBudgetFor,
+  outputBudgetForCoach,
   resolveIntent,
   type CoachId,
   type Intent,
@@ -436,6 +437,25 @@ describe("needsStructuredOutput / outputBudgetFor", () => {
     expect(outputBudgetFor("casual", "hi")).toBe(80);
     expect(outputBudgetFor("casual", "bugün de aynı boktan gün")).toBe(120);
     expect(outputBudgetFor("unknown", "hatırlıyor musun geçen hafta")).toBe(180);
+  });
+
+  it("gives Kai enough room to finish while preserving micro greetings", () => {
+    expect(outputBudgetForCoach("kai", "casual", "selam")).toBe(80);
+    expect(
+      outputBudgetForCoach(
+        "kai",
+        "motivation",
+        "Bugün salona gidesim yok, biraz konuşalım.",
+      ),
+    ).toBeGreaterThanOrEqual(350);
+    expect(
+      outputBudgetForCoach("kai", "unknown", "bilmiyorum ya", {
+        needsContinuation: true,
+      }),
+    ).toBeGreaterThanOrEqual(450);
+    expect(
+      outputBudgetForCoach("alex", "motivation", "Bugün salona gidesim yok."),
+    ).toBe(outputBudgetFor("motivation", "Bugün salona gidesim yok."));
   });
 });
 

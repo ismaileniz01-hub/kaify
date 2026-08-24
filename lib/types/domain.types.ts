@@ -37,6 +37,7 @@ export type ProfileDTO = {
   heightCm: number | null;
   weightKg: number | null;
   experienceLevel: string | null;
+  equipmentAccess: Database["public"]["Tables"]["profiles"]["Row"]["equipment_access"];
   isNatural: boolean;
   bio: string | null;
   countryCode: string;
@@ -64,6 +65,7 @@ export function mapProfileRow(row: ProfileRow): ProfileDTO {
     heightCm: resolveHeightCm(row),
     weightKg: resolveWeightKg(row),
     experienceLevel: resolveExperience(row),
+    equipmentAccess: row.equipment_access,
     isNatural: row.is_natural,
     bio: row.bio,
     countryCode: resolveCountryCode(row),

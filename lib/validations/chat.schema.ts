@@ -15,6 +15,8 @@ export const sendMessageSchema = z.object({
     .min(1, "Message cannot be empty")
     .max(4000, "Message is too long"),
   clientMessageId: z.string().uuid().optional(),
+  /** Current authenticated UI locale; server resolves it against the allowlist. */
+  locale: z.string().trim().min(2).max(10).optional(),
 });
 
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;

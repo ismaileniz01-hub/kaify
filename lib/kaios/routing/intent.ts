@@ -506,3 +506,20 @@ export function outputBudgetFor(
   }
   return budget;
 }
+
+/** Coach-aware completion floor: Kai's conversational capsules need room to finish. */
+export function outputBudgetForCoach(
+  coach: CoachId,
+  intent: Intent,
+  message: string,
+  options?: { needsContinuation?: boolean },
+): number {
+  const base = outputBudgetFor(intent, message, options);
+  if (coach !== "kai") return base;
+  const microGreeting =
+    /^(?:hi|hey|hello|yo|selam|merhaba|sa|günaydın|gunaydin)[\s!.?]*$/iu.test(
+      message.trim(),
+    );
+  if (microGreeting) return base;
+  return Math.max(base, options?.needsContinuation ? 450 : 350);
+}

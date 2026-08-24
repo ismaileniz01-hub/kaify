@@ -13,7 +13,7 @@ import {
   KAI_CORE,
   COUNCIL_CORE,
 } from "@/lib/kaios/capsules";
-import { outputBudgetFor, type Intent } from "@/lib/kaios/routing/intent";
+import { outputBudgetForCoach, type Intent } from "@/lib/kaios/routing/intent";
 import type { BuildRuntimeContextInput } from "@/lib/kaios/context/types";
 
 const FORBIDDEN_TITLE = "Kaify AI Operating System —";
@@ -135,7 +135,11 @@ describe("runtime prompt matrix", () => {
       const ctx = buildRuntimeContext(scenario.input);
       expect(ctx.intent).toBe(scenario.expectedIntent);
       expect(ctx.maxTokens).toBe(
-        outputBudgetFor(scenario.expectedIntent, scenario.input.message),
+        outputBudgetForCoach(
+          scenario.input.coach,
+          scenario.expectedIntent,
+          scenario.input.message,
+        ),
       );
 
       if (scenario.expectMemoryDropped) {

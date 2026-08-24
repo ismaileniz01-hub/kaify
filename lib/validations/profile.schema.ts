@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  EQUIPMENT_ACCESS_OPTIONS,
   EXPERIENCE_LEVELS,
   GENDERS,
   localeSchema,
@@ -36,6 +37,7 @@ export const profileUpdateSchema = z
     heightCm: z.number().int().min(50).max(280),
     weightKg: z.number().min(20).max(500),
     experienceLevel: z.enum(EXPERIENCE_LEVELS),
+    equipmentAccess: z.enum(EQUIPMENT_ACCESS_OPTIONS),
     isNatural: z.boolean(),
     bio: z.string().trim().max(1000, "Bio too long"),
     countryCode: z

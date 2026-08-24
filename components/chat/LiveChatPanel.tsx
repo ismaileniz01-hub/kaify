@@ -20,6 +20,7 @@ import { ChatMessageText } from "@/components/chat/ChatMessageText";
 import { InlineAlert } from "@/components/InlineAlert";
 import { EmptyState } from "@/components/EmptyState";
 import { PhotoAnalyzeConsentModal } from "@/components/consent/PhotoAnalyzeConsentModal";
+import { ImagePickerModal } from "@/components/ImagePickerModal";
 import { useLang } from "@/lib/lang-context";
 import { formatTime } from "@/lib/i18n/format";
 import { useKai } from "@/lib/kai-context";
@@ -190,7 +191,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [imagePickerOpen, setImagePickerOpen] = useState(false);
   const streamTextRef = useRef("");
   const streamRafRef = useRef<number | null>(null);
   const transferredPreviewRef = useRef<Set<string>>(new Set());
@@ -478,6 +479,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         abortRef.current.signal,
         idempotencyKey,
         PERSISTED_ID_RE.test(userMsgId) ? userMsgId : undefined,
+        lang,
       );
     } catch {
       setError(t("chat.error.send"));
@@ -693,6 +695,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         >(`/api/chat/${coachId}/analyze`, {
           imageBase64: base64,
           mimeType,
+          locale: lang,
           ...(caption ? { note: caption.slice(0, 500) } : {}),
           ...(PERSISTED_ID_RE.test(photoUserId)
             ? { clientMessageId: photoUserId }
@@ -848,6 +851,11 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           pendingPhotoRef.current = null;
           if (file) attachPhotoToComposer(file);
         }}
+      />
+      <ImagePickerModal
+        isOpen={imagePickerOpen}
+        onClose={() => setImagePickerOpen(false)}
+        onImageSelect={handlePhoto}
       />
       {pinned ? (
         <ChatPinnedBanner
@@ -1187,24 +1195,13 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         onSend={() => void handleSend()}
         sending={sending}
         showCamera={VISION_COACHES.has(coachId)}
-        onCameraClick={() => fileRef.current?.click()}
+        onCameraClick={() => setImagePickerOpen(true)}
         onVoiceError={setError}
         attachmentPreviewUrl={composerPhoto?.url ?? null}
         onRemoveAttachment={() => setComposerPhoto(null)}
         accentColor={primary}
       />
       )}
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) void handlePhoto(file);
-          e.target.value = "";
-        }}
-      />
     </div>
   );
 }

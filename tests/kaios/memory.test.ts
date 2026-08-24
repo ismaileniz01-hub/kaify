@@ -213,6 +213,18 @@ describe("extractUserMemoryFacts", () => {
     ]);
   });
 
+  it("remembers future-tense home workout preferences", () => {
+    for (const message of [
+      "Ben evde çalışacağım, salon hareketi verme",
+      "evde calismak istiyorum",
+      "evde antrenman yapacagim",
+    ]) {
+      expect(extractUserMemoryFacts(message)).toEqual(
+        expect.arrayContaining([{ key: "equipment", value: "home / limited" }]),
+      );
+    }
+  });
+
   it("keeps newest keyed fact when preparing context", () => {
     const prepared = prepareMemoriesForContext(
       [

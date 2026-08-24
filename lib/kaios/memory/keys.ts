@@ -91,7 +91,7 @@ export function extractUserMemoryFacts(message: string): StructuredMemoryFact[] 
   }
 
   if (
-    /\b(evde calisiyorum|home gym|sadece dambil|sadece dumbbell|salon yok|ekipmanim yok)\b/.test(
+    /\b(evde (?:calisiyorum|calisacagim|calismak istiyorum|antrenman yapacagim|spor yapacagim)|home gym|train at home|work out at home|sadece dambil|sadece dumbbell|salon yok|ekipmanim yok)\b/.test(
       folded,
     )
   ) {

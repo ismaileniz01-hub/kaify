@@ -159,7 +159,11 @@ export const POST = defineDynamicRouteRaw<{ coachId: string }>(
       userId: user.id,
       endpoint,
       key,
-      requestBody: { message: parsed.data.message, coachId: coach.data },
+      requestBody: {
+        message: parsed.data.message,
+        coachId: coach.data,
+        locale: parsed.data.locale ?? null,
+      },
     });
 
     if (claim.kind === "replay") {
@@ -193,6 +197,7 @@ export const POST = defineDynamicRouteRaw<{ coachId: string }>(
           tokensReserved: CHAT_TOKEN_RESERVE,
           clientIdempotencyKey: key,
           clientMessageId: parsed.data.clientMessageId ?? null,
+          explicitLocale: parsed.data.locale ?? null,
           signal: abort.signal,
         }),
       ),

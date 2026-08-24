@@ -12,10 +12,12 @@ import type { OnboardingInput } from "@/lib/validations/onboarding.schema";
 import {
   ACTIVITY_LEVELS,
   DIETARY_PREFERENCES,
+  EQUIPMENT_ACCESS_OPTIONS,
   EXPERIENCE_LEVELS,
   GENDERS,
   type ActivityLevel,
   type DietaryPreference,
+  type EquipmentAccess,
   type ExperienceLevel,
   type Gender,
 } from "@/lib/validations/onboarding.schema";
@@ -58,6 +60,7 @@ export function OnboardingProfileForm({
   const [activityLevel, setActivityLevel] =
     useState<ActivityLevel>("moderately_active");
   const [trainingDaysPerWeek, setTrainingDaysPerWeek] = useState(3);
+  const [equipmentAccess, setEquipmentAccess] = useState<EquipmentAccess>("gym");
   const [experienceLevel, setExperienceLevel] =
     useState<ExperienceLevel>("beginner");
   const [isNatural, setIsNatural] = useState(true);
@@ -81,6 +84,8 @@ export function OnboardingProfileForm({
     t(`onboarding.activity.${level}` as "onboarding.activity.sedentary");
   const dietLabel = (pref: DietaryPreference) =>
     t(`onboarding.diet.${pref}` as "onboarding.diet.omnivore");
+  const equipmentLabel = (value: EquipmentAccess) =>
+    t(`onboarding.equipment.${value}` as "onboarding.equipment.home");
 
   const heightNum = Number.parseInt(heightCm, 10);
   const weightNum = Number.parseFloat(weightKg);
@@ -131,6 +136,7 @@ export function OnboardingProfileForm({
       primaryGoal,
       activityLevel,
       trainingDaysPerWeek,
+      equipmentAccess,
       dietaryPreference,
       allergies: allergies.trim(),
       dislikedFoods: dislikedFoods.trim(),
@@ -355,6 +361,24 @@ export function OnboardingProfileForm({
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor={fid("equipment")} className="signup-field-label">
+          {t("onboarding.equipment")}
+        </label>
+        <select
+          id={fid("equipment")}
+          value={equipmentAccess}
+          onChange={(e) => setEquipmentAccess(e.target.value as EquipmentAccess)}
+          className="signup-field-input"
+        >
+          {EQUIPMENT_ACCESS_OPTIONS.map((value) => (
+            <option key={value} value={value} className="bg-zinc-900">
+              {equipmentLabel(value)}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="flex flex-col gap-1.5">

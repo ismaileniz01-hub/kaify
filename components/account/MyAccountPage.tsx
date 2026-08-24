@@ -9,6 +9,7 @@ import {
   Check,
   CreditCard,
   Crown,
+  Dumbbell,
   Flame,
   Gem,
   Leaf,
@@ -41,6 +42,11 @@ import { useSession } from "@/lib/session-context";
 import { useNativeApp } from "@/lib/native/platform";
 import { WEB_PRICING_URL } from "@/lib/billing/native-web-checkout";
 import type { UserProfile } from "@/lib/user";
+import { apiPatch } from "@/lib/api/client";
+import {
+  EQUIPMENT_ACCESS_OPTIONS,
+  type EquipmentAccess,
+} from "@/lib/validations/onboarding.schema";
 
 function experienceLabel(
   level: string | null | undefined,
@@ -97,6 +103,7 @@ export function MyAccountPage() {
     profile,
     userProfile,
     updateProfile,
+    refreshSession,
     signOut,
     gemBalance,
     streak,
@@ -110,6 +117,8 @@ export function MyAccountPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [equipmentDraft, setEquipmentDraft] =
+    useState<EquipmentAccess>("gym");
   const {
     openPortal,
     portalLoading,
@@ -129,6 +138,16 @@ export function MyAccountPage() {
   useEffect(() => {
     if (userProfile?.name) setNameDraft(userProfile.name);
   }, [userProfile?.name]);
+
+  useEffect(() => {
+    if (
+      profile?.equipmentAccess === "home" ||
+      profile?.equipmentAccess === "gym" ||
+      profile?.equipmentAccess === "limited"
+    ) {
+      setEquipmentDraft(profile.equipmentAccess);
+    }
+  }, [profile?.equipmentAccess]);
 
   if (isLoading || !isAuthenticated || !profile || !userProfile) {
     return (
@@ -183,6 +202,25 @@ export function MyAccountPage() {
     setNameDraft(userProfile.name);
     setEditingName(false);
     setSaveError(null);
+  };
+
+  const handleEquipmentChange = async (next: EquipmentAccess) => {
+    if (saving || next === equipmentDraft) return;
+    const previous = equipmentDraft;
+    setEquipmentDraft(next);
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await apiPatch("/api/profile", { equipmentAccess: next });
+      await refreshSession();
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch {
+      setEquipmentDraft(previous);
+      setSaveError(t("profile.save_error"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const infoRows = [
@@ -389,6 +427,36 @@ export function MyAccountPage() {
                 ) : null}
 
                 <div className="grid gap-3 border-t border-white/8 px-6 py-6 sm:grid-cols-2 sm:px-10 sm:py-8">
+                  <div className="account-info-row sm:col-span-2">
+                    <Dumbbell className="h-4 w-4 shrink-0 text-purple-300/80" />
+                    <div className="min-w-0 flex-1">
+                      <label
+                        htmlFor="account-equipment-access"
+                        className="text-xs text-zinc-500"
+                      >
+                        {t("onboarding.equipment")}
+                      </label>
+                      <select
+                        id="account-equipment-access"
+                        value={equipmentDraft}
+                        disabled={saving}
+                        onChange={(event) =>
+                          void handleEquipmentChange(
+                            event.target.value as EquipmentAccess,
+                          )
+                        }
+                        className="mt-1 w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-100 disabled:opacity-60"
+                      >
+                        {EQUIPMENT_ACCESS_OPTIONS.map((value) => (
+                          <option key={value} value={value}>
+                            {t(
+                              `onboarding.equipment.${value}` as "onboarding.equipment.home",
+                            )}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                   {infoRows.map((row) => (
                     <div key={row.label} className="account-info-row">
                       <row.icon className="h-4 w-4 shrink-0 text-purple-300/80" />

@@ -195,6 +195,7 @@ export const analyzeImageInputSchema = z.object({
   mimeType: z.enum(ANALYSIS_MIME_TYPES),
   note: z.string().trim().max(500, "Note too long").optional().default(""),
   clientMessageId: z.string().uuid().optional(),
+  locale: z.string().trim().min(2).max(10).optional(),
 });
 
 export type AnalyzeImageInput = z.infer<typeof analyzeImageInputSchema>;

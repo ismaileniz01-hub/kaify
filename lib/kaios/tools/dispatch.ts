@@ -25,8 +25,43 @@ import {
 import type { ActionTruthRecord } from "@/lib/kaios/tools/action-truth";
 import type { BaseEnvelope } from "@/lib/kaios/schemas/envelope";
 import { parseToolActionResponse } from "@/lib/kaios/schemas/envelope";
+import {
+  getExerciseById,
+  getExerciseCatalog,
+  type ExerciseEquipment,
+} from "@/lib/kaios/exercises/catalog";
 
 const MAX_POST_MODEL_TOOLS = 1;
+
+export function resolveEquipmentPreference(input: {
+  userState?: string;
+  memoryItems?: string[];
+}): ExerciseEquipment | null {
+  const sources = [...(input.memoryItems ?? []), input.userState ?? ""];
+  for (const source of sources) {
+    const match = source.match(
+      /(?:equipment|equipment_access)\s*:\s*(home(?:\s*\/\s*limited)?|limited|gym)\b/i,
+    );
+    if (!match) continue;
+    return match[1]?.toLowerCase() === "gym" ? "gym" : "home";
+  }
+  return null;
+}
+
+export function equipmentCatalogCandidates(
+  equipment: ExerciseEquipment,
+): Array<{ id: string; name: string; muscle: string; equipment: ExerciseEquipment }> {
+  const perMuscle = new Map<string, number>();
+  return getExerciseCatalog()
+    .filter((exercise) => exercise.equipment === equipment)
+    .filter((exercise) => {
+      const count = perMuscle.get(exercise.muscle) ?? 0;
+      if (count >= 3) return false;
+      perMuscle.set(exercise.muscle, count + 1);
+      return true;
+    })
+    .map(({ id, name, muscle }) => ({ id, name, muscle, equipment }));
+}
 
 export type DispatchResult = {
   truths: ActionTruthRecord[];
@@ -86,8 +121,11 @@ export async function prefetchToolKnowledge(input: {
   coach: CoachId;
   intent: Intent;
   message: string;
+  userState?: string;
+  memoryItems?: string[];
 }): Promise<DispatchResult> {
   const out: DispatchResult = { truths: [], toolResults: [], knowledgeLines: [] };
+  const equipment = resolveEquipmentPreference(input);
 
   if (
     (input.coach === "maya" || input.coach === "kai") &&
@@ -146,6 +184,14 @@ export async function prefetchToolKnowledge(input: {
         `recent_physique_history: UNAVAILABLE (${result.code})`,
       );
     }
+  }
+
+  if (input.coach === "alex" && input.intent === "programming" && equipment) {
+    out.knowledgeLines.push(
+      `required_equipment: ${equipment}; exercise_library_candidates: ${JSON.stringify(
+        equipmentCatalogCandidates(equipment),
+      )}`,
+    );
   }
 
   if (
@@ -239,6 +285,7 @@ export async function dispatchPostModelTools(input: {
   coach: CoachId;
   intent: Intent;
   envelope: BaseEnvelope;
+  expectedEquipment?: ExerciseEquipment | null;
 }): Promise<DispatchResult> {
   const out: DispatchResult = { truths: [], toolResults: [], knowledgeLines: [] };
   let calls = 0;
@@ -252,7 +299,23 @@ export async function dispatchPostModelTools(input: {
         args: { ids },
       });
       out.toolResults.push({ name: "validateExerciseIds", result });
-      out.truths.push(resultToTruth("validateExerciseIds", result));
+      const wrongEquipment = input.expectedEquipment
+        ? ids.filter((id) => {
+            const exercise = getExerciseById(id);
+            return exercise && exercise.equipment !== input.expectedEquipment;
+          })
+        : [];
+      if (wrongEquipment.length > 0) {
+        out.truths.push({
+          status: "FAILED",
+          tool: "validateExerciseIds",
+          code: "EQUIPMENT_MISMATCH",
+          message: `Exercises do not match ${input.expectedEquipment} equipment: ${wrongEquipment.join(", ")}`,
+          data: { invalidEquipmentIds: wrongEquipment },
+        });
+      } else {
+        out.truths.push(resultToTruth("validateExerciseIds", result));
+      }
       calls += 1;
       // Always mark program application as unsupported / proposed.
       out.truths.push({

@@ -102,6 +102,25 @@ export function scrubCoachLaneVoice(
   return next.length > 0 ? next : text;
 }
 
+const ALEX_MASCULINE_ADDRESS_RE =
+  /\b(reis(?:im)?|kral(?:ım|im)?|bro(?:ther)?|king|bruder|könig|hermano|rey|frère|roi|fratello|irmão|rei|брат|король)\b/giu;
+
+/** Deterministic backstop for Alex when the trusted profile says female. */
+export function scrubAlexGenderedAddress(input: {
+  text: string;
+  locale?: string | null;
+  userGender?: string | null;
+}): string {
+  if (input.userGender !== "female") return input.text;
+  const replacement = input.locale?.toLowerCase().startsWith("tr")
+    ? "kraliçe"
+    : "champ";
+  return input.text
+    .replace(ALEX_MASCULINE_ADDRESS_RE, replacement)
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 /** Quota / auth / validation stay real errors. Everything else becomes a retry line. */
 export function isSoftCoachFailure(code: string, details?: unknown): boolean {
   if (quotaResourceFromError({ code, details })) return false;

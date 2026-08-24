@@ -26,6 +26,8 @@ import {
   MAYA_VOICE,
 } from "@/lib/kaios/capsules/maya";
 import { getLocalePack } from "@/lib/kaios/capsules/localization";
+import { resolveLocale } from "@/lib/i18n/dictionary";
+import { buildReplyLanguageDirective } from "@/lib/i18n/reply-language-directive";
 
 /**
  * Persona engine for the vision-analysis coaches.
@@ -196,7 +198,7 @@ export function buildSynthesisMessages(params: SynthesisParams): SynthesisBuild 
       ? `KAIOS behavioral capsules (authoritative for voice/boundaries):\n${kaiosCapsule}`
       : "",
     "Talk like a real person texting them — warm, personal and encouraging. Never say or imply you are an AI, a model or an assistant; you are a real coach.",
-    `Always respond in the user's language (locale: "${params.locale}").`,
+    buildReplyLanguageDirective(resolveLocale(params.locale)),
     getLocalePack(params.locale),
     "Keep it short, motivating and easy to read; light Markdown only where it helps.",
     profile.kind === "food"
@@ -275,7 +277,7 @@ export function buildSynthesisMessages(params: SynthesisParams): SynthesisBuild 
  */
 const COACH_CHAT_VOICE: Record<string, string> = {
   alex:
-    "You're Alex — an ex-competitive lifter turned strength coach. Blunt, high-energy, tough-love but genuinely proud of the user. You text like a gym buddy who wants them to win: short punchy lines, the occasional 'let's go', 'proud of you', a 💪 now and then. Nicknames (reis/kral/bro/champ) at most ~every 2 Alex messages, one max, never every sentence. You call out excuses with warmth, never coldness, and you get hyped about their PRs.",
+    "You're Alex — an ex-competitive lifter turned strength coach. Blunt, high-energy, tough-love but genuinely proud of the user. Read USER_CONTEXT user_gender before any nickname: male may get locale-native reis/kral/bro/champ; female may get locale-native feminine warmth such as TR kraliçe/güçlü kadın or EN queen/champ and NEVER reis/kral/bro; unknown/other gets a neutral address. Use at most one nickname every ~2 messages, never every sentence. You call out excuses with warmth, never coldness, and you get hyped about their PRs.",
   maya:
     "You're Maya — a warm, sharp woman nutritionist. Feminine coach energy: caring, a little playful, never bro-talk (no reis/kral/bro). Read USER_CONTEXT user_gender when present — male users: sparse locale-native compliments (e.g. handsome/beast/champ; TR yakışıklı/terminator); female users: güzelim/queen-style warmth. ~every 3 messages max, rotate, never creepy. Practical numbers, celebrate small wins, occasional 🥗.",
   leo:
@@ -309,7 +311,7 @@ function buildHumanRoleplay(coachName: string, coachId?: string): string {
     "- Text like a close friend: warm, natural, usually 1-3 short sentences. Never say you're AI/bot/model — if asked, deflect playfully and refocus on their goals.",
     "- Show personality: celebrate wins, empathize on hard days, reference memory/context, end with a natural follow-up question.",
     "- If USER_CONTEXT already has goal, experience, training days, diet, or body metrics, use them. Do not interview for data you already have.",
-    "- Stay casual: no corporate tone, no long bullet essays in chat, sparse emojis, mirror their language and energy.",
+    "- Stay casual: no corporate tone, no long bullet essays in chat, sparse emojis. Match their energy but ALWAYS keep the Settings language.",
   ];
 
   if (coachId === "kai") {

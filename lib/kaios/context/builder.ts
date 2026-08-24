@@ -3,7 +3,7 @@ import {
   looksLikeFoodConsumption,
   looksLikeHydrationLog,
   looksLikeMealSaveFollowUp,
-  outputBudgetFor,
+  outputBudgetForCoach,
   resolveIntent,
   type Intent,
 } from "@/lib/kaios/routing/intent";
@@ -171,7 +171,7 @@ export function buildRuntimeContext(
   }
   const contHint = continuationHint(shortTurn, previousAssistant);
 
-  const maxTokens = outputBudgetFor(intent, input.message, {
+  const maxTokens = outputBudgetForCoach(input.coach, intent, input.message, {
     needsContinuation: shortTurn.needsContinuation,
   });
 

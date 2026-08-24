@@ -498,7 +498,7 @@ describe("Unicode stream completion", () => {
         sawDelta: true,
         finishReason: "length",
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 });
 

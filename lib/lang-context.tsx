@@ -39,11 +39,16 @@ export function isRtlLang(code: LangCode): boolean {
 function persistLocaleToProfile(code: LangCode): void {
   if (typeof window === "undefined") return;
   void import("@/lib/api/client")
-    .then(({ apiPatch }) =>
-      apiPatch("/api/profile", { locale: code }).catch(() => {
-        // Non-fatal: language still applies locally via localStorage.
-      }),
-    )
+    .then(async ({ apiPatch }) => {
+      try {
+        await apiPatch("/api/profile", { locale: code });
+      } catch {
+        // One bounded retry covers transient mobile/WebView connectivity.
+        window.setTimeout(() => {
+          void apiPatch("/api/profile", { locale: code }).catch(() => {});
+        }, 1500);
+      }
+    })
     .catch(() => {});
 }
 

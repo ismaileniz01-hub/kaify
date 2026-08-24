@@ -40,9 +40,11 @@ import {
 import {
   ACTIVITY_LEVELS,
   DIETARY_PREFERENCES,
+  EQUIPMENT_ACCESS_OPTIONS,
   EXPERIENCE_LEVELS,
   type ActivityLevel,
   type DietaryPreference,
+  type EquipmentAccess,
   type ExperienceLevel,
   type Gender,
   type OnboardingInput,
@@ -140,7 +142,8 @@ function storePendingLegalConsent(): void {
   );
 }
 
-export function SignupWizard({ redirectTo: _redirectTo = "/pricing" }: Props) {
+export function SignupWizard({ redirectTo = "/pricing" }: Props) {
+  void redirectTo;
   const { lang, t } = useLang();
   const { isAuthenticated, isLoading, profile, refreshSession } = useSession();
   const idPrefix = useId();
@@ -178,6 +181,7 @@ export function SignupWizard({ redirectTo: _redirectTo = "/pricing" }: Props) {
   const [activityLevel, setActivityLevel] =
     useState<ActivityLevel>("moderately_active");
   const [trainingDaysPerWeek, setTrainingDaysPerWeek] = useState(3);
+  const [equipmentAccess, setEquipmentAccess] = useState<EquipmentAccess>("gym");
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>("beginner");
   const [isNatural, setIsNatural] = useState(true);
   const [dietaryPreference, setDietaryPreference] =
@@ -249,6 +253,7 @@ export function SignupWizard({ redirectTo: _redirectTo = "/pricing" }: Props) {
       primaryGoal,
       activityLevel,
       trainingDaysPerWeek,
+      equipmentAccess,
       dietaryPreference,
       allergies: allergies.trim(),
       dislikedFoods: dislikedFoods.trim(),
@@ -264,6 +269,7 @@ export function SignupWizard({ redirectTo: _redirectTo = "/pricing" }: Props) {
     dietaryPreference,
     dislikedFoods,
     displayName,
+    equipmentAccess,
     experienceLevel,
     gender,
     healthConditions,
@@ -456,6 +462,8 @@ export function SignupWizard({ redirectTo: _redirectTo = "/pricing" }: Props) {
     t(`onboarding.activity.${level}` as "onboarding.activity.sedentary");
   const dietLabel = (pref: DietaryPreference) =>
     t(`onboarding.diet.${pref}` as "onboarding.diet.omnivore");
+  const equipmentLabel = (value: EquipmentAccess) =>
+    t(`onboarding.equipment.${value}` as "onboarding.equipment.home");
 
   const stepTitle = t(`signup.wizard.${currentStep}.title` as "signup.wizard.email.title");
   const stepSubtitle = t(`signup.wizard.${currentStep}.subtitle` as "signup.wizard.email.subtitle");
@@ -814,6 +822,32 @@ export function SignupWizard({ redirectTo: _redirectTo = "/pricing" }: Props) {
                       <p id={fid("training-hint")} className="text-center text-[11px] text-zinc-500">
                         {t("signup.wizard.training_days_hint")}
                       </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label id={fid("equipment-label")} className="signup-field-label text-center">
+                        {t("onboarding.equipment")}
+                      </label>
+                      <div
+                        className="grid grid-cols-3 gap-2"
+                        role="group"
+                        aria-labelledby={fid("equipment-label")}
+                      >
+                        {EQUIPMENT_ACCESS_OPTIONS.map((value) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setEquipmentAccess(value)}
+                            aria-pressed={equipmentAccess === value}
+                            className={`signup-wizard-option ${
+                              equipmentAccess === value
+                                ? "signup-wizard-option--active"
+                                : ""
+                            }`}
+                          >
+                            {equipmentLabel(value)}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}

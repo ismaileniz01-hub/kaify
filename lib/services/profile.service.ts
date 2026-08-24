@@ -98,6 +98,9 @@ export async function updateOwnProfile(
   if (patch.experienceLevel !== undefined) {
     updates.experience_level = patch.experienceLevel;
   }
+  if (patch.equipmentAccess !== undefined) {
+    updates.equipment_access = patch.equipmentAccess;
+  }
   if (patch.isNatural !== undefined) updates.is_natural = patch.isNatural;
   if (patch.bio !== undefined) updates.bio = patch.bio === "" ? null : patch.bio;
   if (patch.countryCode !== undefined) updates.country_code = patch.countryCode;

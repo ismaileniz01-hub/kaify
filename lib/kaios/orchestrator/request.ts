@@ -49,6 +49,7 @@ import {
   dispatchPostModelTools,
   maybeQueueMayaFoodLogConfirmation,
   prefetchToolKnowledge,
+  resolveEquipmentPreference,
 } from "@/lib/kaios/tools/dispatch";
 import { maybeQueueCoachLogConfirmation } from "@/lib/kaios/analytics/chat-log";
 import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
@@ -60,6 +61,7 @@ import {
   coachRetryLine,
   isCoachRetryLine,
   looksLikeUnsafeCoachText,
+  scrubAlexGenderedAddress,
   sanitizeCoachVisibleText,
 } from "@/lib/kaios/coach-retry";
 import {
@@ -96,6 +98,7 @@ export type OrchestrateResultMeta = {
   telemetry: ReturnType<typeof createTokenTelemetryRecord>;
   awaitUser?: boolean;
   assistantText: string;
+  maxTokens?: number;
   aborted?: boolean;
   /** Provider finish_reason when streaming (e.g. length = truncated at max_tokens). */
   finishReason?: string | null;
@@ -242,6 +245,8 @@ export async function* orchestrateCoachChat(
     coach: input.coachId,
     intent,
     message: input.message,
+    userState: input.userState,
+    memoryItems: input.memoryItems,
   });
   const knowledge = [
     ...(input.knowledge ?? []),
@@ -518,6 +523,10 @@ export async function* orchestrateCoachChat(
     coach: input.coachId,
     intent,
     envelope,
+    expectedEquipment: resolveEquipmentPreference({
+      userState: input.userState,
+      memoryItems: input.memoryItems,
+    }),
   });
   actionTruth = [...actionTruth, ...post.truths];
   if (post.confirmation) confirmation = post.confirmation;
@@ -631,6 +640,16 @@ export async function* orchestrateCoachChat(
     envelope: { ...envelope, message: assistantText },
   });
   assistantText = envelope.message;
+  if (input.coachId === "alex") {
+    const userGender =
+      input.userState?.match(/\buser_gender:\s*(male|female)\b/i)?.[1]?.toLowerCase() ??
+      null;
+    assistantText = scrubAlexGenderedAddress({
+      text: assistantText,
+      locale: input.locale,
+      userGender,
+    });
+  }
   assistantText = ensureMayaAnalyticsSavedAck({
     text: assistantText,
     locale: input.locale,
@@ -720,6 +739,7 @@ export async function* orchestrateCoachChat(
     telemetry,
     awaitUser,
     assistantText,
+    maxTokens: ctx.maxTokens,
     finishReason: streamFinishReason,
     actionTruth,
     confirmation,

@@ -32,6 +32,7 @@ export type MessageType =
 export type CoachId = "alex" | "maya" | "leo" | "kai";
 export type ThreadType = "direct" | "team";
 export type ProfileRole = "user" | "admin";
+export type EquipmentAccess = "home" | "gym" | "limited";
 export type NotificationType =
   | "streak_risk"
   | "streak_milestone"
@@ -69,6 +70,7 @@ type ProfileRow = {
   birth_date: string | null;
   activity_level: string | null;
   training_days_per_week: number | null;
+  equipment_access: EquipmentAccess | null;
   dietary_preference: string | null;
   allergies: string | null;
   disliked_foods: string | null;
@@ -107,6 +109,7 @@ type ProfileInsert = {
   birth_date?: string | null;
   activity_level?: string | null;
   training_days_per_week?: number | null;
+  equipment_access?: EquipmentAccess | null;
   dietary_preference?: string | null;
   allergies?: string | null;
   disliked_foods?: string | null;
@@ -142,6 +145,7 @@ type ProfileUpdate = {
   birth_date?: string | null;
   activity_level?: string | null;
   training_days_per_week?: number | null;
+  equipment_access?: EquipmentAccess | null;
   dietary_preference?: string | null;
   allergies?: string | null;
   disliked_foods?: string | null;
@@ -224,6 +228,9 @@ type CompleteOnboardingArgs = {
   p_primary_goal?: string | null;
   p_activity_level?: string | null;
   p_training_days_per_week?: number | null;
+  p_equipment_access: EquipmentAccess;
+  p_calorie_goal: number;
+  p_workouts_target: number;
   p_dietary_preference?: string | null;
   p_allergies?: string | null;
   p_disliked_foods?: string | null;

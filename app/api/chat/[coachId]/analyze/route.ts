@@ -61,6 +61,7 @@ export const POST = defineDynamicRoute<{ coachId: string }>(
       requestBody: {
         mimeType: parsed.data.mimeType,
         note: parsed.data.note ?? null,
+        locale: parsed.data.locale ?? null,
         imageLen: parsed.data.imageBase64.length,
       },
       handler: async () => {
@@ -71,6 +72,7 @@ export const POST = defineDynamicRoute<{ coachId: string }>(
             imageBase64: parsed.data.imageBase64,
             mimeType: parsed.data.mimeType,
             note: parsed.data.note,
+            explicitLocale: parsed.data.locale,
             clientMessageId: parsed.data.clientMessageId,
             signal: request.signal,
           });

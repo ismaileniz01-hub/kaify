@@ -15,9 +15,12 @@ import {
   buildVisionPrompt,
   type AnalysisPersona,
 } from "@/lib/ai/personas";
-import { scrubModelOutput } from "@/lib/ai/prompt-safety";
+import { scrubModelOutput, wrapUntrustedInput } from "@/lib/ai/prompt-safety";
 import { sanitizeCoachVisibleText } from "@/lib/kaios/coach-retry";
 import { TOKEN_BUDGET } from "@/lib/ai/budget";
+import { resolveLocale } from "@/lib/i18n/dictionary";
+import { buildReplyLanguageDirective } from "@/lib/i18n/reply-language-directive";
+import { isReplyLanguageMismatch } from "@/lib/i18n/reply-language-guard";
 import {
   interpretVisionEnvelope,
   type ImageQuality,
@@ -129,7 +132,7 @@ export const ModelRouter = {
       userNote: params.userNote,
       userState: params.userState,
     });
-    const { content, usage } = await createChatCompletion(synth.messages, {
+    const first = await createChatCompletion(synth.messages, {
       temperature: 0.7,
       maxTokens: TOKEN_BUDGET.synthesis,
       signal: params.signal,
@@ -138,8 +141,55 @@ export const ModelRouter = {
         : { operation: "synthesis" },
     });
 
+    let rawSummary = scrubModelOutput(first.content, synth.canary);
+    let usage = first.usage;
+    let deepseekCalls = 1;
+    if (isReplyLanguageMismatch(rawSummary, params.locale)) {
+      const retry = await createChatCompletion(
+        [
+          {
+            role: "system",
+            content: [
+              buildReplyLanguageDirective(resolveLocale(params.locale)),
+              "Rewrite the supplied coach reply faithfully in the mandatory language. Preserve numbers and safety meaning. Return only the rewritten reply.",
+            ].join("\n\n"),
+          },
+          {
+            role: "user",
+            content: wrapUntrustedInput("COACH_REPLY_TO_REWRITE", rawSummary),
+          },
+        ],
+        {
+          temperature: 0.2,
+          maxTokens: TOKEN_BUDGET.synthesis,
+          signal: params.signal,
+          usageContext: params.userId
+            ? { userId: params.userId, operation: "synthesis" }
+            : { operation: "synthesis" },
+        },
+      );
+      deepseekCalls += 1;
+      rawSummary = retry.content;
+      if (usage && retry.usage) {
+        usage = {
+          prompt_tokens: usage.prompt_tokens + retry.usage.prompt_tokens,
+          completion_tokens:
+            usage.completion_tokens + retry.usage.completion_tokens,
+          total_tokens: usage.total_tokens + retry.usage.total_tokens,
+        };
+      } else {
+        usage = retry.usage ?? usage;
+      }
+      if (isReplyLanguageMismatch(rawSummary, params.locale)) {
+        throw new AiError(
+          "AI_BAD_OUTPUT",
+          aiCopy(params.locale, "bad_analysis_output"),
+        );
+      }
+    }
+
     const summary = sanitizeCoachVisibleText(
-      scrubModelOutput(content, synth.canary),
+      rawSummary,
       params.locale,
       params.persona,
     );
@@ -151,7 +201,7 @@ export const ModelRouter = {
       summary,
       usage,
       geminiCalls: 1,
-      deepseekCalls: 1,
+      deepseekCalls,
     };
   },
 };

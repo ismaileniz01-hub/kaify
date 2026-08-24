@@ -26,10 +26,12 @@ import {
 } from "@/lib/kaios/orchestrator";
 import { prepareMemoriesForContext, extractUserMemoryFacts, sanitizeMemories } from "@/lib/kaios/memory";
 import { resolveActiveLocale } from "@/lib/kaios/localization/resolve";
+import { isReplyLanguageMismatch } from "@/lib/i18n/reply-language-guard";
 import { resolveKaiFamiliarityStage } from "@/lib/kaios/kai/familiarity";
 import { linkPendingConfirmationToMessage } from "@/lib/services/analytics-confirmation.service";
 import { lastAssistantMessage } from "@/lib/kaios/context/short-turn";
 import {
+  outputBudgetForCoach,
   resolveIntent,
   type CoachId,
 } from "@/lib/kaios/routing/intent";
@@ -51,6 +53,7 @@ import { coachVisibleMessage } from "@/lib/kaios/envelope-text";
 import {
   coachRetryLine,
   isSoftCoachFailure,
+  scrubAlexGenderedAddress,
   sanitizeCoachVisibleText,
 } from "@/lib/kaios/coach-retry";
 import {
@@ -145,13 +148,14 @@ async function getProfileLocaleAndSafety(
   dietaryPreference: string | null;
   dislikedFoods: string | null;
   healthConditions: string | null;
+  equipmentAccess: string | null;
   primaryGoal: string | null;
 }> {
   const [{ data }, { data: settings }] = await Promise.all([
     admin
       .from("profiles")
       .select(
-        "locale, allergies, created_at, gender, experience_level, training_days_per_week, activity_level, height_cm, weight_kg, dietary_preference, disliked_foods, health_conditions",
+        "locale, allergies, created_at, gender, experience_level, training_days_per_week, activity_level, height_cm, weight_kg, dietary_preference, disliked_foods, health_conditions, equipment_access",
       )
       .eq("id", userId)
       .maybeSingle(),
@@ -201,6 +205,10 @@ async function getProfileLocaleAndSafety(
       typeof data?.health_conditions === "string"
         ? data.health_conditions
         : null,
+    equipmentAccess:
+      typeof data?.equipment_access === "string"
+        ? data.equipment_access
+        : null,
     primaryGoal:
       typeof settings?.primary_goal === "string" && settings.primary_goal.trim()
         ? settings.primary_goal.trim()
@@ -235,6 +243,7 @@ function buildStateSummary(
     dietaryPreference?: string | null;
     dislikedFoods?: string | null;
     healthConditions?: string | null;
+    equipmentAccess?: string | null;
     primaryGoal?: string | null;
     crossCoachSnapshot?: string | null;
   },
@@ -250,6 +259,7 @@ function buildStateSummary(
     dietaryPreference: extras?.dietaryPreference,
     dislikedFoods: extras?.dislikedFoods,
     healthConditions: extras?.healthConditions,
+    equipmentAccess: extras?.equipmentAccess,
   });
   if (profileContext) parts.push(profileContext);
   if (extras?.allergies) parts.push(`allergies: ${extras.allergies}`);
@@ -363,6 +373,8 @@ export type StreamReplyParams = {
   userId: string;
   coachId: string;
   message: string;
+  /** Authenticated UI locale for this turn; resolved against supported locales. */
+  explicitLocale?: string | null;
   /** Tokens already reserved by the route before streaming starts. */
   tokensReserved?: number;
   /** Client Idempotency-Key — unique per user so retries do not insert twice. */
@@ -505,10 +517,16 @@ async function* streamKaiosCoachReply(
           .eq("thread_type", "direct"),
       ]);
 
+    const requestedLocale = params.explicitLocale
+      ? resolveLocale(params.explicitLocale)
+      : resolveLocale(profileMeta.savedLocale);
     locale = resolveActiveLocale({
-      savedLocale: profileMeta.savedLocale,
+      savedLocale: requestedLocale,
       fallbackLocale: "en",
     });
+    if (params.explicitLocale && locale !== profileMeta.savedLocale) {
+      await admin.from("profiles").update({ locale }).eq("id", params.userId);
+    }
 
     const familiarityStage =
       coachId === "kai"
@@ -562,6 +580,7 @@ async function* streamKaiosCoachReply(
       dietaryPreference: profileMeta.dietaryPreference,
       dislikedFoods: profileMeta.dislikedFoods,
       healthConditions: profileMeta.healthConditions,
+      equipmentAccess: profileMeta.equipmentAccess,
       primaryGoal: profileMeta.primaryGoal,
       crossCoachSnapshot,
     });
@@ -676,7 +695,6 @@ async function* streamKaiosCoachReply(
         yield chunk;
         return;
       }
-      yield chunk;
     }
 
     const meta = out.meta;
@@ -691,37 +709,100 @@ async function* streamKaiosCoachReply(
       locale,
       params.coachId,
     );
-    if (
-      isStreamCompletionSuspicious({
-        text: assistantText,
-        aborted: false,
-        sawDelta: true,
-        finishReason: meta.finishReason,
-      })
-    ) {
-      logger.error("[chat.service] kaios stream completion suspicious; persist retry", {
+    const suspiciousCompletion = isStreamCompletionSuspicious({
+      text: assistantText,
+      aborted: false,
+      sawDelta: true,
+      finishReason: meta.finishReason,
+    });
+    const languageMismatch = isReplyLanguageMismatch(assistantText, locale);
+    let totalTokens = meta.usageTokens;
+    let correctionCalls = 0;
+    if (suspiciousCompletion || languageMismatch) {
+      logger.warn("[chat.service] repairing coach reply before display", {
         userId: params.userId,
         coachId: params.coachId,
+        finishReason: meta.finishReason,
+        languageMismatch,
         length: assistantText.length,
       });
-      assistantText = coachRetryLine(locale);
-      yield await persistAndDoneCoachRetry({
-        userId: params.userId,
-        coachId: params.coachId,
+      const correction = await ModelRouter.completeText(
+        [
+          {
+            role: "system",
+            content: [
+              buildReplyLanguageDirective(resolveLocale(locale)),
+              suspiciousCompletion
+                ? "The supplied coach reply was cut off. Rewrite it as one complete, concise reply. Preserve established facts, numbers, safety meaning, and coach voice. Do not mention truncation."
+                : "Rewrite the supplied coach reply faithfully in the mandatory language. Preserve facts, numbers, safety meaning, and coach voice.",
+              "Return only the corrected coach reply.",
+            ].join("\n\n"),
+          },
+          {
+            role: "user",
+            content: wrapUntrustedInput("COACH_REPLY_TO_REPAIR", assistantText),
+          },
+        ],
+        {
+          temperature: 0.2,
+          maxTokens: Math.max(
+            TOKEN_BUDGET.chatReply,
+            outputBudgetForCoach(coachId, meta.intent, cleanMessage, {
+              needsContinuation: suspiciousCompletion,
+            }),
+          ),
+          signal: params.signal,
+          usageContext: {
+            userId: params.userId,
+            operation: "kaios_chat_structured",
+          },
+        },
+      );
+      correctionCalls = 1;
+      totalTokens += correction.usage?.total_tokens ?? 0;
+      assistantText = sanitizeCoachVisibleText(
+        correction.content,
         locale,
-        replyToMessageId: insertedUser?.id ?? null,
-      });
-      return;
+        params.coachId,
+      );
+      if (params.coachId === "alex") {
+        assistantText = scrubAlexGenderedAddress({
+          text: assistantText,
+          locale,
+          userGender: profileMeta.userGender,
+        });
+      }
+      if (
+        isStreamCompletionSuspicious({
+          text: assistantText,
+          aborted: false,
+          sawDelta: true,
+          finishReason: null,
+        }) ||
+        isReplyLanguageMismatch(assistantText, locale)
+      ) {
+        yield await persistAndDoneCoachRetry({
+          userId: params.userId,
+          coachId: params.coachId,
+          locale,
+          replyToMessageId: insertedUser?.id ?? null,
+        });
+        return;
+      }
     }
-    const totalTokens = meta.usageTokens;
 
     logger.info("kaios chat telemetry", {
       userId: params.userId,
       coachId: params.coachId,
       intent: meta.intent,
-      modelCallCount: meta.modelCallCount,
+      modelCallCount: meta.modelCallCount + correctionCalls,
       estimatedInputTokens: meta.telemetry.estimatedInputTokens,
       usageTokens: totalTokens,
+      finishReason: meta.finishReason,
+      outputBudget:
+        meta.maxTokens ?? outputBudgetForCoach(coachId, meta.intent, cleanMessage),
+      outputChars: assistantText.length,
+      correctionCalls,
     });
 
     const { data: inserted, error: insertError } = await admin
@@ -747,6 +828,11 @@ async function* streamKaiosCoachReply(
       });
       throw new ApiError("INTERNAL_ERROR", aiCopy(locale, "reply_not_saved"));
     }
+
+    yield {
+      event: "delta",
+      data: { content: assistantText },
+    };
 
     if (inserted?.id && meta.confirmation?.pendingId) {
       await linkPendingConfirmationToMessage({
@@ -918,7 +1004,12 @@ export async function* streamCoachReply(
       loadCrossCoachSnapshot(params.userId).catch(() => ""),
     ]);
 
-    locale = profileMeta.savedLocale;
+    locale = params.explicitLocale
+      ? resolveLocale(params.explicitLocale)
+      : profileMeta.savedLocale;
+    if (params.explicitLocale && locale !== profileMeta.savedLocale) {
+      await admin.from("profiles").update({ locale }).eq("id", params.userId);
+    }
 
     const history = await fetchRecentTurns(admin, params.userId, params.coachId);
 
@@ -938,6 +1029,7 @@ export async function* streamCoachReply(
         dietaryPreference: profileMeta.dietaryPreference,
         dislikedFoods: profileMeta.dislikedFoods,
         healthConditions: profileMeta.healthConditions,
+        equipmentAccess: profileMeta.equipmentAccess,
         primaryGoal: profileMeta.primaryGoal,
         crossCoachSnapshot,
       }),

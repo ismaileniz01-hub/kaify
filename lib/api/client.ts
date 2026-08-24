@@ -207,6 +207,7 @@ export async function streamChatMessage(
   signal?: AbortSignal,
   idempotencyKey?: string,
   clientMessageId?: string,
+  locale?: string,
 ): Promise<void> {
   const key = idempotencyKey ?? createIdempotencyKey();
   const response = await fetch(resolveApiPath(`/api/chat/${coachId}`), {
@@ -220,6 +221,7 @@ export async function streamChatMessage(
     body: JSON.stringify({
       message,
       ...(clientMessageId ? { clientMessageId } : {}),
+      ...(locale ? { locale } : {}),
     }),
     signal,
   });
@@ -245,6 +247,8 @@ export async function streamChatMessage(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let receivedDone = false;
+  let receivedError = false;
 
   const dispatchBlock = (block: string) => {
     const lines = block.split("\n");
@@ -263,6 +267,7 @@ export async function streamChatMessage(
       if (event === "delta" && typeof parsed.content === "string") {
         handlers.onDelta(parsed.content);
       } else if (event === "done") {
+        receivedDone = true;
         handlers.onDone({
           messageId: (parsed.messageId as string | null) ?? null,
           userMessageId: (parsed.userMessageId as string | null) ?? null,
@@ -279,6 +284,7 @@ export async function streamChatMessage(
           payload: parsed.payload,
         });
       } else if (event === "error") {
+        receivedError = true;
         const code =
           typeof parsed.code === "string" ? parsed.code : "INTERNAL_ERROR";
         handlers.onError(code);
@@ -301,4 +307,7 @@ export async function streamChatMessage(
 
   buffer += decoder.decode();
   if (buffer.trim()) dispatchBlock(buffer);
+  if (!receivedDone && !receivedError && !signal?.aborted) {
+    handlers.onError("STREAM_INCOMPLETE");
+  }
 }
