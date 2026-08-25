@@ -1,4 +1,4 @@
-workflows:
+﻿workflows:
   kaify-ios:
     name: Kaify iOS
     instance_type: mac_mini_m2
@@ -9,10 +9,8 @@ workflows:
 
     environment:
       ios_signing:
-        provisioning_profiles:
-          - kaify_appstore_profile
-        certificates:
-          - kaify_distribution
+        distribution_type: app_store
+        bundle_identifier: org.kaifyai.app
       vars:
         XCODE_PROJECT: "App.xcodeproj"
         XCODE_SCHEME: "App"
@@ -57,3 +55,4 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
+
