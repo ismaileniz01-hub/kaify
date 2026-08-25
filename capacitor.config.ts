@@ -9,21 +9,22 @@ import { KeyboardResize, KeyboardStyle } from "@capacitor/keyboard";
  */
 const liveReloadUrl = process.env.CAPACITOR_SERVER_URL?.trim();
 const isLiveReload = Boolean(liveReloadUrl);
+const nativeStartFile = "/login/index.html";
 
 const config: CapacitorConfig = {
   appId: 'org.kaifyai.app',
   appName: "Kaify Ai",
   webDir: "out",
   loggingBehavior: isLiveReload ? "debug" : "none",
-  ...(liveReloadUrl
+  server: liveReloadUrl
     ? {
-        server: {
-          url: liveReloadUrl,
-          cleartext: liveReloadUrl.startsWith("http://"),
-          androidScheme: "https",
-        },
+        url: liveReloadUrl,
+        cleartext: liveReloadUrl.startsWith("http://"),
+        androidScheme: "https",
       }
-    : {}),
+    : {
+        appStartPath: nativeStartFile,
+      },
   android: {
     allowMixedContent: isLiveReload,
     webContentsDebuggingEnabled: isLiveReload,

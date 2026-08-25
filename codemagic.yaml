@@ -1,4 +1,4 @@
-﻿workflows:
+workflows:
   kaify-ios:
     name: Kaify iOS
     instance_type: mac_mini_m2
@@ -35,6 +35,11 @@
             npx cap add ios
           fi
           npx cap sync ios
+
+      - name: Set iOS build metadata
+        script: |
+          perl -0pi -e 's/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $ENV{BUILD_NUMBER};/g' ios/App/App.xcodeproj/project.pbxproj
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/App/App/Info.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" ios/App/App/Info.plist
 
       - name: Configure Apple signing
         script: |

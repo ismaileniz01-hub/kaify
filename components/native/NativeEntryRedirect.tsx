@@ -7,7 +7,7 @@ import { Capacitor } from "@capacitor/core";
 export function NativeEntryRedirect() {
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
-      window.location.replace("/login/");
+      window.location.replace("/login/index.html");
     }
   }, []);
 
