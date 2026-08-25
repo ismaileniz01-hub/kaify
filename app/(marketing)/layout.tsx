@@ -4,7 +4,6 @@ import { OptionalAnalytics } from "@/components/consent/OptionalAnalytics";
 import "../styles/marketing.css";
 
 export const dynamic = "force-static";
-export const revalidate = 3600;
 
 /** Public marketing / legal routes — no SessionProvider, no request cookies. */
 export default function MarketingLayout({

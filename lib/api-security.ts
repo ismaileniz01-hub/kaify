@@ -157,6 +157,14 @@ export function isAllowedOrigin(request: NextRequest): boolean {
     .map((o) => o.trim())
     .filter(Boolean);
 
+  // Static Capacitor bundles use a local, non-web origin. Authentication for
+  // these requests is a Bearer token, not ambient cross-site cookies.
+  allowedOrigins.push(
+    "capacitor://localhost",
+    "https://localhost",
+    "http://localhost",
+  );
+
   // Origin kontrolü (regex yok, includes ile tam eşleşme)
   if (origin && allowedOrigins.includes(origin)) {
     return true;

@@ -6,7 +6,7 @@ import { useLang } from "@/lib/lang-context";
 import { formatNumber } from "@/lib/i18n/format";
 import { FlagImage } from "@/components/FlagImage";
 import { MotionDialog } from "@/components/ui/MotionDialog";
-import { resolveApiPath } from "@/lib/api/client";
+import { getApiAuthHeaders, resolveApiPath } from "@/lib/api/client";
 
 type CountryEntry = {
   countryCode: string;
@@ -38,7 +38,8 @@ export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClo
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
-    fetch(resolveApiPath("/api/country-leaderboard"))
+    void getApiAuthHeaders()
+      .then((headers) => fetch(resolveApiPath("/api/country-leaderboard"), { headers }))
       .then((res) => res.json())
       .then((json) => {
         setData(json);

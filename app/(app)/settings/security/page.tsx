@@ -13,7 +13,7 @@ import {
   verifyTotpEnrollment,
 } from "@/lib/auth/mfa";
 import { CSRF_HEADER_NAME, readCsrfCookieFromDocument } from "@/lib/security/csrf-client";
-import { apiDelete, apiGet, resolveApiPath } from "@/lib/api/client";
+import { apiDelete, apiGet, getApiAuthHeaders, resolveApiPath } from "@/lib/api/client";
 import { CONSENT_TYPES } from "@/lib/legal/constants";
 import { InlineAlert } from "@/components/InlineAlert";
 import {
@@ -186,9 +186,13 @@ export default function SecuritySettingsPage() {
     setMessage(null);
     try {
       const csrf = readCsrfCookieFromDocument();
+      const authHeaders = await getApiAuthHeaders();
       const res = await fetch(resolveApiPath("/api/profile/export"), {
         credentials: "include",
-        headers: csrf ? { [CSRF_HEADER_NAME]: csrf } : {},
+        headers: {
+          ...authHeaders,
+          ...(csrf ? { [CSRF_HEADER_NAME]: csrf } : {}),
+        },
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as {

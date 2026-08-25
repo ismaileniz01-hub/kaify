@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { ArrowRight, Check, Loader2, AlertCircle } from "lucide-react";
 import ReCAPTCHA from "react-google-recaptcha";
 import { useLang } from "@/lib/lang-context";
+import { resolveApiPath } from "@/lib/api/client";
 
 type FieldErrors = {
   firstName?: string;
@@ -69,7 +70,7 @@ export function WaitlistForm({ className = "" }: { className?: string }) {
     const trimmedFirst = firstName.trim();
 
     try {
-      const response = await fetch("/api/waitlist", {
+      const response = await fetch(resolveApiPath("/api/waitlist"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
