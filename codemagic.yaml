@@ -13,3 +13,44 @@ workflows:
           - kaify_appstore_profile
         certificates:
           - kaify_distribution
+      vars:
+        XCODE_WORKSPACE: "App.xcodeproj"
+        XCODE_SCHEME: "App"
+      node: 22
+      xcode: latest
+
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm ci
+
+      - name: Build web application
+        script: |
+          IS_CAPACITOR=true npm run build
+
+      - name: Create and synchronize iOS project
+        script: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
+          npx cap sync ios
+
+      - name: Configure Apple signing
+        script: |
+          xcode-project use-profiles
+
+      - name: Build signed IPA
+        script: |
+          cd ios/App
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - ios/App/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      app_store_connect:
+        auth: integration
