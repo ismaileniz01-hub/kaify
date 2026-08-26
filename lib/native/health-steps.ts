@@ -71,6 +71,7 @@ export async function connectHealthSteps(): Promise<HealthStepsStatus> {
   await Health.requestAuthorization({
     read: ["steps"],
     write: [],
+    requestHistoryAccess: true,
   });
   const auth = await Health.checkAuthorization({ read: ["steps"] }).catch(
     () => null,

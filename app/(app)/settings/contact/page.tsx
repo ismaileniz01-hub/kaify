@@ -76,7 +76,7 @@ export default function ContactSupportPage() {
               {m.body}
             </div>
           ))}
-          {!ticket?.messages.length && (
+          {!ticket?.messages.length && !error && (
             <EmptyState title={t("support.empty")} className="py-6" />
           )}
         </div>
@@ -104,7 +104,8 @@ export default function ContactSupportPage() {
             type="button"
             disabled={busy || !message.trim()}
             onClick={() => void send()}
-            className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-600 text-white disabled:opacity-40"
+            aria-label={t("support.send")}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-600 text-white disabled:opacity-40"
           >
             <Send className="h-4 w-4" />
           </button>

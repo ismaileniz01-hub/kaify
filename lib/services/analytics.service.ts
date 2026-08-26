@@ -281,15 +281,17 @@ async function loadTodayNutritionSnapshot(userId: string): Promise<AnalyticsDail
   const timezone = await resolveUserTimezone(userId);
   const today = localTodayDate(timezone);
 
-  const [todayRow, lastWeightKg, lastGoalRow, profileWeightKg] = await Promise.all([
-    readAnalyticsDailyRow(readClient, userId, today),
-    readLatestWeightKg(readClient, userId, today),
-    readLatestGoalRow(readClient, userId, today),
-    readProfileWeightKg(readClient, userId).catch(() => null),
-  ]);
+  const [todayRow, lastWeightKg, lastGoalRow, profileWeightKg, todaySteps] =
+    await Promise.all([
+      readAnalyticsDailyRow(readClient, userId, today),
+      readLatestWeightKg(readClient, userId, today),
+      readLatestGoalRow(readClient, userId, today),
+      readProfileWeightKg(readClient, userId).catch(() => null),
+      readHealthStepsRange(readClient, userId, today, today),
+    ]);
 
   const stored = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today);
-  const todayDto = hydrateTodaySnapshot(stored, {
+  let todayDto = hydrateTodaySnapshot(stored, {
     hasTodayRow: Boolean(todayRow),
     lastWeightKg: lastWeightKg ?? profileWeightKg,
     lastGoals: lastGoalRow
@@ -304,6 +306,10 @@ async function loadTodayNutritionSnapshot(userId: string): Promise<AnalyticsDail
         }
       : null,
   });
+  const healthSteps = Number(todaySteps?.[0]?.steps) || 0;
+  if (healthSteps > 0) {
+    todayDto = { ...todayDto, steps: healthSteps };
+  }
   return todayDto;
 }
 
@@ -566,4 +572,5 @@ export async function syncHealthSteps(
       patchAnalyticsDaily(userId, { steps }, date),
     ),
   );
+  await invalidateAnalyticsCache(userId);
 }

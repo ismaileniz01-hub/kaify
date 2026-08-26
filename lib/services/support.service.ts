@@ -25,11 +25,15 @@ function supportDb() {
 
 async function listTicketMessages(ticketId: string): Promise<SupportMessageDTO[]> {
   const admin = supportDb();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("support_messages")
     .select("id, sender, body, created_at")
     .eq("ticket_id", ticketId)
     .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new ApiError("INTERNAL_ERROR", "Destek mesajları yüklenemedi.");
+  }
 
   return (data ?? []).map((m) => ({
     id: m.id,
@@ -41,15 +45,19 @@ async function listTicketMessages(ticketId: string): Promise<SupportMessageDTO[]
 
 export async function getOrCreateUserTicket(userId: string): Promise<SupportTicketDTO> {
   const admin = supportDb();
-  const { data: existing } = await admin
+  const { data: rows, error: listError } = await admin
     .from("support_tickets")
     .select("id, subject, status, updated_at")
     .eq("user_id", userId)
     .eq("status", "open")
     .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
 
+  if (listError) {
+    throw new ApiError("INTERNAL_ERROR", "Destek talebi yüklenemedi.");
+  }
+
+  const existing = rows?.[0];
   if (!existing) {
     const { data: created, error } = await admin
       .from("support_tickets")
@@ -93,7 +101,9 @@ export async function sendUserSupportMessage(
     sender: "user",
     body: trimmed,
   });
-  if (error) throw new ApiError("INTERNAL_ERROR", "Mesaj gönderilemedi.");
+  if (error) {
+    throw new ApiError("INTERNAL_ERROR", "Mesaj gönderilemedi.");
+  }
 
   await admin
     .from("support_tickets")

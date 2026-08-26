@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { apiPost, ApiClientError } from "@/lib/api/client";
+import { apiPost } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
 import { notifyAnalyticsUpdated } from "@/lib/analytics-client-cache";
 import {
@@ -22,8 +22,14 @@ export function AnalyticsConfirmationCard({
   const [done, setDone] = useState<"confirmed" | "rejected" | null>(initial);
   const [failed, setFailed] = useState(false);
   const [pendingAction, setPendingAction] = useState<"confirm" | "reject" | null>(null);
-  const [calories, setCalories] = useState(String(payload.calories ?? ""));
-  const [protein, setProtein] = useState(String(payload.protein ?? ""));
+  const initialCalories = payload.calories;
+  const initialProtein = payload.protein;
+  const [calories, setCalories] = useState(
+    initialCalories != null ? String(initialCalories) : "",
+  );
+  const [protein, setProtein] = useState(
+    initialProtein != null ? String(initialProtein) : "",
+  );
 
   const act = async (action: "confirm" | "reject") => {
     if (busy || done) return;
@@ -33,8 +39,15 @@ export function AnalyticsConfirmationCard({
     try {
       const cal = Number(calories);
       const pro = Number(protein);
+      const userEditedMacros =
+        (calories.trim() !== "" &&
+          Number.isFinite(cal) &&
+          cal !== (initialCalories ?? Number.NaN)) ||
+        (protein.trim() !== "" &&
+          Number.isFinite(pro) &&
+          pro !== (initialProtein ?? Number.NaN));
       const shouldCorrect =
-        action === "confirm" && Number.isFinite(cal) && cal > 0;
+        action === "confirm" && Number.isFinite(cal) && cal > 0 && userEditedMacros;
       await apiPost("/api/analytics/confirm", {
         pendingId: payload.pendingId,
         action: shouldCorrect ? "correct" : action,
@@ -47,15 +60,8 @@ export function AnalyticsConfirmationCard({
       setDone(status);
       notifyAnalyticsUpdated();
       onResolved?.(status);
-    } catch (error) {
-      if (error instanceof ApiClientError && error.code === "NOT_FOUND") {
-        const status = action === "confirm" ? "confirmed" : "rejected";
-        setDone(status);
-        notifyAnalyticsUpdated();
-        onResolved?.(status);
-      } else {
-        setFailed(true);
-      }
+    } catch {
+      setFailed(true);
     } finally {
       setBusy(false);
     }

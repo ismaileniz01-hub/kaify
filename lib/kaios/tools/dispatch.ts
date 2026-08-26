@@ -11,6 +11,7 @@ import {
 } from "@/lib/kaios/routing/intent";
 import { extractMealMacrosFromCoachText, extractMealMacrosFromRecord } from "@/lib/kaios/nutrition/parse-macros";
 import { createPendingAnalyticsConfirmation } from "@/lib/services/analytics-confirmation.service";
+import { confirmationCardFromPending } from "@/lib/analytics/confirmation-payload";
 import { parseHydrationLiters } from "@/lib/kaios/analytics/chat-log";
 import { getTodayNutritionSnapshot } from "@/lib/services/analytics.service";
 import {
@@ -67,7 +68,14 @@ export type DispatchResult = {
   truths: ActionTruthRecord[];
   toolResults: Array<{ name: ToolName; result: ToolResult }>;
   /** Pending meal confirmation for UI card. */
-  confirmation?: { pendingId: string; summary: string };
+  confirmation?: {
+    pendingId: string;
+    summary: string;
+    calories?: number;
+    protein?: number;
+    carbs?: number;
+    fat?: number;
+  };
   /** Knowledge lines to inject before model (prefetch). */
   knowledgeLines: string[];
 };
@@ -493,20 +501,18 @@ export async function maybeQueueMayaFoodLogConfirmation(input: {
   const waterDelta = waterThisTurn ?? glass;
 
   try {
+    const pendingPayload = {
+      summary: `${Math.round(macros.calories)} kcal · P${Math.round(macros.protein)} C${Math.round(macros.carbs)} F${Math.round(macros.fat)} + ${waterDelta}L water`,
+      meal: macros,
+      patch: { waterLiters: waterTotal },
+    };
     const pendingId = await createPendingAnalyticsConfirmation({
       userId: input.userId,
       coachId: "maya",
       source: "chat",
-      payload: {
-        summary: `${Math.round(macros.calories)} kcal · P${Math.round(macros.protein)} C${Math.round(macros.carbs)} F${Math.round(macros.fat)} + ${waterDelta}L water`,
-        meal: macros,
-        patch: { waterLiters: waterTotal },
-      },
+      payload: pendingPayload,
     });
-    out.confirmation = {
-      pendingId,
-      summary: `${Math.round(macros.calories)} kcal · P${Math.round(macros.protein)} C${Math.round(macros.carbs)} F${Math.round(macros.fat)} + ${waterDelta}L water`,
-    };
+    out.confirmation = confirmationCardFromPending(pendingId, pendingPayload);
     out.truths.push({
       status: "PENDING_CONFIRMATION",
       tool: "saveMealMacros",

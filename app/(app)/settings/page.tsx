@@ -497,16 +497,22 @@ export default function SettingsPage() {
               {t(group.title)}
             </h2>
             <div className="overflow-hidden rounded-2xl border border-white/5 bg-white/[0.03]">
-              {group.items.map((item, ii) => (
-                <div
-                  key={item.label}
-                  className={`flex items-center gap-3 px-4 py-3.5 ${
-                    ii < group.items.length - 1 ||
-                    (group.title === "settings.profile" && isAuthenticated && profile?.id)
-                      ? "border-b border-white/5"
-                      : ""
-                  }`}
-                >
+              {group.items.map((item, ii) => {
+                const navigableHref =
+                  item.type === "link" &&
+                  item.href &&
+                  item.label !== "settings.logout" &&
+                  item.label !== "settings.billing"
+                    ? item.href
+                    : null;
+                const rowClass = `flex items-center gap-3 px-4 py-3.5 ${
+                  ii < group.items.length - 1 ||
+                  (group.title === "settings.profile" && isAuthenticated && profile?.id)
+                    ? "border-b border-white/5"
+                    : ""
+                }`;
+                const iconAndLabels = (
+                  <>
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5">
                     <item.icon className="h-4 w-4 text-zinc-400" strokeWidth={1.5} />
                   </div>
@@ -515,6 +521,28 @@ export default function SettingsPage() {
                     <span className="text-sm font-medium text-white">{t(item.label)}</span>
                     <span className="text-[11px] text-zinc-500">{t(item.description)}</span>
                   </div>
+                  </>
+                );
+                if (navigableHref) {
+                  return (
+                    <Link
+                      key={item.label}
+                      href={navigableHref}
+                      className={`${rowClass} transition hover:bg-white/[0.04]`}
+                    >
+                      {iconAndLabels}
+                      <span className="shrink-0 text-xs font-medium text-purple-400">
+                        {t(item.value || "")}
+                      </span>
+                    </Link>
+                  );
+                }
+                return (
+                <div
+                  key={item.label}
+                  className={rowClass}
+                >
+                  {iconAndLabels}
 
                   <div className="shrink-0">
                     {item.type === "toggle" && (
@@ -674,7 +702,8 @@ export default function SettingsPage() {
                       ))}
                   </div>
                 </div>
-              ))}
+                );
+              })}
               {group.title === "settings.profile" && isAuthenticated && profile?.id && (
                 <div className="flex items-center gap-3 px-4 py-3.5">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5">

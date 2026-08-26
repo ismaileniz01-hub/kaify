@@ -51,7 +51,8 @@ import {
   prefetchToolKnowledge,
   resolveEquipmentPreference,
 } from "@/lib/kaios/tools/dispatch";
-import { maybeQueueCoachLogConfirmation } from "@/lib/kaios/analytics/chat-log";
+import { maybeQueueCoachLogConfirmation, looksLikeChatYes } from "@/lib/kaios/analytics/chat-log";
+import { confirmLatestPendingAnalytics } from "@/lib/services/analytics-confirmation.service";
 import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
 import { ensureAlexDailyCardio } from "@/lib/kaios/alex/daily-cardio";
 import { ensureMayaMealSaveAsk } from "@/lib/kaios/maya/meal-save-ask";
@@ -294,7 +295,17 @@ export async function* orchestrateCoachChat(
   let envelope: BaseEnvelope;
   let awaitUser = false;
   let actionTruth: ActionTruthRecord[] = [...prefetch.truths];
-  let confirmation: { pendingId: string; summary: string } | undefined;
+  let confirmation:
+    | {
+        pendingId: string;
+        summary: string;
+        calories?: number;
+        protein?: number;
+        carbs?: number;
+        fat?: number;
+      }
+    | undefined;
+  let appliedExistingConfirmation = false;
 
   if (!needsStructuredOutput(intent)) {
     modelCallCount = 1;
@@ -531,7 +542,57 @@ export async function* orchestrateCoachChat(
   actionTruth = [...actionTruth, ...post.truths];
   if (post.confirmation) confirmation = post.confirmation;
 
-  if (!confirmation && assistantText.trim().length > 0) {
+  if (
+    !confirmation &&
+    looksLikeChatYes(input.message) &&
+    (input.coachId === "maya" || input.coachId === "alex")
+  ) {
+    try {
+      const applied = await confirmLatestPendingAnalytics(input.userId);
+      if (applied) {
+        appliedExistingConfirmation = true;
+        const truths: ActionTruthRecord[] = [];
+        if (applied.meal) {
+          truths.push({
+            status: "SUCCEEDED",
+            tool: "saveMealMacros",
+            message: "Confirmed from chat yes",
+            data: { saved: true, ...applied.meal },
+          });
+        }
+        const waterLiters = Number(
+          applied.patch?.waterLiters ?? applied.patch?.water_liters,
+        );
+        if (Number.isFinite(waterLiters) && waterLiters > 0) {
+          truths.push({
+            status: "SUCCEEDED",
+            tool: "recordHydration",
+            message: "Confirmed from chat yes",
+            data: { saved: true, waterLiters },
+          });
+        }
+        if (
+          truths.length === 0 &&
+          applied.patch &&
+          Object.keys(applied.patch).length > 0
+        ) {
+          truths.push({
+            status: "SUCCEEDED",
+            tool: "logWorkout",
+            message: "Confirmed from chat yes",
+            data: { saved: true, ...applied.patch },
+          });
+        }
+        actionTruth = [...actionTruth, ...truths];
+      }
+    } catch (error) {
+      logger.warn("[orchestrator] chat-yes confirmation failed", {
+        error: error instanceof Error ? error.message : "unknown",
+      });
+    }
+  }
+
+  if (!confirmation && !appliedExistingConfirmation && assistantText.trim().length > 0) {
     const foodLog = await maybeQueueMayaFoodLogConfirmation({
       userId: input.userId,
       coach: input.coachId,
@@ -546,14 +607,14 @@ export async function* orchestrateCoachChat(
     if (foodLog.confirmation) confirmation = foodLog.confirmation;
   }
 
-  const mealSaved = actionTruth.some(
+  let mealSaved = actionTruth.some(
     (t) => t.tool === "saveMealMacros" && t.status === "SUCCEEDED",
   );
   let waterSaved = actionTruth.some(
     (t) => t.tool === "recordHydration" && t.status === "SUCCEEDED",
   );
 
-  if (!confirmation) {
+  if (!confirmation && !appliedExistingConfirmation) {
     const coachLog = await maybeQueueCoachLogConfirmation({
       userId: input.userId,
       coach: input.coachId,
@@ -722,6 +783,10 @@ export async function* orchestrateCoachChat(
       confirmation: {
         pendingId: confirmation.pendingId,
         summary: confirmation.summary,
+        ...(confirmation.calories != null ? { calories: confirmation.calories } : {}),
+        ...(confirmation.protein != null ? { protein: confirmation.protein } : {}),
+        ...(confirmation.carbs != null ? { carbs: confirmation.carbs } : {}),
+        ...(confirmation.fat != null ? { fat: confirmation.fat } : {}),
       },
       saved: false,
     };

@@ -62,8 +62,8 @@ export function HealthStepsSection() {
     setBusy(true);
     setMessage(null);
     try {
-      await syncNativeHealthSteps();
-      setMessage(t("health.steps.synced"));
+      const count = await syncNativeHealthSteps();
+      setMessage(count > 0 ? t("health.steps.synced") : t("health.steps.empty"));
     } catch {
       setMessage(t("health.steps.denied"));
     } finally {

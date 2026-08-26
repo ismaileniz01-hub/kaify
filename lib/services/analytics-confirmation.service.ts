@@ -6,7 +6,11 @@ import { invalidateHomeBundleCache, invalidateUserReadCaches } from "@/lib/cache
 import { sanitizeAnalyticsPatch, sanitizeMealMacros } from "@/lib/analytics/bounds";
 import { patchAnalyticsDaily } from "@/lib/services/analytics.service";
 import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
-import { mergeConfirmationStamp } from "@/lib/analytics/confirmation-payload";
+import {
+  mergeConfirmationStamp,
+  mergeCorrectedAnalyticsPayload,
+  type PendingAnalyticsPayload,
+} from "@/lib/analytics/confirmation-payload";
 import { emitProductEvent, emitFirstActivation, productEventIdempotencyKey } from "@/lib/events/product";
 import { logger } from "@/lib/logger";
 import type { Json } from "@/lib/types/database.types";
@@ -23,11 +27,7 @@ export function pendingAnalyticsIsExpired(
   return now - t > PENDING_ANALYTICS_TTL_MS;
 }
 
-export type PendingAnalyticsPayload = {
-  summary: string;
-  patch?: Record<string, number>;
-  meal?: { calories: number; protein: number; carbs: number; fat: number };
-};
+export type { PendingAnalyticsPayload };
 
 export async function createPendingAnalyticsConfirmation(params: {
   userId: string;
@@ -192,10 +192,6 @@ export async function confirmPendingAnalytics(
     messageId: pending?.message_id,
     sourceMessageId: pending?.source_message_id,
   });
-  void Promise.all([
-    invalidateUserReadCaches(userId),
-    invalidateHomeBundleCache(userId),
-  ]).catch(() => undefined);
 
   const payload =
     pending?.payload && typeof pending.payload === "object"
@@ -212,11 +208,23 @@ export async function confirmPendingAnalytics(
     if (Object.keys(extras).length > 0) {
       try {
         await patchAnalyticsDaily(userId, extras);
-      } catch {
-        // Meal already landed; water can be retried from a later log.
+      } catch (error) {
+        logger.warn("[analytics-confirmation] water patch after meal failed", {
+          pendingId,
+          error: error instanceof Error ? error.message : "unknown",
+        });
       }
     }
   }
+  await Promise.all([
+    invalidateUserReadCaches(userId),
+    invalidateHomeBundleCache(userId),
+  ]).catch((error) => {
+    logger.warn("[analytics-confirmation] cache invalidation failed", {
+      pendingId,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+  });
   if (payload?.meal) {
     await emitKaiosEventBestEffort({
       category: "nutrition",
@@ -336,14 +344,11 @@ export async function correctPendingAnalytics(
       ? (pending.payload as PendingAnalyticsPayload)
       : { summary: "corrected meal" };
   const meal = sanitizeMealMacros(macros);
+  const next = mergeCorrectedAnalyticsPayload(current, meal);
   await admin
     .from("analytics_pending_confirmations")
     .update({
-      payload: {
-        ...current,
-        meal,
-        patch: { caloriesConsumed: meal.calories },
-      } as unknown as Json,
+      payload: next as unknown as Json,
     })
     .eq("id", pendingId)
     .eq("user_id", userId);
