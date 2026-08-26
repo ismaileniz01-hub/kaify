@@ -607,7 +607,7 @@ export async function* orchestrateCoachChat(
     if (foodLog.confirmation) confirmation = foodLog.confirmation;
   }
 
-  let mealSaved = actionTruth.some(
+  const mealSaved = actionTruth.some(
     (t) => t.tool === "saveMealMacros" && t.status === "SUCCEEDED",
   );
   let waterSaved = actionTruth.some(
