@@ -75,10 +75,19 @@ export async function performCheckIn(
         dto.checkedInDate ?? "",
       ]),
     });
-    void (admin as unknown as { from: (table: string) => { update: (row: Record<string, string>) => { eq: (col: string, id: string) => Promise<unknown> } } })
-      .from("profiles")
-      .update({ last_meaningful_activity_at: new Date().toISOString() })
-      .eq("id", userId);
+    const profiles = admin as unknown as {
+      from?: (table: string) => {
+        update: (row: Record<string, string>) => {
+          eq: (col: string, id: string) => Promise<unknown>;
+        };
+      };
+    };
+    if (typeof profiles.from === "function") {
+      void profiles
+        .from("profiles")
+        .update({ last_meaningful_activity_at: new Date().toISOString() })
+        .eq("id", userId);
+    }
 
     void emitCheckInNotifications(userId, dto).catch((emitError) => {
       logger.warn("check-in notification emit failed", {

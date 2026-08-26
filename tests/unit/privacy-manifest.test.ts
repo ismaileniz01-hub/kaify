@@ -23,6 +23,6 @@ describe("iOS privacy manifest", () => {
   });
 
   it("does not declare tracking", () => {
-    expect(manifest).toContain("<key>NSPrivacyTracking</key>\n\t<false/>");
+    expect(manifest).toMatch(/<key>NSPrivacyTracking<\/key>\s*<false\/>/);
   });
 });

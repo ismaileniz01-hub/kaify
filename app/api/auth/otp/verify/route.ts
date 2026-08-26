@@ -29,7 +29,7 @@ export const POST = defineRouteRaw(
         type: "email",
       });
 
-      let session = emailAttempt.data.session;
+      let session = emailAttempt.data?.session ?? null;
 
       if (emailAttempt.error) {
         const signupAttempt = await supabase.auth.verifyOtp({
@@ -53,7 +53,7 @@ export const POST = defineRouteRaw(
             ),
           );
         }
-        session = signupAttempt.data.session;
+        session = signupAttempt.data?.session ?? null;
       }
 
       emitProductEvent({
