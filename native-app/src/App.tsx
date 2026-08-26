@@ -11,6 +11,7 @@ import {
   sendKaiMessage,
   type NativeProfile,
 } from "./api";
+import { sendNativeEmailOtp, verifyNativeEmailOtp, NATIVE_CLIENT_VERSION } from "./auth-otp";
 import { supabase } from "./session";
 
 type Screen = "login" | "signup" | "verify" | "plan" | "welcome" | "chat";
@@ -77,7 +78,7 @@ export function App() {
       localStorage.setItem("kaify_native_first_open", "1");
       postNativeEvent("native.first_opened", installId, {
         os: "android",
-        app_version: "native-local-v1",
+        app_version: NATIVE_CLIENT_VERSION,
       });
     }
     let removeUrlListener: (() => void) | undefined;
@@ -123,33 +124,30 @@ export function App() {
     event.preventDefault();
     setBusy(true);
     setError("");
-    const { error: authError } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: screen === "signup" },
-    });
-    setBusy(false);
-    if (authError) {
-      setError(authError.message);
-      return;
+    try {
+      const result = await sendNativeEmailOtp(email);
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      setScreen("verify");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not send code.");
+    } finally {
+      setBusy(false);
     }
-    setScreen("verify");
   }
 
   async function verifyCode(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError("");
-    const { error: authError } = await supabase.auth.verifyOtp({
-      email,
-      token: otp,
-      type: "email",
-    });
-    if (authError) {
-      setError(authError.message);
-      setBusy(false);
-      return;
-    }
     try {
+      const result = await verifyNativeEmailOtp(email, otp);
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
       if (acceptedLegal && acceptedAi) {
         await recordNativeSignupConsents();
       }

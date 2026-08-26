@@ -1,4 +1,5 @@
 import { supabase } from "./session";
+import { NATIVE_CLIENT_VERSION } from "./auth-otp";
 import {
   CONSENT_TYPES,
   PRIVACY_VERSION,
@@ -27,7 +28,7 @@ export async function nativeApi(
 ): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${await accessToken()}`);
-  headers.set("X-Client-Version", "native-local-v1");
+  headers.set("X-Client-Version", NATIVE_CLIENT_VERSION);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }

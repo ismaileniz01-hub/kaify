@@ -5,6 +5,7 @@ import { createRouteHandlerSupabase } from "@/lib/supabase/route-handler";
 import { SupabaseEnvError } from "@/lib/supabase/env";
 import { otpVerifySchema } from "@/lib/validations/auth-otp.schema";
 import { emitProductEvent, productEventIdempotencyKey } from "@/lib/events/product";
+import { isNativeWebViewRequest } from "@/lib/native/webview-request";
 
 export const runtime = "nodejs";
 
@@ -65,16 +66,16 @@ export const POST = defineRouteRaw(
         ]),
       });
 
-      const origin = request.headers.get("origin");
-      const isNativeOrigin =
-        origin === "capacitor://localhost" ||
-        origin === "https://localhost" ||
-        origin === "http://localhost";
+      // Capacitor shells need bearer tokens (no shared cookie jar with kaifyai.org).
+      // Use the same WebView detection as OTP send (origin + Android wv UA).
+      const returnNativeSession =
+        Boolean(session?.access_token && session.refresh_token) &&
+        isNativeWebViewRequest(request);
 
       return withCookies(
         ok({
           verified: true as const,
-          ...(isNativeOrigin && session
+          ...(returnNativeSession && session
             ? {
                 session: {
                   accessToken: session.access_token,

@@ -47,6 +47,11 @@ export default defineConfig({
       },
     },
   },
+  define: {
+    __KAIFY_API_BASE__: JSON.stringify("https://kaifyai.org"),
+    __SUPABASE_URL__: JSON.stringify("https://example.supabase.co"),
+    __SUPABASE_ANON_KEY__: JSON.stringify("test-anon-key-for-vitest"),
+  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./", import.meta.url)),

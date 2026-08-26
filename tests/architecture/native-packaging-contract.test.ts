@@ -25,7 +25,20 @@ describe("native local packaging contract", () => {
       expect(nativeApp).toContain(`"${screen}"`);
     }
     expect(nativeApp).toContain('from "@/lib/marketing/pricing-plans"');
-    expect(nativeApp).toContain("shouldCreateUser");
+    expect(nativeApp).toContain("sendNativeEmailOtp");
+    expect(nativeApp).toContain("verifyNativeEmailOtp");
+    expect(nativeApp).not.toContain("signInWithOtp");
+    expect(nativeApp).not.toContain("shouldCreateUser");
+  });
+
+  it("routes native OTP through Kaify APIs instead of direct Supabase GoTrue", () => {
+    const nativeOtp = source("native-app/src/auth-otp.ts");
+    expect(nativeOtp).toContain("/api/auth/otp/send");
+    expect(nativeOtp).toContain("/api/auth/otp/verify");
+    expect(nativeOtp).toContain("__KAIFY_API_BASE__");
+    expect(nativeOtp).toContain("setSession");
+    expect(nativeOtp).not.toContain("SERVICE_ROLE");
+    expect(nativeOtp).not.toContain("service_role");
   });
 
   it("locks coaching before payment on both navigation and send", () => {

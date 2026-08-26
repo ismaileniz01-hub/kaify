@@ -164,6 +164,38 @@ describe("POST /api/auth/otp/verify", () => {
     expect(body.data.verified).toBe(true);
   });
 
+  it("returns native session tokens for Capacitor WebView origins", async () => {
+    verifyOtp.mockResolvedValueOnce({
+      data: {
+        session: {
+          access_token: "access-token",
+          refresh_token: "refresh-token",
+        },
+      },
+      error: null,
+    });
+    const res = await otpVerifyPost({
+      method: "POST",
+      headers: new Headers({
+        "content-type": "application/json",
+        origin: "https://localhost",
+      }),
+      json: async () => ({ email: "ok@example.com", token: "123456" }),
+    } as unknown as NextRequest);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      success: true;
+      data: {
+        verified: true;
+        session?: { accessToken: string; refreshToken: string };
+      };
+    };
+    expect(body.data.session).toEqual({
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+    });
+  });
+
   it("falls back to signup type then fails as UNAUTHORIZED", async () => {
     verifyOtp
       .mockResolvedValueOnce({ data: null, error: { message: "bad" } })
