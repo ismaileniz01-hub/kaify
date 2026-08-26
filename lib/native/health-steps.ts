@@ -46,13 +46,40 @@ async function loadHealthPlugin() {
   return Health;
 }
 
+async function stepsAuthorizationGranted(): Promise<boolean | null> {
+  try {
+    const Health = await loadHealthPlugin();
+    const auth = await Health.checkAuthorization({ read: ["steps"] });
+    const denied = auth.readDenied?.includes("steps") === true;
+    const granted = auth.readAuthorized?.includes("steps") === true;
+    if (denied) return false;
+    if (granted) return true;
+    // Unknown / empty status must not fail-open as connected.
+    return false;
+  } catch {
+    return null;
+  }
+}
+
 export async function getHealthStepsStatus(): Promise<HealthStepsStatus> {
   if (!(await isNativePlatform())) return "web";
   try {
     const Health = await loadHealthPlugin();
     const availability = await Health.isAvailable();
-    if (!availability.available) return "unavailable";
+    if (!availability.available) {
+      writeConnectedFlag(false);
+      return "unavailable";
+    }
     if (!readConnectedFlag()) return "disconnected";
+    const granted = await stepsAuthorizationGranted();
+    if (granted === false) {
+      writeConnectedFlag(false);
+      return "denied";
+    }
+    if (granted == null) {
+      writeConnectedFlag(false);
+      return "unavailable";
+    }
     return "connected";
   } catch {
     return "unavailable";
@@ -73,15 +100,10 @@ export async function connectHealthSteps(): Promise<HealthStepsStatus> {
     write: [],
     requestHistoryAccess: true,
   });
-  const auth = await Health.checkAuthorization({ read: ["steps"] }).catch(
-    () => null,
-  );
-  const denied = auth?.readDenied?.includes("steps") ?? false;
-  const granted = auth?.readAuthorized?.includes("steps") ?? !denied;
-
-  if (!granted || denied) {
+  const granted = await stepsAuthorizationGranted();
+  if (granted !== true) {
     writeConnectedFlag(false);
-    return "denied";
+    return granted === false ? "denied" : "unavailable";
   }
 
   writeConnectedFlag(true);

@@ -96,7 +96,7 @@ async function finalizeResponse(
     );
     response.headers.set(
       "Access-Control-Allow-Headers",
-      "Authorization,Content-Type,Idempotency-Key,X-Client-Version",
+      "Authorization,Content-Type,Idempotency-Key,X-Client-Version,x-csrf-token",
     );
     response.headers.set("Access-Control-Max-Age", "600");
     response.headers.append("Vary", "Origin");
