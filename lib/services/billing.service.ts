@@ -16,6 +16,7 @@ import type { SubscriptionTier } from "@/lib/types/database.types";
 import { parsePaddleExpiresAt } from "@/lib/billing/paddle-period";
 import { logger } from "@/lib/logger";
 import { minimizeBillingPayload } from "@/lib/privacy/billing-payload";
+import { emitProductEvent, hashReferralCampaignId, productEventIdempotencyKey } from "@/lib/events/product";
 import {
   billingEventTypeRank,
   isBillingEventNewer,
@@ -1017,6 +1018,57 @@ export async function handleNormalizedPaddleEvent(
     }
 
     await finalizeBillingEvent(admin, eventId);
+    if (userId) {
+      const billingNames: Array<
+        | "billing.subscription_activated"
+        | "billing.checkout_completed"
+        | "billing.cancel_completed"
+        | "billing.refund_applied"
+        | "billing.dispute_updated"
+        | "billing.renewal_failed"
+        | "billing.renewal_succeeded"
+      > = [];
+      if (eventType.includes("activated")) billingNames.push("billing.subscription_activated");
+      if (eventType.includes("transaction.completed")) {
+        billingNames.push("billing.checkout_completed");
+      }
+      if (eventType.includes("canceled") || eventType.includes("cancelled")) {
+        billingNames.push("billing.cancel_completed");
+      }
+      if (eventType.includes("adjustment")) billingNames.push("billing.refund_applied");
+      if (eventType.includes("dispute")) billingNames.push("billing.dispute_updated");
+      if (eventType.includes("past_due") || eventType.includes("payment_failed")) {
+        billingNames.push("billing.renewal_failed");
+      }
+      if (eventType.includes("subscription.updated") && !eventType.includes("canceled")) {
+        billingNames.push("billing.renewal_succeeded");
+      }
+      for (const billingName of billingNames) {
+        emitProductEvent({
+          name: billingName,
+          userId,
+          properties: { plan: "unknown", state: eventType.slice(0, 40) },
+          idempotencyKey: productEventIdempotencyKey([billingName, eventId]),
+        });
+      }
+      if (billingNames.includes("billing.subscription_activated")) {
+        const { data: referred } = await admin
+          .from("profiles")
+          .select("referred_by_code")
+          .eq("id", userId)
+          .maybeSingle();
+        if (referred?.referred_by_code) {
+          emitProductEvent({
+            name: "referral.paid",
+            userId,
+            properties: {
+              campaign_id: hashReferralCampaignId(referred.referred_by_code),
+            },
+            idempotencyKey: productEventIdempotencyKey(["referral.paid", userId]),
+          });
+        }
+      }
+    }
     return { ok: true };
   } catch (error) {
     await releaseBillingEvent(admin, eventId);

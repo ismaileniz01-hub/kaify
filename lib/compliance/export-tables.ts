@@ -49,6 +49,7 @@ export const USER_EXPORT_TABLES: readonly ExportTableSpec[] = [
     description: "Messages in support tickets you opened",
   },
   { table: "analytics_pending_confirmations", column: "user_id", description: "Pending fitness log confirmations" },
+  { table: "scan_corrections", column: "user_id", description: "Numeric meal or scan corrections you submitted" },
   { table: "team_meeting_weeks", column: "user_id", description: "Weekly Coach Council lock records" },
   { table: "referrals", column: "referrer_id", description: "Referral codes and edges you created" },
 ] as const;

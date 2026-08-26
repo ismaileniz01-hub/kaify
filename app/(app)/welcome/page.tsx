@@ -18,6 +18,7 @@ import { captureReferralFromUrl, getPendingReferral } from "@/lib/referral";
 import { InlineAlert } from "@/components/InlineAlert";
 import { AppHeader } from "@/components/navigation/AppHeader";
 import { TodaysJobCard } from "@/components/welcome/TodaysJobCard";
+import { WeeklyReviewCard } from "@/components/welcome/WeeklyReviewCard";
 import { FirstTaskChecklist } from "@/components/welcome/FirstTaskChecklist";
 import { GoalsEditor } from "@/components/goals/GoalsEditor";
 
@@ -201,6 +202,7 @@ function WelcomeContent() {
                 onGoalsClick={() => setGoalsOpen(true)}
               />
             )}
+            {home.weeklyReview ? <WeeklyReviewCard review={home.weeklyReview} /> : null}
             <FirstTaskChecklist
               progress={{
                 checkInDone: home.firstTask.checkInDone,

@@ -30,6 +30,7 @@ import {
   TERMS_VERSION,
 } from "@/lib/legal/constants";
 import { apiPost } from "@/lib/api/client";
+import { postClientProductEvent } from "@/lib/events/client-beacon";
 import { COUNTRY_OPTIONS } from "@/lib/country-names";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
@@ -83,16 +84,8 @@ type WizardStepId =
 const FULL_FLOW: WizardStepId[] = [
   "email",
   "name",
-  "gender",
   "birth",
-  "body",
-  "goal",
-  "activity",
-  "experience",
-  "status",
-  "lifestyle",
   "country",
-  "bio",
   "referral",
   "verify",
 ];
@@ -159,10 +152,39 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     setFlowKind(alreadyAuthedNeedsProfile ? "authed" : "full");
   }, [alreadyAuthedNeedsProfile, flowKind, isLoading]);
 
+  useEffect(() => {
+    if (flowKind === "pending") return;
+    if (flowKind === "full") {
+      postClientProductEvent({
+        name: "signup.started",
+        properties: { flow: "email", method: "otp" },
+      });
+      postClientProductEvent({
+        name: "onboarding.started",
+        properties: { flow: "signup", version: "v2" },
+      });
+      return;
+    }
+    postClientProductEvent({
+      name: "onboarding.started",
+      properties: { flow: "lifestyle", version: "v2" },
+    });
+  }, [flowKind]);
+
   const flow = flowKind === "authed" ? AUTHED_FLOW : FULL_FLOW;
 
   const [stepIndex, setStepIndex] = useState(0);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
+
+  useEffect(() => {
+    if (flowKind === "pending") return;
+    const step = flow[stepIndex];
+    if (!step) return;
+    postClientProductEvent({
+      name: "onboarding.step_viewed",
+      properties: { flow: flowKind === "authed" ? "lifestyle" : "signup", step },
+    });
+  }, [flow, flowKind, stepIndex]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -290,6 +312,17 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     },
     [refreshSession],
   );
+
+  const saveSignupBasicsAndCheckout = useCallback(async () => {
+    await apiPost("/api/onboarding/basics", {
+      displayName: displayName.trim(),
+      birthDate,
+      countryCode,
+      locale: lang,
+    });
+    await refreshSession();
+    await redirectToWebCheckoutAfterSignup();
+  }, [birthDate, countryCode, displayName, lang, refreshSession]);
 
   const canContinue = useMemo(() => {
     switch (currentStep) {
@@ -446,12 +479,23 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
         }
         clearPendingReferral();
       }
-      await completeOnboarding(buildPayload());
+      if (alreadyAuthedNeedsProfile) {
+        await completeOnboarding(buildPayload());
+      } else {
+        await saveSignupBasicsAndCheckout();
+      }
     } catch {
       setError(t("onboarding.error"));
       setBusy(false);
     }
-  }, [buildPayload, completeOnboarding, refreshSession, t]);
+  }, [
+    alreadyAuthedNeedsProfile,
+    buildPayload,
+    completeOnboarding,
+    refreshSession,
+    saveSignupBasicsAndCheckout,
+    t,
+  ]);
 
   const genderLabel = (g: Gender) => t(`onboarding.gender.${g}` as "onboarding.gender.male");
   const experienceLabel = (level: ExperienceLevel) =>

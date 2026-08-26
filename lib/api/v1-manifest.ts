@@ -11,6 +11,8 @@ export const API_LEGACY_EXCLUDED_PREFIXES = [
   "/api/health", // liveness probe (exact + /steps handled via v1)
   "/api/waitlist",
   "/api/subscribe",
+  "/api/events",
+  "/api/public/",
 ] as const;
 
 /** Canonical v1 routes — keep in sync with tests/architecture/v1-routes.test.ts */
@@ -37,6 +39,9 @@ export const API_V1_ROUTES = [
   "/api/v1/analytics/goals",
   "/api/v1/settings",
   "/api/v1/onboarding",
+  "/api/v1/onboarding/basics",
+  "/api/v1/events",
+  "/api/v1/billing/status",
   "/api/v1/usage",
   "/api/v1/kai",
   "/api/v1/home",

@@ -24,9 +24,11 @@ import { useTheme } from "@/lib/theme-context";
 import { useLang, LANG_OPTIONS, hasStoredLangPreference } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { apiGet, apiPatch } from "@/lib/api/client";
+import { postClientProductEvent } from "@/lib/events/client-beacon";
 import type { UserSettingsDTO } from "@/lib/services/settings.service";
 import { UsageQuotaSection } from "@/components/settings/UsageQuotaSection";
 import { HealthStepsSection } from "@/components/settings/HealthStepsSection";
+import { NotificationScheduleSection } from "@/components/settings/NotificationScheduleSection";
 import { AppHeader } from "@/components/navigation/AppHeader";
 import { DeleteAccountSection } from "@/components/settings/DeleteAccountSection";
 import { MarketAuraPreview } from "@/components/market/MarketAuraPreview";
@@ -92,6 +94,8 @@ const SETTINGS_GROUPS: { title: string; items: SettingItem[] }[] = [
     items: [
       { icon: Bell, label: "settings.workout", description: "settings.workout.desc", type: "toggle" },
       { icon: Bell, label: "settings.water", description: "settings.water.desc", type: "toggle" },
+      { icon: Bell, label: "settings.notify_weekly", description: "settings.notify_weekly.desc", type: "toggle" },
+      { icon: Bell, label: "settings.notify_praise", description: "settings.notify_praise.desc", type: "toggle" },
     ],
   },
   {
@@ -223,6 +227,8 @@ export default function SettingsPage() {
   const [toggles, setToggles] = useState<Record<string, boolean>>({
     "settings.workout": true,
     "settings.water": false,
+    "settings.notify_weekly": true,
+    "settings.notify_praise": true,
     "settings.dark_mode": theme === "dark",
     "settings.sfx": loadBoolean(SFX_KEY, true),
     "settings.chat.sfx": loadBoolean(CHAT_SFX_KEY, true),
@@ -266,6 +272,8 @@ export default function SettingsPage() {
           ...prev,
           "settings.workout": s.workoutReminders,
           "settings.water": s.waterReminder,
+          "settings.notify_weekly": s.notifyWeekly,
+          "settings.notify_praise": s.notifyPraise,
           "settings.sfx": s.soundEffects,
           "settings.chat.sfx": s.chatSounds,
           "settings.leaderboard_opt_out": s.leaderboardOptOut,
@@ -325,6 +333,10 @@ export default function SettingsPage() {
     try {
       if (navigator.share) {
         await navigator.share({ title: t("settings.referral.share_title"), text });
+        postClientProductEvent({
+          name: "referral.shared",
+          properties: { channel: "os" },
+        });
         return;
       }
     } catch {
@@ -334,6 +346,10 @@ export default function SettingsPage() {
     if (ok) {
       setReferralCopied(true);
       setTimeout(() => setReferralCopied(false), 2000);
+      postClientProductEvent({
+        name: "referral.shared",
+        properties: { channel: "copy" },
+      });
     }
   };
 
@@ -380,6 +396,8 @@ export default function SettingsPage() {
     const patch: Partial<UserSettingsDTO> = {};
     if (label === "settings.workout") patch.workoutReminders = newVal;
     if (label === "settings.water") patch.waterReminder = newVal;
+    if (label === "settings.notify_weekly") patch.notifyWeekly = newVal;
+    if (label === "settings.notify_praise") patch.notifyPraise = newVal;
     if (label === "settings.sfx") patch.soundEffects = newVal;
     if (label === "settings.chat.sfx") patch.chatSounds = newVal;
     if (label === "settings.leaderboard_opt_out") patch.leaderboardOptOut = newVal;
@@ -464,6 +482,7 @@ export default function SettingsPage() {
 
         {isAuthenticated && <UsageQuotaSection />}
         {isAuthenticated && <HealthStepsSection />}
+        {isAuthenticated && <NotificationScheduleSection />}
 
         {isAuthenticated && <PushToggle />}
 

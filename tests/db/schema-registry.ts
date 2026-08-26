@@ -59,6 +59,7 @@ export const SCHEMA_REGISTRY: readonly SchemaRegistryEntry[] = [
     note: "select-only",
   },
   { table: "team_meeting_weeks", mode: "user_own", ownerColumn: "user_id", note: "select-only" },
+  { table: "scan_corrections", mode: "user_own", ownerColumn: "user_id", note: "select-only" },
 
   // ---- authenticated_read (catalog / public catalog rows) ----
   { table: "tier_limits", mode: "authenticated_read" },
@@ -75,6 +76,7 @@ export const SCHEMA_REGISTRY: readonly SchemaRegistryEntry[] = [
   { table: "cost_alerts", mode: "service_only" },
   { table: "cron_job_runs", mode: "service_only" },
   { table: "domain_events", mode: "service_only" },
+  { table: "product_events", mode: "service_only" },
   { table: "idempotency_keys", mode: "service_only" },
   { table: "influencer_codes", mode: "service_only", note: "select revoked" },
   { table: "leaderboard_snapshots", mode: "service_only" },

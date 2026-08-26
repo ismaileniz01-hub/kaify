@@ -30,8 +30,15 @@ export function isHealthStepsConnected(): boolean {
   return readConnectedFlag();
 }
 
-export function disconnectHealthSteps(): void {
+export async function disconnectHealthSteps(): Promise<HealthStepsStatus> {
   writeConnectedFlag(false);
+  try {
+    const Health = await loadHealthPlugin();
+    await Health.requestAuthorization({ read: [], write: [] }).catch(() => undefined);
+  } catch {
+    // Plugin absence must not leave the app in a connected state.
+  }
+  return "disconnected";
 }
 
 async function loadHealthPlugin() {
@@ -127,12 +134,19 @@ export async function syncNativeHealthSteps(): Promise<number> {
       source,
     }));
 
-  if (entries.length === 0) return 0;
+  const deduped = new Map<string, (typeof entries)[number]>();
+  for (const entry of entries) {
+    const prev = deduped.get(entry.date);
+    if (!prev || entry.steps >= prev.steps) deduped.set(entry.date, entry);
+  }
+  const uniqueEntries = [...deduped.values()];
 
-  await apiPost("/api/health/steps", { entries });
+  if (uniqueEntries.length === 0) return 0;
+
+  await apiPost("/api/health/steps", { entries: uniqueEntries });
   notifyAnalyticsUpdated();
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event(HEALTH_STEPS_SYNCED_EVENT));
   }
-  return entries.length;
+  return uniqueEntries.length;
 }

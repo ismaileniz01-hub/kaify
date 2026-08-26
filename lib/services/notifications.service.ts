@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
 import { pushNotification } from "@/lib/services/push.service";
+import { emitProductEvent, productEventIdempotencyKey } from "@/lib/events/product";
 import type { Json, NotificationType } from "@/lib/types/database.types";
 import type { CheckInDTO } from "@/lib/types/domain.types";
 
@@ -212,6 +213,19 @@ export async function createNotificationsBatch(
         ).catch(() => {}),
       ),
     );
+    for (const row of inserted) {
+      emitProductEvent({
+        name: "notification.sent",
+        userId: row.user_id,
+        properties: { type: row.type, channel: "push", status: "ok" },
+        idempotencyKey: productEventIdempotencyKey([
+          "notification.sent",
+          row.user_id,
+          row.type,
+          row.id,
+        ]),
+      });
+    }
   }
 
   return inserted.length;

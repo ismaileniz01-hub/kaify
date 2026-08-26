@@ -15,6 +15,23 @@ import { supabase } from "./session";
 
 type Screen = "login" | "signup" | "verify" | "plan" | "welcome" | "chat";
 
+function postNativeEvent(
+  name: string,
+  installId: string,
+  properties: Record<string, string>,
+): void {
+  void fetch(`${__KAIFY_API_BASE__}/api/v1/events`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      name,
+      installId,
+      platform: "android",
+      properties,
+    }),
+  }).catch(() => undefined);
+}
+
 export function App() {
   const [screen, setScreen] = useState<Screen>("login");
   const [email, setEmail] = useState("");
@@ -50,9 +67,37 @@ export function App() {
         setBusy(false);
       }
     });
+    const installKey = "kaify_install_id";
+    let installId = localStorage.getItem(installKey);
+    if (!installId) {
+      installId = crypto.randomUUID();
+      localStorage.setItem(installKey, installId);
+    }
+    if (!localStorage.getItem("kaify_native_first_open")) {
+      localStorage.setItem("kaify_native_first_open", "1");
+      postNativeEvent("native.first_opened", installId, {
+        os: "android",
+        app_version: "native-local-v1",
+      });
+    }
     let removeUrlListener: (() => void) | undefined;
+    let removeResumeListener: (() => void) | undefined;
+    void CapacitorApp.addListener("appStateChange", (state) => {
+      if (state.isActive) {
+        postNativeEvent("native.app_resumed", installId, { os: "android" });
+      }
+    }).then((handle) => {
+      removeResumeListener = () => {
+        void handle.remove();
+      };
+    }).catch(() => undefined);
     void CapacitorApp.addListener("appUrlOpen", (event) => {
       const next = nativeScreenFromUrl(event.url);
+      postNativeEvent("native.deep_link_received", installId, { route: next });
+      postNativeEvent("native.deep_link_resolved", installId, {
+        route: next,
+        result: "ok",
+      });
       const currentProfile = profileRef.current;
       if (next === "welcome" || next === "chat") {
         setScreen(profileHasPaidAccess(currentProfile) ? next : currentProfile ? "plan" : "login");
@@ -70,6 +115,7 @@ export function App() {
       window.removeEventListener("online", onlineListener);
       window.removeEventListener("offline", offlineListener);
       removeUrlListener?.();
+      removeResumeListener?.();
     };
   }, [resolveSignedInDestination]);
 

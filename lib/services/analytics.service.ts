@@ -41,6 +41,7 @@ import {
   PRIMARY_GOALS,
   type PrimaryGoal,
 } from "@/lib/validations/goals.schema";
+import { emitFirstActivation } from "@/lib/events/product";
 export type AnalyticsDailyDTO = {
   entryDate: string;
   weightKg: number | null;
@@ -543,6 +544,7 @@ export async function incrementTodayWorkout(userId: string): Promise<number> {
 
   await invalidateAnalyticsCache(userId);
   const next = await getTodayNutritionSnapshot(userId);
+  emitFirstActivation("activation.first_workout_completed", userId, "workout");
   return next.workoutsCompleted;
 }
 

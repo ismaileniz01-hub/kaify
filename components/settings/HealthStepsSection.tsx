@@ -45,9 +45,17 @@ export function HealthStepsSection() {
   };
 
   const handleDisconnect = () => {
-    disconnectHealthSteps();
-    setStatus("disconnected");
-    setMessage(null);
+    void revokeAndDisconnect();
+  };
+
+  const revokeAndDisconnect = async () => {
+    setBusy(true);
+    try {
+      const next = await disconnectHealthSteps();
+      setStatus(next);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleSync = async () => {

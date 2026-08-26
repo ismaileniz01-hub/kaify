@@ -42,7 +42,7 @@ import { useSession } from "@/lib/session-context";
 import { useNativeApp } from "@/lib/native/platform";
 import { WEB_PRICING_URL } from "@/lib/billing/native-web-checkout";
 import type { UserProfile } from "@/lib/user";
-import { apiPatch } from "@/lib/api/client";
+import { apiGet, apiPatch } from "@/lib/api/client";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
   type EquipmentAccess,
@@ -119,6 +119,8 @@ export function MyAccountPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [equipmentDraft, setEquipmentDraft] =
     useState<EquipmentAccess>("gym");
+  const [billingStatus, setBillingStatus] = useState<string | null>(null);
+  const [billingEndsAt, setBillingEndsAt] = useState<string | null>(null);
   const {
     openPortal,
     portalLoading,
@@ -138,6 +140,16 @@ export function MyAccountPage() {
   useEffect(() => {
     if (userProfile?.name) setNameDraft(userProfile.name);
   }, [userProfile?.name]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    void apiGet<{ status: string; endsAt: string | null }>("/api/billing/status")
+      .then((row) => {
+        setBillingStatus(row.status);
+        setBillingEndsAt(row.endsAt);
+      })
+      .catch(() => undefined);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (
@@ -413,6 +425,14 @@ export function MyAccountPage() {
                     <div>
                       <p className="account-stat__label">{t("myaccount.plan")}</p>
                       <p className="account-stat__value">{formatTierLabel(profile.tier)}</p>
+                      {billingStatus ? (
+                        <p className="text-[11px] text-zinc-500">
+                          {t("myaccount.billing_status", { status: billingStatus })}
+                          {billingEndsAt
+                            ? ` · ${t("myaccount.billing_ends", { date: billingEndsAt.slice(0, 10) })}`
+                            : ""}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 </div>

@@ -15,6 +15,9 @@ import {
   type FirstTaskProgress,
   type TodayJob,
 } from "@/lib/activation/today-job";
+import { resolveWeeklyReview, type WeeklyReview } from "@/lib/activation/weekly-review";
+import { daysSince, inactivityBucket } from "@/lib/notifications/quiet-hours";
+import { emitProductEvent, productEventIdempotencyKey } from "@/lib/events/product";
 import type { ProfileDTO } from "@/lib/types/domain.types";
 import type { PrimaryGoal } from "@/lib/validations/goals.schema";
 
@@ -30,6 +33,7 @@ export type HomeDTO = {
   };
   kaiLevel: number;
   todayJob: TodayJob;
+  weeklyReview: WeeklyReview;
   firstTask: FirstTaskProgress;
   goals: {
     configured: boolean;
@@ -49,6 +53,7 @@ export type HomeCoreDTO = {
   stats: HomeDTO["stats"];
   kaiLevel: number;
   todayJob: TodayJob;
+  weeklyReview: WeeklyReview;
   firstTask: FirstTaskProgress;
   goals: HomeDTO["goals"];
   /** Enough nutrition state to rebuild kaiFoodInsight for any locale. */
@@ -74,6 +79,29 @@ export type HomeDataPrefetch = {
   streakStatus?: StreakStatusDTO;
 };
 
+async function loadWeeklyTotals(userId: string, today: string): Promise<{
+  workouts: number;
+  meals: number;
+  waterDays: number;
+}> {
+  const start = new Date(`${today}T00:00:00Z`);
+  start.setUTCDate(start.getUTCDate() - 6);
+  const from = start.toISOString().slice(0, 10);
+  const admin = createAdminSupabaseClient();
+  const { data } = await admin
+    .from("analytics_daily")
+    .select("workouts_completed, calories_consumed, water_liters")
+    .eq("user_id", userId)
+    .gte("entry_date", from)
+    .lte("entry_date", today);
+  const rows = data ?? [];
+  return {
+    workouts: rows.reduce((sum, row) => sum + Number(row.workouts_completed ?? 0), 0),
+    meals: rows.filter((row) => Number(row.calories_consumed ?? 0) > 0).length,
+    waterDays: rows.filter((row) => Number(row.water_liters ?? 0) > 0).length,
+  };
+}
+
 export async function getHomeCoreData(
   userId: string,
   prefetch?: HomeDataPrefetch,
@@ -92,8 +120,16 @@ export async function getHomeCoreData(
     ]);
 
   const today = localTodayDate(profile.timezone ?? "UTC");
+  const week = await loadWeeklyTotals(userId, today).catch(() => ({
+    workouts: todayNutrition?.workoutsCompleted ?? 0,
+    meals: (todayNutrition?.caloriesConsumed ?? 0) > 0 ? 1 : 0,
+    waterDays: (todayNutrition?.waterLiters ?? 0) > 0 ? 1 : 0,
+  }));
   const checkedInToday = streakStatus.lastCheckInDate === today;
   const goalsConfigured = settings?.goalsConfigured ?? false;
+  const inactivityDays = daysSince(
+    streakStatus.lastCheckInDate ? `${streakStatus.lastCheckInDate}T00:00:00Z` : null,
+  );
 
   const steps = todayNutrition?.steps ?? null;
   const goalPercent =
@@ -106,6 +142,49 @@ export async function getHomeCoreData(
         )
       : null;
 
+  const weeklyReview = resolveWeeklyReview({
+    workouts: week.workouts,
+    meals: week.meals,
+    waterDays: week.waterDays,
+    streak: streakStatus.currentStreak,
+    workoutsTarget: todayNutrition?.workoutsTarget ?? 3,
+  });
+  const todayJob = resolveTodayJob({
+    checkedInToday,
+    goalsConfigured,
+    mealLogged: (todayNutrition?.caloriesConsumed ?? 0) > 0,
+    workoutLogged: (todayNutrition?.workoutsCompleted ?? 0) > 0,
+    waterLogged: (todayNutrition?.waterLiters ?? 0) > 0,
+    inactivityDays,
+  });
+
+  emitProductEvent({
+    name: "session.daily_job_viewed",
+    userId,
+    properties: { job: todayJob.kind },
+    idempotencyKey: productEventIdempotencyKey([
+      "session.daily_job_viewed",
+      userId,
+      today,
+      todayJob.kind,
+    ]),
+  });
+  if (todayJob.recovery) {
+    emitProductEvent({
+      name: "reactivation.recovery_task_shown",
+      userId,
+      properties: {
+        task: "check_in",
+        inactivity_bucket: inactivityBucket(inactivityDays ?? 0),
+      },
+      idempotencyKey: productEventIdempotencyKey([
+        "reactivation.recovery_task_shown",
+        userId,
+        today,
+      ]),
+    });
+  }
+
   return {
     displayName: profile.displayName,
     stats: {
@@ -114,13 +193,8 @@ export async function getHomeCoreData(
       goalPercent,
     },
     kaiLevel: streakStatus.kaiUnlockedLevel,
-    todayJob: resolveTodayJob({
-      checkedInToday,
-      goalsConfigured,
-      mealLogged: (todayNutrition?.caloriesConsumed ?? 0) > 0,
-      workoutLogged: (todayNutrition?.workoutsCompleted ?? 0) > 0,
-      waterLogged: (todayNutrition?.waterLiters ?? 0) > 0,
-    }),
+    todayJob,
+    weeklyReview,
     firstTask: {
       checkInDone: checkedInToday || streakStatus.currentStreak > 0,
       goalsDone: goalsConfigured,
@@ -157,6 +231,7 @@ export async function localizeHomeData(
     stats: core.stats,
     kaiLevel: core.kaiLevel,
     todayJob: core.todayJob,
+    weeklyReview: core.weeklyReview,
     firstTask: core.firstTask,
     goals: core.goals,
   };

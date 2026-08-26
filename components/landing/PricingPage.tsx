@@ -18,6 +18,7 @@ import { usePaddle } from "@/components/billing/PaddleProvider";
 import { useBillingPortal } from "@/components/billing/useBillingPortal";
 import { useSessionOptional } from "@/lib/session-contexts";
 import { useNativeApp } from "@/lib/native/platform";
+import { ProductEventBeacon } from "@/components/analytics/ProductEventBeacon";
 import { openInstalledAppOrWebsite } from "@/lib/billing/native-web-checkout";
 import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
 import { useLang } from "@/lib/lang-context";
@@ -245,6 +246,17 @@ function PlanCheckoutButton({
             showAddDiscounts: true,
           },
         });
+        void import("@/lib/events/client-beacon").then(({ postClientProductEvent }) => {
+          postClientProductEvent({
+            name: "acquisition.cta_clicked",
+            requireConsent: true,
+            properties: { page: "pricing", cta: plan.id },
+          });
+          postClientProductEvent({
+            name: "billing.checkout_started",
+            properties: { plan: plan.id, interval },
+          });
+        });
         return;
       }
       setCheckoutError(t("pricing.checkout_unavailable"));
@@ -258,6 +270,7 @@ function PlanCheckoutButton({
     paddle,
     plan.paddlePriceId,
     plan.paddlePriceIdYearly,
+    plan.id,
     profile,
     ready,
     router,
@@ -311,6 +324,7 @@ export function PricingPage() {
 
   return (
     <div className="landing-site">
+      <ProductEventBeacon name="acquisition.pricing_viewed" page="pricing" />
       <WebCheckoutReturn />
       <Suspense fallback={null}>
         <PaddleCheckoutResume />

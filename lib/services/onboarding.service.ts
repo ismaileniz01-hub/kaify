@@ -4,7 +4,9 @@ import { logger } from "@/lib/logger";
 import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
 import { mapProfileRow, type ProfileDTO } from "@/lib/types/domain.types";
 import type { OnboardingInput } from "@/lib/validations/onboarding.schema";
+import type { SignupBasicsInput } from "@/lib/validations/signup-basics.schema";
 import { recommendOnboardingNutrition } from "@/lib/nutrition/onboarding-recommendation";
+import { emitProductEvent, productEventIdempotencyKey } from "@/lib/events/product";
 
 /**
  * Maps a Postgres RPC error (raised via RAISE ... USING ERRCODE) to an ApiError.
@@ -109,6 +111,14 @@ export async function completeOnboarding(
 
   const profile = mapProfileRow(data);
 
+  emitProductEvent({
+    name: "onboarding.completed",
+    userId: profile.id,
+    platform: "web",
+    properties: { flow: "full", version: "v2" },
+    idempotencyKey: productEventIdempotencyKey(["onboarding.completed", profile.id]),
+  });
+
   // Paid users who finish forms after checkout would otherwise stay
   // FORMS_COMPLETED forever (apply_subscription only promotes when already
   // past PAID). Never treat a default/unpaid tier as a real plan.
@@ -117,6 +127,46 @@ export async function completeOnboarding(
   }
 
   return profile;
+}
+
+export async function saveSignupBasics(
+  input: SignupBasicsInput,
+): Promise<ProfileDTO> {
+  const supabase = await createServerSupabaseClient();
+  const { data: sessionData } = await supabase.auth.getUser();
+  const userId = sessionData.user?.id;
+  if (!userId) {
+    throw new ApiError("UNAUTHORIZED", "Oturum gerekli.");
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({
+      display_name: input.displayName,
+      birth_date: input.birthDate,
+      country_code: input.countryCode,
+      locale: input.locale,
+    })
+    .eq("id", userId)
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    logger.error("[onboarding.service:basics] error", {
+      error: error?.message ?? "no row",
+    });
+    throw new ApiError("INTERNAL_ERROR", "Profil kaydedilemedi.");
+  }
+
+  emitProductEvent({
+    name: "signup.completed",
+    userId,
+    platform: "web",
+    properties: { flow: "progressive", method: "otp" },
+    idempotencyKey: productEventIdempotencyKey(["signup.completed", userId]),
+  });
+
+  return mapProfileRow(data);
 }
 
 /**

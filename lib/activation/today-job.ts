@@ -12,6 +12,7 @@ export type TodayJob = {
   titleKey: string;
   bodyKey: string;
   ctaKey: string;
+  recovery?: boolean;
 };
 
 export type FirstTaskProgress = {
@@ -27,7 +28,18 @@ export function resolveTodayJob(input: {
   mealLogged?: boolean;
   workoutLogged?: boolean;
   waterLogged?: boolean;
+  inactivityDays?: number | null;
 }): TodayJob {
+  if ((input.inactivityDays ?? 0) >= 7 && !input.checkedInToday) {
+    return {
+      kind: "check_in",
+      href: "/streak",
+      titleKey: "home.today_job.recovery.title",
+      bodyKey: "home.today_job.recovery.body",
+      ctaKey: "home.today_job.recovery.cta",
+      recovery: true,
+    };
+  }
   if (!input.checkedInToday) {
     return {
       kind: "check_in",

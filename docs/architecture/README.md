@@ -43,7 +43,7 @@ flowchart TB
 | **Faz 1** | 72 | ✅ Done | defineRoute standard, `.env.example`, market=DB, [layers.md](./layers.md) |
 | **Faz 2** | 80 | ✅ Done | `lib/domains/*`, domain events, [bounded-contexts.md](./bounded-contexts.md) |
 | **Faz 3** | 88 | ✅ Done | Read/write repos, outbox DB + cron, integration flow tests |
-| **Faz 4** | 92+ | ✅ Done | `/api/v1` (36 routes), CODEOWNERS, onboarding doc, deprecation headers |
+| **Faz 4** | 92+ | ✅ Done | `/api/v1` (39 routes), CODEOWNERS, onboarding doc, deprecation headers |
 
 Full gate checklist: [verification-2026-07.md](./verification-2026-07.md)
 

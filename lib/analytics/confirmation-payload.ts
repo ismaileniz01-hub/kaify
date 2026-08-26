@@ -4,6 +4,11 @@ export type ChatConfirmationPayload = {
   pendingId: string;
   summary: string;
   status?: ConfirmationStatus;
+  confidence?: number;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
 };
 
 export function resolvedConfirmationStatus(

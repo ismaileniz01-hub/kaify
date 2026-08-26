@@ -4,6 +4,7 @@ import { fail, ok } from "@/lib/api/response";
 import { createRouteHandlerSupabase } from "@/lib/supabase/route-handler";
 import { SupabaseEnvError } from "@/lib/supabase/env";
 import { otpVerifySchema } from "@/lib/validations/auth-otp.schema";
+import { emitProductEvent, productEventIdempotencyKey } from "@/lib/events/product";
 
 export const runtime = "nodejs";
 
@@ -36,6 +37,14 @@ export const POST = defineRouteRaw(
         });
 
         if (signupAttempt.error) {
+          emitProductEvent({
+            name: "signup.failed",
+            properties: { flow: "otp", error: "invalid_code" },
+            idempotencyKey: productEventIdempotencyKey([
+              "signup.failed",
+              "invalid_code",
+            ]),
+          });
           return withCookies(
             fail(
               new ApiError("UNAUTHORIZED", "Invalid or expired code. Please try again."),
@@ -44,6 +53,14 @@ export const POST = defineRouteRaw(
         }
       }
 
+      emitProductEvent({
+        name: "signup.otp_verified",
+        properties: { flow: "otp", method: "email" },
+        idempotencyKey: productEventIdempotencyKey([
+          "signup.otp_verified",
+          String(Date.now()).slice(0, 8),
+        ]),
+      });
       return withCookies(ok({ verified: true as const }));
     } catch (error) {
       if (error instanceof SupabaseEnvError) {

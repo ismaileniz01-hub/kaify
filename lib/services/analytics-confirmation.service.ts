@@ -7,6 +7,7 @@ import { sanitizeAnalyticsPatch, sanitizeMealMacros } from "@/lib/analytics/boun
 import { patchAnalyticsDaily } from "@/lib/services/analytics.service";
 import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import { mergeConfirmationStamp } from "@/lib/analytics/confirmation-payload";
+import { emitProductEvent, emitFirstActivation, productEventIdempotencyKey } from "@/lib/events/product";
 import { logger } from "@/lib/logger";
 import type { Json } from "@/lib/types/database.types";
 
@@ -63,6 +64,20 @@ export async function createPendingAnalyticsConfirmation(params: {
   if (error || !data) {
     throw new ApiError("INTERNAL_ERROR", "Onay kaydı oluşturulamadı.");
   }
+  emitProductEvent({
+    name: "scan.result_shown",
+    userId: params.userId,
+    properties: {
+      scan_type: payload.meal ? "meal" : "analytics",
+      confidence_bucket: "pending",
+      model: params.source,
+    },
+    idempotencyKey: productEventIdempotencyKey([
+      "scan.result_shown",
+      params.userId,
+      data.id,
+    ]),
+  });
   return data.id;
 }
 
@@ -210,6 +225,16 @@ export async function confirmPendingAnalytics(
       payload: { meal: payload.meal },
       at: new Date().toISOString(),
     });
+    emitProductEvent({
+      name: "activation.first_meal_logged",
+      userId,
+      properties: { action: "meal", first: true },
+      idempotencyKey: productEventIdempotencyKey([
+        "activation.first_meal_logged",
+        userId,
+      ]),
+    });
+    emitFirstActivation("activation.first_scan_confirmed", userId, "scan");
   }
   const workouts = Number(payload?.patch?.workoutsCompleted ?? payload?.patch?.workouts_completed);
   if (Number.isFinite(workouts) && workouts > 0) {
@@ -276,6 +301,83 @@ export async function rejectPendingAnalytics(
     status: "rejected",
     messageId: data[0]?.message_id,
     sourceMessageId: data[0]?.source_message_id,
+  });
+  emitProductEvent({
+    name: "scan.rejected",
+    userId,
+    properties: { scan_type: "meal", action: "reject" },
+    idempotencyKey: productEventIdempotencyKey(["scan.rejected", userId, pendingId]),
+  });
+  await recordScanCorrection({
+    userId,
+    pendingId,
+    action: "reject",
+  });
+}
+
+export async function correctPendingAnalytics(
+  userId: string,
+  pendingId: string,
+  macros: { calories: number; protein: number; carbs: number; fat: number },
+): Promise<void> {
+  const admin = createAdminSupabaseClient() as SupabaseClient;
+  const { data: pending } = await admin
+    .from("analytics_pending_confirmations")
+    .select("payload")
+    .eq("id", pendingId)
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .maybeSingle();
+  if (!pending) {
+    throw new ApiError("NOT_FOUND", "Onay bekleyen kayıt bulunamadı.");
+  }
+  const current =
+    pending.payload && typeof pending.payload === "object"
+      ? (pending.payload as PendingAnalyticsPayload)
+      : { summary: "corrected meal" };
+  const meal = sanitizeMealMacros(macros);
+  await admin
+    .from("analytics_pending_confirmations")
+    .update({
+      payload: {
+        ...current,
+        meal,
+        patch: { caloriesConsumed: meal.calories },
+      } as unknown as Json,
+    })
+    .eq("id", pendingId)
+    .eq("user_id", userId);
+  await recordScanCorrection({
+    userId,
+    pendingId,
+    action: "correct",
+    meal,
+  });
+  emitProductEvent({
+    name: "scan.corrected",
+    userId,
+    properties: { scan_type: "meal", action: "correct" },
+    idempotencyKey: productEventIdempotencyKey(["scan.corrected", userId, pendingId]),
+  });
+  await confirmPendingAnalytics(userId, pendingId);
+}
+
+async function recordScanCorrection(params: {
+  userId: string;
+  pendingId: string;
+  action: "confirm" | "reject" | "correct";
+  meal?: { calories: number; protein: number; carbs: number; fat: number };
+}): Promise<void> {
+  const admin = createAdminSupabaseClient() as unknown as SupabaseClient;
+  await admin.from("scan_corrections").insert({
+    user_id: params.userId,
+    pending_id: params.pendingId,
+    scan_type: "meal",
+    action: params.action,
+    calories: params.meal?.calories ?? null,
+    protein: params.meal?.protein ?? null,
+    carbs: params.meal?.carbs ?? null,
+    fat: params.meal?.fat ?? null,
   });
 }
 

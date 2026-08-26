@@ -66,6 +66,22 @@ export const POST = defineRoute(
       );
     }
 
+    const { emitProductEvent, productEventIdempotencyKey } = await import(
+      "@/lib/events/product"
+    );
+    emitProductEvent({
+      name: "billing.checkout_started",
+      userId: user.id,
+      properties: { plan: parsed.data.planId, interval: parsed.data.interval },
+      idempotencyKey: productEventIdempotencyKey([
+        "billing.checkout_started",
+        user.id,
+        parsed.data.planId,
+        parsed.data.interval,
+        transaction.id ?? "",
+      ]),
+    });
+
     return { checkoutUrl };
   },
 );

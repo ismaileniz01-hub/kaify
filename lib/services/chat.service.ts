@@ -42,6 +42,7 @@ import {
   highRiskSafetyResponse,
   type HighRiskCategory,
 } from "@/lib/ai/high-risk-safety";
+import { emitProductEvent, emitFirstActivation, productEventIdempotencyKey } from "@/lib/events/product";
 import {
   buildCanaryReminder,
   containsCanary,
@@ -706,6 +707,13 @@ async function* streamKaiosCoachReply(
       .select("id")
       .single();
     insertedUser = insertedUserRow;
+    if (!userInsertError && insertedUser) {
+      emitFirstActivation(
+        "activation.first_chat_action_completed",
+        params.userId,
+        "chat",
+      );
+    }
     if (userInsertError) {
       if (userInsertError.code === "23505" && params.clientIdempotencyKey) {
         const existingUserId = await lookupExistingUserMessageId(admin, params);
@@ -1061,6 +1069,16 @@ export async function* streamCoachReply(
 ): AsyncGenerator<SseChunk> {
   const highRiskCategory = classifyHighRiskMessage(params.message);
   if (highRiskCategory) {
+    emitProductEvent({
+      name: "scan.ai_safety_escalated",
+      userId: params.userId,
+      properties: { category: highRiskCategory },
+      idempotencyKey: productEventIdempotencyKey([
+        "scan.ai_safety_escalated",
+        params.userId,
+        highRiskCategory,
+      ]),
+    });
     yield* streamHighRiskSafetyReply(params, highRiskCategory);
     return;
   }
@@ -1220,6 +1238,13 @@ export async function* streamCoachReply(
       .select("id")
       .single();
     insertedUser = insertedUserRow;
+    if (!userInsertError && insertedUser) {
+      emitFirstActivation(
+        "activation.first_chat_action_completed",
+        params.userId,
+        "chat",
+      );
+    }
     if (userInsertError) {
       if (userInsertError.code === "23505" && params.clientIdempotencyKey) {
         const existingUserId = await lookupExistingUserMessageId(admin, params);

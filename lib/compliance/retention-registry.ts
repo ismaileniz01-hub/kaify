@@ -63,6 +63,8 @@ export const RETENTION_REGISTRY: readonly RetentionRegistryEntry[] = [
   { table: "cost_alerts", classification: "OPERATIONAL_SHORT_LIVED", retainDays: 90, purged: false, rationale: "Ops alerts; low volume." },
   { table: "cron_job_runs", classification: "OPERATIONAL_SHORT_LIVED", retainDays: 90, purged: false, rationale: "Cron metrics; low volume." },
   { table: "domain_events", classification: "OPERATIONAL_SHORT_LIVED", retainDays: RETENTION.domainEventsDays, purged: true, rationale: "Processed outbox only." },
+  { table: "product_events", classification: "NEEDS_POLICY", purged: false, rationale: "Product analytics TTL pending legal/privacy approval (ADR 008). Production collection off by default." },
+  { table: "scan_corrections", classification: "PRODUCT_HISTORY", retainMonths: RETENTION.analyticsMonths, purged: false, rationale: "Numeric scan corrections; no image or free-text." },
   { table: "idempotency_keys", classification: "OPERATIONAL_SHORT_LIVED", purged: true, rationale: "TTL via expires_at." },
   { table: "influencer_codes", classification: "INDEFINITE_BY_DESIGN", purged: false, rationale: "Admin catalog." },
   { table: "leaderboard_snapshots", classification: "OPERATIONAL_SHORT_LIVED", purged: false, rationale: "Overwritten in place." },

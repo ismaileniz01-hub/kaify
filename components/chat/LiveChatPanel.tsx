@@ -19,6 +19,7 @@ import { AnalyticsConfirmationCard } from "@/components/chat/AnalyticsConfirmati
 import { ChatMessageText } from "@/components/chat/ChatMessageText";
 import { InlineAlert } from "@/components/InlineAlert";
 import { EmptyState } from "@/components/EmptyState";
+import { CoachStarterChips } from "@/components/chat/CoachStarterChips";
 import { PhotoAnalyzeConsentModal } from "@/components/consent/PhotoAnalyzeConsentModal";
 import { ImagePickerModal } from "@/components/ImagePickerModal";
 import { useLang } from "@/lib/lang-context";
@@ -963,12 +964,18 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           />
         )}
         {!loadingHistory && messages.length === 0 && !error && (
-          <EmptyState
-            title={t("chat.empty.title")}
-            subtitle={t("chat.empty.subtitle")}
-            icon={<MessageCircle className="h-5 w-5" aria-hidden />}
-            tone="info"
-          />
+          <>
+            <EmptyState
+              title={t("chat.empty.title")}
+              subtitle={t("chat.empty.subtitle")}
+              icon={<MessageCircle className="h-5 w-5" aria-hidden />}
+              tone="info"
+            />
+            <CoachStarterChips
+              coachId={coachId}
+              onPick={(text) => void sendTextMessage(text)}
+            />
+          </>
         )}
         <div
           role="log"

@@ -3,6 +3,7 @@ import { LandingNav } from "./LandingNav";
 import { LandingHero } from "./LandingHero";
 import { LandingAbout } from "./LandingAbout";
 import { LandingFooter } from "./LandingFooter";
+import { ProductEventBeacon } from "@/components/analytics/ProductEventBeacon";
 
 const LandingCoaches = dynamic(
   () => import("./LandingCoaches").then((m) => m.LandingCoaches),
@@ -33,6 +34,7 @@ const LandingPricingCTA = dynamic(
 export function LandingPage() {
   return (
     <div className="landing-site">
+      <ProductEventBeacon name="acquisition.landing_viewed" page="landing" />
       <LandingNav />
       <main>
         <LandingHero />

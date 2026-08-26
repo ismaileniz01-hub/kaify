@@ -80,7 +80,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     accent: "zinc",
     perks: [
       "All 4 AI coaches unlocked",
-      "Great Capacity coaching",
+      "1M coaching tokens / month",
       "1 Maya meal scan / day",
       "1 Leo physique scan / week",
       "Streaks, gems & Kai",
@@ -97,7 +97,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     accent: "purple",
     perks: [
       "Everything in Essential",
-      "2.5× Capacity coaching",
+      "2.5M coaching tokens / month",
       "3 Maya meal scans / day",
       "2 Leo physique scans / week",
       "Priority AI responses",
@@ -115,7 +115,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     accent: "amber",
     perks: [
       "Everything in Pro",
-      "5× Capacity coaching",
+      "5M coaching tokens / month",
       "5 Maya meal scans / day",
       "3 Leo physique scans / week",
       "Deepest coach memory",
@@ -224,9 +224,9 @@ export const PLAN_COMPARISON: PlanFeature[] = [
   },
   {
     label: "Monthly coaching capacity",
-    essential: "Great Capacity",
-    pro: "2.5× Capacity",
-    premium: "5× Capacity",
+    essential: "1M tokens / month",
+    pro: "2.5M tokens / month",
+    premium: "5M tokens / month",
     highlight: true,
   },
   {

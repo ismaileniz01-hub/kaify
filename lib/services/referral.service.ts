@@ -2,6 +2,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
+import { emitProductEvent, hashReferralCampaignId, productEventIdempotencyKey } from "@/lib/events/product";
 import type { ProcessReferralResult } from "@/lib/types/database.types";
 import { applyMarketAura } from "@/lib/services/market.service";
 
@@ -87,6 +88,15 @@ export async function trackReferral(params: {
 
   const result = data as ProcessReferralResult;
   if (result.applied) {
+    emitProductEvent({
+      name: "referral.signup_completed",
+      userId: params.referredId,
+      properties: { campaign_id: hashReferralCampaignId(params.code) },
+      idempotencyKey: productEventIdempotencyKey([
+        "referral.signup_completed",
+        params.referredId,
+      ]),
+    });
     // Older RPC builds omit referrer_rewarded — treat missing as rewarded.
     if (result.referrer_rewarded !== false && result.referrer_id) {
       await grantReferralSkin([result.referrer_id]);

@@ -32,6 +32,7 @@ const REQUIRED_EXPORT_TABLES = [
     "support_tickets",
     "support_messages",
     "analytics_pending_confirmations",
+    "scan_corrections",
     "team_meeting_weeks",
     "referrals",
 ] as const;

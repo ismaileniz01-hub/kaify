@@ -9,6 +9,7 @@ import { SupabaseEnvError } from "@/lib/supabase/env";
 import { otpSendSchema } from "@/lib/validations/auth-otp.schema";
 import { logger } from "@/lib/logger";
 import { isNativeWebViewRequest } from "@/lib/native/webview-request";
+import { emitProductEvent, productEventIdempotencyKey } from "@/lib/events/product";
 
 export const runtime = "nodejs";
 
@@ -55,8 +56,26 @@ export const POST = defineRouteRaw(
           message: result.error.message,
           status: result.error.status,
         });
+        emitProductEvent({
+          name: "signup.failed",
+          properties: { flow: "otp", error: result.error.code || "send_failed" },
+          idempotencyKey: productEventIdempotencyKey([
+            "signup.failed",
+            emailHash,
+            result.error.code,
+          ]),
+        });
         return fail(mapGoTrueOtpSendError(result.error));
       }
+
+      emitProductEvent({
+        name: "signup.otp_requested",
+        properties: { flow: "otp", method: "email" },
+        idempotencyKey: productEventIdempotencyKey([
+          "signup.otp_requested",
+          emailHash,
+        ]),
+      });
 
       return ok({ sent: true as const });
     } catch (error) {

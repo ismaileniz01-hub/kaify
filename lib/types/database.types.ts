@@ -90,6 +90,7 @@ type ProfileRow = {
   team_chat_unlocked: boolean;
   team_chat_unlocked_at: string | null;
   leaderboard_opt_out: boolean;
+  last_meaningful_activity_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -128,6 +129,7 @@ type ProfileInsert = {
   team_chat_unlocked?: boolean;
   team_chat_unlocked_at?: string | null;
   leaderboard_opt_out?: boolean;
+  last_meaningful_activity_at?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -164,6 +166,7 @@ type ProfileUpdate = {
   team_chat_unlocked?: boolean;
   team_chat_unlocked_at?: string | null;
   leaderboard_opt_out?: boolean;
+  last_meaningful_activity_at?: string | null;
   updated_at?: string;
 };
 
@@ -709,6 +712,11 @@ export type Database = {
           marketing_emails?: boolean;
           primary_goal?: string | null;
           goals_configured?: boolean;
+          quiet_hours_start: number | null;
+          quiet_hours_end: number | null;
+          notify_weekly: boolean;
+          notify_praise: boolean;
+          daily_push_cap: number;
           updated_at: string;
         };
         Insert: { user_id: string } & Partial<
@@ -1000,6 +1008,63 @@ export type Database = {
           token: string;
         };
         Update: Partial<Database["public"]["Tables"]["native_push_tokens"]["Row"]>;
+        Relationships: [];
+      };
+      product_events: {
+        Row: {
+          id: string;
+          event_id: string;
+          event_name: string;
+          occurred_at: string;
+          user_id: string | null;
+          install_id: string | null;
+          platform: string | null;
+          schema_version: number;
+          properties: Json;
+          idempotency_key: string;
+        };
+        Insert: {
+          id?: string;
+          event_id?: string;
+          event_name: string;
+          occurred_at?: string;
+          user_id?: string | null;
+          install_id?: string | null;
+          platform?: string | null;
+          schema_version?: number;
+          properties?: Json;
+          idempotency_key: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["product_events"]["Row"]>;
+        Relationships: [];
+      };
+      scan_corrections: {
+        Row: {
+          id: string;
+          user_id: string;
+          pending_id: string | null;
+          scan_type: string;
+          action: string;
+          confidence_bucket: string | null;
+          calories: number | null;
+          protein: number | null;
+          carbs: number | null;
+          fat: number | null;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          pending_id?: string | null;
+          scan_type?: string;
+          action: string;
+          confidence_bucket?: string | null;
+          calories?: number | null;
+          protein?: number | null;
+          carbs?: number | null;
+          fat?: number | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["scan_corrections"]["Row"]>;
         Relationships: [];
       };
     };

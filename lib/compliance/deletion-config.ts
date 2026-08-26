@@ -54,7 +54,9 @@ export const CASCADE_ON_DELETE_TABLES: readonly DeletionTableSpec[] = [
   { table: "data_export_logs", column: "user_id", behavior: "cascade", notes: "" },
   { table: "pending_gifts", column: "user_id", behavior: "cascade", notes: "" },
   { table: "support_tickets", column: "user_id", behavior: "cascade", notes: "" },
+  { table: "support_messages", column: "ticket_id", behavior: "cascade", notes: "Owned via support_tickets" },
   { table: "analytics_pending_confirmations", column: "user_id", behavior: "cascade", notes: "" },
+  { table: "scan_corrections", column: "user_id", behavior: "cascade", notes: "" },
   { table: "team_meeting_weeks", column: "user_id", behavior: "cascade", notes: "" },
   { table: "referrals", column: "referrer_id", behavior: "cascade", notes: "" },
 ] as const;
@@ -66,6 +68,12 @@ export const RETAINED_AFTER_DELETE: readonly DeletionTableSpec[] = [
     column: "user_id",
     behavior: "set_null",
     notes: "Financial audit row retained (SET NULL); payload is minimized at insert. Row TTL: RETENTION.billingEventsMonths (policy 7y).",
+  },
+  {
+    table: "product_events",
+    column: "user_id",
+    behavior: "set_null",
+    notes: "Lifecycle projection retained without user id after delete; TTL pending legal approval.",
   },
   {
     table: "paddle_customers",
