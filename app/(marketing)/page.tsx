@@ -1,6 +1,7 @@
 import { LandingPage } from "@/components/landing/LandingPage";
 import { MarketingJsonLd } from "@/components/seo/MarketingJsonLd";
 import { publicPageMetadata } from "@/lib/seo/metadata";
+import { NativeEntryRedirect } from "@/components/native/NativeEntryRedirect";
 
 export const metadata = publicPageMetadata({
   title: "Kaify Ai — Your Personal Coach Team",
@@ -12,6 +13,7 @@ export const metadata = publicPageMetadata({
 export default function HomePage() {
   return (
     <>
+      <NativeEntryRedirect />
       <MarketingJsonLd />
       <LandingPage />
     </>

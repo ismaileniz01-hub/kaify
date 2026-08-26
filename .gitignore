@@ -21,6 +21,7 @@ audit/remediation/_vitest-db-last.json
 /.next/
 /out/
 /native-dist/
+/.capacitor-build-stash/
 
 # production
 /build

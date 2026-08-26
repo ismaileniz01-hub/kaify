@@ -1,9 +1,9 @@
-import { cookies } from "next/headers";
-import { translateKey } from "@/lib/i18n/dictionary";
+"use client";
+
+import { useLang } from "@/lib/lang-context";
 
 /** Screen-reader loading label that follows the `kaify-lang` cookie. */
-export async function SrOnlyLoading() {
-  const lang = (await cookies()).get("kaify-lang")?.value;
-  const label = await translateKey(lang, "common.loading");
-  return <p className="sr-only">{label}</p>;
+export function SrOnlyLoading() {
+  const { t } = useLang();
+  return <p className="sr-only">{t("common.loading")}</p>;
 }

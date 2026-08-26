@@ -6,7 +6,7 @@ import { useSession } from "@/lib/session-context";
 import type { LeaderboardEntryDTO } from "@/lib/types/domain.types";
 import { useLang } from "@/lib/lang-context";
 import { FlagImage } from "@/components/FlagImage";
-import { resolveApiPath } from "@/lib/api/client";
+import { getApiAuthHeaders, resolveApiPath } from "@/lib/api/client";
 
 type LeaderboardEntry = {
   userId: string;
@@ -43,7 +43,10 @@ export function WelcomeLeaderboard() {
       : "/api/leaderboard";
 
     setLoadError(false);
-    fetch(resolveApiPath(path), { credentials: "include" })
+    void getApiAuthHeaders()
+      .then((headers) =>
+        fetch(resolveApiPath(path), { credentials: "include", headers }),
+      )
       .then(async (res) => {
         const json = (await res.json()) as Record<string, unknown>;
         if (!res.ok || json.success === false) {

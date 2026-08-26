@@ -1,0 +1,63 @@
+workflows:
+  kaify-ios:
+    name: Kaify iOS
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+
+    integrations:
+      app_store_connect: Kaify
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: org.kaifyai.app
+      vars:
+        XCODE_PROJECT: "App.xcodeproj"
+        XCODE_SCHEME: "App"
+        NEXT_PUBLIC_API_BASE_URL: "https://kaifyai.org"
+        NEXT_PUBLIC_SUPABASE_URL: "https://urnetodzvszmddzdazdj.supabase.co"
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVybmV0b2R6dnN6bWRkemRhemRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MDQ3NTQsImV4cCI6MjA5ODM4MDc1NH0.EemHnCv-3wf36S-6u5-GxGRJ-1P4uYCOJ-Zl0U-BKxQ"
+      node: 22
+      xcode: latest
+
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm ci
+
+      - name: Build web application
+        script: |
+          npm run build:cap
+
+      - name: Create and synchronize iOS project
+        script: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
+          npx cap sync ios
+
+      - name: Set iOS build metadata
+        script: |
+          perl -0pi -e 's/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $ENV{BUILD_NUMBER};/g' ios/App/App.xcodeproj/project.pbxproj
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/App/App/Info.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" ios/App/App/Info.plist
+
+      - name: Configure Apple signing
+        script: |
+          xcode-project use-profiles --project ios/App/App.xcodeproj
+
+      - name: Build signed IPA
+        script: |
+          cd ios/App
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - ios/App/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      app_store_connect:
+        auth: integration
+

@@ -39,6 +39,24 @@ const SUSPICIOUS_PATHS = [
   "/cgi-bin", "/cpanel", "/webmail",
 ];
 
+function attachCorsHeaders(request: NextRequest, response: NextResponse) {
+  const origin = request.headers.get("origin");
+  if (origin && isAllowedOrigin(request)) {
+    response.headers.set("Access-Control-Allow-Origin", origin);
+    response.headers.set("Access-Control-Allow-Credentials", "true");
+    response.headers.set(
+      "Access-Control-Allow-Headers",
+      "Authorization, Content-Type, Idempotency-Key, X-CSRF-Token",
+    );
+    response.headers.set(
+      "Access-Control-Allow-Methods",
+      "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS",
+    );
+    response.headers.append("Vary", "Origin");
+  }
+  return response;
+}
+
 function hasSupabaseAuthCookie(request: NextRequest): boolean {
   return request.cookies
     .getAll()
@@ -121,11 +139,21 @@ async function finalizeResponse(
     }
   }
 
-  return await attachCsrfCookie(forwardedRequest, response);
+  const finalized = await attachCsrfCookie(forwardedRequest, response);
+  return attachCorsHeaders(forwardedRequest, finalized);
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (
+    pathname.startsWith("/api/") &&
+    request.method === "OPTIONS" &&
+    isAllowedOrigin(request)
+  ) {
+    return attachCorsHeaders(request, new NextResponse(null, { status: 204 }));
+  }
+
   const ip = getClientIP(request);
   const nonce = generateCspNonce();
   const requestId = crypto.randomUUID();

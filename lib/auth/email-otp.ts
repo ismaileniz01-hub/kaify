@@ -2,6 +2,7 @@
 
 import { apiPost, ApiClientError } from "@/lib/api/client";
 import { isCompleteOtp, normalizeOtpInput } from "@/lib/auth/otp";
+import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 
 /** Request a one-time email code via the server (avoids missing browser Supabase keys). */
 export async function sendEmailLoginCode(
@@ -35,10 +36,23 @@ export async function verifyEmailLoginCode(
   }
 
   try {
-    await apiPost<{ verified: true }>("/api/auth/otp/verify", {
+    const result = await apiPost<{
+      verified: true;
+      session?: { accessToken: string; refreshToken: string };
+    }>("/api/auth/otp/verify", {
       email: email.trim().toLowerCase(),
       token: normalized,
     });
+
+    if (result.session) {
+      const supabase = tryCreateBrowserSupabaseClient();
+      if (!supabase) return { ok: false, message: "auth_not_configured" };
+      const { error } = await supabase.auth.setSession({
+        access_token: result.session.accessToken,
+        refresh_token: result.session.refreshToken,
+      });
+      if (error) return { ok: false, message: error.message };
+    }
     return { ok: true };
   } catch (error) {
     if (error instanceof ApiClientError) {

@@ -178,13 +178,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    if (hasBrowserAuthCookie()) {
-      void refreshSession();
-    } else {
-      applyGuestState();
-      setIsLoading(false);
-      setHasHydrated(true);
-    }
+    void supabase.auth.getSession().then(({ data }) => {
+      if (data.session || hasBrowserAuthCookie()) {
+        void refreshSession();
+      } else {
+        applyGuestState();
+        setIsLoading(false);
+        setHasHydrated(true);
+      }
+    });
 
     return () => subscription.unsubscribe();
   }, [applyGuestState, refreshSession]);

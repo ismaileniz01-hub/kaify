@@ -2,6 +2,8 @@ import type { MetadataRoute } from "next";
 import { seoCanonicalOrigin } from "@/lib/seo/origin";
 import { SEO_DISALLOW_PREFIXES } from "@/lib/seo/policy";
 
+export const dynamic = "force-static";
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [

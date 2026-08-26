@@ -84,12 +84,10 @@ async function runRouteGuards(
   const method = request.method.toUpperCase();
   const isMutating = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
   const csrfRequired =
-    options.requireCsrf === true ||
-    (options.requireCsrf !== false && authMode !== "none" && isMutating);
-  const bearerAuthenticated = request.headers
-    .get("authorization")
-    ?.startsWith("Bearer ");
-  if (csrfRequired && !bearerAuthenticated) {
+    (options.requireCsrf === true ||
+      (options.requireCsrf !== false && authMode !== "none" && isMutating)) &&
+    !request.headers.get("authorization")?.toLowerCase().startsWith("bearer ");
+  if (csrfRequired) {
     await assertCsrf(request);
   }
 

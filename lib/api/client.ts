@@ -4,6 +4,7 @@ export { resolveApiPath } from "@/lib/api/resolve-api-path";
 import { resolveApiPath } from "@/lib/api/resolve-api-path";
 import { withRetry } from "@/lib/resilience/retry";
 import { UpstreamHttpError } from "@/lib/resilience/error-taxonomy";
+import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 
 export const IDEMPOTENCY_HEADER = "Idempotency-Key";
 
@@ -14,6 +15,18 @@ function csrfHeaders(): HeadersInit {
 
 function mergeHeaders(init?: HeadersInit): HeadersInit {
   return { ...csrfHeaders(), ...(init ?? {}) };
+}
+
+/** Bearer auth is required when the UI is bundled under a Capacitor origin. */
+export async function getApiAuthHeaders(): Promise<Record<string, string>> {
+  const supabase = tryCreateBrowserSupabaseClient();
+  if (!supabase) return {};
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token
+    ? { Authorization: `Bearer ${session.access_token}` }
+    : {};
 }
 
 function isIdempotentMethod(method: string): boolean {
@@ -64,6 +77,9 @@ export async function apiFetch<T>(
   const method = (init?.method ?? "GET").toUpperCase();
   const idempotent = isIdempotentMethod(method);
   const baseHeaders = headerMap(mergeHeaders(init?.headers));
+  if (!baseHeaders.Authorization && !baseHeaders.authorization) {
+    Object.assign(baseHeaders, await getApiAuthHeaders());
+  }
   const idempotencyKey = resolveMutationIdempotencyKey(method, baseHeaders);
   if (idempotencyKey) {
     baseHeaders[IDEMPOTENCY_HEADER] = idempotencyKey;
@@ -210,6 +226,7 @@ export async function streamChatMessage(
   locale?: string,
 ): Promise<void> {
   const key = idempotencyKey ?? createIdempotencyKey();
+  const authHeaders = await getApiAuthHeaders();
   const response = await fetch(resolveApiPath(`/api/chat/${coachId}`), {
     method: "POST",
     credentials: "include",
@@ -217,6 +234,7 @@ export async function streamChatMessage(
       "Content-Type": "application/json",
       [IDEMPOTENCY_HEADER]: key,
       ...csrfHeaders(),
+      ...authHeaders,
     },
     body: JSON.stringify({
       message,

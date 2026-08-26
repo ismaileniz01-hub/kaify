@@ -29,6 +29,8 @@ export const POST = defineRouteRaw(
         type: "email",
       });
 
+      let session = emailAttempt.data.session;
+
       if (emailAttempt.error) {
         const signupAttempt = await supabase.auth.verifyOtp({
           email: parsed.data.email.toLowerCase(),
@@ -51,6 +53,7 @@ export const POST = defineRouteRaw(
             ),
           );
         }
+        session = signupAttempt.data.session;
       }
 
       emitProductEvent({
@@ -61,7 +64,26 @@ export const POST = defineRouteRaw(
           String(Date.now()).slice(0, 8),
         ]),
       });
-      return withCookies(ok({ verified: true as const }));
+
+      const origin = request.headers.get("origin");
+      const isNativeOrigin =
+        origin === "capacitor://localhost" ||
+        origin === "https://localhost" ||
+        origin === "http://localhost";
+
+      return withCookies(
+        ok({
+          verified: true as const,
+          ...(isNativeOrigin && session
+            ? {
+                session: {
+                  accessToken: session.access_token,
+                  refreshToken: session.refresh_token,
+                },
+              }
+            : {}),
+        }),
+      );
     } catch (error) {
       if (error instanceof SupabaseEnvError) {
         return fail(
