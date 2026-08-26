@@ -4,56 +4,42 @@ import { KeyboardResize, KeyboardStyle } from "@capacitor/keyboard";
 /**
  * Capacitor native shell for Kaify Ai.
  *
- * Store / default builds (`npm run cap:sync`): load audited local `native-dist`.
- * Only API calls leave the WebView — no production remote UI (ADR 007).
+ * Store builds load the audited local `native-dist` bundle. Only API calls
+ * leave the WebView. A dev server URL is accepted solely when explicitly set
+ * by cap:sync:dev and is never included in production sync output.
  *
- * Internal device QA against the full Next.js product:
- *   npm run cap:sync:test-web
- *   → WebView loads https://kaifyai.org (Maya, settings, analytics, etc.)
- * Do NOT ship App Store / Play builds from that sync.
+ * Sync before store builds:
+ *   npm run cap:sync
  *
- * Local device against a LAN Next.dev:
+ * Local device against dev server:
  *   npm run cap:sync:dev
  */
-const ALLOWED_TEST_WEBVIEW_URLS = new Set([
-  "https://kaifyai.org",
-  "https://www.kaifyai.org",
-]);
-
-function resolveCapacitorServerUrl(
-  raw: string | undefined,
-): string | undefined {
-  const requested = raw?.trim().replace(/\/$/, "");
-  if (!requested) return undefined;
-  if (requested.startsWith("http://")) return requested;
-  if (ALLOWED_TEST_WEBVIEW_URLS.has(requested)) return requested;
-  return undefined;
-}
-
-const serverUrl = resolveCapacitorServerUrl(process.env.CAPACITOR_SERVER_URL);
-const isLocalDevHttp = Boolean(serverUrl?.startsWith("http://"));
-const isTestRemoteHttps = Boolean(serverUrl?.startsWith("https://"));
+const requestedServerUrl = process.env.CAPACITOR_SERVER_URL?.trim();
+const devServerUrl = requestedServerUrl?.startsWith("http://")
+  ? requestedServerUrl
+  : undefined;
+const isLocal = Boolean(devServerUrl?.startsWith("http://"));
 
 const config: CapacitorConfig = {
   appId: "org.kaify.app",
   appName: "Kaify Ai",
   webDir: "native-dist",
-  loggingBehavior: isLocalDevHttp || isTestRemoteHttps ? "debug" : "none",
-  ...(serverUrl
+  loggingBehavior: isLocal ? "debug" : "none",
+  ...(devServerUrl
     ? {
         server: {
-          url: serverUrl,
-          cleartext: isLocalDevHttp,
+          url: devServerUrl,
+          cleartext: isLocal,
           androidScheme: "https",
         },
       }
     : {}),
   android: {
-    allowMixedContent: isLocalDevHttp,
-    webContentsDebuggingEnabled: isLocalDevHttp || isTestRemoteHttps,
+    allowMixedContent: isLocal,
+    webContentsDebuggingEnabled: isLocal,
   },
   ios: {
-    webContentsDebuggingEnabled: isLocalDevHttp || isTestRemoteHttps,
+    webContentsDebuggingEnabled: isLocal,
   },
   plugins: {
     PushNotifications: {

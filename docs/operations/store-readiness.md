@@ -85,14 +85,3 @@ See [evidence/store-screenshots-checklist.md](./evidence/store-screenshots-check
 ## TestFlight / Play internal
 
 Operator evidence (install + sign-in) is recorded in [evidence/faz5-store-checklist.md](./evidence/faz5-store-checklist.md).
-
-### Full-product device QA (not for store submission)
-
-Store / `npm run cap:sync:prod` packages the slim local `native-dist` shell (login + Kai example only). For internal iOS/Android QA of Maya, settings, analytics, Health Connect UI, and support chat, sync the production website into the WebView, then rebuild:
-
-```bash
-npm run cap:sync:test-web
-npx cap open android   # or: npx cap open ios
-```
-
-Do **not** submit that sync to App Store / Play — revert with `npm run cap:sync:prod` before a store archive.

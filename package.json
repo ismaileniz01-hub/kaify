@@ -49,7 +49,6 @@
     "assets:chest": "node scripts/chroma-key-chest.mjs",
     "cap:sync": "node scripts/cap-sync.mjs",
     "cap:sync:prod": "node scripts/cap-sync.mjs",
-    "cap:sync:test-web": "node scripts/cap-sync.mjs https://kaifyai.org",
     "cap:verify-fcm": "node scripts/ops/verify-google-services.mjs",
     "cap:verify-store": "node scripts/ops/verify-store-readiness.mjs",
     "cap:configure-links": "node scripts/ops/configure-app-links.mjs",
