@@ -160,7 +160,8 @@ If notifications stop: verify the job is `active`, `CRON_SECRET` matches, and
   response header). Sensitive keys are auto-redacted.
 - **Errors**: server 5xx and unexpected throws are sent to Sentry from
   `handleApiError` (4xx client errors are not, by design). Events are tagged
-  with `error_code` and the deploy `release`.
+  with `error_code` and the deploy `release`. Workout plan writes use
+  `INTERNAL_ERROR` on missing tables so operators can tell SQL is not applied.
 - **Health**: `GET /api/health` — coarse `{status,timestamp}` for anonymous
   callers (200 healthy / 503 critical). Full dependency detail requires
   `Authorization: Bearer $CRON_SECRET`.
@@ -194,7 +195,8 @@ Severity taxonomy + on-call checklist: [`docs/reliability/incident-response.md`]
 | `/api/cron/*` returns 401 | `CRON_SECRET` mismatch/whitespace | Reset secret in Vercel + pg_cron header; redeploy |
 | Notifications not sent | pg_cron inactive / pg_net timeout | See §6; re-schedule with higher `timeout_milliseconds` |
 | Health `database: down` | Supabase outage / bad service key | Check Supabase status; verify `SUPABASE_SERVICE_ROLE_KEY` |
-| AI chat failing, health `ai: degraded/down` | Provider outage → circuit breaker open | Wait for breaker half-open; check provider status/keys |
+| AI chat failing, health `ai: degraded/down` | Provider outage → circuit breaker open | Wait for breaker half-open; check provider status/keys. High-risk safety replies still return without a model call. |
+| Library plan apply fails | Phase 3 SQL not applied | Apply `supabase/migrations/20260826150000_phase3_workout_plans.sql`. Daily workout increment still works. |
 | Waitlist signups failing | `SENDER_API_KEY` missing/invalid | Set key in Vercel; retry |
 | Build fails in CI on env | Missing build-safe placeholder | Placeholders are set in `.github/workflows/ci.yml` |
 

@@ -6,7 +6,7 @@ function src(rel: string): string {
   return readFileSync(join(process.cwd(), rel), "utf8");
 }
 
-describe("marketing static rendering (PERF-004)", () => {
+describe("marketing rendering (PERF-004 + F3-09 CSP)", () => {
   it("root layout metadata does not read cookies or headers", () => {
     const layout = src("app/layout.tsx");
     expect(layout).not.toContain("cookies(");
@@ -14,10 +14,11 @@ describe("marketing static rendering (PERF-004)", () => {
     expect(layout).toContain("export const metadata");
   });
 
-  it("marketing layout is statically generated without request APIs", () => {
+  it("marketing layout uses a per-request nonce instead of force-static", () => {
     const layout = src("app/(marketing)/layout.tsx");
-    expect(layout).toContain('dynamic = "force-static"');
-    expect(layout).not.toContain("headers(");
+    expect(layout).not.toContain('dynamic = "force-static"');
+    expect(layout).toContain("headers(");
+    expect(layout).toContain("x-nonce");
     expect(layout).not.toContain("cookies(");
   });
 

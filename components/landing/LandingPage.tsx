@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import { headers } from "next/headers";
 import { LandingNav } from "./LandingNav";
 import { LandingHero } from "./LandingHero";
 import { LandingAbout } from "./LandingAbout";
@@ -31,7 +32,8 @@ const LandingPricingCTA = dynamic(
 );
 
 /** Server page: only above-the-fold islands hydrate with the initial JS. */
-export function LandingPage() {
+export async function LandingPage() {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <div className="landing-site">
       <ProductEventBeacon name="acquisition.landing_viewed" page="landing" />
@@ -43,7 +45,7 @@ export function LandingPage() {
         <LandingFeatures />
         <LandingStreak />
         <LandingLeaderboard />
-        <LandingFAQ />
+        <LandingFAQ nonce={nonce} />
         <LandingPricingCTA />
       </main>
       <LandingFooter />

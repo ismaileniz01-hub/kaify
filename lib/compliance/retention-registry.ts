@@ -70,6 +70,10 @@ export const RETENTION_REGISTRY: readonly RetentionRegistryEntry[] = [
   { table: "leaderboard_snapshots", classification: "OPERATIONAL_SHORT_LIVED", purged: false, rationale: "Overwritten in place." },
   { table: "retention_purge_runs", classification: "OPERATIONAL_SHORT_LIVED", retainDays: 365, purged: false, rationale: "Purge audit." },
   { table: "support_messages", classification: "PRODUCT_HISTORY", purged: false, rationale: "Tied to tickets; account deletion cascades." },
+  { table: "workout_plans", classification: "PRODUCT_HISTORY", retainMonths: RETENTION.analyticsMonths, purged: false, rationale: "Applied training plans; account deletion cascades." },
+  { table: "workout_plan_items", classification: "PRODUCT_HISTORY", retainMonths: RETENTION.analyticsMonths, purged: false, rationale: "Prescription rows; cascade with plans." },
+  { table: "workout_sessions", classification: "PRODUCT_HISTORY", retainMonths: RETENTION.analyticsMonths, purged: false, rationale: "Structured session history; no free-text notes." },
+  { table: "workout_set_logs", classification: "PRODUCT_HISTORY", retainMonths: RETENTION.analyticsMonths, purged: false, rationale: "Numeric set logs tied to sessions." },
 ];
 
 export function retentionTableNames(): string[] {

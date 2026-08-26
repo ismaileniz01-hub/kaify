@@ -30,6 +30,11 @@ export const featureFlags = {
       "FEATURE_PRODUCT_EVENTS",
       process.env.NODE_ENV === "test" || process.env.VITEST === "true",
     ),
+  /**
+   * Versioned workout plans + session history. Default on; library logging
+   * still increments the daily workout counter if the tables are not applied.
+   */
+  workoutPlans: () => envFlag("FEATURE_WORKOUT_PLANS", true),
 } as const;
 
 export type FeatureFlag = keyof typeof featureFlags;

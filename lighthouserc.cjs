@@ -32,7 +32,7 @@ module.exports = {
         {
           matchingUrlPattern: "http://127\\.0\\.0\\.1:3000/login",
           assertions: {
-            "categories:performance": ["warn", { minScore: 0.65 }],
+            "categories:performance": ["warn", { minScore: 0.80 }],
             "categories:accessibility": ["error", { minScore: 0.85 }],
             "categories:seo": "off",
             "is-crawlable": "off",
@@ -46,7 +46,7 @@ module.exports = {
           matchingUrlPattern:
             "^http://127\\.0\\.0\\.1:3000/(?!login(?:[/?#]|$)).*",
           assertions: {
-            "categories:performance": ["warn", { minScore: 0.65 }],
+            "categories:performance": ["warn", { minScore: 0.80 }],
             "categories:accessibility": ["error", { minScore: 0.85 }],
             "categories:seo": ["error", { minScore: 0.95 }],
             "first-contentful-paint": ["warn", { maxNumericValue: 3000 }],

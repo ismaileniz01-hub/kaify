@@ -35,6 +35,10 @@ const REQUIRED_EXPORT_TABLES = [
     "scan_corrections",
     "team_meeting_weeks",
     "referrals",
+    "workout_plans",
+    "workout_plan_items",
+    "workout_sessions",
+    "workout_set_logs",
 ] as const;
 
 describe("export completeness", () => {

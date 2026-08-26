@@ -60,6 +60,10 @@ export const SCHEMA_REGISTRY: readonly SchemaRegistryEntry[] = [
   },
   { table: "team_meeting_weeks", mode: "user_own", ownerColumn: "user_id", note: "select-only" },
   { table: "scan_corrections", mode: "user_own", ownerColumn: "user_id", note: "select-only" },
+  { table: "workout_plans", mode: "user_own", ownerColumn: "user_id", note: "select-only for client; service-role writes" },
+  { table: "workout_plan_items", mode: "user_own", ownerColumn: "user_id", note: "select-only" },
+  { table: "workout_sessions", mode: "user_own", ownerColumn: "user_id", note: "select-only" },
+  { table: "workout_set_logs", mode: "user_own", ownerColumn: "user_id", note: "select-only" },
 
   // ---- authenticated_read (catalog / public catalog rows) ----
   { table: "tier_limits", mode: "authenticated_read" },

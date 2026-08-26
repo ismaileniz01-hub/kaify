@@ -45,7 +45,11 @@ const FAQ_ITEMS = [
   },
 ] as const;
 
-export function LandingFAQ() {
+type LandingFAQProps = {
+  nonce?: string;
+};
+
+export function LandingFAQ({ nonce }: LandingFAQProps) {
   const { t } = useLang();
   const baseId = useId();
   const [openIndex, setOpenIndex] = useState(0);
@@ -66,6 +70,7 @@ export function LandingFAQ() {
   return (
     <section id="faq" className="landing-section landing-section--faq relative overflow-hidden">
       <script
+        nonce={nonce}
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />

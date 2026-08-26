@@ -21,6 +21,7 @@ export const CRITICAL_TRANSACTION_MATRIX: readonly TransactionMatrixRow[] = [
   { flow: "council / team meeting", classification: "ATOMIC_TRANSACTION", note: "team_meeting_weeks unique week lock" },
   { flow: "meal save", classification: "ATOMIC_TRANSACTION", note: "increment_analytics_meals" },
   { flow: "library workout log", classification: "ATOMIC_TRANSACTION", note: "increment_analytics_workouts" },
+  { flow: "workout session log", classification: "IDEMPOTENT_MULTI_STEP", note: "session upsert + set logs + daily workout increment; fail-open if plan tables missing" },
   { flow: "chat persist + quota", classification: "IDEMPOTENT_MULTI_STEP", note: "quota reserve then messages; unique idempotency; refund on empty failure" },
   { flow: "AI analytics extract", classification: "BEST_EFFORT_NON_CANONICAL", note: "pending confirmation; user confirm is canonical" },
 ];

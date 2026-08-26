@@ -22,6 +22,8 @@ const AUTH_ROUTES = [
   "/leaderboard",
   "/market",
   "/myaccount",
+  "/library",
+  "/streak",
 ] as const;
 
 async function signInWithOtp(page: import("@playwright/test").Page) {

@@ -5,6 +5,8 @@ describe("backup verification", () => {
   it("manifest includes critical tables", () => {
     expect(BACKUP_MANIFEST_TABLES).toContain("profiles");
     expect(BACKUP_MANIFEST_TABLES).toContain("gem_ledger");
+    expect(BACKUP_MANIFEST_TABLES).toContain("workout_sessions");
+    expect(BACKUP_MANIFEST_TABLES).toContain("workout_plans");
     expect(BACKUP_MANIFEST_TABLES.length).toBeGreaterThanOrEqual(5);
   });
 });

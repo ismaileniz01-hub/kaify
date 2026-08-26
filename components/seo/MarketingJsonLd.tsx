@@ -1,6 +1,8 @@
+import { headers } from "next/headers";
 import { seoCanonicalOrigin } from "@/lib/seo/origin";
 
-export function MarketingJsonLd() {
+export async function MarketingJsonLd() {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const origin = seoCanonicalOrigin();
   const data = {
     "@context": "https://schema.org",
@@ -33,6 +35,7 @@ export function MarketingJsonLd() {
   };
   return (
     <script
+      nonce={nonce}
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
     />

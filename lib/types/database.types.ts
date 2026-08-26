@@ -1067,6 +1067,104 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["scan_corrections"]["Row"]>;
         Relationships: [];
       };
+      workout_plans: {
+        Row: {
+          id: string;
+          user_id: string;
+          template_slug: string;
+          title_key: string;
+          place: "gym" | "home";
+          version: number;
+          status: "active" | "paused" | "deload" | "completed";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          template_slug: string;
+          title_key: string;
+          place: "gym" | "home";
+          version?: number;
+          status?: "active" | "paused" | "deload" | "completed";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["workout_plans"]["Row"]>;
+        Relationships: [];
+      };
+      workout_plan_items: {
+        Row: {
+          id: string;
+          user_id: string;
+          plan_id: string;
+          plan_version: number;
+          day_index: number;
+          sort_order: number;
+          exercise_key: string;
+          movement: "upper" | "lower" | "core";
+          target_sets: number;
+          target_reps: number;
+          load_kg: number;
+        };
+        Insert: {
+          user_id: string;
+          plan_id: string;
+          plan_version: number;
+          day_index: number;
+          sort_order?: number;
+          exercise_key: string;
+          movement: "upper" | "lower" | "core";
+          target_sets: number;
+          target_reps: number;
+          load_kg?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["workout_plan_items"]["Row"]>;
+        Relationships: [];
+      };
+      workout_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          plan_id: string | null;
+          plan_version: number | null;
+          session_date: string;
+          status: "completed" | "missed" | "rest" | "deload";
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          plan_id?: string | null;
+          plan_version?: number | null;
+          session_date: string;
+          status: "completed" | "missed" | "rest" | "deload";
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["workout_sessions"]["Row"]>;
+        Relationships: [];
+      };
+      workout_set_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          session_id: string;
+          exercise_key: string;
+          set_index: number;
+          reps: number;
+          load_kg: number;
+          rir: number | null;
+        };
+        Insert: {
+          user_id: string;
+          session_id: string;
+          exercise_key: string;
+          set_index: number;
+          reps: number;
+          load_kg?: number;
+          rir?: number | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["workout_set_logs"]["Row"]>;
+        Relationships: [];
+      };
     };
     Views: {
       user_gem_balances: {

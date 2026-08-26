@@ -269,6 +269,72 @@ export async function seedUserOwnedRows(
       }),
       `team_meeting_weeks ${label}`,
     );
+
+    await must(
+      admin.from("scan_corrections").insert({
+        user_id: uid,
+        scan_type: "meal",
+        action: "confirm",
+        calories: 500,
+      }),
+      `scan_corrections ${label}`,
+    );
+
+    const plan = await mustData(
+      admin
+        .from("workout_plans")
+        .insert({
+          user_id: uid,
+          template_slug: "gym-full-3",
+          title_key: "workout.template.gym_full",
+          place: "gym",
+          version: 1,
+          status: "active",
+        })
+        .select("id")
+        .single(),
+      `workout_plans ${label}`,
+    );
+    await must(
+      admin.from("workout_plan_items").insert({
+        user_id: uid,
+        plan_id: plan.id,
+        plan_version: 1,
+        day_index: 0,
+        sort_order: 0,
+        exercise_key: "library.ex.gym.bench_press",
+        movement: "upper",
+        target_sets: 3,
+        target_reps: 8,
+        load_kg: 0,
+      }),
+      `workout_plan_items ${label}`,
+    );
+    const session = await mustData(
+      admin
+        .from("workout_sessions")
+        .insert({
+          user_id: uid,
+          plan_id: plan.id,
+          plan_version: 1,
+          session_date: today(),
+          status: "completed",
+        })
+        .select("id")
+        .single(),
+      `workout_sessions ${label}`,
+    );
+    await must(
+      admin.from("workout_set_logs").insert({
+        user_id: uid,
+        session_id: session.id,
+        exercise_key: "library.ex.gym.bench_press",
+        set_index: 1,
+        reps: 8,
+        load_kg: 40,
+      }),
+      `workout_set_logs ${label}`,
+    );
   }
 
   // referrals: A referred B

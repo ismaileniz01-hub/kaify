@@ -30,6 +30,9 @@ export function ExerciseDetailSheet({
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sets, setSets] = useState("3");
+  const [reps, setReps] = useState("8");
+  const [loadKg, setLoadKg] = useState("0");
 
   const name = t(exerciseKey as "library.ex.home.wide_grip_pushups");
   const muscle = t(`exercise.${groupId}` as "exercise.chest");
@@ -44,7 +47,12 @@ export function ExerciseDetailSheet({
     setSaving(true);
     setError(null);
     try {
-      await apiPost("/api/analytics/workout-log", { exerciseKey });
+      await apiPost("/api/analytics/workout-log", {
+        exerciseKey,
+        sets: Number(sets) || 1,
+        reps: Number(reps) || 0,
+        loadKg: Number(loadKg) || 0,
+      });
       notifyAnalyticsUpdated();
       setDone(true);
       setConfirming(false);
@@ -70,6 +78,7 @@ export function ExerciseDetailSheet({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
       <div
         role="dialog"
+        aria-modal="true"
         aria-labelledby="exercise-detail-title"
         className="w-full max-w-sm rounded-3xl border border-white/10 bg-zinc-950 p-5 shadow-2xl"
       >
@@ -107,6 +116,44 @@ export function ExerciseDetailSheet({
             <dd className="mt-0.5 font-medium">{placeLabel}</dd>
           </div>
         </dl>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <label className="text-xs text-zinc-400">
+            {t("workout.sets_label")}
+            <input
+              type="number"
+              min={1}
+              max={8}
+              inputMode="numeric"
+              value={sets}
+              onChange={(event) => setSets(event.target.value)}
+              className="mt-1 min-h-11 w-full rounded-lg bg-white/5 px-2 text-white"
+            />
+          </label>
+          <label className="text-xs text-zinc-400">
+            {t("workout.reps_label")}
+            <input
+              type="number"
+              min={0}
+              max={50}
+              inputMode="numeric"
+              value={reps}
+              onChange={(event) => setReps(event.target.value)}
+              className="mt-1 min-h-11 w-full rounded-lg bg-white/5 px-2 text-white"
+            />
+          </label>
+          <label className="text-xs text-zinc-400">
+            {t("workout.load_label")}
+            <input
+              type="number"
+              min={0}
+              max={500}
+              inputMode="decimal"
+              value={loadKg}
+              onChange={(event) => setLoadKg(event.target.value)}
+              className="mt-1 min-h-11 w-full rounded-lg bg-white/5 px-2 text-white"
+            />
+          </label>
+        </div>
 
         {error ? (
           <InlineAlert className="mt-3" variant="error" message={error} />

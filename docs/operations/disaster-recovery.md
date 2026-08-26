@@ -34,7 +34,7 @@ Enable **Point-in-Time Recovery (PITR)** in Supabase dashboard → Project Setti
 Schedule: **daily 03:00 UTC** via [`/api/cron/cleanup`](../app/api/cron/cleanup/route.ts) (bundled with idempotency maintenance).
 
 Each run records:
-- Row counts for 8 critical tables
+- Row counts for 7 critical tables (`profiles`, `user_streaks`, `gem_ledger`, `chat_messages`, `analytics_daily`, `workout_plans`, `workout_sessions`)
 - Latest applied migration version
 - Avatar storage object sample count
 - Git commit SHA (`VERCEL_GIT_COMMIT_SHA`)

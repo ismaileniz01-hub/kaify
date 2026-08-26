@@ -132,7 +132,6 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   const contentSecurityPolicy = buildContentSecurityPolicy(nonce, {
     legalEmbed: isLegalContentPath(pathname),
-    staticHtml: isMarketingPath(pathname),
   });
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("x-request-id", requestId);

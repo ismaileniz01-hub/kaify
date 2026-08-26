@@ -59,6 +59,10 @@ export const CASCADE_ON_DELETE_TABLES: readonly DeletionTableSpec[] = [
   { table: "scan_corrections", column: "user_id", behavior: "cascade", notes: "" },
   { table: "team_meeting_weeks", column: "user_id", behavior: "cascade", notes: "" },
   { table: "referrals", column: "referrer_id", behavior: "cascade", notes: "" },
+  { table: "workout_plans", column: "user_id", behavior: "cascade", notes: "" },
+  { table: "workout_plan_items", column: "user_id", behavior: "cascade", notes: "" },
+  { table: "workout_sessions", column: "user_id", behavior: "cascade", notes: "" },
+  { table: "workout_set_logs", column: "user_id", behavior: "cascade", notes: "" },
 ] as const;
 
 /** Rows that may survive delete with user_id cleared (financial / audit). */

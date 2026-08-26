@@ -287,6 +287,14 @@ function harmlessUpdatePatch(table: string): Record<string, unknown> {
       return { steps: 999999 };
     case "health_steps":
       return { steps: 999999 };
+    case "workout_plans":
+      return { status: "paused" };
+    case "workout_plan_items":
+      return { target_reps: 12 };
+    case "workout_sessions":
+      return { status: "rest" };
+    case "workout_set_logs":
+      return { reps: 1 };
     default:
       return { updated_at: new Date().toISOString() };
   }

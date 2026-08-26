@@ -52,6 +52,10 @@ export const USER_EXPORT_TABLES: readonly ExportTableSpec[] = [
   { table: "scan_corrections", column: "user_id", description: "Numeric meal or scan corrections you submitted" },
   { table: "team_meeting_weeks", column: "user_id", description: "Weekly Coach Council lock records" },
   { table: "referrals", column: "referrer_id", description: "Referral codes and edges you created" },
+  { table: "workout_plans", column: "user_id", description: "Applied versioned workout plans" },
+  { table: "workout_plan_items", column: "user_id", description: "Prescription rows for applied workout plans" },
+  { table: "workout_sessions", column: "user_id", description: "Completed, missed, rest, and deload session history" },
+  { table: "workout_set_logs", column: "user_id", description: "Per-set reps and load for completed sessions" },
 ] as const;
 
 export const EXPORT_SCHEMA_VERSION = "2026-08-26";

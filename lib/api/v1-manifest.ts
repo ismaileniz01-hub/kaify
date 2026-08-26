@@ -56,6 +56,9 @@ export const API_V1_ROUTES = [
   "/api/v1/leaderboard/country",
   "/api/v1/push/subscribe",
   "/api/v1/push/native",
+  "/api/v1/workout/plan",
+  "/api/v1/workout/session",
+  "/api/v1/workout/swap",
 ] as const;
 
 export function isLegacyPublicApi(pathname: string): boolean {
