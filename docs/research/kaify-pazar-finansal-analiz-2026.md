@@ -64,7 +64,7 @@ LLM sohbet + vision tarama + alışkanlık döngüsü (streak/Kai) + analitik; i
 ### Ürün aşaması **[Tespit]**
 
 - Web üretimde.
-- Native: `org.kaify.app`; Play URL belgede var; App Store Team ID / imza SHA-256 **placeholder** (store kapısı açık değil).
+- Native: `org.kaifyai.app`; Play URL belgede var; App Store Team ID / imza SHA-256 **placeholder** (store kapısı açık değil).
 - Path-to-90 (04.08.2026) taban skor **41 / NO GO**; sonraki fazların çoğu kodda işaretli, operatör/legal kapıları (HIBP, avukat, store) kapanmamış.
 - Test açığı (ürün denetimi): kimlikli E2E ve gerçek DB RLS testleri zayıf.
 

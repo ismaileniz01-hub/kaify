@@ -1,0 +1,19 @@
+App name: Kaify Ai
+Package: org.kaifyai.app
+Short description (80 chars max):
+AI coaches for workouts, nutrition, form, and a dragon that keeps you showing up.
+
+Full description:
+Kaify Ai is your personal coaching team: Alex for training, Maya for nutrition, Leo for form, and Kai the companion who helps you stay consistent.
+
+Sign in with the email you used on kaifyai.org. Create your account and manage your subscription on the website. The app is for members to chat with coaches, log meals and workouts, track streaks, and follow progress.
+
+No in-app purchases. Billing is only on the website.
+
+Privacy: https://kaifyai.org/privacy
+Terms: https://kaifyai.org/terms
+Support: https://kaifyai.org
+
+Reviewer notes (Play Console → App content / notes):
+This is a consumption-only app. Account creation and Paddle checkout exist only on the website. The Android app is email sign-in for existing customers. After login, members land on /welcome. Website-only routes / /signup /pricing are not available in the app.
+Reviewer: sign in with the email and password provided in the review credentials. Website signup is not offered inside the APK.

@@ -6,13 +6,13 @@ Last updated: 2026-08-05 · Policy: **ADR 019 (consumption-only native; web-only
 
 | Platform | ID |
 |----------|-----|
-| Capacitor `appId` | `org.kaify.app` |
-| iOS bundle | `org.kaify.app` |
-| Android `applicationId` | `org.kaify.app` |
-| Play Store URL | `https://play.google.com/store/apps/details?id=org.kaify.app` |
+| Capacitor `appId` | `org.kaifyai.app` |
+| iOS bundle | `org.kaifyai.app` |
+| Android `applicationId` | `org.kaifyai.app` |
+| Play Store URL | `https://play.google.com/store/apps/details?id=org.kaifyai.app` |
 | App Store URL | `NEXT_PUBLIC_APP_STORE_URL` or `https://apps.apple.com/app/kaify` |
 
-Do **not** use marketing id `org.kaifyai.app` — that mismatch is closed.
+Canonical package ID is **`org.kaifyai.app`** (matches Google Play Console and App Store Connect). Do **not** use `org.kaify.app`.
 
 ## Before a store build
 

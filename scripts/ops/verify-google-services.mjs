@@ -13,7 +13,7 @@ const example = resolve("android/app/google-services.json.example");
 if (!existsSync(target)) {
   console.error(
     "[verify-google-services] Missing android/app/google-services.json\n" +
-      "Download from Firebase Console for package org.kaify.app and place it next to:\n" +
+      "Download from Firebase Console for package org.kaifyai.app and place it next to:\n" +
       `  ${example}`,
   );
   process.exit(1);
@@ -22,9 +22,9 @@ if (!existsSync(target)) {
 try {
   const raw = readFileSync(target, "utf8");
   JSON.parse(raw);
-  if (!raw.includes("org.kaify.app") && !raw.includes("project_id")) {
+  if (!raw.includes("org.kaifyai.app") && !raw.includes("project_id")) {
     console.warn(
-      "[verify-google-services] File present but does not look like a Firebase config — double-check package name org.kaify.app",
+      "[verify-google-services] File present but does not look like a Firebase config — double-check package name org.kaifyai.app",
     );
   }
 } catch {

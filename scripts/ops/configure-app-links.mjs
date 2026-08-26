@@ -27,7 +27,7 @@ const assetLinks = [
     relation: ["delegate_permission/common.handle_all_urls"],
     target: {
       namespace: "android_app",
-      package_name: "org.kaify.app",
+      package_name: "org.kaifyai.app",
       sha256_cert_fingerprints: fingerprints,
     },
   },
@@ -37,7 +37,7 @@ const aasa = {
     apps: [],
     details: [
       {
-        appID: `${teamId}.org.kaify.app`,
+        appID: `${teamId}.org.kaifyai.app`,
         paths: [
           "/login*",
           "/signup*",
@@ -56,7 +56,7 @@ const aasa = {
     ],
   },
   webcredentials: {
-    apps: [`${teamId}.org.kaify.app`],
+    apps: [`${teamId}.org.kaifyai.app`],
   },
 };
 

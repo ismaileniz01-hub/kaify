@@ -1,4 +1,4 @@
-package org.kaify.app;
+package org.kaifyai.app;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;

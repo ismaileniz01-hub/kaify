@@ -7,7 +7,7 @@ export const CANONICAL_APP_URL = "https://kaifyai.org";
 /** Custom URL scheme for native deep links (`kaify://chat/kai`). */
 export const NATIVE_URL_SCHEME = "kaify";
 
-export const NATIVE_APP_ID = "org.kaify.app";
+export const NATIVE_APP_ID = "org.kaifyai.app";
 
 const TRAILING_SLASH = /\/$/;
 

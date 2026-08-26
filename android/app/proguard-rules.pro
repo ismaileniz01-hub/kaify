@@ -35,7 +35,7 @@
 }
 
 # App package (MainActivity etc.).
--keep class org.kaify.app.** { *; }
+-keep class org.kaifyai.app.** { *; }
 
 # Cordova bridge used by capacitor-cordova-android-plugins.
 -keep class org.apache.cordova.** { *; }

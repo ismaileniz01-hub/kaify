@@ -33,7 +33,7 @@ Apple “reader app.” Fitness coaching does not fit Apple’s reader-app defin
 - Native sign-in has no clickable web signup or payment CTA.
 - Website checkout completion can deep-link back to `kaify://login`.
 - Store listings must link Privacy / Terms to `https://kaifyai.org/privacy` and `https://kaifyai.org/terms`.
-- Play / App Store package IDs stay `org.kaify.app` (aligned with Capacitor `appId`).
+- Play / App Store package IDs stay `org.kaifyai.app` (aligned with Capacitor `appId`).
 - Revisit with Option A if App Review requires IAP or if conversion economics justify dual billing.
 
 ## Review guardrails

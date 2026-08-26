@@ -5,7 +5,7 @@
     ],
     "target": {
       "namespace": "android_app",
-      "package_name": "org.kaify.app",
+      "package_name": "org.kaifyai.app",
       "sha256_cert_fingerprints": [
         "REPLACE_WITH_PLAY_UPLOAD_OR_APP_SIGNING_SHA256"
       ]
