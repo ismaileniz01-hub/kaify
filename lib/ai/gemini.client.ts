@@ -1,5 +1,6 @@
 import { getGeminiConfig } from "@/lib/ai/env";
 import { AiError } from "@/lib/ai/errors";
+import { TOKEN_BUDGET } from "@/lib/ai/budget";
 import { logger as geminiLogger } from "@/lib/logger";
 import { isGemini3Model, type GeminiThinkingLevel } from "@/lib/ai/models";
 import { resilient, classifyStatus, UpstreamHttpError } from "@/lib/resilience";
@@ -20,8 +21,11 @@ import { geminiEstimatedUsage, recordAiUsage } from "@/lib/ai/usage-ledger";
 const DEFAULT_TIMEOUT_MS = 60_000;
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
-type GeminiPart = { text?: string };
-type GeminiCandidate = { content?: { parts?: GeminiPart[] } };
+type GeminiPart = { text?: string; thought?: boolean };
+type GeminiCandidate = {
+  content?: { parts?: GeminiPart[] };
+  finishReason?: string;
+};
 type GeminiUsageMetadata = {
   promptTokenCount?: number;
   candidatesTokenCount?: number;
@@ -35,13 +39,48 @@ type GeminiResponse = {
   usageMetadata?: GeminiUsageMetadata;
 };
 
+/**
+ * Visible answer text only — never concatenate thought/summary parts into the
+ * JSON payload (Gemini 3 thinking returns mixed parts; joining them breaks
+ * Maya/Leo photo analysis with AI_BAD_OUTPUT).
+ */
+export function extractGeminiAnswerText(
+  parts: GeminiPart[] | undefined,
+): string {
+  if (!parts?.length) return "";
+  const hasThoughtFlag = parts.some((part) => part.thought === true);
+  if (hasThoughtFlag) {
+    return parts
+      .filter((part) => !part.thought)
+      .map((part) => part.text ?? "")
+      .join("")
+      .trim();
+  }
+  if (parts.length === 1) return (parts[0]?.text ?? "").trim();
+  for (const part of parts) {
+    const text = (part.text ?? "").trim();
+    if (text.startsWith("{") || text.startsWith("```")) return text;
+  }
+  return parts
+    .map((part) => part.text ?? "")
+    .join("")
+    .trim();
+}
+
 /** REST generateContent config: Gemini 3 omits temperature; thinking MEDIUM. */
 export function buildGeminiGenerationConfig(
   model: string,
-  options?: { temperature?: number; thinkingLevel?: GeminiThinkingLevel },
+  options?: {
+    temperature?: number;
+    thinkingLevel?: GeminiThinkingLevel;
+    maxOutputTokens?: number;
+  },
 ): Record<string, unknown> {
   const generationConfig: Record<string, unknown> = {
     responseMimeType: "application/json",
+    // Thinking tokens count against this budget. Without headroom, Gemini 3
+    // returns empty candidates (finishReason MAX_TOKENS) and photo analysis fails.
+    maxOutputTokens: options?.maxOutputTokens ?? TOKEN_BUDGET.visionJson,
   };
   if (isGemini3Model(model)) {
     const thinkingLevel = options?.thinkingLevel ?? "MEDIUM";
@@ -203,22 +242,31 @@ export async function generateGeminiJson(
       );
     }
 
-    const text = json.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text ?? "")
-      .join("")
-      .trim();
+    const candidate = json.candidates?.[0];
+    const text = extractGeminiAnswerText(candidate?.content?.parts);
 
     if (!text) {
       geminiLogger.error("[gemini] empty content", {
+        finishReason: candidate?.finishReason ?? null,
+        thoughtsTokenCount: json.usageMetadata?.thoughtsTokenCount ?? null,
         response: JSON.stringify(json).slice(0, 600),
       });
+      if (candidate?.finishReason === "MAX_TOKENS") {
+        throw new AiError(
+          "AI_UPSTREAM",
+          "Gemini exhausted the output budget before returning vision JSON",
+        );
+      }
       throw new AiError("AI_BAD_OUTPUT", "Gemini returned empty content");
     }
 
     try {
       return JSON.parse(stripCodeFences(text)) as unknown;
     } catch {
-      geminiLogger.error("[gemini] invalid JSON", { text: text.slice(0, 600) });
+      geminiLogger.error("[gemini] invalid JSON", {
+        finishReason: candidate?.finishReason ?? null,
+        text: text.slice(0, 600),
+      });
       throw new AiError("AI_BAD_OUTPUT", "Gemini did not return valid JSON");
     } finally {
       if (params.usageContext) {

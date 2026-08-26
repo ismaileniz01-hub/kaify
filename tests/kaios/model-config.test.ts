@@ -34,6 +34,7 @@ describe("KAIOS model config contract", () => {
     });
     expect(config).toEqual({
       responseMimeType: "application/json",
+      maxOutputTokens: 8192,
       thinkingConfig: { thinkingLevel: "medium" },
     });
     expect(config).not.toHaveProperty("temperature");
@@ -45,6 +46,7 @@ describe("KAIOS model config contract", () => {
     });
     expect(config).toEqual({
       responseMimeType: "application/json",
+      maxOutputTokens: 8192,
       temperature: 0.2,
     });
   });

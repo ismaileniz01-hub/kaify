@@ -52,6 +52,25 @@ export const foodAnalysisSchema = z.object({
 
 export type FoodAnalysis = z.infer<typeof foodAnalysisSchema>;
 
+/** Gemini often emits carbs/carbohydrates — normalize before strict parse. */
+function normalizeFoodAnalysisInput(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const raw = value as Record<string, unknown>;
+  if (raw.carb != null) return value;
+  const alias = raw.carbs ?? raw.carbohydrates ?? raw.carbs_g ?? raw.carb_g;
+  if (alias == null) return value;
+  return { ...raw, carb: alias };
+}
+
+function coerceScoreNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const n = Number.parseFloat(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
 export const technicalAnalysisSchema = z.object({
   // Tolerate LLM drift: models sometimes emit non-muscle keys (e.g. food
   // returns "protein_quality") or invalid muscle names. Drop unknown/invalid
@@ -67,15 +86,18 @@ export const technicalAnalysisSchema = z.object({
     .transform((obj) => {
       const filtered: MuscleScores = {};
       for (const [key, value] of Object.entries(obj)) {
-        if (muscleGroupSet.has(key) && typeof value === "number") {
-          const clamped = Math.min(100, Math.max(0, value));
-          filtered[key as MuscleGroup] = clamped;
-        }
+        if (!muscleGroupSet.has(key)) continue;
+        const n = coerceScoreNumber(value);
+        if (n == null) continue;
+        filtered[key as MuscleGroup] = Math.min(100, Math.max(0, n));
       }
       return filtered;
     }),
   overall_score: scoreSchema.default(0),
-  food_analysis: foodAnalysisSchema.nullable().default(null),
+  food_analysis: z.preprocess(
+    normalizeFoodAnalysisInput,
+    foodAnalysisSchema.nullable().default(null),
+  ),
   ambiguity: z
     .array(z.string())
     .optional()
