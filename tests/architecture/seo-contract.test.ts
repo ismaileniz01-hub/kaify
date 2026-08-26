@@ -106,6 +106,7 @@ describe("SEO contract", () => {
   it("does not ship a competing public/index.html", () => {
     expect(existsSync(join(process.cwd(), "public", "index.html"))).toBe(false);
     expect(existsSync(join(process.cwd(), "public", "sitemap.xml"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "public", "robots.txt"))).toBe(false);
     expect(
       existsSync(join(process.cwd(), "native", "offline-index.html")),
     ).toBe(

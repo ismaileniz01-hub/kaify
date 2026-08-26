@@ -1,6 +1,6 @@
 # ADR 019: Store billing policy (native vs web)
 
-**Status:** Accepted, hardened · 2026-08-05  
+**Status:** Partially superseded by ADR 007 · 2026-08-26  
 **Context:** Path-to-90 Faz 0 — store billing decision
 
 ## Decision
@@ -44,6 +44,17 @@ Apple “reader app.” Fitness coaching does not fit Apple’s reader-app defin
   account; account creation and commerce are not features of the binary.
 - Keep camera/photo wording explicit: OS picker/file capture, not hidden camera access.
 - Any future external-link experiment requires a new ADR and region-aware implementation.
+
+## Superseded native acquisition (2026-08-26)
+
+Phase 1 ADR [007](../architecture/adr/007-local-native-client.md) updates items 3–4 and the native route guard:
+
+- Login **and signup** UI ship in the packaged native client. Account creation uses the remote Auth API.
+- Plan comparison may be local. **Paddle checkout and the customer portal remain external** (store policy).
+- Website-only native routes are limited to the marketing landing (`/`).
+- Coaching still stays locked until a server-authoritative paid entitlement exists.
+
+Items 1, 2, 5, 6, and 7 are unchanged: Paddle remains Merchant of Record on the web; native IAP is still out of scope.
 
 ## References
 
