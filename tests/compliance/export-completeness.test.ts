@@ -30,6 +30,7 @@ const REQUIRED_EXPORT_TABLES = [
     "data_export_logs",
     "pending_gifts",
     "support_tickets",
+    "support_messages",
     "analytics_pending_confirmations",
     "team_meeting_weeks",
     "referrals",

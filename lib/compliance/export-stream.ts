@@ -6,6 +6,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/api/errors";
+import type { ExportTableSpec } from "@/lib/compliance/export-tables";
 
 export const EXPORT_PAGE_SIZE = 200;
 /** Hard cap per table — above this we refuse rather than silently truncate. */
@@ -18,19 +19,33 @@ export async function fetchOwnedRowPage(
   userId: string,
   from: number,
   pageSize = EXPORT_PAGE_SIZE,
+  ownerRelation?: ExportTableSpec["ownerRelation"],
 ): Promise<{ rows: unknown[]; complete: boolean }> {
   const to = from + pageSize - 1;
-  const { data, error } = await db
+  const selection = ownerRelation
+    ? `*, ${ownerRelation.table}!inner(${ownerRelation.ownerColumn})`
+    : "*";
+  let query = db
     .from(table)
-    .select("*")
-    .eq(column, userId)
-    .range(from, to);
+    .select(selection);
+  query = ownerRelation
+    ? query.eq(
+        `${ownerRelation.table}.${ownerRelation.ownerColumn}`,
+        userId,
+      )
+    : query.eq(column, userId);
+  const { data, error } = await query.range(from, to);
 
   if (error) {
     throw new ApiError("INTERNAL_ERROR", "Veri dışa aktarımı tamamlanamadı.");
   }
 
-  const rows = (data ?? []) as unknown[];
+  const rows = ((data ?? []) as unknown as Array<Record<string, unknown>>).map((row) => {
+    if (!ownerRelation) return row;
+    const exported = { ...row };
+    delete exported[ownerRelation.table];
+    return exported;
+  });
   return { rows, complete: rows.length < pageSize };
 }
 
@@ -40,11 +55,20 @@ export async function fetchOwnedRowsPaged(
   column: string,
   userId: string,
   pageSize = EXPORT_PAGE_SIZE,
+  ownerRelation?: ExportTableSpec["ownerRelation"],
 ): Promise<unknown[]> {
   const rows: unknown[] = [];
   let from = 0;
   for (;;) {
-    const page = await fetchOwnedRowPage(db, table, column, userId, from, pageSize);
+    const page = await fetchOwnedRowPage(
+      db,
+      table,
+      column,
+      userId,
+      from,
+      pageSize,
+      ownerRelation,
+    );
     rows.push(...page.rows);
     if (rows.length > EXPORT_TABLE_ROW_CAP) {
       throw new ApiError(

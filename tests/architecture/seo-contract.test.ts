@@ -5,6 +5,7 @@ import {
   SEO_CONTENT_DATES,
   SEO_DISALLOW_PREFIXES,
   SEO_INDEXABLE_PATHS,
+  isAssociationPath,
   isMarketingPath,
   isProtectedProductPath,
   isSeoIndexablePath,
@@ -79,10 +80,36 @@ describe("SEO contract", () => {
     expect(isSeoIndexablePath("/pricing")).toBe(true);
   });
 
+  it("keeps native association documents public without indexing them", () => {
+    for (const path of [
+      "/.well-known/assetlinks.json",
+      "/.well-known/apple-app-site-association",
+    ]) {
+      expect(isAssociationPath(path)).toBe(true);
+      expect(isProtectedProductPath(path)).toBe(false);
+      expect(isSeoIndexablePath(path)).toBe(false);
+    }
+    const aasa = readFileSync(
+      join(process.cwd(), "public", ".well-known", "apple-app-site-association"),
+      "utf8",
+    );
+    expect(aasa).toContain("/signup*");
+    JSON.parse(aasa);
+    JSON.parse(
+      readFileSync(
+        join(process.cwd(), "public", ".well-known", "assetlinks.json"),
+        "utf8",
+      ),
+    );
+  });
+
   it("does not ship a competing public/index.html", () => {
     expect(existsSync(join(process.cwd(), "public", "index.html"))).toBe(false);
-    expect(existsSync(join(process.cwd(), "native", "offline-index.html"))).toBe(
-      true,
+    expect(existsSync(join(process.cwd(), "public", "sitemap.xml"))).toBe(false);
+    expect(
+      existsSync(join(process.cwd(), "native", "offline-index.html")),
+    ).toBe(
+      false,
     );
   });
 

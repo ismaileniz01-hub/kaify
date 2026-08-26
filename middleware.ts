@@ -16,6 +16,7 @@ import {
   isLegacyPublicApi,
   legacyApiDeprecationHeaders,
 } from "@/lib/api/v1-manifest";
+import { isNativeShellOrigin } from "@/lib/native/webview-request";
 
 const RATE_LIMIT_CONFIG = {
   api: { requests: 400, windowMs: 60 * 1000 },
@@ -49,6 +50,7 @@ function hasSupabaseAuthCookie(request: NextRequest): boolean {
 }
 
 function getRateLimitBucket(pathname: string): keyof typeof RATE_LIMIT_CONFIG {
+  if (pathname === "/api/health") return "health";
   if (pathname.startsWith("/api/")) return "api";
   if (isMarketingPath(pathname)) return "marketing";
   return "page";
@@ -67,29 +69,38 @@ const RATE_LIMIT_SOFT =
 
 async function finalizeResponse(
   forwardedRequest: NextRequest,
-  nonce: string,
+  _nonce: string,
   requestId: string,
   pathname: string,
+  contentSecurityPolicy: string,
   rateLimit?: { limit: number; remaining: number },
-  options?: { skipSessionRefresh?: boolean },
+  options?: { skipSessionRefresh?: boolean; response?: NextResponse },
 ) {
-  const { response } = options?.skipSessionRefresh
-    ? {
-        response: NextResponse.next({
+  const response =
+    options?.response ??
+    (options?.skipSessionRefresh
+      ? NextResponse.next({
           request: { headers: forwardedRequest.headers },
-        }),
-      }
-    : await updateSupabaseSession(forwardedRequest);
+        })
+      : (await updateSupabaseSession(forwardedRequest)).response);
 
-  response.headers.set(
-    "Content-Security-Policy",
-    buildContentSecurityPolicy(nonce, {
-      legalEmbed: isLegalContentPath(pathname),
-      staticHtml: isMarketingPath(pathname),
-    }),
-  );
+  response.headers.set("Content-Security-Policy", contentSecurityPolicy);
   response.headers.set("Reporting-Endpoints", buildCspReportingEndpoints());
   response.headers.set("X-Request-ID", requestId);
+  const origin = forwardedRequest.headers.get("origin");
+  if (pathname.startsWith("/api/") && isNativeShellOrigin(origin)) {
+    response.headers.set("Access-Control-Allow-Origin", origin!);
+    response.headers.set(
+      "Access-Control-Allow-Methods",
+      "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    );
+    response.headers.set(
+      "Access-Control-Allow-Headers",
+      "Authorization,Content-Type,Idempotency-Key,X-Client-Version",
+    );
+    response.headers.set("Access-Control-Max-Age", "600");
+    response.headers.append("Vary", "Origin");
+  }
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-XSS-Protection", "1; mode=block");
@@ -119,12 +130,37 @@ export async function middleware(request: NextRequest) {
   const nonce = generateCspNonce();
   const requestId = crypto.randomUUID();
   const requestHeaders = new Headers(request.headers);
+  const contentSecurityPolicy = buildContentSecurityPolicy(nonce, {
+    legalEmbed: isLegalContentPath(pathname),
+    staticHtml: isMarketingPath(pathname),
+  });
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("x-request-id", requestId);
+  // Next.js extracts the nonce for framework/page scripts from the request CSP.
+  // The identical policy is added to the browser response in finalizeResponse.
+  requestHeaders.set("Content-Security-Policy", contentSecurityPolicy);
   const forwardedRequest = new NextRequest(request.url, {
     headers: requestHeaders,
     method: request.method,
   });
+  if (
+    request.method === "OPTIONS" &&
+    pathname.startsWith("/api/") &&
+    isNativeShellOrigin(request.headers.get("origin"))
+  ) {
+    return finalizeResponse(
+      forwardedRequest,
+      nonce,
+      requestId,
+      pathname,
+      contentSecurityPolicy,
+      undefined,
+      {
+        skipSessionRefresh: true,
+        response: new NextResponse(null, { status: 204 }),
+      },
+    );
+  }
   if (SUSPICIOUS_PATHS.some((p) => pathname.toLowerCase().includes(p))) {
     logger.warn("middleware blocked suspicious path", { requestId, pathname, ip });
     return new NextResponse(null, { status: 404 });
@@ -164,25 +200,43 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  if (pathname === "/api/health") {
-    return finalizeResponse(forwardedRequest, nonce, requestId, pathname);
-  }
-
   if (pathname === CSP_REPORT_PATH) {
-    return finalizeResponse(forwardedRequest, nonce, requestId, pathname, undefined, {
-      skipSessionRefresh: true,
-    });
+    return finalizeResponse(
+      forwardedRequest,
+      nonce,
+      requestId,
+      pathname,
+      contentSecurityPolicy,
+      undefined,
+      {
+        skipSessionRefresh: true,
+      },
+    );
   }
 
   if (pathname.startsWith("/api/cron/") || pathname.startsWith("/api/webhooks/")) {
-    return finalizeResponse(forwardedRequest, nonce, requestId, pathname);
+    return finalizeResponse(
+      forwardedRequest,
+      nonce,
+      requestId,
+      pathname,
+      contentSecurityPolicy,
+    );
   }
 
   // Anonymous marketing/legal: skip Redis rate limit + skip getUser() when no auth cookies.
   if (isMarketingPath(pathname) && !hasSupabaseAuthCookie(request)) {
-    return finalizeResponse(forwardedRequest, nonce, requestId, pathname, undefined, {
-      skipSessionRefresh: true,
-    });
+    return finalizeResponse(
+      forwardedRequest,
+      nonce,
+      requestId,
+      pathname,
+      contentSecurityPolicy,
+      undefined,
+      {
+        skipSessionRefresh: true,
+      },
+    );
   }
 
   // Guest product routes: send to login (cookie presence only — not a security check).
@@ -227,7 +281,9 @@ export async function middleware(request: NextRequest) {
     nonce,
     requestId,
     pathname,
+    contentSecurityPolicy,
     { limit: rateLimit.limit, remaining: rateLimit.remaining },
+    pathname === "/api/health" ? { skipSessionRefresh: true } : undefined,
   );
 }
 

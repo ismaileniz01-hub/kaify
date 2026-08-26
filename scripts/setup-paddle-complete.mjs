@@ -13,12 +13,19 @@ const WEBHOOK_URL =
   process.env.PADDLE_WEBHOOK_URL?.trim() || "https://kaifyai.org/api/webhooks/paddle";
 
 const EVENTS = [
+  "customer.created",
+  "customer.updated",
   "subscription.created",
   "subscription.updated",
   "subscription.activated",
   "subscription.resumed",
+  "subscription.trialing",
+  "subscription.past_due",
+  "subscription.paused",
   "subscription.canceled",
-  "subscription.cancelled",
+  "transaction.completed",
+  "adjustment.created",
+  "adjustment.updated",
 ];
 
 if (!API_KEY) {

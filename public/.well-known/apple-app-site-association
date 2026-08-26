@@ -6,6 +6,7 @@
         "appID": "APPLE_TEAM_ID.org.kaify.app",
         "paths": [
           "/login*",
+          "/signup*",
           "/welcome*",
           "/chat*",
           "/pricing*",

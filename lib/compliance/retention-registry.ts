@@ -54,7 +54,7 @@ export const RETENTION_REGISTRY: readonly RetentionRegistryEntry[] = [
   { table: "tier_limits", classification: "INDEFINITE_BY_DESIGN", purged: false, rationale: "Catalog." },
   { table: "coaches", classification: "INDEFINITE_BY_DESIGN", purged: false, rationale: "Catalog." },
   { table: "market_items", classification: "INDEFINITE_BY_DESIGN", purged: false, rationale: "Catalog." },
-  { table: "admin_audit_log", classification: "LEGAL_AUDIT", retainDays: RETENTION.adminAuditDays, purged: true, rationale: "Admin actions." },
+  { table: "admin_audit_log", classification: "NEEDS_POLICY", purged: false, rationale: "Automated TTL disabled pending versioned KVKK/GDPR legal/privacy approval." },
   { table: "ai_usage_ledger", classification: "OPERATIONAL_SHORT_LIVED", retainMonths: RETENTION.aiUsageLedgerMonths, purged: true, rationale: "Cost/usage telemetry." },
   { table: "ai_daily_usage", classification: "OPERATIONAL_SHORT_LIVED", retainDays: 90, purged: false, rationale: "UTC-day AI token counters; rebuilt from ledger." },
   { table: "ai_platform_daily_usage", classification: "OPERATIONAL_SHORT_LIVED", retainDays: 90, purged: false, rationale: "Platform AI spend counter; overwritten per day." },

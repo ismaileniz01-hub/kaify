@@ -38,6 +38,11 @@ import {
 import { isStreamCompletionSuspicious } from "@/lib/kaios/stream/unicode";
 import { aiCopy } from "@/lib/ai/ai-copy";
 import {
+  classifyHighRiskMessage,
+  highRiskSafetyResponse,
+  type HighRiskCategory,
+} from "@/lib/ai/high-risk-safety";
+import {
   buildCanaryReminder,
   containsCanary,
   createCanary,
@@ -471,6 +476,100 @@ async function settleChatQuota(params: {
     resource: "text_tokens",
     locale: params.locale,
   });
+}
+
+async function* streamHighRiskSafetyReply(
+  params: StreamReplyParams,
+  category: HighRiskCategory,
+): AsyncGenerator<SseChunk> {
+  const admin = createAdminSupabaseClient();
+  const locale = resolveLocale(params.explicitLocale ?? "en");
+  const cleanMessage = sanitizeUserText(params.message);
+  const content = highRiskSafetyResponse(category, locale);
+  let userMessageId: string | null = null;
+
+  try {
+    await getCoachOrThrow(params.coachId);
+    const { data: userMessage, error: userInsertError } = await admin
+      .from("chat_messages")
+      .insert({
+        ...(params.clientMessageId ? { id: params.clientMessageId } : {}),
+        user_id: params.userId,
+        coach_id: params.coachId,
+        thread_type: "direct",
+        sender: "user",
+        message_type: "text",
+        content: cleanMessage,
+        locale,
+        client_idempotency_key: params.clientIdempotencyKey ?? null,
+      })
+      .select("id")
+      .single();
+    if (userInsertError) {
+      throw new ApiError(
+        "INTERNAL_ERROR",
+        aiCopy(locale, "message_not_saved"),
+      );
+    }
+    userMessageId = userMessage.id;
+
+    const { data: coachMessage, error: coachInsertError } = await admin
+      .from("chat_messages")
+      .insert({
+        user_id: params.userId,
+        coach_id: params.coachId,
+        reply_to_message_id: userMessageId,
+        thread_type: "direct",
+        sender: "coach",
+        message_type: "text",
+        content,
+        payload: null,
+        tokens_used: 0,
+        locale,
+      })
+      .select("id")
+      .single();
+    if (coachInsertError) {
+      throw new ApiError(
+        "INTERNAL_ERROR",
+        aiCopy(locale, "message_not_saved"),
+      );
+    }
+
+    logger.warn("ai.high_risk_safety_routed", {
+      userId: params.userId,
+      coachId: params.coachId,
+      category,
+    });
+
+    yield { event: "delta", data: { content } };
+    yield {
+      event: "done",
+      data: {
+        messageId: coachMessage.id,
+        userMessageId,
+        messageType: "text",
+        payload: null,
+        content,
+        warning_trigger: category,
+        safety_escalated: true,
+      },
+    };
+  } finally {
+    if ((params.tokensReserved ?? 0) > 0) {
+      await refundQuota({
+        userId: params.userId,
+        resource: "text_tokens",
+        amount: params.tokensReserved ?? 0,
+      }).catch((error) => {
+        logger.error("ai.high_risk_quota_refund_failed", {
+          userId: params.userId,
+          category,
+          error: error instanceof Error ? error.message : "unknown",
+        });
+      });
+    }
+  }
 }
 
 /**
@@ -960,6 +1059,12 @@ async function* streamKaiosCoachReply(
 export async function* streamCoachReply(
   params: StreamReplyParams,
 ): AsyncGenerator<SseChunk> {
+  const highRiskCategory = classifyHighRiskMessage(params.message);
+  if (highRiskCategory) {
+    yield* streamHighRiskSafetyReply(params, highRiskCategory);
+    return;
+  }
+
   if (AI_FEATURES.kaiosRuntime) {
     yield* streamKaiosCoachReply(params);
     return;

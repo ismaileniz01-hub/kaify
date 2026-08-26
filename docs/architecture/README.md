@@ -43,7 +43,7 @@ flowchart TB
 | **Faz 1** | 72 | ✅ Done | defineRoute standard, `.env.example`, market=DB, [layers.md](./layers.md) |
 | **Faz 2** | 80 | ✅ Done | `lib/domains/*`, domain events, [bounded-contexts.md](./bounded-contexts.md) |
 | **Faz 3** | 88 | ✅ Done | Read/write repos, outbox DB + cron, integration flow tests |
-| **Faz 4** | 92+ | ✅ Done | `/api/v1` (28 routes), CODEOWNERS, onboarding doc, deprecation headers |
+| **Faz 4** | 92+ | ✅ Done | `/api/v1` (36 routes), CODEOWNERS, onboarding doc, deprecation headers |
 
 Full gate checklist: [verification-2026-07.md](./verification-2026-07.md)
 
@@ -59,6 +59,7 @@ Full gate checklist: [verification-2026-07.md](./verification-2026-07.md)
 | [004](./adr/004-market-db-catalog.md) | Market catalog single source |
 | [005](./adr/005-cache-read-models.md) | Redis read-through cache |
 | [006](./adr/006-api-v1-reexports.md) | API v1 re-export versioning |
+| [007](./adr/007-local-native-client.md) | Locally packaged native client |
 
 ---
 

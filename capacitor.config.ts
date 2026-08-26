@@ -1,33 +1,39 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 import { KeyboardResize, KeyboardStyle } from "@capacitor/keyboard";
-import { resolveNativeServerUrl } from "./lib/native/app-entry";
 
 /**
  * Capacitor native shell for Kaify Ai.
  *
- * **Remote URL mode** — WebView loads the deployed Next.js app (Vercel).
- * Web and native share one codebase; Vercel deploy updates the app UI without
- * a store resubmit. Native plugins (push, speech, keyboard) run in the shell.
+ * Store builds load the audited local `native-dist` bundle. Only API calls
+ * leave the WebView. A dev server URL is accepted solely when explicitly set
+ * by cap:sync:dev and is never included in production sync output.
  *
  * Sync before store builds:
- *   npm run cap:sync:prod
+ *   npm run cap:sync
  *
  * Local device against dev server:
  *   npm run cap:sync:dev
  */
-const serverUrl = resolveNativeServerUrl();
-const isLocal = serverUrl.startsWith("http://");
+const requestedServerUrl = process.env.CAPACITOR_SERVER_URL?.trim();
+const devServerUrl = requestedServerUrl?.startsWith("http://")
+  ? requestedServerUrl
+  : undefined;
+const isLocal = Boolean(devServerUrl?.startsWith("http://"));
 
 const config: CapacitorConfig = {
   appId: "org.kaify.app",
   appName: "Kaify Ai",
-  webDir: "public",
+  webDir: "native-dist",
   loggingBehavior: isLocal ? "debug" : "none",
-  server: {
-    url: serverUrl,
-    cleartext: isLocal,
-    androidScheme: "https",
-  },
+  ...(devServerUrl
+    ? {
+        server: {
+          url: devServerUrl,
+          cleartext: isLocal,
+          androidScheme: "https",
+        },
+      }
+    : {}),
   android: {
     allowMixedContent: isLocal,
     webContentsDebuggingEnabled: isLocal,

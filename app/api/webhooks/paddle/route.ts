@@ -4,6 +4,11 @@ import {
   verifyAndParsePaddleWebhook,
 } from "@/lib/domains/billing";
 import { handleApiError } from "@/lib/api/response";
+import {
+  PADDLE_WEBHOOK_MAX_BYTES,
+  readTextBodyWithLimit,
+  RequestBodyTooLargeError,
+} from "@/lib/api/request-body-limit";
 
 export const runtime = "nodejs";
 
@@ -13,7 +18,10 @@ export const runtime = "nodejs";
  */
 export async function POST(request: NextRequest) {
   try {
-    const rawBody = await request.text();
+    const rawBody = await readTextBodyWithLimit(
+      request,
+      PADDLE_WEBHOOK_MAX_BYTES,
+    );
     const signature = request.headers.get("paddle-signature");
 
     let event;
@@ -42,6 +50,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true, skipped: result.skipped ?? false });
   } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return NextResponse.json(
+        { error: "payload_too_large" },
+        { status: 413 },
+      );
+    }
     return handleApiError(error, { route: "POST /api/webhooks/paddle" });
   }
 }

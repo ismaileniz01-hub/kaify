@@ -1,0 +1,53 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+
+function source(path: string): string {
+  return readFileSync(join(process.cwd(), path), "utf8");
+}
+
+describe("native local packaging contract", () => {
+  const capacitor = source("capacitor.config.ts");
+  const nativeApp = source("native-app/src/App.tsx");
+  const nativeApi = source("native-app/src/api.ts");
+  const nativeSession = source("native-app/src/session.ts");
+  const serverAuth = source("lib/supabase/server.ts");
+  const middleware = source("middleware.ts");
+
+  it("packages native-dist and cannot accept a production remote WebView URL", () => {
+    expect(capacitor).toContain('webDir: "native-dist"');
+    expect(capacitor).toContain('startsWith("http://")');
+    expect(capacitor).not.toContain("https://kaifyai.org/login");
+  });
+
+  it("keeps required acquisition and coaching examples in the local UI", () => {
+    for (const screen of ["login", "signup", "plan", "welcome", "chat"]) {
+      expect(nativeApp).toContain(`"${screen}"`);
+    }
+    expect(nativeApp).toContain('from "@/lib/marketing/pricing-plans"');
+    expect(nativeApp).toContain("shouldCreateUser");
+  });
+
+  it("locks coaching before payment on both navigation and send", () => {
+    expect(nativeApp.match(/profileHasPaidAccess/g)?.length).toBeGreaterThanOrEqual(
+      3,
+    );
+    expect(nativeApi).toContain("active subscription is required");
+  });
+
+  it("uses secure native session storage and bearer API authentication", () => {
+    expect(nativeSession).toContain("SecureStorage");
+    expect(nativeSession).toContain("persistSession: true");
+    expect(nativeApi).toContain('"Authorization"');
+    expect(nativeApi).toContain("Bearer ${await accessToken()}");
+    expect(serverAuth).toContain("supabase.auth.getUser(bearerToken");
+    expect(middleware).toContain("Access-Control-Allow-Origin");
+    expect(middleware).toContain("isNativeShellOrigin");
+  });
+
+  it("handles App/Universal Links and offline retry in the local client", () => {
+    expect(nativeApp).toContain("appUrlOpen");
+    expect(nativeApp).toContain("nativeScreenFromUrl");
+    expect(nativeApp).toContain("Try again");
+  });
+});

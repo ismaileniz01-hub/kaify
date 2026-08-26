@@ -59,6 +59,29 @@ describe("export pagination (PRIV-002)", () => {
     ).rejects.toBeInstanceOf(ApiError);
   });
 
+  it("exports support messages through ticket ownership without leaking join metadata", async () => {
+    const rows = await fetchOwnedRowsPaged(
+      fakeDb({
+        support_messages: [
+          {
+            id: "m1",
+            ticket_id: "t1",
+            body: "owned",
+            support_tickets: { user_id: "u1" },
+          },
+        ],
+      }),
+      "support_messages",
+      "ticket_id",
+      "u1",
+      50,
+      { table: "support_tickets", ownerColumn: "user_id" },
+    );
+    expect(rows).toEqual([
+      { id: "m1", ticket_id: "t1", body: "owned" },
+    ]);
+  });
+
   it("defines a hard cap so mega-tables cannot be silently truncated", () => {
     expect(EXPORT_TABLE_ROW_CAP).toBe(100_000);
     expect(EXPORT_PAGE_SIZE).toBe(200);

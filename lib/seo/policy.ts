@@ -70,6 +70,13 @@ export function isPublicAppPath(pathname: string): boolean {
   return pathname === "/pricing";
 }
 
+export function isAssociationPath(pathname: string): boolean {
+  return (
+    pathname === "/.well-known/assetlinks.json" ||
+    pathname === "/.well-known/apple-app-site-association"
+  );
+}
+
 export function isMarketingPath(pathname: string): boolean {
   if (pathname === "/") return true;
   if (pathname === "/pricing") return true;
@@ -94,6 +101,7 @@ export function isMarketingPath(pathname: string): boolean {
 /** Authenticated product UI — middleware may redirect guests. */
 export function isProtectedProductPath(pathname: string): boolean {
   if (pathname.startsWith("/api/")) return false;
+  if (isAssociationPath(pathname)) return false;
   if (isMarketingPath(pathname)) return false;
   if (isPublicAppPath(pathname)) return false;
   if (pathname.startsWith("/_next/")) return false;

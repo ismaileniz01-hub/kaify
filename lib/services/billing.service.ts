@@ -51,6 +51,54 @@ function pickString(...values: unknown[]): string | undefined {
   return undefined;
 }
 
+export type AdjustmentEntitlementAction = "preserve" | "revoke" | "restore";
+
+export function classifyAdjustmentEntitlementAction(
+  data: Record<string, unknown>,
+): AdjustmentEntitlementAction {
+  const action = (pickString(data.action) ?? "").toLowerCase();
+  const adjustmentType = (
+    pickString(data.type, data.adjustment_type) ?? ""
+  ).toLowerCase();
+  const status = (pickString(data.status) ?? "").toLowerCase();
+  const final = status === "approved" || status === "completed";
+  const rejected =
+    status === "rejected" ||
+    status === "reversed" ||
+    status === "canceled" ||
+    status === "cancelled";
+
+  if (action === "chargeback_reverse" && final) return "restore";
+  if (
+    !rejected &&
+    (action === "chargeback" ||
+      action === "chargeback_warning" ||
+      action === "dispute")
+  ) {
+    return "revoke";
+  }
+  if (action === "refund" && adjustmentType === "full" && final) {
+    return "revoke";
+  }
+  return "preserve";
+}
+
+export function classifyDisputeEntitlementAction(
+  data: Record<string, unknown>,
+): AdjustmentEntitlementAction {
+  const status = (pickString(data.status) ?? "").toLowerCase();
+  const outcome = (pickString(data.outcome) ?? "").toLowerCase();
+  if (outcome === "won" || status === "won") return "restore";
+  if (
+    outcome === "lost" ||
+    status === "lost" ||
+    (status === "closed" && outcome !== "won")
+  ) {
+    return "revoke";
+  }
+  return "preserve";
+}
+
 function extractCustomUserId(custom: unknown): string | null {
   const record = asRecord(custom);
   if (!record) return null;
@@ -184,6 +232,10 @@ async function resolveUserId(
   data: Record<string, unknown>,
 ): Promise<string | null> {
   const customerId = pickString(data.customerId, data.customer_id);
+  const subscriptionId = pickString(
+    data.subscriptionId,
+    data.subscription_id,
+  );
   const fromCustom =
     extractCustomUserId(data.customData) ??
     extractCustomUserId(data.custom_data);
@@ -196,6 +248,17 @@ async function resolveUserId(
       .eq("customer_id", customerId)
       .maybeSingle();
 
+    if (typeof row?.user_id === "string" && row.user_id) {
+      return row.user_id;
+    }
+  }
+
+  if (subscriptionId) {
+    const { data: row } = await admin
+      .from("paddle_subscriptions")
+      .select("user_id")
+      .eq("subscription_id", subscriptionId)
+      .maybeSingle();
     if (typeof row?.user_id === "string" && row.user_id) {
       return row.user_id;
     }
@@ -742,6 +805,31 @@ async function provisionFromPrice(
   return { ok: true };
 }
 
+async function restoreAfterChargebackReversal(
+  admin: ReturnType<typeof createAdminSupabaseClient>,
+  userId: string,
+  data: Record<string, unknown>,
+  eventMeta: { eventId: string; eventType: string; occurredAt?: string | null },
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const subscriptionId = pickString(
+    data.subscriptionId,
+    data.subscription_id,
+  );
+  if (!subscriptionId || !isPaddleServerConfigured()) {
+    return { ok: false, reason: "subscription_refresh_required" };
+  }
+
+  const subscription = await getPaddleServerClient().subscriptions.get(
+    subscriptionId,
+  );
+  const subscriptionData = entityToRecord(subscription);
+  await syncSubscriptionMirror(admin, subscriptionData, userId, eventMeta);
+  if (!subscriptionGrantsAccess(pickString(subscriptionData.status))) {
+    return { ok: true };
+  }
+  return provisionFromPrice(userId, subscriptionData);
+}
+
 /**
  * Processes a verified Paddle Billing webhook. Idempotent via provider_event_id.
  */
@@ -882,6 +970,44 @@ export async function handleNormalizedPaddleEvent(
         const result = await provisionFromPrice(userId, data);
         if (!result.ok) {
           return failRetryable(result.reason);
+        }
+        break;
+      }
+
+      case "adjustment.created":
+      case "adjustment.updated": {
+        if (!userId) return failRetryable("user_not_found");
+        const entitlementAction =
+          classifyAdjustmentEntitlementAction(data);
+        if (entitlementAction === "restore") {
+          const restored = await restoreAfterChargebackReversal(
+            admin,
+            userId,
+            data,
+            eventMeta,
+          );
+          if (!restored.ok) return failRetryable(restored.reason);
+        } else if (entitlementAction === "revoke") {
+          await revokeSubscription(userId);
+        }
+        // A partial refund changes the ledger but does not revoke the paid term.
+        break;
+      }
+
+      case "dispute.created":
+      case "dispute.updated": {
+        if (!userId) return failRetryable("user_not_found");
+        const disputeAction = classifyDisputeEntitlementAction(data);
+        if (disputeAction === "restore") {
+          const restored = await restoreAfterChargebackReversal(
+            admin,
+            userId,
+            data,
+            eventMeta,
+          );
+          if (!restored.ok) return failRetryable(restored.reason);
+        } else if (disputeAction === "revoke") {
+          await revokeSubscription(userId);
         }
         break;
       }

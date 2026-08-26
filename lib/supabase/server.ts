@@ -1,5 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/types/database.types";
 import {
@@ -42,15 +42,31 @@ export async function createServerSupabaseClient(): Promise<ServerSupabaseClient
  * Resolves the authenticated user from the server session.
  * Returns null when unauthenticated or when the session is invalid.
  */
-export async function getServerAuthUser(): Promise<{
+export async function getServerAuthUser(request?: Request): Promise<{
   id: string;
   email: string | undefined;
 } | null> {
-  const supabase = await createServerSupabaseClient();
+  const authorization = request?.headers.get("authorization")?.trim() ?? "";
+  const bearerToken = authorization.startsWith("Bearer ")
+    ? authorization.slice("Bearer ".length).trim()
+    : "";
+  const supabase = bearerToken
+    ? createClient<Database>(
+        getSupabasePublicEnv().url,
+        getSupabasePublicEnv().anonKey,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+            detectSessionInUrl: false,
+          },
+        },
+      )
+    : await createServerSupabaseClient();
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser(bearerToken || undefined);
 
   if (error || !user) {
     return null;

@@ -15,7 +15,10 @@ vi.mock("@/lib/supabase/env", () => ({
   getSupabaseServerEnv: vi.fn(() => ({})),
 }));
 
-import { validateEnvAtBoot } from "@/lib/startup/validate-env";
+import {
+  CriticalEnvironmentError,
+  validateEnvAtBoot,
+} from "@/lib/startup/validate-env";
 
 const CRITICAL_KEYS = [
   "CRON_SECRET",
@@ -53,7 +56,7 @@ describe("validateEnvAtBoot (OPS-001 / OPS-002)", () => {
     for (const key of CRITICAL_KEYS) {
       error.mockClear();
       process.env[key] = key === "ADMIN_HUB_PASSWORD" || key === "ADMIN_EMAIL" ? "" : "your_placeholder";
-      validateEnvAtBoot();
+      expect(() => validateEnvAtBoot()).toThrow(CriticalEnvironmentError);
       expect(error).toHaveBeenCalled();
       const problems = error.mock.calls[0][1].problems as string[];
       expect(problems.some((p) => p.includes(key))).toBe(true);
@@ -63,7 +66,7 @@ describe("validateEnvAtBoot (OPS-001 / OPS-002)", () => {
 
   it("reports DAILY_CHEST_LIMIT_ENABLED=false as critical (OPS-002)", () => {
     process.env.DAILY_CHEST_LIMIT_ENABLED = "false";
-    validateEnvAtBoot();
+    expect(() => validateEnvAtBoot()).toThrow(CriticalEnvironmentError);
     const problems = error.mock.calls[0][1].problems as string[];
     expect(
       problems.some((p) => p.includes("DAILY_CHEST_LIMIT_ENABLED")),
@@ -73,8 +76,13 @@ describe("validateEnvAtBoot (OPS-001 / OPS-002)", () => {
   it("does not log secret values", () => {
     process.env.CSRF_SECRET = "super-secret-value-xyz";
     delete process.env.CRON_SECRET;
-    validateEnvAtBoot();
+    expect(() => validateEnvAtBoot()).toThrow(CriticalEnvironmentError);
     const serialized = JSON.stringify(error.mock.calls);
     expect(serialized).not.toContain("super-secret-value-xyz");
+  });
+
+  it("allows a fully configured production process to become ready", () => {
+    expect(() => validateEnvAtBoot()).not.toThrow();
+    expect(error).not.toHaveBeenCalled();
   });
 });

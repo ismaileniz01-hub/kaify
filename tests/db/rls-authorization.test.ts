@@ -4,7 +4,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { entriesByMode, SCHEMA_REGISTRY, registryTableNames } from "./schema-registry";
-import { seedUserOwnedRows } from "./seed";
+import { seedUserOwnedRows, type SeedIds } from "./seed";
 import {
   assertAllowed,
   assertDenied,
@@ -24,12 +24,13 @@ describe.skipIf(!enabled)("rls-authorization (live)", () => {
   let admin: SupabaseClient;
   let userA: TestUser;
   let userB: TestUser;
+  let seedIds: SeedIds;
 
   beforeAll(async () => {
     admin = createServiceClient();
     userA = await createTestUser("USER_A", admin);
     userB = await createTestUser("USER_B", admin);
-    await seedUserOwnedRows(admin, userA, userB);
+    seedIds = await seedUserOwnedRows(admin, userA, userB);
   }, 120_000);
 
   afterAll(async () => {
@@ -125,6 +126,33 @@ describe.skipIf(!enabled)("rls-authorization (live)", () => {
         });
       });
     }
+  });
+
+  it("support_messages enforces indirect ticket ownership with valid rows", async () => {
+    const own = await userA.client
+      .from("support_messages")
+      .select("id, ticket_id, body")
+      .eq("ticket_id", seedIds.ticketIds.USER_A);
+    expect(own.error).toBeNull();
+    expect(own.data?.length).toBeGreaterThan(0);
+
+    const foreign = await userA.client
+      .from("support_messages")
+      .select("id, ticket_id, body")
+      .eq("ticket_id", seedIds.ticketIds.USER_B);
+    expect(foreign.error).toBeNull();
+    expect(foreign.data).toEqual([]);
+
+    const forged = await userA.client
+      .from("support_messages")
+      .insert({
+        ticket_id: seedIds.ticketIds.USER_B,
+        sender: "user",
+        body: "cross-user-forge",
+      })
+      .select("id");
+    expect(forged.error).not.toBeNull();
+    expect(forged.data ?? []).toEqual([]);
   });
 
   describe("service_only tables", () => {

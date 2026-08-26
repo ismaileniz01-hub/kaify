@@ -51,5 +51,27 @@ describe("post-auth-redirect", () => {
   it("checks active subscription", () => {
     expect(hasActiveSubscription(null)).toBe(false);
     expect(hasActiveSubscription("essential")).toBe(true);
+    expect(
+      hasActiveSubscription(
+        "essential",
+        new Date(Date.now() - 60_000).toISOString(),
+      ),
+    ).toBe(false);
+    expect(
+      hasActiveSubscription(
+        "essential",
+        new Date(Date.now() + 60_000).toISOString(),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects a paid-looking profile after its entitlement expires", () => {
+    const expired = {
+      tier: "pro" as const,
+      tierStartedAt: "2026-01-01T00:00:00.000Z",
+      tierExpiresAt: new Date(Date.now() - 60_000).toISOString(),
+    };
+    expect(hasPaidPlan(expired)).toBe(false);
+    expect(resolvePostAuthRedirect(expired, "/chat/kai")).toBe("/pricing");
   });
 });

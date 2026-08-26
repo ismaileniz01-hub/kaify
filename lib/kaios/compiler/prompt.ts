@@ -31,7 +31,6 @@ import {
 } from "@/lib/kaios/telemetry/tokens";
 import {
   CACHE_PREFIX_VERSION,
-  DEEPSEEK_PREFIX_HIT_TARGET,
   maxVolatileTokens,
   padPrefixToCacheChunks,
   prefixHitRatio,

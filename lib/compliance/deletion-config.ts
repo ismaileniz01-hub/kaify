@@ -30,8 +30,20 @@ export const CASCADE_ON_DELETE_TABLES: readonly DeletionTableSpec[] = [
   { table: "user_settings", column: "user_id", behavior: "cascade", notes: "" },
   { table: "referral_events", column: "referrer_id", behavior: "cascade", notes: "" },
   { table: "streak_gem_claims", column: "user_id", behavior: "cascade", notes: "" },
-  { table: "consent_records", column: "user_id", behavior: "cascade", notes: "" },
-  { table: "consent_revocations", column: "user_id", behavior: "cascade", notes: "" },
+  {
+    table: "consent_records",
+    column: "user_id",
+    behavior: "cascade",
+    notes:
+      "Current approved behavior; any post-delete archive requires a versioned legal/privacy decision.",
+  },
+  {
+    table: "consent_revocations",
+    column: "user_id",
+    behavior: "cascade",
+    notes:
+      "Current approved behavior; any post-delete archive requires a versioned legal/privacy decision.",
+  },
   { table: "notifications", column: "user_id", behavior: "cascade", notes: "" },
   { table: "push_subscriptions", column: "user_id", behavior: "cascade", notes: "" },
   { table: "native_push_tokens", column: "user_id", behavior: "cascade", notes: "" },

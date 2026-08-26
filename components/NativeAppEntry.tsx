@@ -6,9 +6,9 @@ import { isWebOnlyPath, nativeFallbackForWebOnlyPath } from "@/lib/native/app-en
 import { isNativePlatform } from "@/lib/native/platform";
 
 /**
- * Keeps the store build inside the app UI. Marketing landing (/) is web-only;
- * native users always land on sign-in. Signup and pricing are website-only
- * under the consumption-only store policy.
+ * Development fallback for the shared Next.js UI. Store builds use the local
+ * native bundle; signup and plan comparison remain in-app, while checkout may
+ * open Paddle externally when store policy requires it.
  */
 export function NativeAppEntry() {
   const pathname = usePathname();

@@ -16,6 +16,7 @@ import { getClientIP } from "@/lib/api-security";
 import { assertConsent } from "@/lib/services/consent.service";
 import { CONSENT_TYPES } from "@/lib/legal/constants";
 import { withSpan } from "@/lib/observability/tracing";
+import { assertActiveEntitlement } from "@/lib/billing/entitlement";
 
 export type RouteAuth = "user" | "admin" | "none";
 
@@ -57,6 +58,8 @@ export type DefineRouteOptions = {
   requireAiConsent?: boolean;
   /** Explicit consent before body/food photo analysis. */
   requirePhotoConsent?: boolean;
+  /** Server-authoritative paid entitlement; implied by requireAi. */
+  requireSubscription?: boolean;
 };
 
 async function runRouteGuards(
@@ -83,7 +86,10 @@ async function runRouteGuards(
   const csrfRequired =
     options.requireCsrf === true ||
     (options.requireCsrf !== false && authMode !== "none" && isMutating);
-  if (csrfRequired) {
+  const bearerAuthenticated = request.headers
+    .get("authorization")
+    ?.startsWith("Bearer ");
+  if (csrfRequired && !bearerAuthenticated) {
     await assertCsrf(request);
   }
 
@@ -99,6 +105,13 @@ async function runRouteGuards(
     await assertConsent(user.id, CONSENT_TYPES.PHOTO_ANALYSIS);
   }
 
+  if (
+    authMode !== "none" &&
+    (options.requireSubscription || options.requireAi)
+  ) {
+    await assertActiveEntitlement(user.id);
+  }
+
   if (options.requireAi) {
     await assertAiAvailable();
     await assertPlatformDailyAiBudget();
@@ -112,6 +125,7 @@ async function runRouteGuards(
 async function resolveRouteUser(
   authMode: RouteAuth,
   options: DefineRouteOptions,
+  request: NextRequest,
 ): Promise<AuthedUser> {
   if (authMode === "admin") {
     return requireAdmin();
@@ -119,7 +133,7 @@ async function resolveRouteUser(
   if (authMode === "none") {
     return { id: "", email: undefined };
   }
-  return requireUser({ skipMfa: options.skipMfa });
+  return requireUser({ skipMfa: options.skipMfa, request });
 }
 
 /**
@@ -136,7 +150,7 @@ export function defineRoute<T>(
       options.route,
       async () => {
         try {
-          const user = await resolveRouteUser(authMode, options);
+          const user = await resolveRouteUser(authMode, options, request);
           await runRouteGuards(options, authMode, user, request);
           const result = await handler({ user, request });
           return ok(result);
@@ -163,7 +177,7 @@ export function defineRouteRaw(
       options.route,
       async () => {
         try {
-          const user = await resolveRouteUser(authMode, options);
+          const user = await resolveRouteUser(authMode, options, request);
           await runRouteGuards(options, authMode, user, request);
           return await handler({ user, request });
         } catch (error) {
@@ -196,7 +210,7 @@ export function defineDynamicRoute<TParams>(
       options.route,
       async () => {
         try {
-          const user = await resolveRouteUser(authMode, options);
+          const user = await resolveRouteUser(authMode, options, request);
           await runRouteGuards(options, authMode, user, request);
           const params = await routeCtx.params;
           const result = await handler({ user, request, params });
@@ -224,7 +238,7 @@ export function defineDynamicRouteRaw<TParams>(
       options.route,
       async () => {
         try {
-          const user = await resolveRouteUser(authMode, options);
+          const user = await resolveRouteUser(authMode, options, request);
           await runRouteGuards(options, authMode, user, request);
           const params = await routeCtx.params;
           return await handler({ user, request, params });

@@ -10,6 +10,8 @@ export type AuthedUser = {
 export type RequireUserOptions = {
   /** Skip MFA AAL2 check (e.g. pre-MFA bootstrap — use sparingly). */
   skipMfa?: boolean;
+  /** Enables validated bearer sessions for packaged native clients. */
+  request?: Request;
 };
 
 /**
@@ -20,7 +22,7 @@ export type RequireUserOptions = {
 export async function requireUser(
   options?: RequireUserOptions,
 ): Promise<AuthedUser> {
-  const user = await getServerAuthUser();
+  const user = await getServerAuthUser(options?.request);
 
   if (!user) {
     throw new ApiError("UNAUTHORIZED", "Bu işlem için giriş yapmalısınız.");

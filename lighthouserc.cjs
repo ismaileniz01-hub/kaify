@@ -43,7 +43,8 @@ module.exports = {
           },
         },
         {
-          matchingUrlPattern: ".*",
+          matchingUrlPattern:
+            "^http://127\\.0\\.0\\.1:3000/(?!login(?:[/?#]|$)).*",
           assertions: {
             "categories:performance": ["warn", { minScore: 0.65 }],
             "categories:accessibility": ["error", { minScore: 0.85 }],

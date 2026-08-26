@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { AuthModeToggle } from "@/components/auth/AuthModeToggle";
 import { EmailOtpLogin } from "@/components/auth/EmailOtpLogin";
+import { AuthLoadingFallback } from "@/components/auth/AuthLoadingFallback";
 import { useLang } from "@/lib/lang-context";
 import { parseAuthMode, sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 import { captureReferralFromUrl } from "@/lib/referral";
@@ -33,11 +34,7 @@ function LoginPageContent() {
   }, [mode, native, redirectTo]);
 
   if (mode === "signup" && native !== true) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-black">
-        <div className="h-9 w-9 animate-spin rounded-full border-2 border-white/15 border-t-purple-400" />
-      </div>
-    );
+    return <AuthLoadingFallback destination="signup" />;
   }
 
   const subtitle = t("login.subtitle");
@@ -100,13 +97,7 @@ function LoginPageContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-dvh items-center justify-center bg-black">
-          <div className="h-9 w-9 animate-spin rounded-full border-2 border-white/15 border-t-purple-400" />
-        </div>
-      }
-    >
+    <Suspense fallback={<AuthLoadingFallback destination="login" />}>
       <LoginPageContent />
     </Suspense>
   );

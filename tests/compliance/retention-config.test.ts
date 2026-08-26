@@ -7,6 +7,8 @@ import {
   monthsAgoDate,
   monthsAgoIso,
 } from "@/lib/compliance/retention-config";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 describe("RETENTION constants", () => {
   it("defines expected purge periods", () => {
@@ -16,7 +18,26 @@ describe("RETENTION constants", () => {
     expect(RETENTION.healthStepsMonths).toBe(36);
     expect(RETENTION.dataExportLogsMonths).toBe(24);
     expect(RETENTION.billingEventsMonths).toBe(84);
+    expect(RETENTION.adminAuditDays).toBeNull();
     expect(RETENTION_WARNING_DAYS).toBe(30);
+  });
+
+  it("stays aligned with the public retention policy document", () => {
+    const policy = readFileSync(
+      join(process.cwd(), "docs", "compliance", "retention-policy.md"),
+      "utf8",
+    );
+    const deletion = readFileSync(
+      join(process.cwd(), "lib", "compliance", "deletion-config.ts"),
+      "utf8",
+    );
+    expect(policy).toContain("**24 months** after last activity");
+    expect(policy).toContain("**7 years** (tax/accounting)");
+    expect(policy).toContain("**Pending legal/privacy approval**");
+    expect(policy).toContain("no unsupported six-year archive is claimed");
+    expect(deletion).toContain('table: "consent_records"');
+    expect(deletion).toContain("versioned legal/privacy decision");
+    expect(deletion).toContain("RETENTION.billingEventsMonths");
   });
 });
 

@@ -242,6 +242,14 @@ export async function seedUserOwnedRows(
       `support_tickets ${label}`,
     );
     ticketIds[label] = ticket.id as string;
+    await must(
+      admin.from("support_messages").insert({
+        ticket_id: ticket.id,
+        sender: "user",
+        body: `support-message-${label}`,
+      }),
+      `support_messages ${label}`,
+    );
 
     await must(
       admin.from("analytics_pending_confirmations").insert({

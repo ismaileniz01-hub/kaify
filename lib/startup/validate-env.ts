@@ -1,15 +1,18 @@
 import { logger } from "@/lib/logger";
 import { getSupabasePublicEnv, getSupabaseServerEnv } from "@/lib/supabase/env";
 
+export class CriticalEnvironmentError extends Error {
+  constructor(readonly problems: readonly string[]) {
+    super(`Critical environment validation failed (${problems.length} problem(s))`);
+    this.name = "CriticalEnvironmentError";
+  }
+}
+
 /**
  * Boot-time environment validation.
  *
  * Runs once per cold start (from instrumentation `register`). Surfaces
  * misconfiguration in logs immediately instead of as a first-request 500.
- * Deliberately does NOT throw: on serverless a throw would take down every
- * request, so we log loudly and let per-dependency getters enforce hard
- * failures where they matter.
- *
  * Critical production checks MUST be collected before the critical-error log
  * so missing secrets are never silently downgraded to soft warnings.
  */
@@ -97,6 +100,9 @@ export function validateEnvAtBoot(): void {
 
   if (problems.length > 0) {
     logger.error("env validation failed (critical)", { problems });
+    if (isProd) {
+      throw new CriticalEnvironmentError(problems);
+    }
   }
   if (missingSoft.length > 0) {
     logger.warn("env validation: optional vars missing/placeholder", {

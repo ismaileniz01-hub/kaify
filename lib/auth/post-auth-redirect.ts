@@ -1,27 +1,33 @@
 import type { SubscriptionTier } from "@/lib/types/database.types";
 import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
+import { entitlementIsActive } from "@/lib/billing/entitlement";
 
 export function hasActiveSubscription(
   tier: SubscriptionTier | null | undefined,
+  tierExpiresAt?: string | null,
 ): boolean {
-  return tier != null;
+  if (tier == null) return false;
+  if (!tierExpiresAt) return true;
+  const expiresAt = Date.parse(tierExpiresAt);
+  return Number.isFinite(expiresAt) && expiresAt > Date.now();
 }
 
 type ProfileLike = {
   tier?: SubscriptionTier | null;
   /** Set only by Paddle `apply_subscription`. Missing = never paid. */
   tierStartedAt?: string | null;
+  tierExpiresAt?: string | null;
 };
 
 /** True when Paddle actually granted a plan — not a leftover default tier. */
 export function hasPaidPlan(
   profile: ProfileLike | null | undefined,
 ): boolean {
-  if (profile?.tier == null) return false;
+  if (!profile) return false;
   if (profile.tierStartedAt === undefined) {
-    return true;
+    return hasActiveSubscription(profile.tier, profile.tierExpiresAt);
   }
-  return profile.tierStartedAt != null;
+  return entitlementIsActive(profile);
 }
 
 type PostAuthOptions = {

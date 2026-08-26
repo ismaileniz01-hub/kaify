@@ -65,9 +65,16 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
   const db = admin as unknown as SupabaseClient;
   const failures: string[] = [];
 
-  for (const { table, column } of USER_EXPORT_TABLES) {
+  for (const { table, column, ownerRelation } of USER_EXPORT_TABLES) {
     try {
-      data[table] = await fetchOwnedRowsPaged(db, table, column, userId);
+      data[table] = await fetchOwnedRowsPaged(
+        db,
+        table,
+        column,
+        userId,
+        undefined,
+        ownerRelation,
+      );
     } catch (error) {
       failures.push(table);
       logger.warn("account.export table failed", {
@@ -216,7 +223,15 @@ async function exportUserDataHeaderAndStreamTables(
     let from = 0;
     let first = true;
     for (;;) {
-      const page = await fetchOwnedRowPage(db, spec.table, spec.column, userId, from);
+      const page = await fetchOwnedRowPage(
+        db,
+        spec.table,
+        spec.column,
+        userId,
+        from,
+        undefined,
+        spec.ownerRelation,
+      );
       for (const row of page.rows) {
         if (!first) write(",");
         first = false;
