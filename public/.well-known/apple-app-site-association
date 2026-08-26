@@ -3,7 +3,7 @@
     "apps": [],
     "details": [
       {
-        "appID": "APPLE_TEAM_ID.org.kaifyai.app",
+        "appID": "APZ7L5F5UZ.org.kaifyai.app",
         "paths": [
           "/login*",
           "/signup*",
@@ -22,6 +22,6 @@
     ]
   },
   "webcredentials": {
-    "apps": ["APPLE_TEAM_ID.org.kaifyai.app"]
+    "apps": ["APZ7L5F5UZ.org.kaifyai.app"]
   }
 }

@@ -28,8 +28,8 @@ node scripts/ops/verify-google-services.mjs
 npm run cap:verify-store
 ```
 
-`cap:verify-store` intentionally fails until the real Apple Team ID and Play
-signing SHA-256 replace the checked-in placeholders.
+`cap:verify-store` asserts live AASA Team ID, Play App Signing SHA-256, package
+`org.kaifyai.app`, privacy manifest fields, and the `kaify` URL scheme.
 
 ## Native account and billing flow
 
@@ -71,12 +71,12 @@ it to the store forms.
 
 | File | Purpose |
 |------|---------|
-| `public/.well-known/apple-app-site-association` | Universal Links — replace `APPLE_TEAM_ID` |
-| `public/.well-known/assetlinks.json` | Android App Links — replace SHA-256 fingerprints |
+| `public/.well-known/apple-app-site-association` | Universal Links — `APZ7L5F5UZ.org.kaifyai.app` |
+| `public/.well-known/assetlinks.json` | Android App Links — Play **App Signing** SHA-256 for `org.kaifyai.app` |
 | In-app | `/privacy`, `/terms`, `/terms&conditions` → rewrite |
 
-`APPLE_TEAM_ID` and the Play signing SHA-256 placeholders are release blockers,
-not optional documentation work.
+Association files must use the live Team ID and Play App Signing certificate fingerprint.
+Do **not** put the Play upload-key SHA-256 into production `assetlinks.json`.
 
 ## Screenshots
 

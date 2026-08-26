@@ -11,6 +11,11 @@ import {
 
 const CANONICAL_APP_ID = "org.kaifyai.app";
 const LEGACY_APP_ID = "org.kaify.app";
+const APPLE_TEAM_ID = "APZ7L5F5UZ";
+const PLAY_APP_SIGNING_SHA256 =
+  "C9:A3:EC:0B:AD:B7:85:39:DF:94:A5:40:45:43:B8:1B:59:CC:91:B3:09:2F:13:48:A1:12:E8:04:EB:C2:74:98";
+const PLAY_UPLOAD_KEY_SHA256 =
+  "E4:09:C6:A7:D6:C4:B8:ED:52:6A:C9:7D:6B:85:4A:6D:07:C9:BD:13:43:B0:51:40:46:40:BE:7B:91:3E:87:BD";
 const root = process.cwd();
 
 function read(relativePath: string): string {
@@ -60,10 +65,14 @@ describe("store package id alignment", () => {
     expect(infoPlist).toContain(`<string>${NATIVE_URL_SCHEME}</string>`);
     expect(infoPlist).not.toContain(LEGACY_APP_ID);
 
-    expect(aasa).toContain(`APPLE_TEAM_ID.${CANONICAL_APP_ID}`);
+    expect(aasa).toContain(`${APPLE_TEAM_ID}.${CANONICAL_APP_ID}`);
+    expect(aasa).not.toContain("APPLE_TEAM_ID");
     expect(aasa).not.toContain(LEGACY_APP_ID);
 
     expect(assetlinks).toContain(`"package_name": "${CANONICAL_APP_ID}"`);
+    expect(assetlinks).toContain(PLAY_APP_SIGNING_SHA256);
+    expect(assetlinks).not.toContain("REPLACE_WITH_PLAY");
+    expect(assetlinks).not.toContain(PLAY_UPLOAD_KEY_SHA256);
     expect(assetlinks).not.toContain(LEGACY_APP_ID);
   });
 
