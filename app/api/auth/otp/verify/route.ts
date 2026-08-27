@@ -9,7 +9,13 @@ export const runtime = "nodejs";
 
 /** POST /api/auth/otp/verify — verify email OTP and set session cookies on the response. */
 export const POST = defineRouteRaw(
-  { route: "POST /api/auth/otp/verify", auth: "none", publicRateLimit: "otp_verify" },
+  {
+    route: "POST /api/auth/otp/verify",
+    auth: "none",
+    publicRateLimit: "otp_verify",
+    // Public OTP; Capacitor has no double-submit CSRF cookie.
+    requireCsrf: false,
+  },
   async ({ request }) => {
     const body = await request.json().catch(() => null);
     const parsed = otpVerifySchema.safeParse(body);
@@ -28,7 +34,7 @@ export const POST = defineRouteRaw(
         type: "email",
       });
 
-      let session = emailAttempt.data.session;
+      let session = emailAttempt.data?.session;
 
       if (emailAttempt.error) {
         const signupAttempt = await supabase.auth.verifyOtp({
@@ -44,7 +50,7 @@ export const POST = defineRouteRaw(
             ),
           );
         }
-        session = signupAttempt.data.session;
+        session = signupAttempt.data?.session;
       }
 
       const origin = request.headers.get("origin");

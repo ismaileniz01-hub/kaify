@@ -122,6 +122,13 @@ describe("POST /api/auth/otp/send", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns validation 400 for empty/null body (not middleware 403)", async () => {
+    const res = await otpSendPost(jsonRequest(null));
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { success: false };
+    expect(body.success).toBe(false);
+  });
+
   it("returns sent:true on success", async () => {
     sendAuthEmailOtp.mockResolvedValue({ ok: true });
     const res = await otpSendPost(
@@ -150,6 +157,11 @@ describe("POST /api/auth/otp/verify", () => {
     const res = await otpVerifyPost(
       jsonRequest({ email: "ok@example.com", token: "abcdef" }),
     );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns validation 400 for empty/null body (not middleware 403)", async () => {
+    const res = await otpVerifyPost(jsonRequest(null));
     expect(res.status).toBe(400);
   });
 
