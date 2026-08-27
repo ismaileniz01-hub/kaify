@@ -175,11 +175,13 @@ workflows:
 
       - name: Assemble debug APK
         script: |
+          chmod +x android/gradlew
           cd android
           ./gradlew :app:assembleDebug -x lint -x test
 
       - name: Bundle signed release AAB
         script: |
+          chmod +x android/gradlew
           cd android
           ./gradlew :app:bundleRelease -x lint -x test
 
