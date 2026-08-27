@@ -1,4 +1,5 @@
 import { isCompleteOtp, normalizeOtpInput } from "@/lib/auth/otp";
+import { DEFAULT_RESEND_AFTER_SECONDS } from "./otp-resend-timer";
 import { supabase } from "./session";
 
 const NATIVE_CLIENT_VERSION = "native-1.0.2";
@@ -6,7 +7,19 @@ const NATIVE_CLIENT_VERSION = "native-1.0.2";
 type ApiSuccess<T> = { success: true; data: T };
 type ApiFailure = {
   success: false;
-  error?: { code?: string; message?: string };
+  error?: { code?: string; message?: string; details?: unknown };
+};
+
+export type NativeOtpSendSuccess = {
+  ok: true;
+  resendAfterSeconds: number;
+};
+
+export type NativeOtpFailure = {
+  ok: false;
+  message: string;
+  code?: string;
+  retryAfterSeconds?: number;
 };
 
 async function parseApiJson<T>(
@@ -17,35 +30,94 @@ async function parseApiJson<T>(
   } catch {
     return {
       success: false,
-      error: { code: "BAD_RESPONSE", message: "Invalid server response." },
+      error: { code: "BAD_RESPONSE", message: "Sunucu yanıtı okunamadı." },
     };
+  }
+}
+
+function readRetryAfterSeconds(response: Response, payload: ApiFailure): number | undefined {
+  const header = response.headers.get("Retry-After");
+  if (header) {
+    const n = Number(header);
+    if (Number.isFinite(n) && n > 0) return Math.ceil(n);
+  }
+  const details = payload.error?.details as
+    | { retryAfterSeconds?: unknown; retryAfterMs?: unknown; resendAfterSeconds?: unknown }
+    | undefined;
+  if (typeof details?.retryAfterSeconds === "number" && details.retryAfterSeconds > 0) {
+    return Math.ceil(details.retryAfterSeconds);
+  }
+  if (typeof details?.resendAfterSeconds === "number" && details.resendAfterSeconds > 0) {
+    return Math.ceil(details.resendAfterSeconds);
+  }
+  if (typeof details?.retryAfterMs === "number" && details.retryAfterMs > 0) {
+    return Math.max(1, Math.ceil(details.retryAfterMs / 1000));
+  }
+  return undefined;
+}
+
+function mapSendErrorMessage(code: string | undefined, fallback: string): string {
+  switch (code) {
+    case "OTP_RESEND_COOLDOWN":
+      return "Yeni kod istemeden önce lütfen biraz bekle.";
+    case "RATE_LIMITED":
+      return "Çok hızlı istek gönderdin. Lütfen biraz bekle.";
+    case "FORBIDDEN":
+      return "Güvenlik doğrulaması başarısız. Lütfen tekrar dene.";
+    case "SERVICE_UNAVAILABLE":
+      return "Kimlik doğrulama şu an kullanılamıyor. Lütfen sonra tekrar dene.";
+    default:
+      return fallback || "Kod gönderilemedi. Lütfen tekrar dene.";
   }
 }
 
 /**
  * Public Kaify OTP APIs (same server path as web). No Bearer — cookies unused;
  * verify returns access/refresh tokens for Capacitor origins.
+ * No captcha token — backend skips captcha for exact native origins.
  */
 async function publicAuthPost<T>(
   path: string,
   body: Record<string, unknown>,
-): Promise<{ ok: true; data: T } | { ok: false; message: string }> {
-  const response = await fetch(`${__KAIFY_API_BASE__}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "X-Client-Version": NATIVE_CLIENT_VERSION,
-    },
-    body: JSON.stringify(body),
-  });
+): Promise<
+  | { ok: true; data: T }
+  | { ok: false; message: string; code?: string; retryAfterSeconds?: number }
+> {
+  let response: Response;
+  try {
+    response = await fetch(`${__KAIFY_API_BASE__}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-Client-Version": NATIVE_CLIENT_VERSION,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    return {
+      ok: false,
+      message: "Bağlantı hatası. İnternetini kontrol edip tekrar dene.",
+      code: "NETWORK_ERROR",
+    };
+  }
+
   const payload = await parseApiJson<T>(response);
   if (!response.ok || payload.success !== true) {
-    const message =
+    const code = payload.success === false ? payload.error?.code : undefined;
+    const fallback =
       payload.success === false
-        ? payload.error?.message || "Request failed."
-        : `Request failed (${response.status}).`;
-    return { ok: false, message };
+        ? payload.error?.message || "İstek başarısız."
+        : `İstek başarısız (${response.status}).`;
+    return {
+      ok: false,
+      message: mapSendErrorMessage(code, fallback),
+      code,
+      retryAfterSeconds:
+        payload.success === false
+          ? readRetryAfterSeconds(response, payload)
+          : undefined,
+    };
   }
   return { ok: true, data: payload.data };
 }
@@ -53,22 +125,30 @@ async function publicAuthPost<T>(
 export async function sendNativeEmailOtp(
   email: string,
   locale: "tr" | "en" = "en",
-): Promise<{ ok: true } | { ok: false; message: string }> {
-  const result = await publicAuthPost<{ sent: true }>("/api/auth/otp/send", {
+): Promise<NativeOtpSendSuccess | NativeOtpFailure> {
+  const result = await publicAuthPost<{
+    sent: true;
+    resendAfterSeconds?: number;
+  }>("/api/auth/otp/send", {
     email: email.trim().toLowerCase(),
     locale,
   });
   if (!result.ok) return result;
-  return { ok: true };
+  const resendAfterSeconds =
+    typeof result.data.resendAfterSeconds === "number" &&
+    result.data.resendAfterSeconds > 0
+      ? Math.ceil(result.data.resendAfterSeconds)
+      : DEFAULT_RESEND_AFTER_SECONDS;
+  return { ok: true, resendAfterSeconds };
 }
 
 export async function verifyNativeEmailOtp(
   email: string,
   token: string,
-): Promise<{ ok: true } | { ok: false; message: string }> {
+): Promise<{ ok: true } | NativeOtpFailure> {
   const normalized = normalizeOtpInput(token);
   if (!isCompleteOtp(normalized)) {
-    return { ok: false, message: "Enter the 6-digit code from your email." };
+    return { ok: false, message: "E-postandaki 6 haneli kodu gir." };
   }
 
   const result = await publicAuthPost<{
@@ -85,7 +165,7 @@ export async function verifyNativeEmailOtp(
     return {
       ok: false,
       message:
-        "Signed in on the server, but the app session was not returned. Please try again.",
+        "Sunucu girişi tamamladı ama uygulama oturumu dönmedi. Lütfen tekrar dene.",
     };
   }
 

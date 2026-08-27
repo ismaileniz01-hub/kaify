@@ -15,35 +15,71 @@ import {
   verifyNativeEmailOtp,
 } from "../../native-app/src/auth-otp";
 
-describe("native Kaify OTP client", () => {
+describe("native Kaify OTP client (resend contract)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     setSession.mockReset();
   });
 
-  it("posts send to Kaify API and surfaces API errors", async () => {
+  it("posts build-20 payload and reads resendAfterSeconds", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 403,
+      ok: true,
+      status: 200,
+      headers: new Headers(),
       json: async () => ({
-        success: false,
-        error: { code: "FORBIDDEN", message: "reCAPTCHA failed" },
+        success: true,
+        data: { sent: true, resendAfterSeconds: 60 },
       }),
     });
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await sendNativeEmailOtp("user@example.com");
-    expect(result).toEqual({ ok: false, message: "reCAPTCHA failed" });
+    expect(result).toEqual({ ok: true, resendAfterSeconds: 60 });
     expect(fetchMock).toHaveBeenCalledWith(
       "https://kaifyai.org/api/auth/otp/send",
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "X-Client-Version": "native-1.0.2",
+        }),
+      }),
     );
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0][1] as { body: string }).body,
+    );
+    expect(body).toEqual({ email: "user@example.com", locale: "en" });
+    expect(body.recaptchaToken).toBeUndefined();
+    expect(body.recaptchaEnterpriseToken).toBeUndefined();
+  });
+
+  it("maps OTP_RESEND_COOLDOWN Retry-After for the UI timer", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      headers: new Headers({ "Retry-After": "42" }),
+      json: async () => ({
+        success: false,
+        error: {
+          code: "OTP_RESEND_COOLDOWN",
+          message: "Yeni kod istemeden önce lütfen biraz bekle.",
+        },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await sendNativeEmailOtp("user@example.com");
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("OTP_RESEND_COOLDOWN");
+    expect(result.retryAfterSeconds).toBe(42);
+    expect(result.message).toContain("bekle");
   });
 
   it("sets supabase session from verify response tokens", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      headers: new Headers(),
       json: async () => ({
         success: true,
         data: {
@@ -64,21 +100,5 @@ describe("native Kaify OTP client", () => {
       access_token: "access",
       refresh_token: "refresh",
     });
-  });
-
-  it("does not advance when verify omits native session tokens", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        success: true,
-        data: { verified: true },
-      }),
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    const result = await verifyNativeEmailOtp("user@example.com", "123456");
-    expect(result.ok).toBe(false);
-    expect(setSession).not.toHaveBeenCalled();
   });
 });

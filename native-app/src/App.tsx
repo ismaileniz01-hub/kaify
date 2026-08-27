@@ -142,12 +142,18 @@ export function App() {
       const result = await sendNativeEmailOtp(email);
       if (!result.ok) {
         setError(result.message);
-        return;
+        return result;
       }
       setAuthStep("code");
       setScreen("verify");
+      return result;
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not send code.");
+      const message =
+        cause instanceof Error
+          ? cause.message
+          : "Kod gönderilemedi. Lütfen tekrar dene.";
+      setError(message);
+      return { ok: false as const, message };
     } finally {
       setAuthBusy(false);
     }
@@ -160,14 +166,20 @@ export function App() {
       const result = await verifyNativeEmailOtp(email, otp);
       if (!result.ok) {
         setError(result.message);
-        return;
+        return result;
       }
       if (acceptedLegal && acceptedAi) {
         await recordNativeSignupConsents();
       }
       await resolveSignedInDestination();
+      return result;
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Account check failed.");
+      const message =
+        cause instanceof Error
+          ? cause.message
+          : "Doğrulama başarısız. Lütfen tekrar dene.";
+      setError(message);
+      return { ok: false as const, message };
     } finally {
       setAuthBusy(false);
     }

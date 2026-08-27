@@ -1,4 +1,11 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -8,6 +15,18 @@ import {
 } from "lucide-react";
 import { isCompleteOtp } from "@/lib/auth/otp";
 import { maskEmail } from "@/lib/auth/mask-email";
+import type {
+  NativeOtpFailure,
+  NativeOtpSendSuccess,
+} from "../auth-otp";
+import {
+  clearResendAvailableAt,
+  computeResendAvailableAt,
+  loadResendAvailableAt,
+  persistResendAvailableAt,
+  remainingResendSeconds,
+  resendButtonLabel,
+} from "../otp-resend-timer";
 import { NativeFitnessWallpaper } from "./NativeFitnessWallpaper";
 import { NativeOtpDigitInput } from "./NativeOtpDigitInput";
 
@@ -30,8 +49,8 @@ export type NativeLoginScreenProps = {
   onAcceptedAiChange: (value: boolean) => void;
   onModeChange: (mode: NativeAuthMode) => void;
   onStepChange: (step: NativeAuthStep) => void;
-  onSendCode: () => void | Promise<void>;
-  onVerifyCode: () => void | Promise<void>;
+  onSendCode: () => Promise<NativeOtpSendSuccess | NativeOtpFailure>;
+  onVerifyCode: () => Promise<{ ok: true } | NativeOtpFailure>;
   onClearError: () => void;
 };
 
@@ -62,32 +81,121 @@ export function NativeLoginScreen({
   const idPrefix = useId();
   const emailId = `${idPrefix}-email`;
   const errorId = `${idPrefix}-error`;
+  const resendStatusId = `${idPrefix}-resend-status`;
   const isSignup = mode === "signup";
-  const [resendIn, setResendIn] = useState(0);
+  const [resendAvailableAt, setResendAvailableAt] = useState<number | null>(
+    null,
+  );
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  const [sendInFlight, setSendInFlight] = useState(false);
+  const emailRef = useRef(email);
+  emailRef.current = email;
+
+  const remaining = remainingResendSeconds(resendAvailableAt, nowTick);
+
+  const refreshNow = useCallback(() => {
+    setNowTick(Date.now());
+  }, []);
+
+  // Tick from absolute timestamp — survives background by recomputing on focus.
+  useEffect(() => {
+    if (!resendAvailableAt || remaining <= 0) return;
+    const timer = window.setTimeout(refreshNow, 250);
+    return () => window.clearTimeout(timer);
+  }, [resendAvailableAt, remaining, refreshNow, nowTick]);
 
   useEffect(() => {
-    if (resendIn <= 0) return;
-    const timer = window.setTimeout(() => setResendIn((s) => s - 1), 1000);
-    return () => window.clearTimeout(timer);
-  }, [resendIn]);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refreshNow();
+    };
+    window.addEventListener("focus", refreshNow);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", refreshNow);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [refreshNow]);
+
+  // Restore cooldown after app reopen (email-hash key in SecureStorage).
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      if (!email.trim().includes("@")) {
+        setResendAvailableAt(null);
+        return;
+      }
+      const stored = await loadResendAvailableAt(email);
+      if (cancelled) return;
+      if (stored && stored > Date.now()) {
+        setResendAvailableAt(stored);
+        refreshNow();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [email, refreshNow]);
+
+  async function applyResendCooldown(seconds: number) {
+    const at = computeResendAvailableAt(seconds);
+    setResendAvailableAt(at);
+    refreshNow();
+    await persistResendAvailableAt(emailRef.current, at);
+  }
+
+  async function clearCooldownForEmail(nextEmail: string) {
+    setResendAvailableAt(null);
+    await clearResendAvailableAt(nextEmail);
+  }
 
   const canSend =
     email.trim().includes("@") &&
     online &&
     !busy &&
+    !sendInFlight &&
     (!isSignup || (acceptedLegal && acceptedAi));
 
   async function handleSend(event?: FormEvent) {
     event?.preventDefault();
-    if (!canSend) return;
-    await onSendCode();
-    setResendIn(60);
+    if (!canSend || sendInFlight) return;
+    if (step === "code" && remaining > 0) return;
+    setSendInFlight(true);
+    try {
+      const result = await onSendCode();
+      if (!result.ok) {
+        if (
+          typeof result.retryAfterSeconds === "number" &&
+          result.retryAfterSeconds > 0
+        ) {
+          await applyResendCooldown(result.retryAfterSeconds);
+        }
+        return;
+      }
+      await applyResendCooldown(result.resendAfterSeconds);
+    } finally {
+      setSendInFlight(false);
+    }
   }
 
   async function handleVerify(event?: FormEvent) {
     event?.preventDefault();
     if (!isCompleteOtp(otp) || busy || !online) return;
-    await onVerifyCode();
+    const result = await onVerifyCode();
+    if (result.ok) {
+      await clearCooldownForEmail(emailRef.current);
+      setResendAvailableAt(null);
+    }
+  }
+
+  function handleEmailChange(value: string) {
+    const previous = emailRef.current;
+    onEmailChange(value);
+    onClearError();
+    if (previous.trim().toLowerCase() !== value.trim().toLowerCase()) {
+      void clearCooldownForEmail(previous);
+      setResendAvailableAt(null);
+      onOtpChange("");
+    }
   }
 
   if (step === "code") {
@@ -156,14 +264,21 @@ export function NativeLoginScreen({
               <button
                 type="button"
                 className="link-purple"
-                disabled={busy || !online || resendIn > 0}
+                disabled={busy || !online || remaining > 0 || sendInFlight}
                 onClick={() => void handleSend()}
+                aria-describedby={resendStatusId}
+                aria-label={resendButtonLabel(remaining)}
               >
-                {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend code"}
+                {resendButtonLabel(remaining)}
               </button>
+              <span id={resendStatusId} className="sr-only" aria-live="polite">
+                {remaining > 0
+                  ? `Yeni kod ${remaining} saniye sonra istenebilir.`
+                  : "Yeni kod istenebilir."}
+              </span>
               <p className="login-otp-expires">
                 <ShieldCheck className="icon-sm" aria-hidden />
-                Code expires in a few minutes
+                Kod birkaç dakika içinde geçersiz olur
               </p>
             </div>
 
@@ -234,7 +349,7 @@ export function NativeLoginScreen({
               id={emailId}
               type="email"
               value={email}
-              onChange={(e) => onEmailChange(e.target.value)}
+              onChange={(e) => handleEmailChange(e.target.value)}
               placeholder="Your email address"
               autoComplete="email"
               inputMode="email"
