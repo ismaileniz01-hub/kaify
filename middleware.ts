@@ -43,15 +43,16 @@ const SUSPICIOUS_PATHS = [
   "/cgi-bin", "/cpanel", "/webmail",
 ];
 
+/** Headers native + web clients may send on credentialed API calls. */
+const CORS_ALLOW_HEADERS =
+  "Authorization, Content-Type, Idempotency-Key, X-Client-Version, X-CSRF-Token, x-csrf-token";
+
 function attachCorsHeaders(request: NextRequest, response: NextResponse) {
   const origin = request.headers.get("origin");
   if (origin && isAllowedOrigin(request)) {
     response.headers.set("Access-Control-Allow-Origin", origin);
     response.headers.set("Access-Control-Allow-Credentials", "true");
-    response.headers.set(
-      "Access-Control-Allow-Headers",
-      "Authorization, Content-Type, Idempotency-Key, X-CSRF-Token",
-    );
+    response.headers.set("Access-Control-Allow-Headers", CORS_ALLOW_HEADERS);
     response.headers.set(
       "Access-Control-Allow-Methods",
       "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS",
