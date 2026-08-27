@@ -462,7 +462,7 @@ export function NativeLoginBoot() {
       <NativeFitnessWallpaper />
       <main className="login-page-main login-boot-main">
         <div className="login-spinner" aria-hidden />
-        <p>Verifying…</p>
+        <p>Giriş hazırlanıyor…</p>
       </main>
     </div>
   );

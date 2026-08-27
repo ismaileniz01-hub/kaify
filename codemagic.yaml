@@ -59,8 +59,8 @@ workflows:
 
       - name: Set iOS build metadata
         script: |
-          BUILD_NUMBER="${BUILD_NUMBER:-${CM_BUILD_NUMBER:-21}}"
-          if [ "$BUILD_NUMBER" -lt 21 ]; then BUILD_NUMBER=21; fi
+          BUILD_NUMBER="${BUILD_NUMBER:-${CM_BUILD_NUMBER:-22}}"
+          if [ "$BUILD_NUMBER" -lt 22 ]; then BUILD_NUMBER=22; fi
           export BUILD_NUMBER
           echo "Using iOS CFBundleVersion=$BUILD_NUMBER"
           perl -0pi -e "s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" ios/App/App.xcodeproj/project.pbxproj

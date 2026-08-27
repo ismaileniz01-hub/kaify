@@ -71,15 +71,37 @@ export function App() {
     const offlineListener = () => setOnline(false);
     window.addEventListener("online", onlineListener);
     window.addEventListener("offline", offlineListener);
-    void supabase.auth.getSession().then(async ({ data }) => {
-      try {
-        if (data.session) await resolveSignedInDestination();
-      } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Account check failed.");
-      } finally {
-        setBusy(false);
-      }
-    });
+
+    let cancelled = false;
+    // Absolute fallback so SecureStorage / getSession hangs never blank the app.
+    const bootWatchdog = window.setTimeout(() => {
+      if (!cancelled) setBusy(false);
+    }, 4_000);
+
+    void supabase.auth
+      .getSession()
+      .then(async ({ data }) => {
+        if (cancelled) return;
+        try {
+          if (data.session) await resolveSignedInDestination();
+        } catch (cause) {
+          setError(
+            cause instanceof Error ? cause.message : "Hesap kontrolü başarısız.",
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError("Oturum kontrolü zaman aşımına uğradı. Tekrar giriş yapabilirsin.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          window.clearTimeout(bootWatchdog);
+          setBusy(false);
+        }
+      });
+
     const installKey = "kaify_install_id";
     let installId = localStorage.getItem(installKey);
     if (!installId) {
@@ -128,6 +150,8 @@ export function App() {
       // Browser/dev shells do not expose the native App plugin.
     });
     return () => {
+      cancelled = true;
+      window.clearTimeout(bootWatchdog);
       window.removeEventListener("online", onlineListener);
       window.removeEventListener("offline", offlineListener);
       removeUrlListener?.();

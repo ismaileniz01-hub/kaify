@@ -25,15 +25,16 @@ const config: CapacitorConfig = {
   appName: "Kaify Ai",
   webDir: "native-dist",
   loggingBehavior: isLocal ? "debug" : "none",
-  ...(devServerUrl
-    ? {
-        server: {
+  // Stable Android WebView origin (https://localhost) for OTP CORS / captcha skip.
+  server: {
+    androidScheme: "https",
+    ...(devServerUrl
+      ? {
           url: devServerUrl,
           cleartext: isLocal,
-          androidScheme: "https",
-        },
-      }
-    : {}),
+        }
+      : {}),
+  },
   android: {
     allowMixedContent: isLocal,
     webContentsDebuggingEnabled: isLocal,

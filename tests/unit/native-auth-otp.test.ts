@@ -40,7 +40,7 @@ describe("native Kaify OTP client (resend contract)", () => {
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
-          "X-Client-Version": "native-1.0.2",
+          "X-Client-Version": "native-1.0.3",
         }),
       }),
     );

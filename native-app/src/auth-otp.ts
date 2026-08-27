@@ -2,7 +2,7 @@ import { isCompleteOtp, normalizeOtpInput } from "@/lib/auth/otp";
 import { DEFAULT_RESEND_AFTER_SECONDS } from "./otp-resend-timer";
 import { supabase } from "./session";
 
-const NATIVE_CLIENT_VERSION = "native-1.0.2";
+const NATIVE_CLIENT_VERSION = "native-1.0.3";
 
 type ApiSuccess<T> = { success: true; data: T };
 type ApiFailure = {
