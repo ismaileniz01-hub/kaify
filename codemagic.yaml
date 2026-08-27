@@ -111,9 +111,21 @@ workflows:
         NEXT_PUBLIC_SUPABASE_URL: "https://urnetodzvszmddzdazdj.supabase.co"
         NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVybmV0b2R6dnN6bWRkemRhemRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MDQ3NTQsImV4cCI6MjA5ODM4MDc1NH0.EemHnCv-3wf36S-6u5-GxGRJ-1P4uYCOJ-Zl0U-BKxQ"
       node: 22
-      java: 17
+      java: 21
 
     scripts:
+      - name: Assert Java 21 toolchain
+        script: |
+          set -euo pipefail
+          java -version
+          javac -version
+          JAVA_VER=$(java -version 2>&1 | head -n 1)
+          JAVAC_VER=$(javac -version 2>&1)
+          echo "java reported: $JAVA_VER"
+          echo "javac reported: $JAVAC_VER"
+          echo "$JAVA_VER" | grep -Eq 'version "21(\.|")'
+          echo "$JAVAC_VER" | grep -Eq '^javac 21(\.|$)'
+
       - name: Install dependencies
         script: |
           npm ci
