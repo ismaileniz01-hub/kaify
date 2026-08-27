@@ -51,8 +51,17 @@ if (!existsSync(indexPath)) {
 }
 
 const bundle = readAllUnder("native-dist");
-if (!bundle.includes("Sign in locally")) {
-  fail('native-dist must contain "Sign in locally"');
+if (!bundle.includes("Kaify Ai")) {
+  fail('native-dist must contain "Kaify Ai" login title');
+}
+if (!bundle.includes("Send login code")) {
+  fail('native-dist must contain canonical "Send login code" CTA');
+}
+if (!bundle.includes("4 coaches. One team")) {
+  fail("native-dist missing canonical login subtitle");
+}
+if (bundle.includes("Sign in locally")) {
+  fail('native-dist must not use legacy "Sign in locally" card copy');
 }
 if (/Loading secure sign-in/i.test(bundle)) {
   fail('native-dist must not contain "Loading secure sign-in"');
@@ -91,8 +100,11 @@ function assertPackagedMirror(label, relative) {
     return;
   }
   const packaged = readAllUnder(relative);
-  if (!packaged.includes("Sign in locally")) {
-    fail(`${label}: packaged assets missing "Sign in locally"`);
+  if (!packaged.includes("Send login code")) {
+    fail(`${label}: packaged assets missing "Send login code"`);
+  }
+  if (packaged.includes("Sign in locally")) {
+    fail(`${label}: packaged assets still use legacy "Sign in locally" copy`);
   }
   if (/Loading secure sign-in/i.test(packaged)) {
     fail(`${label}: packaged assets still contain Next AuthLoadingFallback text`);
@@ -146,5 +158,5 @@ try {
   /* already failed above */
 }
 console.log(
-  `[native-verify] OK shell=Sign in locally supabase_host=${hostLabel} api=kaifyai.org server.url=absent`,
+  `[native-verify] OK shell=canonical-login supabase_host=${hostLabel} api=kaifyai.org server.url=absent`,
 );

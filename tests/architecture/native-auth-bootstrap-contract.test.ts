@@ -37,11 +37,12 @@ describe("native auth bootstrap packaging", () => {
   });
 
   it("rejects Next AuthLoadingFallback and placeholder hosts in verify", () => {
-    expect(verify).toContain("Sign in locally");
+    expect(verify).toContain("Send login code");
     expect(verify).toContain("Loading secure sign-in");
     expect(verify).toContain("xyzcompany.supabase.co");
     expect(verify).toContain("test-anon-key");
     expect(verify).toContain("server.url");
+    expect(verify).toContain("Sign in locally");
   });
 
   it("Codemagic uses native:build not build:cap for store shells", () => {

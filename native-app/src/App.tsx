@@ -13,6 +13,13 @@ import {
 } from "./api";
 import { sendNativeEmailOtp, verifyNativeEmailOtp, NATIVE_CLIENT_VERSION } from "./auth-otp";
 import { supabase } from "./session";
+import {
+  NativeLoginBoot,
+  NativeLoginScreen,
+  type NativeAuthMode,
+  type NativeAuthStep,
+} from "./login/NativeLoginScreen";
+import { useNativeKeyboardOffset } from "./login/useNativeKeyboardOffset";
 
 type Screen = "login" | "signup" | "verify" | "plan" | "welcome" | "chat";
 
@@ -34,13 +41,18 @@ function postNativeEvent(
 }
 
 export function App() {
+  useNativeKeyboardOffset();
+
   const [screen, setScreen] = useState<Screen>("login");
+  const [authMode, setAuthMode] = useState<NativeAuthMode>("login");
+  const [authStep, setAuthStep] = useState<NativeAuthStep>("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [acceptedAi, setAcceptedAi] = useState(false);
   const [profile, setProfile] = useState<NativeProfile | null>(null);
   const [busy, setBusy] = useState(true);
+  const [authBusy, setAuthBusy] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -105,7 +117,10 @@ export function App() {
         return;
       }
       setScreen(next);
-    }).then((handle) => {
+      if (next === "login" || next === "signup") {
+        setAuthMode(next === "signup" ? "signup" : "login");
+        setAuthStep("email");
+      }    }).then((handle) => {
       removeUrlListener = () => {
         void handle.remove();
       };
@@ -120,9 +135,8 @@ export function App() {
     };
   }, [resolveSignedInDestination]);
 
-  async function sendCode(event: FormEvent) {
-    event.preventDefault();
-    setBusy(true);
+  async function sendCode() {
+    setAuthBusy(true);
     setError("");
     try {
       const result = await sendNativeEmailOtp(email);
@@ -130,17 +144,17 @@ export function App() {
         setError(result.message);
         return;
       }
+      setAuthStep("code");
       setScreen("verify");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not send code.");
     } finally {
-      setBusy(false);
+      setAuthBusy(false);
     }
   }
 
-  async function verifyCode(event: FormEvent) {
-    event.preventDefault();
-    setBusy(true);
+  async function verifyCode() {
+    setAuthBusy(true);
     setError("");
     try {
       const result = await verifyNativeEmailOtp(email, otp);
@@ -155,7 +169,7 @@ export function App() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Account check failed.");
     } finally {
-      setBusy(false);
+      setAuthBusy(false);
     }
   }
 
@@ -219,11 +233,50 @@ export function App() {
   async function signOut() {
     await supabase.auth.signOut();
     setProfile(null);
+    setAuthStep("email");
     setScreen("login");
   }
 
-  if (busy && screen === "login") {
-    return <main className="center"><div className="spinner" /><p>Opening Kaify Ai…</p></main>;
+  const showAuth =
+    screen === "login" || screen === "signup" || screen === "verify";
+
+  if (busy && showAuth) {
+    return <NativeLoginBoot />;
+  }
+
+  if (showAuth) {
+    return (
+      <NativeLoginScreen
+        mode={authMode}
+        step={screen === "verify" || authStep === "code" ? "code" : "email"}
+        email={email}
+        otp={otp}
+        busy={authBusy}
+        online={online}
+        error={error}
+        acceptedLegal={acceptedLegal}
+        acceptedAi={acceptedAi}
+        onEmailChange={setEmail}
+        onOtpChange={setOtp}
+        onAcceptedLegalChange={setAcceptedLegal}
+        onAcceptedAiChange={setAcceptedAi}
+        onModeChange={(mode) => {
+          setError("");
+          setAuthMode(mode);
+          setAuthStep("email");
+          setScreen(mode === "signup" ? "signup" : "login");
+        }}
+        onStepChange={(step) => {
+          setAuthStep(step);
+          if (step === "email") {
+            setScreen(authMode === "signup" ? "signup" : "login");
+          }
+        }}
+        onSendCode={sendCode}
+        onVerifyCode={verifyCode}
+        onClearError={() => setError("")}
+      />
+    );
   }
 
   return (
@@ -252,39 +305,6 @@ export function App() {
         {profile && <button className="link" onClick={() => void signOut()}>Sign out</button>}
       </header>
       {error && <div className="error" role="alert">{error}</div>}
-
-      {(screen === "login" || screen === "signup") && (
-        <section className="card auth-card">
-          <p className="eyebrow">{screen === "login" ? "WELCOME BACK" : "CREATE ACCOUNT"}</p>
-          <h1>{screen === "login" ? "Sign in locally" : "Start your Kaify journey"}</h1>
-          <p>The interface stays on your device. Account verification uses Kaify&apos;s secure remote API.</p>
-          <form onSubmit={(event) => void sendCode(event)}>
-            <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" /></label>
-            {screen === "signup" && (
-              <>
-                <label className="check"><input type="checkbox" checked={acceptedLegal} onChange={(event) => setAcceptedLegal(event.target.checked)} />I accept the Terms and Privacy Policy.</label>
-                <label className="check"><input type="checkbox" checked={acceptedAi} onChange={(event) => setAcceptedAi(event.target.checked)} />I explicitly consent to AI processing of fitness and health data. I can withdraw this optional consent later.</label>
-              </>
-            )}
-            <button disabled={busy || !online || (screen === "signup" && (!acceptedLegal || !acceptedAi))}>{busy ? "Sending…" : "Send secure code"}</button>
-          </form>
-          <button className="link" onClick={() => { setError(""); setScreen(screen === "login" ? "signup" : "login"); }}>
-            {screen === "login" ? "Create an account" : "Already have an account?"}
-          </button>
-        </section>
-      )}
-
-      {screen === "verify" && (
-        <section className="card auth-card">
-          <p className="eyebrow">VERIFY EMAIL</p>
-          <h1>Enter your code</h1>
-          <p>We sent a one-time code to {email}.</p>
-          <form onSubmit={(event) => void verifyCode(event)}>
-            <label>6-digit code<input value={otp} onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" required /></label>
-            <button disabled={busy || otp.length !== 6 || !online}>{busy ? "Verifying…" : "Verify"}</button>
-          </form>
-        </section>
-      )}
 
       {screen === "plan" && (
         <section>
