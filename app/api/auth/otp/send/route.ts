@@ -10,24 +10,12 @@ import {
 } from "@/lib/api/rate-guard";
 import { mapGoTrueOtpSendError } from "@/lib/auth/map-otp-send-error";
 import { sendAuthEmailOtp } from "@/lib/auth/send-otp-server";
-import { isNativeOtpOrigin } from "@/lib/native/otp-cors";
+import { shouldSkipOtpCaptchaForNativeOrigin } from "@/lib/native/otp-cors";
 import { SupabaseEnvError } from "@/lib/supabase/env";
 import { otpSendSchema } from "@/lib/validations/auth-otp.schema";
 import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
-
-/**
- * Captcha gate for OTP send.
- * Exact native OTP origins skip web reCAPTCHA (flow selection only — not a
- * security proof). Web and all other origins keep existing v2 validation.
- * Rate limits always apply regardless of captcha path.
- */
-export function shouldSkipOtpCaptchaForNativeOrigin(
-  origin: string | null,
-): boolean {
-  return isNativeOtpOrigin(origin);
-}
 
 /** POST /api/auth/otp/send — email OTP for sign-in / sign-up (server-side Supabase). */
 export const POST = defineRouteRaw(

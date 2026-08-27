@@ -10,8 +10,11 @@ import {
   OTP_TARGET_RATE_LIMIT,
   OTP_VERIFY_TARGET_RATE_LIMIT,
 } from "@/lib/api/rate-guard";
-import { NATIVE_OTP_ORIGINS, isNativeOtpOrigin } from "@/lib/native/otp-cors";
-import { shouldSkipOtpCaptchaForNativeOrigin } from "@/app/api/auth/otp/send/route";
+import {
+  NATIVE_OTP_ORIGINS,
+  isNativeOtpOrigin,
+  shouldSkipOtpCaptchaForNativeOrigin,
+} from "@/lib/native/otp-cors";
 import { middleware } from "@/middleware";
 import { NextRequest } from "next/server";
 

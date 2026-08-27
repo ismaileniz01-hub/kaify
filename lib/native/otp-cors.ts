@@ -12,6 +12,20 @@ export function isNativeOtpOrigin(origin: string | null): boolean {
   return (NATIVE_OTP_ORIGINS as readonly string[]).includes(origin);
 }
 
+/**
+ * Captcha gate for OTP send.
+ * Exact native OTP origins skip web reCAPTCHA (flow selection only — not a
+ * security proof). Web and all other origins keep existing v2 validation.
+ * Rate limits always apply regardless of captcha path.
+ *
+ * Kept out of `app/api/.../route.ts` so Next.js route type checks stay valid.
+ */
+export function shouldSkipOtpCaptchaForNativeOrigin(
+  origin: string | null,
+): boolean {
+  return isNativeOtpOrigin(origin);
+}
+
 export function isNativeOtpPath(pathname: string): boolean {
   return (
     pathname === "/api/auth/otp/send" || pathname === "/api/auth/otp/verify"
