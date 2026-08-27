@@ -16,6 +16,11 @@ import {
   isLegacyPublicApi,
   legacyApiDeprecationHeaders,
 } from "@/lib/api/v1-manifest";
+import {
+  applyNativeOtpCorsHeaders,
+  isNativeOtpPath,
+  isNativeOtpRequest,
+} from "@/lib/native/otp-cors";
 
 const RATE_LIMIT_CONFIG = {
   api: { requests: 400, windowMs: 60 * 1000 },
@@ -129,11 +134,43 @@ async function finalizeResponse(
   }
 
   const finalized = await attachCsrfCookie(forwardedRequest, response);
-  return attachCorsHeaders(forwardedRequest, finalized);
+  const withCors = attachCorsHeaders(forwardedRequest, finalized);
+  if (isNativeOtpPath(pathname)) {
+    return applyNativeOtpCorsHeaders(forwardedRequest, withCors);
+  }
+  return withCors;
+}
+
+function jsonDenied(
+  request: NextRequest,
+  pathname: string,
+  body: Record<string, string>,
+  status: number,
+  extraHeaders?: Record<string, string>,
+) {
+  const response = new NextResponse(JSON.stringify(body), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      ...extraHeaders,
+    },
+  });
+  if (isNativeOtpPath(pathname)) {
+    return applyNativeOtpCorsHeaders(request, response);
+  }
+  return response;
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const nativeOtp = isNativeOtpRequest(request, pathname);
+
+  if (request.method === "OPTIONS" && nativeOtp) {
+    return applyNativeOtpCorsHeaders(
+      request,
+      new NextResponse(null, { status: 204 }),
+    );
+  }
 
   if (
     pathname.startsWith("/api/") &&
@@ -164,13 +201,12 @@ export async function middleware(request: NextRequest) {
     !pathname.startsWith("/api/cron/") &&
     pathname !== "/api/health" &&
     pathname !== CSP_REPORT_PATH &&
-    isLikelyBot(request)
+    isLikelyBot(request) &&
+    // Capacitor shells often omit/shorten UA; never 403 native OTP on bot heuristics.
+    !nativeOtp
   ) {
     logger.warn("middleware blocked bot request", { requestId, pathname, ip });
-    return new NextResponse(
-      JSON.stringify({ error: "Access denied" }),
-      { status: 403, headers: { "Content-Type": "application/json" } },
-    );
+    return jsonDenied(request, pathname, { error: "Access denied" }, 403);
   }
 
   if (
@@ -178,7 +214,8 @@ export async function middleware(request: NextRequest) {
     !pathname.startsWith("/api/webhooks/") &&
     pathname !== CSP_REPORT_PATH &&
     ["POST", "PUT", "DELETE", "PATCH"].includes(request.method) &&
-    !isAllowedOrigin(request)
+    !isAllowedOrigin(request) &&
+    !nativeOtp
   ) {
     logger.warn("middleware blocked cross-origin request", {
       requestId,
@@ -186,10 +223,7 @@ export async function middleware(request: NextRequest) {
       pathname,
       ip,
     });
-    return new NextResponse(
-      JSON.stringify({ error: "Access denied" }),
-      { status: 403, headers: { "Content-Type": "application/json" } },
-    );
+    return jsonDenied(request, pathname, { error: "Access denied" }, 403);
   }
 
   if (pathname === "/api/health") {
@@ -236,16 +270,15 @@ export async function middleware(request: NextRequest) {
 
   if (!rateLimit.allowed) {
     logger.warn("middleware rate limit exceeded", { requestId, bucket, ip });
-    return new NextResponse(
-      JSON.stringify({ error: "Too many requests. Please try again later." }),
+    return jsonDenied(
+      request,
+      pathname,
+      { error: "Too many requests. Please try again later." },
+      429,
       {
-        status: 429,
-        headers: {
-          "Content-Type": "application/json",
-          "Retry-After": String(Math.ceil(rateLimit.resetMs / 1000)),
-          "X-RateLimit-Limit": String(rateLimit.limit),
-          "X-RateLimit-Remaining": String(rateLimit.remaining),
-        },
+        "Retry-After": String(Math.ceil(rateLimit.resetMs / 1000)),
+        "X-RateLimit-Limit": String(rateLimit.limit),
+        "X-RateLimit-Remaining": String(rateLimit.remaining),
       },
     );
   }
