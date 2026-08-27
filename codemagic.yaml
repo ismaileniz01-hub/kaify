@@ -9,8 +9,11 @@ workflows:
 
     environment:
       ios_signing:
-        distribution_type: app_store
-        bundle_identifier: org.kaifyai.app
+        # Explicit profile reference only — excludes legacy "Kaify App Store".
+        # (Cannot mix with distribution_type / bundle_identifier per Codemagic docs.)
+        provisioning_profiles:
+          - profile: kaify_app_store_healthkit
+            environment_variable: KAIFY_PROVISIONING_PROFILE
       vars:
         XCODE_PROJECT: "App.xcodeproj"
         XCODE_SCHEME: "App"
@@ -66,7 +69,14 @@ workflows:
 
       - name: Configure Apple signing
         script: |
-          xcode-project use-profiles --project ios/App/App.xcodeproj
+          # Main app project only; CapApp-SPM / other projects must not pick profiles.
+          if [ -z "${KAIFY_PROVISIONING_PROFILE:-}" ]; then
+            echo "KAIFY_PROVISIONING_PROFILE is empty — expected Codemagic profile kaify_app_store_healthkit"
+            exit 1
+          fi
+          xcode-project use-profiles \
+            --project ios/App/App.xcodeproj \
+            --profile "$KAIFY_PROVISIONING_PROFILE"
 
       - name: Build signed IPA
         script: |
