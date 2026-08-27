@@ -4,6 +4,7 @@
  * Usage:
  *   node scripts/cap-sync.mjs
  *   CAPACITOR_SERVER_URL=http://10.0.2.2:3000 node scripts/cap-sync.mjs
+ *   node scripts/cap-sync.mjs http://10.0.2.2:3000
  */
 import { execSync } from "node:child_process";
 
@@ -31,3 +32,14 @@ execSync("npx cap sync", {
   stdio: "inherit",
   env: syncEnv,
 });
+
+if (!requestedUrl) {
+  execSync("node scripts/native/verify-native-bundle.mjs", {
+    stdio: "inherit",
+    env: syncEnv,
+  });
+} else {
+  console.log(
+    "[cap-sync] skipped release verify while CAPACITOR_SERVER_URL is set",
+  );
+}

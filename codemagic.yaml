@@ -14,7 +14,10 @@ workflows:
       vars:
         XCODE_PROJECT: "App.xcodeproj"
         XCODE_SCHEME: "App"
+        NATIVE_API_BASE_URL: "https://kaifyai.org"
         NEXT_PUBLIC_API_BASE_URL: "https://kaifyai.org"
+        # Public client values only — never service_role / SMTP / secrets in native bundle.
+        # Prefer NEXT_PUBLIC_*; assert-native-public-env also maps SUPABASE_URL / SUPABASE_ANON_KEY.
         NEXT_PUBLIC_SUPABASE_URL: "https://urnetodzvszmddzdazdj.supabase.co"
         NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVybmV0b2R6dnN6bWRkemRhemRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MDQ3NTQsImV4cCI6MjA5ODM4MDc1NH0.EemHnCv-3wf36S-6u5-GxGRJ-1P4uYCOJ-Zl0U-BKxQ"
       node: 22
@@ -25,20 +28,40 @@ workflows:
         script: |
           npm ci
 
-      - name: Build web application
+      - name: Assert native public auth env
         script: |
-          npm run build:cap
+          # Map alternate public names if a Codemagic group uses them.
+          if [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ] && [ -n "${SUPABASE_URL:-}" ]; then
+            export NEXT_PUBLIC_SUPABASE_URL="$SUPABASE_URL"
+          fi
+          if [ -z "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" ] && [ -n "${SUPABASE_ANON_KEY:-}" ]; then
+            export NEXT_PUBLIC_SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+          fi
+          unset CAPACITOR_SERVER_URL || true
+          node scripts/native/assert-native-public-env.mjs
 
-      - name: Create and synchronize iOS project
+      - name: Build local native shell
         script: |
+          unset CAPACITOR_SERVER_URL || true
+          npm run native:build
+
+      - name: Sync Capacitor iOS (native-dist only)
+        script: |
+          unset CAPACITOR_SERVER_URL || true
           if [ ! -d "ios" ]; then
             npx cap add ios
           fi
           npx cap sync ios
+          node scripts/native/verify-native-bundle.mjs
 
       - name: Set iOS build metadata
         script: |
-          perl -0pi -e 's/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $ENV{BUILD_NUMBER};/g' ios/App/App.xcodeproj/project.pbxproj
+          BUILD_NUMBER="${BUILD_NUMBER:-${CM_BUILD_NUMBER:-18}}"
+          if [ "$BUILD_NUMBER" -lt 18 ]; then BUILD_NUMBER=18; fi
+          export BUILD_NUMBER
+          echo "Using iOS CFBundleVersion=$BUILD_NUMBER"
+          perl -0pi -e "s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" ios/App/App.xcodeproj/project.pbxproj
+          perl -0pi -e 's/MARKETING_VERSION = [^;]+;/MARKETING_VERSION = 1.0.2;/g' ios/App/App.xcodeproj/project.pbxproj
           /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/App/App/Info.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" ios/App/App/Info.plist
 
       - name: Configure Apple signing
@@ -60,4 +83,74 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
+        submit_to_testflight: true
+        # Internal testing only — no App Store production submission.
+        submit_to_app_store: false
 
+  kaify-android:
+    name: Kaify Android
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+
+    environment:
+      vars:
+        NATIVE_API_BASE_URL: "https://kaifyai.org"
+        NEXT_PUBLIC_API_BASE_URL: "https://kaifyai.org"
+        NEXT_PUBLIC_SUPABASE_URL: "https://urnetodzvszmddzdazdj.supabase.co"
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVybmV0b2R6dnN6bWRkemRhemRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MDQ3NTQsImV4cCI6MjA5ODM4MDc1NH0.EemHnCv-3wf36S-6u5-GxGRJ-1P4uYCOJ-Zl0U-BKxQ"
+      node: 22
+      java: 17
+
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm ci
+
+      - name: Assert native public auth env
+        script: |
+          if [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ] && [ -n "${SUPABASE_URL:-}" ]; then
+            export NEXT_PUBLIC_SUPABASE_URL="$SUPABASE_URL"
+          fi
+          if [ -z "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" ] && [ -n "${SUPABASE_ANON_KEY:-}" ]; then
+            export NEXT_PUBLIC_SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+          fi
+          unset CAPACITOR_SERVER_URL || true
+          node scripts/native/assert-native-public-env.mjs
+
+      - name: Build local native shell
+        script: |
+          unset CAPACITOR_SERVER_URL || true
+          npm run native:build
+
+      - name: Sync Capacitor Android (native-dist only)
+        script: |
+          unset CAPACITOR_SERVER_URL || true
+          npx cap sync android
+          node scripts/native/verify-native-bundle.mjs
+
+      - name: Set Android version metadata
+        script: |
+          VERSION_CODE="${VERSION_CODE:-${CM_BUILD_NUMBER:-18}}"
+          if [ "$VERSION_CODE" -lt 18 ]; then VERSION_CODE=18; fi
+          echo "Using Android versionCode=$VERSION_CODE versionName=1.0.2"
+          sed -i.bak -E "s/versionCode [0-9]+/versionCode ${VERSION_CODE}/" android/app/build.gradle
+          sed -i.bak -E 's/versionName "[^"]+"/versionName "1.0.2"/' android/app/build.gradle
+
+      - name: Assemble debug APK
+        script: |
+          cd android
+          ./gradlew :app:assembleDebug -x lint -x test
+
+      - name: Bundle release AAB when signing is configured
+        script: |
+          cd android
+          if [ -n "${CM_KEYSTORE_PATH:-}" ] || [ -f key.properties ] || [ -f app/key.properties ]; then
+            ./gradlew :app:bundleRelease -x lint -x test
+          else
+            echo "No Android signing config — skipping bundleRelease (debug APK still produced)."
+          fi
+
+    artifacts:
+      - android/app/build/outputs/apk/debug/*.apk
+      - android/app/build/outputs/bundle/release/*.aab
+      - android/app/build/outputs/apk/release/*.apk
