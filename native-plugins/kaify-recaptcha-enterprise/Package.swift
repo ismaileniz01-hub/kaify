@@ -14,7 +14,7 @@ let package = Package(
         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.5.0"),
         .package(
             url: "https://github.com/GoogleCloudPlatform/recaptcha-enterprise-mobile-sdk.git",
-            from: "18.7.0"
+            from: "18.9.0"
         ),
     ],
     targets: [
