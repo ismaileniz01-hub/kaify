@@ -101,8 +101,28 @@ export async function enforcePublicRateLimit(
  * Per-target OTP send limit (email-hash bucket).
  * Complements IP limiting so rotating IPs cannot linearly bomb one address.
  * Never log or key on plaintext email — callers must pass a pre-hashed bucket.
+ *
+ * 5 / 15 min is stricter than a naive 5/hour short-window burst; kept as-is
+ * (do not loosen). Hourly cap below additionally enforces ≤5 sends/hour.
  */
 export const OTP_TARGET_RATE_LIMIT = {
+  requests: 5,
+  windowMs: 15 * 60 * 1000,
+} as const;
+
+/** Absolute hourly ceiling per hashed email (≤5 sends/hour). */
+export const OTP_TARGET_HOURLY_RATE_LIMIT = {
+  requests: 5,
+  windowMs: 60 * 60 * 1000,
+} as const;
+
+/** Minimum gap between OTP sends for the same hashed email. */
+export const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
+
+export const OTP_RESEND_AFTER_SECONDS = 60;
+
+/** Wrong-code / verify attempts per hashed email. */
+export const OTP_VERIFY_TARGET_RATE_LIMIT = {
   requests: 5,
   windowMs: 15 * 60 * 1000,
 } as const;
@@ -123,6 +143,82 @@ export async function enforceOtpTargetRateLimit(
     throw new ApiError(
       "RATE_LIMITED",
       "Çok hızlı istek gönderiyorsun. Lütfen birkaç saniye bekle.",
+      { retryAfterMs: result.resetMs },
+    );
+  }
+}
+
+export async function enforceOtpTargetHourlyRateLimit(
+  emailHash: string,
+): Promise<void> {
+  const result = await checkRateLimit(
+    `pub:otp_send:target_hour:${emailHash}`,
+    OTP_TARGET_HOURLY_RATE_LIMIT,
+    { failClosedInProduction: true },
+  );
+
+  if (!result.allowed) {
+    logger.warn("otp target hourly rate limit exceeded", {
+      emailHashPrefix: emailHash.slice(0, 8),
+    });
+    throw new ApiError(
+      "RATE_LIMITED",
+      "Bu e-posta için saatlik kod gönderme sınırına ulaşıldı. Lütfen daha sonra dene.",
+      { retryAfterMs: result.resetMs },
+    );
+  }
+}
+
+/**
+ * Enforces the minimum 60s gap between OTP sends for one hashed email.
+ * Distinct error code so native UI can drive the resend timer from Retry-After.
+ */
+export async function enforceOtpResendCooldown(
+  emailHash: string,
+): Promise<void> {
+  const result = await checkRateLimit(
+    `pub:otp_send:cooldown:${emailHash}`,
+    { requests: 1, windowMs: OTP_RESEND_COOLDOWN_MS },
+    { failClosedInProduction: true },
+  );
+
+  if (!result.allowed) {
+    const retryAfterSeconds = Math.max(
+      1,
+      Math.ceil(result.resetMs / 1000),
+    );
+    logger.warn("otp resend cooldown active", {
+      emailHashPrefix: emailHash.slice(0, 8),
+      retryAfterSeconds,
+    });
+    throw new ApiError(
+      "OTP_RESEND_COOLDOWN",
+      "Yeni kod istemeden önce lütfen biraz bekle.",
+      {
+        retryAfterMs: result.resetMs,
+        retryAfterSeconds,
+        resendAfterSeconds: retryAfterSeconds,
+      },
+    );
+  }
+}
+
+export async function enforceOtpVerifyTargetRateLimit(
+  emailHash: string,
+): Promise<void> {
+  const result = await checkRateLimit(
+    `pub:otp_verify:target:${emailHash}`,
+    OTP_VERIFY_TARGET_RATE_LIMIT,
+    { failClosedInProduction: true },
+  );
+
+  if (!result.allowed) {
+    logger.warn("otp verify target rate limit exceeded", {
+      emailHashPrefix: emailHash.slice(0, 8),
+    });
+    throw new ApiError(
+      "RATE_LIMITED",
+      "Çok fazla hatalı kod denemesi. Lütfen daha sonra tekrar dene.",
       { retryAfterMs: result.resetMs },
     );
   }

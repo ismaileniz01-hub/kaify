@@ -1,13 +1,29 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextRequest } from "next/server";
 
-vi.mock("@/lib/api/rate-guard", () => ({
-  enforcePublicRateLimit: vi.fn().mockResolvedValue(undefined),
-  enforceUserRateLimit: vi.fn().mockResolvedValue(undefined),
-  enforceOtpTargetRateLimit: vi.fn().mockResolvedValue(undefined),
-  AI_RATE_LIMITS: {},
-  OTP_TARGET_RATE_LIMIT: { requests: 5, windowMs: 15 * 60 * 1000 },
-}));
+const enforceOtpResendCooldown = vi.fn().mockResolvedValue(undefined);
+const enforceOtpTargetRateLimit = vi.fn().mockResolvedValue(undefined);
+const enforceOtpTargetHourlyRateLimit = vi.fn().mockResolvedValue(undefined);
+const enforceOtpVerifyTargetRateLimit = vi.fn().mockResolvedValue(undefined);
+
+vi.mock("@/lib/api/rate-guard", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/rate-guard")>(
+    "@/lib/api/rate-guard",
+  );
+  return {
+    ...actual,
+    enforcePublicRateLimit: vi.fn().mockResolvedValue(undefined),
+    enforceUserRateLimit: vi.fn().mockResolvedValue(undefined),
+    enforceOtpResendCooldown: (...args: unknown[]) =>
+      enforceOtpResendCooldown(...args),
+    enforceOtpTargetRateLimit: (...args: unknown[]) =>
+      enforceOtpTargetRateLimit(...args),
+    enforceOtpTargetHourlyRateLimit: (...args: unknown[]) =>
+      enforceOtpTargetHourlyRateLimit(...args),
+    enforceOtpVerifyTargetRateLimit: (...args: unknown[]) =>
+      enforceOtpVerifyTargetRateLimit(...args),
+  };
+});
 
 vi.mock("@/lib/observability/tracing", () => ({
   withSpan: async (_name: string, fn: () => Promise<unknown>) => fn(),
@@ -22,13 +38,14 @@ vi.mock("@/lib/auth/send-otp-server", () => ({
   sendAuthEmailOtp: (...args: unknown[]) => sendAuthEmailOtp(...args),
 }));
 
+const validateRecaptcha = vi.fn().mockResolvedValue(true);
 vi.mock("@/lib/api-security", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api-security")>(
     "@/lib/api-security",
   );
   return {
     ...actual,
-    validateRecaptcha: vi.fn().mockResolvedValue(true),
+    validateRecaptcha: (...args: unknown[]) => validateRecaptcha(...args),
     getClientIP: () => "127.0.0.1",
   };
 });
@@ -45,13 +62,20 @@ vi.mock("@/lib/supabase/route-handler", () => ({
 
 import { POST as otpSendPost } from "@/app/api/auth/otp/send/route";
 import { POST as otpVerifyPost } from "@/app/api/auth/otp/verify/route";
+import { ApiError } from "@/lib/api/errors";
 import { mapGoTrueOtpSendError, mapOtpSendError } from "@/lib/auth/map-otp-send-error";
 import { otpSendSchema, otpVerifySchema } from "@/lib/validations/auth-otp.schema";
 
-function jsonRequest(body: unknown): NextRequest {
+function jsonRequest(
+  body: unknown,
+  headers?: Record<string, string>,
+): NextRequest {
   return {
     method: "POST",
-    headers: new Headers({ "content-type": "application/json" }),
+    headers: new Headers({
+      "content-type": "application/json",
+      ...headers,
+    }),
     json: async () => body,
   } as unknown as NextRequest;
 }
@@ -61,6 +85,16 @@ beforeEach(() => {
   vi.stubEnv("RECAPTCHA_SECRET_KEY", "");
   sendAuthEmailOtp.mockReset();
   verifyOtp.mockReset();
+  validateRecaptcha.mockReset();
+  validateRecaptcha.mockResolvedValue(true);
+  enforceOtpResendCooldown.mockReset();
+  enforceOtpResendCooldown.mockResolvedValue(undefined);
+  enforceOtpTargetRateLimit.mockReset();
+  enforceOtpTargetRateLimit.mockResolvedValue(undefined);
+  enforceOtpTargetHourlyRateLimit.mockReset();
+  enforceOtpTargetHourlyRateLimit.mockResolvedValue(undefined);
+  enforceOtpVerifyTargetRateLimit.mockReset();
+  enforceOtpVerifyTargetRateLimit.mockResolvedValue(undefined);
   withCookies.mockImplementation((res: Response) => res);
 });
 
@@ -129,15 +163,72 @@ describe("POST /api/auth/otp/send", () => {
     expect(body.success).toBe(false);
   });
 
-  it("returns sent:true on success", async () => {
+  it("keeps web reCAPTCHA validation", async () => {
     sendAuthEmailOtp.mockResolvedValue({ ok: true });
     const res = await otpSendPost(
-      jsonRequest({ email: "ok@example.com", recaptchaToken: "tok" }),
+      jsonRequest(
+        { email: "ok@example.com", recaptchaToken: "web-tok" },
+        { origin: "https://kaifyai.org" },
+      ),
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { success: true; data: { sent: true } };
-    expect(body.success).toBe(true);
-    expect(body.data.sent).toBe(true);
+    expect(validateRecaptcha).toHaveBeenCalledWith("web-tok");
+  });
+
+  it("skips captcha for exact native origins and returns resendAfterSeconds", async () => {
+    sendAuthEmailOtp.mockResolvedValue({ ok: true });
+    const res = await otpSendPost(
+      jsonRequest(
+        { email: "native@example.com", locale: "en" },
+        {
+          origin: "capacitor://localhost",
+          "x-client-version": "native-1.0.2",
+        },
+      ),
+    );
+    expect(res.status).toBe(200);
+    expect(validateRecaptcha).not.toHaveBeenCalled();
+    expect(sendAuthEmailOtp).toHaveBeenCalled();
+    const body = (await res.json()) as {
+      success: true;
+      data: { sent: true; resendAfterSeconds: number };
+    };
+    expect(body.data).toEqual({ sent: true, resendAfterSeconds: 60 });
+  });
+
+  it("skips captcha for https://localhost native origin", async () => {
+    sendAuthEmailOtp.mockResolvedValue({ ok: true });
+    const res = await otpSendPost(
+      jsonRequest(
+        { email: "native2@example.com" },
+        { origin: "https://localhost" },
+      ),
+    );
+    expect(res.status).toBe(200);
+    expect(validateRecaptcha).not.toHaveBeenCalled();
+  });
+
+  it("returns 429 OTP_RESEND_COOLDOWN with Retry-After on early resend", async () => {
+    enforceOtpResendCooldown.mockRejectedValueOnce(
+      new ApiError("OTP_RESEND_COOLDOWN", "Yeni kod istemeden önce lütfen biraz bekle.", {
+        retryAfterMs: 45_000,
+        retryAfterSeconds: 45,
+      }),
+    );
+    const res = await otpSendPost(
+      jsonRequest(
+        { email: "cool@example.com" },
+        { origin: "capacitor://localhost" },
+      ),
+    );
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toBe("45");
+    const body = (await res.json()) as {
+      success: false;
+      error: { code: string };
+    };
+    expect(body.error.code).toBe("OTP_RESEND_COOLDOWN");
+    expect(sendAuthEmailOtp).not.toHaveBeenCalled();
   });
 
   it("maps GoTrue rate limit to RATE_LIMITED", async () => {
@@ -174,6 +265,36 @@ describe("POST /api/auth/otp/verify", () => {
     expect(withCookies).toHaveBeenCalled();
     const body = (await res.json()) as { success: true; data: { verified: true } };
     expect(body.data.verified).toBe(true);
+  });
+
+  it("returns native session tokens for exact Capacitor origins", async () => {
+    verifyOtp.mockResolvedValueOnce({
+      data: {
+        session: {
+          access_token: "access-token",
+          refresh_token: "refresh-token",
+        },
+      },
+      error: null,
+    });
+    const res = await otpVerifyPost(
+      jsonRequest(
+        { email: "ok@example.com", token: "123456" },
+        { origin: "https://localhost" },
+      ),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      success: true;
+      data: {
+        verified: true;
+        session?: { accessToken: string; refreshToken: string };
+      };
+    };
+    expect(body.data.session).toEqual({
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+    });
   });
 
   it("falls back to signup type then fails as UNAUTHORIZED", async () => {

@@ -12,6 +12,8 @@ export const API_ERROR_STATUS = {
   NOT_FOUND: 404,
   CONFLICT: 409,
   RATE_LIMITED: 429,
+  /** OTP resend before the per-email cooldown elapsed. */
+  OTP_RESEND_COOLDOWN: 429,
   INTERNAL_ERROR: 500,
   SERVICE_UNAVAILABLE: 503,
 } as const;

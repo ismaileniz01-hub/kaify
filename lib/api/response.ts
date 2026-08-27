@@ -54,7 +54,29 @@ export function fail(error: ApiError): NextResponse<ApiFailure> {
       ...(includeDetails ? { details: error.details } : {}),
     },
   };
-  return NextResponse.json(body, { status: error.status });
+  const response = NextResponse.json(body, { status: error.status });
+
+  if (
+    error.code === "RATE_LIMITED" ||
+    error.code === "OTP_RESEND_COOLDOWN"
+  ) {
+    const details = error.details as
+      | { retryAfterMs?: unknown; retryAfterSeconds?: unknown }
+      | undefined;
+    const retryAfterSeconds =
+      typeof details?.retryAfterSeconds === "number" &&
+      Number.isFinite(details.retryAfterSeconds)
+        ? Math.max(1, Math.ceil(details.retryAfterSeconds))
+        : typeof details?.retryAfterMs === "number" &&
+            Number.isFinite(details.retryAfterMs)
+          ? Math.max(1, Math.ceil(details.retryAfterMs / 1000))
+          : null;
+    if (retryAfterSeconds !== null) {
+      response.headers.set("Retry-After", String(retryAfterSeconds));
+    }
+  }
+
+  return response;
 }
 
 /**

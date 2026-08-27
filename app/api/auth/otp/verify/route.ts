@@ -1,8 +1,11 @@
 import { defineRouteRaw } from "@/lib/api/route-handler";
 import { ApiError } from "@/lib/api/errors";
 import { fail, ok } from "@/lib/api/response";
+import { hashEmail } from "@/lib/api-security";
+import { enforceOtpVerifyTargetRateLimit } from "@/lib/api/rate-guard";
 import { createRouteHandlerSupabase } from "@/lib/supabase/route-handler";
 import { SupabaseEnvError } from "@/lib/supabase/env";
+import { isNativeOtpOrigin } from "@/lib/native/otp-cors";
 import { otpVerifySchema } from "@/lib/validations/auth-otp.schema";
 
 export const runtime = "nodejs";
@@ -25,6 +28,14 @@ export const POST = defineRouteRaw(
       );
     }
 
+    const emailHash = await hashEmail(parsed.data.email);
+    try {
+      await enforceOtpVerifyTargetRateLimit(emailHash);
+    } catch (error) {
+      if (error instanceof ApiError) return fail(error);
+      throw error;
+    }
+
     try {
       const { supabase, withCookies } = createRouteHandlerSupabase(request);
 
@@ -44,6 +55,7 @@ export const POST = defineRouteRaw(
         });
 
         if (signupAttempt.error) {
+          // Uniform unauthorized — do not reveal whether the email is registered.
           return withCookies(
             fail(
               new ApiError("UNAUTHORIZED", "Invalid or expired code. Please try again."),
@@ -54,15 +66,14 @@ export const POST = defineRouteRaw(
       }
 
       const origin = request.headers.get("origin");
-      const isNativeOrigin =
-        origin === "capacitor://localhost" ||
-        origin === "https://localhost" ||
-        origin === "http://localhost";
+      const returnNativeSession =
+        Boolean(session?.access_token && session.refresh_token) &&
+        isNativeOtpOrigin(origin);
 
       return withCookies(
         ok({
           verified: true as const,
-          ...(isNativeOrigin && session
+          ...(returnNativeSession && session
             ? {
                 session: {
                   accessToken: session.access_token,
