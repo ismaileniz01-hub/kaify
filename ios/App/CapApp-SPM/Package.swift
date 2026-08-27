@@ -21,7 +21,8 @@ let package = Package(
         .package(name: "CapacitorSplashScreen", path: "..\..\..\node_modules\@capacitor\splash-screen"),
         .package(name: "CapacitorStatusBar", path: "..\..\..\node_modules\@capacitor\status-bar"),
         .package(name: "CapgoCapacitorHealth", path: "..\..\..\node_modules\@capgo\capacitor-health"),
-        .package(name: "CapgoCapacitorSpeechRecognition", path: "..\..\..\node_modules\@capgo\capacitor-speech-recognition")
+        .package(name: "CapgoCapacitorSpeechRecognition", path: "..\..\..\node_modules\@capgo\capacitor-speech-recognition"),
+        .package(name: "KaifyRecaptchaEnterprise", path: "..\..\..\native-plugins\kaify-recaptcha-enterprise")
     ],
     targets: [
         .target(
@@ -38,7 +39,8 @@ let package = Package(
                 .product(name: "CapacitorSplashScreen", package: "CapacitorSplashScreen"),
                 .product(name: "CapacitorStatusBar", package: "CapacitorStatusBar"),
                 .product(name: "CapgoCapacitorHealth", package: "CapgoCapacitorHealth"),
-                .product(name: "CapgoCapacitorSpeechRecognition", package: "CapgoCapacitorSpeechRecognition")
+                .product(name: "CapgoCapacitorSpeechRecognition", package: "CapgoCapacitorSpeechRecognition"),
+                .product(name: "KaifyRecaptchaEnterprise", package: "KaifyRecaptchaEnterprise")
             ]
         )
     ]

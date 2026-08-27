@@ -33,6 +33,16 @@ vi.mock("@/lib/api-security", async () => {
   };
 });
 
+vi.mock("@/lib/security/recaptcha-enterprise-mobile", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/lib/security/recaptcha-enterprise-mobile")
+  >("@/lib/security/recaptcha-enterprise-mobile");
+  return {
+    ...actual,
+    validateRecaptchaEnterpriseMobileToken: vi.fn().mockResolvedValue(true),
+  };
+});
+
 const verifyOtp = vi.fn();
 const withCookies = vi.fn((res: Response) => res);
 
@@ -131,6 +141,18 @@ describe("POST /api/auth/otp/send", () => {
     const body = (await res.json()) as { success: true; data: { sent: true } };
     expect(body.success).toBe(true);
     expect(body.data.sent).toBe(true);
+  });
+
+  it("accepts native enterprise token path without web recaptchaToken", async () => {
+    sendAuthEmailOtp.mockResolvedValue({ ok: true });
+    const res = await otpSendPost(
+      jsonRequest({
+        email: "native@example.com",
+        recaptchaPlatform: "ios",
+        recaptchaEnterpriseToken: "ios-enterprise-token-abcdefghijklmnopqrstuvwxyz",
+      }),
+    );
+    expect(res.status).toBe(200);
   });
 
   it("maps GoTrue rate limit to RATE_LIMITED", async () => {

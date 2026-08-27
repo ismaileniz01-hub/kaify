@@ -78,6 +78,7 @@
     "@capacitor/status-bar": "^8.0.2",
     "@capgo/capacitor-health": "^8.10.4",
     "@capgo/capacitor-speech-recognition": "^8.1.9",
+    "kaify-recaptcha-enterprise": "file:native-plugins/kaify-recaptcha-enterprise",
     "@paddle/paddle-js": "^1.6.4",
     "@paddle/paddle-node-sdk": "^3.8.0",
     "@sentry/nextjs": "^10.62.0",

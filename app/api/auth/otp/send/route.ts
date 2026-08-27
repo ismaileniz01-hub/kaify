@@ -1,21 +1,27 @@
 import { defineRouteRaw } from "@/lib/api/route-handler";
 import { ApiError } from "@/lib/api/errors";
 import { fail, ok } from "@/lib/api/response";
-import { hashEmail, validateRecaptcha } from "@/lib/api-security";
+import { hashEmail } from "@/lib/api-security";
 import { enforceOtpTargetRateLimit } from "@/lib/api/rate-guard";
 import { mapGoTrueOtpSendError } from "@/lib/auth/map-otp-send-error";
 import { sendAuthEmailOtp } from "@/lib/auth/send-otp-server";
+import { RECAPTCHA_ENTERPRISE_ACTION_OTP_SEND } from "@/lib/security/recaptcha-enterprise-mobile";
+import { validateOtpCaptcha } from "@/lib/security/otp-captcha";
 import { SupabaseEnvError } from "@/lib/supabase/env";
 import { otpSendSchema } from "@/lib/validations/auth-otp.schema";
 import { logger } from "@/lib/logger";
-import { isNativeWebViewRequest } from "@/lib/native/webview-request";
-import { emitProductEvent, productEventIdempotencyKey } from "@/lib/events/product";
 
 export const runtime = "nodejs";
 
 /** POST /api/auth/otp/send — email OTP for sign-in / sign-up (server-side Supabase). */
 export const POST = defineRouteRaw(
-  { route: "POST /api/auth/otp/send", auth: "none", publicRateLimit: "otp_send" },
+  {
+    route: "POST /api/auth/otp/send",
+    auth: "none",
+    publicRateLimit: "otp_send",
+    // Public OTP; Capacitor has no double-submit CSRF cookie.
+    requireCsrf: false,
+  },
   async ({ request }) => {
     const body = await request.json().catch(() => null);
     const parsed = otpSendSchema.safeParse(body);
@@ -25,10 +31,13 @@ export const POST = defineRouteRaw(
       );
     }
 
-    const skipCaptcha = isNativeWebViewRequest(request);
-    const captchaOk = skipCaptcha
-      ? true
-      : await validateRecaptcha(parsed.data.recaptchaToken ?? "");
+    const captchaOk = await validateOtpCaptcha({
+      request,
+      recaptchaToken: parsed.data.recaptchaToken,
+      recaptchaEnterpriseToken: parsed.data.recaptchaEnterpriseToken,
+      recaptchaPlatform: parsed.data.recaptchaPlatform,
+      expectedEnterpriseAction: RECAPTCHA_ENTERPRISE_ACTION_OTP_SEND,
+    });
     if (!captchaOk) {
       return fail(new ApiError("FORBIDDEN", "reCAPTCHA doğrulaması başarısız."));
     }
@@ -56,26 +65,8 @@ export const POST = defineRouteRaw(
           message: result.error.message,
           status: result.error.status,
         });
-        emitProductEvent({
-          name: "signup.failed",
-          properties: { flow: "otp", error: result.error.code || "send_failed" },
-          idempotencyKey: productEventIdempotencyKey([
-            "signup.failed",
-            emailHash,
-            result.error.code,
-          ]),
-        });
         return fail(mapGoTrueOtpSendError(result.error));
       }
-
-      emitProductEvent({
-        name: "signup.otp_requested",
-        properties: { flow: "otp", method: "email" },
-        idempotencyKey: productEventIdempotencyKey([
-          "signup.otp_requested",
-          emailHash,
-        ]),
-      });
 
       return ok({ sent: true as const });
     } catch (error) {

@@ -65,10 +65,23 @@ export default defineConfig(({ mode }) => {
       process.env.NATIVE_API_BASE_URL?.trim() ||
       env.NATIVE_API_BASE_URL ||
       "",
+    NEXT_PUBLIC_RECAPTCHA_ENTERPRISE_IOS_SITE_KEY:
+      process.env.NEXT_PUBLIC_RECAPTCHA_ENTERPRISE_IOS_SITE_KEY?.trim() ||
+      env.NEXT_PUBLIC_RECAPTCHA_ENTERPRISE_IOS_SITE_KEY ||
+      "",
+    RECAPTCHA_ENTERPRISE_IOS_SITE_KEY:
+      process.env.RECAPTCHA_ENTERPRISE_IOS_SITE_KEY?.trim() ||
+      env.RECAPTCHA_ENTERPRISE_IOS_SITE_KEY ||
+      "",
   };
   const { url, anon } = requirePublicAuthEnv(merged);
   const apiBase =
     merged.NATIVE_API_BASE_URL.trim() || "https://kaifyai.org";
+  const iosRecaptchaKey = (
+    merged.NEXT_PUBLIC_RECAPTCHA_ENTERPRISE_IOS_SITE_KEY ||
+    merged.RECAPTCHA_ENTERPRISE_IOS_SITE_KEY ||
+    ""
+  ).trim();
 
   return {
     root: "native-app",
@@ -84,6 +97,7 @@ export default defineConfig(({ mode }) => {
       __KAIFY_API_BASE__: JSON.stringify(apiBase),
       __SUPABASE_URL__: JSON.stringify(url),
       __SUPABASE_ANON_KEY__: JSON.stringify(anon),
+      __RECAPTCHA_ENTERPRISE_IOS_SITE_KEY__: JSON.stringify(iosRecaptchaKey),
     },
     build: {
       outDir: "../native-dist",

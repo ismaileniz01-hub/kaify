@@ -1,7 +1,13 @@
 import { isCompleteOtp, normalizeOtpInput } from "@/lib/auth/otp";
+import {
+  RECAPTCHA_ENTERPRISE_ACTION_OTP_SEND,
+  RECAPTCHA_ENTERPRISE_ACTION_OTP_VERIFY,
+  executeNativeRecaptchaEnterprise,
+} from "./recaptcha-enterprise";
 import { supabase } from "./session";
 
 const NATIVE_CLIENT_VERSION = "native-1.0.2";
+const ENTERPRISE_TOKEN_HEADER = "X-Recaptcha-Enterprise-Token";
 
 type ApiSuccess<T> = { success: true; data: T };
 type ApiFailure = {
@@ -29,14 +35,20 @@ async function parseApiJson<T>(
 async function publicAuthPost<T>(
   path: string,
   body: Record<string, unknown>,
+  enterpriseToken?: string,
 ): Promise<{ ok: true; data: T } | { ok: false; message: string }> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    "X-Client-Version": NATIVE_CLIENT_VERSION,
+  };
+  if (enterpriseToken) {
+    headers[ENTERPRISE_TOKEN_HEADER] = enterpriseToken;
+  }
+
   const response = await fetch(`${__KAIFY_API_BASE__}${path}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "X-Client-Version": NATIVE_CLIENT_VERSION,
-    },
+    headers,
     body: JSON.stringify(body),
   });
   const payload = await parseApiJson<T>(response);
@@ -54,10 +66,21 @@ export async function sendNativeEmailOtp(
   email: string,
   locale: "tr" | "en" = "en",
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const result = await publicAuthPost<{ sent: true }>("/api/auth/otp/send", {
-    email: email.trim().toLowerCase(),
-    locale,
-  });
+  const captcha = await executeNativeRecaptchaEnterprise(
+    RECAPTCHA_ENTERPRISE_ACTION_OTP_SEND,
+  );
+  if (!captcha.ok) return captcha;
+
+  const result = await publicAuthPost<{ sent: true }>(
+    "/api/auth/otp/send",
+    {
+      email: email.trim().toLowerCase(),
+      locale,
+      recaptchaPlatform: "ios",
+      recaptchaEnterpriseToken: captcha.token,
+    },
+    captcha.token,
+  );
   if (!result.ok) return result;
   return { ok: true };
 }
@@ -71,13 +94,24 @@ export async function verifyNativeEmailOtp(
     return { ok: false, message: "Enter the 6-digit code from your email." };
   }
 
+  const captcha = await executeNativeRecaptchaEnterprise(
+    RECAPTCHA_ENTERPRISE_ACTION_OTP_VERIFY,
+  );
+  if (!captcha.ok) return captcha;
+
   const result = await publicAuthPost<{
     verified: true;
     session?: { accessToken: string; refreshToken: string };
-  }>("/api/auth/otp/verify", {
-    email: email.trim().toLowerCase(),
-    token: normalized,
-  });
+  }>(
+    "/api/auth/otp/verify",
+    {
+      email: email.trim().toLowerCase(),
+      token: normalized,
+      recaptchaPlatform: "ios",
+      recaptchaEnterpriseToken: captcha.token,
+    },
+    captcha.token,
+  );
   if (!result.ok) return result;
 
   const session = result.data.session;

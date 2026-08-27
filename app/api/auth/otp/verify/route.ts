@@ -6,12 +6,22 @@ import { SupabaseEnvError } from "@/lib/supabase/env";
 import { otpVerifySchema } from "@/lib/validations/auth-otp.schema";
 import { emitProductEvent, productEventIdempotencyKey } from "@/lib/events/product";
 import { isNativeWebViewRequest } from "@/lib/native/webview-request";
+import { RECAPTCHA_ENTERPRISE_ACTION_OTP_VERIFY } from "@/lib/security/recaptcha-enterprise-mobile";
+import {
+  extractRecaptchaEnterpriseToken,
+  validateOtpCaptcha,
+} from "@/lib/security/otp-captcha";
 
 export const runtime = "nodejs";
 
 /** POST /api/auth/otp/verify — verify email OTP and set session cookies on the response. */
 export const POST = defineRouteRaw(
-  { route: "POST /api/auth/otp/verify", auth: "none", publicRateLimit: "otp_verify" },
+  {
+    route: "POST /api/auth/otp/verify",
+    auth: "none",
+    publicRateLimit: "otp_verify",
+    requireCsrf: false,
+  },
   async ({ request }) => {
     const body = await request.json().catch(() => null);
     const parsed = otpVerifySchema.safeParse(body);
@@ -19,6 +29,24 @@ export const POST = defineRouteRaw(
       return fail(
         new ApiError("VALIDATION_ERROR", "Invalid verification code.", parsed.error.issues),
       );
+    }
+
+    // Native Enterprise token is optional on verify for web compatibility.
+    // When present, validate via Enterprise assessment (never Origin bypass).
+    const enterpriseToken = extractRecaptchaEnterpriseToken(
+      request,
+      parsed.data.recaptchaEnterpriseToken,
+    );
+    if (enterpriseToken) {
+      const captchaOk = await validateOtpCaptcha({
+        request,
+        recaptchaEnterpriseToken: enterpriseToken,
+        recaptchaPlatform: parsed.data.recaptchaPlatform ?? "ios",
+        expectedEnterpriseAction: RECAPTCHA_ENTERPRISE_ACTION_OTP_VERIFY,
+      });
+      if (!captchaOk) {
+        return fail(new ApiError("FORBIDDEN", "reCAPTCHA doğrulaması başarısız."));
+      }
     }
 
     try {
