@@ -16,12 +16,26 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            // Codemagic only — never read keystores from the repo or local key.properties.
+            if (System.getenv()["CI"] && System.getenv()["CM_KEYSTORE_PATH"]) {
+                storeFile file(System.getenv()["CM_KEYSTORE_PATH"])
+                storePassword System.getenv()["CM_KEYSTORE_PASSWORD"]
+                keyAlias System.getenv()["CM_KEY_ALIAS"]
+                keyPassword System.getenv()["CM_KEY_PASSWORD"]
+            }
+        }
+    }
     buildTypes {
         release {
             // R8 code shrinking + obfuscation (anti reverse-engineering).
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (System.getenv()["CI"] && System.getenv()["CM_KEYSTORE_PATH"]) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

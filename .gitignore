@@ -51,4 +51,10 @@ android/app/google-services.json
 ios/App/GoogleService-Info.plist
 .env*
 
+# Android signing material must never be committed
+*.keystore
+*.jks
+**/key.properties
+
+
 .env.vercel.prod.tmp

@@ -103,6 +103,8 @@ workflows:
     max_build_duration: 120
 
     environment:
+      android_signing:
+        - kaify_android_upload
       vars:
         NATIVE_API_BASE_URL: "https://kaifyai.org"
         NEXT_PUBLIC_API_BASE_URL: "https://kaifyai.org"
@@ -146,21 +148,65 @@ workflows:
           sed -i.bak -E "s/versionCode [0-9]+/versionCode ${VERSION_CODE}/" android/app/build.gradle
           sed -i.bak -E 's/versionName "[^"]+"/versionName "1.0.2"/' android/app/build.gradle
 
+      - name: Assert Codemagic Android signing env
+        script: |
+          # Presence checks only — never echo keystore secrets or path contents.
+          missing=0
+          for var in CM_KEYSTORE_PATH CM_KEYSTORE_PASSWORD CM_KEY_ALIAS CM_KEY_PASSWORD; do
+            if [ -z "${!var:-}" ]; then
+              echo "Missing required signing env: $var"
+              missing=1
+            else
+              echo "$var is set"
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "android_signing reference kaify_android_upload did not inject CM_* vars"
+            exit 1
+          fi
+          if [ ! -f "$CM_KEYSTORE_PATH" ]; then
+            echo "CM_KEYSTORE_PATH does not point to a readable keystore file"
+            exit 1
+          fi
+          if [ "$CM_KEY_ALIAS" != "kaify" ]; then
+            echo "Unexpected CM_KEY_ALIAS (expected kaify)"
+            exit 1
+          fi
+
       - name: Assemble debug APK
         script: |
           cd android
           ./gradlew :app:assembleDebug -x lint -x test
 
-      - name: Bundle release AAB when signing is configured
+      - name: Bundle signed release AAB
         script: |
           cd android
-          if [ -n "${CM_KEYSTORE_PATH:-}" ] || [ -f key.properties ] || [ -f app/key.properties ]; then
-            ./gradlew :app:bundleRelease -x lint -x test
-          else
-            echo "No Android signing config — skipping bundleRelease (debug APK still produced)."
+          ./gradlew :app:bundleRelease -x lint -x test
+
+      - name: Verify signed AAB certificate fingerprint
+        script: |
+          set -euo pipefail
+          AAB=$(ls -1 android/app/build/outputs/bundle/release/*.aab | head -n 1)
+          echo "AAB=$AAB"
+          TMP=$(mktemp -d)
+          unzip -qo "$AAB" "META-INF/*" -d "$TMP"
+          CERT=$(find "$TMP/META-INF" -type f \( -name '*.RSA' -o -name '*.DSA' -o -name '*.EC' \) | head -n 1)
+          if [ -z "$CERT" ]; then
+            echo "No signing certificate found inside AAB (unsigned?)"
+            exit 1
           fi
+          # Public cert fingerprints only — never print CM_* secret values.
+          keytool -printcert -file "$CERT" | tee /tmp/kaify-aab-cert.txt
+          if ! grep -Eq 'SHA(1|256):' /tmp/kaify-aab-cert.txt; then
+            echo "Could not parse SHA fingerprints from AAB certificate"
+            exit 1
+          fi
+          echo "Signed AAB certificate fingerprint verification OK (no Play upload)."
 
     artifacts:
       - android/app/build/outputs/apk/debug/*.apk
       - android/app/build/outputs/bundle/release/*.aab
       - android/app/build/outputs/apk/release/*.apk
+      - /tmp/kaify-aab-cert.txt
+
+    # Intentionally no google_play publishing — signed AAB only.
