@@ -136,6 +136,19 @@ export function NativeLoginScreen({
     };
   }, [email, refreshNow]);
 
+  useEffect(() => {
+    if (step !== "code") return;
+    const onViewport = () => {
+      document
+        .querySelector("[data-otp-code]")
+        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+    };
+    window.visualViewport?.addEventListener("resize", onViewport);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", onViewport);
+    };
+  }, [step]);
+
   async function applyResendCooldown(seconds: number) {
     const at = computeResendAvailableAt(seconds);
     setResendAvailableAt(at);
@@ -239,7 +252,7 @@ export function NativeLoginScreen({
               </p>
             </div>
 
-            <div className="login-otp-code-block">
+            <div className="login-otp-code-block" data-otp-code>
               <p className="login-otp-code-label">6-digit code</p>
               <NativeOtpDigitInput
                 value={otp}

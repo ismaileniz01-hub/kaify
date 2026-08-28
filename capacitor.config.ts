@@ -25,11 +25,11 @@ const config: CapacitorConfig = {
   appName: "Kaify Ai",
   webDir: "native-dist",
   loggingBehavior: isLocal ? "debug" : "none",
-  // https origin (not capacitor://) so WKWebView CORS matches Android and
-  // third-party APIs that reject custom-scheme origins as "Load failed".
+  // Android WebView origin is https://localhost (OTP CORS).
+  // iOS keeps the default capacitor:// scheme — iosScheme: https crushes
+  // WKWebView layout after the OTP keyboard. GoTrue is intercepted in-app.
   server: {
     androidScheme: "https",
-    iosScheme: "https",
     hostname: "localhost",
     ...(devServerUrl
       ? {

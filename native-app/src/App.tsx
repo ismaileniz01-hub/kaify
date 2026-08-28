@@ -23,6 +23,7 @@ import {
   type NativeAuthMode,
   type NativeAuthStep,
 } from "./login/NativeLoginScreen";
+import { NativeFitnessWallpaper } from "./login/NativeFitnessWallpaper";
 import { useNativeKeyboardOffset } from "./login/useNativeKeyboardOffset";
 
 type Screen = "login" | "signup" | "verify" | "plan" | "welcome" | "chat";
@@ -214,7 +215,7 @@ export function App() {
             ? "Giriş oldu; hesap bilgisi yüklenirken bağlantı koptu. Uygulamayı yeniden açmayı dene."
             : raw,
         );
-        setScreen("plan");
+        // Stay on the OTP UI. Jumping to the post-auth shell made iOS look destroyed.
       }
       return result;
     } catch (cause) {
@@ -339,7 +340,9 @@ export function App() {
   }
 
   return (
-    <main className="shell">
+    <div className="phone-shell login-page">
+      <NativeFitnessWallpaper />
+      <main className="shell">
       {!online && (
         <div className="offline" role="status">
           You&apos;re offline. Your secure session is saved; reconnect to continue.
@@ -408,5 +411,6 @@ export function App() {
         </section>
       )}
     </main>
+    </div>
   );
 }

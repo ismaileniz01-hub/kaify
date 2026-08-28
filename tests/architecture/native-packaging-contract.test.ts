@@ -14,9 +14,9 @@ describe("native local packaging contract", () => {
   const serverAuth = source("lib/supabase/server.ts");
   const middleware = source("middleware.ts");
 
-  it("uses https WebView origins on both iOS and Android", () => {
+  it("keeps Android on https://localhost and iOS on the default capacitor scheme", () => {
     expect(capacitor).toContain('androidScheme: "https"');
-    expect(capacitor).toContain('iosScheme: "https"');
+    expect(capacitor).not.toContain('iosScheme: "https"');
     expect(capacitor).toContain('hostname: "localhost"');
   });
 

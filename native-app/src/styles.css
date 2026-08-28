@@ -23,11 +23,14 @@
 }
 
 * { box-sizing: border-box; }
-html, body, #root { min-height: 100%; }
+html, body, #root {
+  min-height: 100%;
+  height: calc(100dvh - var(--keyboard-offset, 0px));
+  max-height: calc(100dvh - var(--keyboard-offset, 0px));
+}
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100dvh;
   background: #1a0530;
   -webkit-tap-highlight-color: transparent;
 }
@@ -57,6 +60,8 @@ a { color: #d8b4fe; }
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
+  height: calc(100dvh - var(--keyboard-offset, 0px));
+  max-height: calc(100dvh - var(--keyboard-offset, 0px));
   overflow-x: hidden;
   overflow-y: auto;
   background: #1a0530;
@@ -70,12 +75,16 @@ a { color: #d8b4fe; }
   display: flex;
   flex: 1;
   flex-direction: column;
-  min-height: 0;
-  min-height: min(100dvh, 100%);
+  min-height: 100%;
   padding:
     max(3rem, calc(var(--safe-top) + 2.5rem))
     1.5rem
-    max(2rem, calc(var(--safe-bottom) + 1.25rem + var(--keyboard-offset)));
+    max(2rem, calc(var(--safe-bottom) + 1.25rem));
+}
+
+.login-page-main:has(.login-otp-panel--code) {
+  justify-content: flex-start;
+  padding-top: max(1rem, calc(var(--safe-top) + 0.75rem));
 }
 
 .login-hero {
@@ -161,9 +170,10 @@ a { color: #d8b4fe; }
 }
 
 .login-otp-panel--code {
-  margin: auto;
-  gap: 1.25rem;
-  padding-block: 1rem;
+  margin: 0 auto;
+  gap: 0.85rem;
+  padding-block: 0;
+  flex: 0 0 auto;
 }
 
 .login-otp-heading { text-align: center; }
@@ -460,14 +470,20 @@ a { color: #d8b4fe; }
 }
 
 /* Post-auth screens keep compact shell */
+.phone-shell.login-page .shell {
+  position: relative;
+  z-index: 10;
+  background: transparent;
+}
+
 .shell {
   width: min(100%, 960px);
-  min-height: 100dvh;
+  min-height: 100%;
   margin: auto;
   padding:
     max(18px, var(--safe-top))
     18px
-    max(24px, calc(var(--safe-bottom) + var(--keyboard-offset)));
+    max(24px, var(--safe-bottom));
 }
 .center {
   min-height: 100dvh;

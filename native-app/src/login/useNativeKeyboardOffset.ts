@@ -2,19 +2,40 @@ import { useEffect } from "react";
 import { Keyboard } from "@capacitor/keyboard";
 
 /**
- * Mirrors web --keyboard-offset behavior under Capacitor KeyboardResize.None.
+ * Same contract as web: shrink the shell by the covered viewport.
+ * Never add keyboard height as extra padding on 100dvh — that is what
+ * flattened the iOS OTP screen.
  */
 export function useNativeKeyboardOffset() {
   useEffect(() => {
     const root = document.documentElement;
+
+    const setOffset = (px: number) => {
+      root.style.setProperty(
+        "--keyboard-offset",
+        `${Math.max(0, Math.round(px))}px`,
+      );
+    };
+
+    const syncVisualViewport = () => {
+      const viewport = window.visualViewport;
+      if (!viewport) return;
+      const covered = Math.max(
+        0,
+        window.innerHeight - viewport.height - viewport.offsetTop,
+      );
+      setOffset(covered);
+    };
+
     let removeShow: (() => void) | undefined;
     let removeHide: (() => void) | undefined;
 
     void Keyboard.addListener("keyboardWillShow", (info) => {
-      root.style.setProperty(
-        "--keyboard-offset",
-        `${Math.max(0, info.keyboardHeight)}px`,
-      );
+      if (window.visualViewport) {
+        syncVisualViewport();
+        return;
+      }
+      setOffset(Math.max(0, info.keyboardHeight));
     })
       .then((handle) => {
         removeShow = () => {
@@ -24,7 +45,7 @@ export function useNativeKeyboardOffset() {
       .catch(() => undefined);
 
     void Keyboard.addListener("keyboardWillHide", () => {
-      root.style.setProperty("--keyboard-offset", "0px");
+      setOffset(0);
     })
       .then((handle) => {
         removeHide = () => {
@@ -33,10 +54,15 @@ export function useNativeKeyboardOffset() {
       })
       .catch(() => undefined);
 
+    window.visualViewport?.addEventListener("resize", syncVisualViewport);
+    window.visualViewport?.addEventListener("scroll", syncVisualViewport);
+
     return () => {
       removeShow?.();
       removeHide?.();
-      root.style.setProperty("--keyboard-offset", "0px");
+      window.visualViewport?.removeEventListener("resize", syncVisualViewport);
+      window.visualViewport?.removeEventListener("scroll", syncVisualViewport);
+      setOffset(0);
     };
   }, []);
 }

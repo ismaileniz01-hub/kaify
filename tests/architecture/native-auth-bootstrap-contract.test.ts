@@ -58,6 +58,6 @@ describe("native auth bootstrap packaging", () => {
     const capacitor = source("capacitor.config.ts");
     expect(session).toContain("nativeGoTrueFetch");
     expect(app).toContain("const [busy, setBusy] = useState(false)");
-    expect(capacitor).toContain('iosScheme: "https"');
+    expect(capacitor).not.toContain('iosScheme: "https"');
   });
 });

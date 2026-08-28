@@ -51,7 +51,8 @@ describe("native login UI contract (canonical web parity)", () => {
   it("applies safe-area and Capacitor keyboard offset handling", () => {
     expect(keyboard).toContain("keyboardWillShow");
     expect(keyboard).toContain("keyboardWillHide");
-    expect(keyboard).toContain("--keyboard-offset");
+    expect(keyboard).toContain("visualViewport");
+    expect(css).toContain("calc(100dvh - var(--keyboard-offset");
     expect(css).toContain("env(safe-area-inset-top");
     expect(css).toContain("env(safe-area-inset-bottom");
   });
