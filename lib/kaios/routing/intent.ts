@@ -109,7 +109,7 @@ export function classifyOutputBudget(
 }
 
 const CLASS_BUDGET: Record<OutputBudgetClass, number> = {
-  micro: 80,
+  micro: 160,
   casual: 120,
   support: 160,
   memory: 180,

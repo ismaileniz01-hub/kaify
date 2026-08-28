@@ -46,6 +46,25 @@ export function isCoachRetryLine(text: string): boolean {
   );
 }
 
+export function isUsableCoachReply(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length < 2) return false;
+  if (isCoachRetryLine(trimmed)) return false;
+  return !looksLikeUnsafeCoachText(trimmed);
+}
+
+function stripUnsafeCoachLeaks(text: string): string {
+  const sentences = text.split(/(?<=[.!?…])\s+/u).filter((part) => {
+    const piece = part.trim();
+    if (!piece) return false;
+    if (ERROR_CODE_RE.test(piece)) return false;
+    if (INTERNAL_LEAK_RE.test(piece)) return false;
+    if (looksLikeLeakedEnvelope(piece)) return false;
+    return true;
+  });
+  return sentences.join(" ").replace(/[ \t]{2,}/g, " ").trim();
+}
+
 export function looksLikeUnsafeCoachText(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return true;
@@ -65,7 +84,14 @@ export function sanitizeCoachVisibleText(
   coachId?: string | null,
 ): string {
   const spoken = coachVisibleMessage(text).trim();
-  if (looksLikeUnsafeCoachText(spoken)) return coachRetryLine(locale);
+  if (!spoken) return coachRetryLine(locale);
+  if (looksLikeUnsafeCoachText(spoken)) {
+    const stripped = stripUnsafeCoachLeaks(spoken);
+    if (isUsableCoachReply(stripped)) {
+      return scrubCoachLaneVoice(stripped, coachId);
+    }
+    return coachRetryLine(locale);
+  }
   return scrubCoachLaneVoice(spoken, coachId);
 }
 

@@ -30,7 +30,7 @@ import { ChatComposer } from "@/components/chat/ChatComposer";
 import { ChatDeliveryTicks } from "@/components/chat/ChatDeliveryTicks";
 import { chatBubbleEnterClass } from "@/lib/chat/message-motion";
 import { errorToMessage, quotaErrorMessage, quotaResourceFromError, visionQuotaResourceFromError, isAnalyzeQuotaDenied } from "@/lib/i18n/api-error";
-import { coachRetryLine, isSoftCoachFailure } from "@/lib/kaios/coach-retry";
+import { coachRetryLine, isSoftCoachFailure, isUsableCoachReply } from "@/lib/kaios/coach-retry";
 import { MessageCircle, MoreVertical, Check } from "lucide-react";
 import {
   markMessageDelivered,
@@ -491,12 +491,15 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                 cancelAnimationFrame(streamRafRef.current);
                 streamRafRef.current = null;
               }
-              const retry = coachRetryLine(lang);
+              const streamed = streamTextRef.current.trim();
+              const kept = isUsableCoachReply(streamed)
+                ? streamed
+                : coachRetryLine(lang);
               setMessages((prev) =>
                 markMessageDelivered(
                   prev.map((msg) =>
                     msg.id === coachMsgId
-                      ? { ...msg, text: retry, streaming: false }
+                      ? { ...msg, text: kept, streaming: false }
                       : msg,
                   ),
                   userMsgId,

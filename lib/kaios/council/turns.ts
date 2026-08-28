@@ -39,6 +39,7 @@ import {
 import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
 import {
   coachRetryLine,
+  isUsableCoachReply,
   sanitizeCoachVisibleText,
   scrubAlexGenderedAddress,
 } from "@/lib/kaios/coach-retry";
@@ -429,7 +430,7 @@ export async function runCouncilTurn(params: {
   const rows = speakers.map((s, i) => {
     const isLast = i === speakers.length - 1;
     let visible = sanitizeCoachVisibleText(s.text, locale, s.coachId);
-    if (isReplyLanguageMismatch(visible, locale)) {
+    if (isReplyLanguageMismatch(visible, locale) && !isUsableCoachReply(visible)) {
       visible = coachRetryLine(locale);
     }
     if (s.coachId === "alex") {

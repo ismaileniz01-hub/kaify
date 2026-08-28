@@ -32,6 +32,15 @@ describe("sanitizeCoachVisibleText", () => {
     expect(out).not.toContain("schema_version");
   });
 
+  it("keeps a real greeting when a later sentence leaked internals", () => {
+    expect(
+      sanitizeCoachVisibleText(
+        "Hey! How's it going? TOOL_RESULTS: none.",
+        "en",
+      ),
+    ).toBe("Hey! How's it going?");
+  });
+
   it("does not treat ordinary failure talk as an error leak", () => {
     expect(
       sanitizeCoachVisibleText("Last set failed at 80kg, drop the load.", "en"),

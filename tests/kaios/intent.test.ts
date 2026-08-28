@@ -467,13 +467,13 @@ describe("needsStructuredOutput / outputBudgetFor", () => {
     );
     expect(outputBudgetFor("meal_plan")).toBe(800);
     expect(outputBudgetFor("meal_analysis")).toBe(650);
-    expect(outputBudgetFor("casual", "hi")).toBe(80);
+    expect(outputBudgetFor("casual", "hi")).toBe(160);
     expect(outputBudgetFor("casual", "bugün de aynı boktan gün")).toBe(120);
     expect(outputBudgetFor("unknown", "hatırlıyor musun geçen hafta")).toBe(180);
   });
 
   it("gives Kai enough room to finish while preserving micro greetings", () => {
-    expect(outputBudgetForCoach("kai", "casual", "selam")).toBe(80);
+    expect(outputBudgetForCoach("kai", "casual", "selam")).toBe(160);
     expect(
       outputBudgetForCoach(
         "kai",

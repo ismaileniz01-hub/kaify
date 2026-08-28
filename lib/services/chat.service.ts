@@ -59,6 +59,7 @@ import { coachVisibleMessage } from "@/lib/kaios/envelope-text";
 import {
   coachRetryLine,
   isSoftCoachFailure,
+  isUsableCoachReply,
   scrubAlexGenderedAddress,
   sanitizeCoachVisibleText,
 } from "@/lib/kaios/coach-retry";
@@ -832,6 +833,7 @@ async function* streamKaiosCoachReply(
     let totalTokens = meta.usageTokens;
     let correctionCalls = 0;
     if (suspiciousCompletion || languageMismatch) {
+      const originalReply = assistantText;
       logger.warn("[chat.service] repairing coach reply before display", {
         userId: params.userId,
         coachId: params.coachId,
@@ -839,61 +841,69 @@ async function* streamKaiosCoachReply(
         languageMismatch,
         length: assistantText.length,
       });
-      const correction = await ModelRouter.completeText(
-        [
+      try {
+        const correction = await ModelRouter.completeText(
+          [
+            {
+              role: "system",
+              content: [
+                buildReplyLanguageDirective(resolveLocale(locale)),
+                suspiciousCompletion
+                  ? "The supplied coach reply was cut off. Rewrite it as one complete, concise reply. Preserve established facts, numbers, safety meaning, and coach voice. Do not mention truncation."
+                  : "Rewrite the supplied coach reply faithfully in the mandatory language. Preserve facts, numbers, safety meaning, and coach voice.",
+                "Return only the corrected coach reply.",
+              ].join("\n\n"),
+            },
+            {
+              role: "user",
+              content: wrapUntrustedInput("COACH_REPLY_TO_REPAIR", assistantText),
+            },
+          ],
           {
-            role: "system",
-            content: [
-              buildReplyLanguageDirective(resolveLocale(locale)),
-              suspiciousCompletion
-                ? "The supplied coach reply was cut off. Rewrite it as one complete, concise reply. Preserve established facts, numbers, safety meaning, and coach voice. Do not mention truncation."
-                : "Rewrite the supplied coach reply faithfully in the mandatory language. Preserve facts, numbers, safety meaning, and coach voice.",
-              "Return only the corrected coach reply.",
-            ].join("\n\n"),
+            temperature: 0.2,
+            maxTokens: Math.max(
+              TOKEN_BUDGET.chatReply,
+              outputBudgetForCoach(coachId, meta.intent, cleanMessage, {
+                needsContinuation: suspiciousCompletion,
+              }),
+            ),
+            signal: params.signal,
+            usageContext: {
+              userId: params.userId,
+              operation: "kaios_chat_structured",
+            },
           },
-          {
-            role: "user",
-            content: wrapUntrustedInput("COACH_REPLY_TO_REPAIR", assistantText),
-          },
-        ],
-        {
-          temperature: 0.2,
-          maxTokens: Math.max(
-            TOKEN_BUDGET.chatReply,
-            outputBudgetForCoach(coachId, meta.intent, cleanMessage, {
-              needsContinuation: suspiciousCompletion,
-            }),
-          ),
-          signal: params.signal,
-          usageContext: {
-            userId: params.userId,
-            operation: "kaios_chat_structured",
-          },
-        },
-      );
-      correctionCalls = 1;
-      totalTokens += correction.usage?.total_tokens ?? 0;
-      assistantText = sanitizeCoachVisibleText(
-        correction.content,
-        locale,
-        params.coachId,
-      );
-      if (params.coachId === "alex") {
-        assistantText = scrubAlexGenderedAddress({
-          text: assistantText,
+        );
+        correctionCalls = 1;
+        totalTokens += correction.usage?.total_tokens ?? 0;
+        assistantText = sanitizeCoachVisibleText(
+          correction.content,
           locale,
-          userGender: profileMeta.userGender,
+          params.coachId,
+        );
+        if (params.coachId === "alex") {
+          assistantText = scrubAlexGenderedAddress({
+            text: assistantText,
+            locale,
+            userGender: profileMeta.userGender,
+          });
+        }
+      } catch (error) {
+        logger.warn("[chat.service] coach reply repair failed; keeping original", {
+          error: error instanceof Error ? error.message : "unknown",
         });
+        assistantText = originalReply;
       }
-      if (
+      const repairedStillBroken =
         isStreamCompletionSuspicious({
           text: assistantText,
           aborted: false,
           sawDelta: true,
           finishReason: null,
-        }) ||
-        isReplyLanguageMismatch(assistantText, locale)
-      ) {
+        }) || isReplyLanguageMismatch(assistantText, locale);
+      if (repairedStillBroken && isUsableCoachReply(originalReply)) {
+        assistantText = originalReply;
+      } else if (repairedStillBroken && !isUsableCoachReply(assistantText)) {
         yield await persistAndDoneCoachRetry({
           userId: params.userId,
           coachId: params.coachId,
@@ -1348,7 +1358,8 @@ export async function* streamCoachReply(
         aborted: Boolean(params.signal?.aborted),
         sawDelta: true,
         finishReason: streamFinishReason,
-      })
+      }) &&
+      !isUsableCoachReply(assistantText)
     ) {
       logger.error("[chat.service] legacy stream completion suspicious; persist retry", {
         userId: params.userId,

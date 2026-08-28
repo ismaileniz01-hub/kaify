@@ -209,6 +209,6 @@ describe("schema + exercise adversarial rejects", () => {
     expect(outputBudgetFor("casual")).toBeLessThan(900);
     expect(outputBudgetFor("casual")).toBeLessThanOrEqual(160);
     expect(outputBudgetFor("casual")).toBe(120);
-    expect(outputBudgetFor("casual", "selam")).toBeLessThanOrEqual(80);
+    expect(outputBudgetFor("casual", "selam")).toBeLessThanOrEqual(160);
   });
 });

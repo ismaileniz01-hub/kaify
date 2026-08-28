@@ -64,7 +64,7 @@ import { ensureMayaAnalyticsSavedAck } from "@/lib/kaios/maya/analytics-ack";
 import {
   coachRetryLine,
   isCoachRetryLine,
-  looksLikeUnsafeCoachText,
+  isUsableCoachReply,
   scrubAlexGenderedAddress,
   sanitizeCoachVisibleText,
 } from "@/lib/kaios/coach-retry";
@@ -719,8 +719,7 @@ export async function* orchestrateCoachChat(
   });
   if (
     isCoachRetryLine(assistantText) &&
-    streamedVisible.trim().length >= 40 &&
-    !looksLikeUnsafeCoachText(streamedVisible)
+    isUsableCoachReply(streamedVisible)
   ) {
     assistantText = streamedVisible.trim();
   }
