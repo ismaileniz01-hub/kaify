@@ -40,7 +40,7 @@ describe("native Kaify OTP client (resend contract)", () => {
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
-          "X-Client-Version": "native-1.0.4",
+          "X-Client-Version": "native-1.0.5",
         }),
       }),
     );
@@ -95,7 +95,11 @@ describe("native Kaify OTP client (resend contract)", () => {
     setSession.mockResolvedValue({ error: null });
 
     const result = await verifyNativeEmailOtp("user@example.com", "123456");
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({
+      ok: true,
+      accessToken: "access",
+      refreshToken: "refresh",
+    });
     expect(setSession).toHaveBeenCalledWith({
       access_token: "access",
       refresh_token: "refresh",

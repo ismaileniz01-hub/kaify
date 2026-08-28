@@ -57,6 +57,7 @@ describe("native auth bootstrap packaging", () => {
     const app = source("native-app/src/App.tsx");
     const capacitor = source("capacitor.config.ts");
     expect(session).toContain("nativeGoTrueFetch");
+    expect(app).toContain("enterRealKaify");
     expect(app).toContain("const [busy, setBusy] = useState(false)");
     expect(capacitor).not.toContain('iosScheme: "https"');
   });

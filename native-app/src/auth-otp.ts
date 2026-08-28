@@ -158,7 +158,10 @@ export async function sendNativeEmailOtp(
 export async function verifyNativeEmailOtp(
   email: string,
   token: string,
-): Promise<{ ok: true } | NativeOtpFailure> {
+): Promise<
+  | { ok: true; accessToken: string; refreshToken: string }
+  | NativeOtpFailure
+> {
   const normalized = normalizeOtpInput(token);
   if (!isCompleteOtp(normalized)) {
     return { ok: false, message: "E-postandaki 6 haneli kodu gir." };
@@ -195,5 +198,9 @@ export async function verifyNativeEmailOtp(
       ),
     };
   }
-  return { ok: true };
+  return {
+    ok: true,
+    accessToken: session.accessToken,
+    refreshToken: session.refreshToken,
+  };
 }

@@ -31,6 +31,7 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: "https",
     hostname: "localhost",
+    allowNavigation: ["kaifyai.org", "www.kaifyai.org"],
     ...(devServerUrl
       ? {
           url: devServerUrl,

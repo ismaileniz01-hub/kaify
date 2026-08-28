@@ -16,9 +16,9 @@ describe("webview-request", () => {
   });
 
   it("treats native-* client version as a WebView request", () => {
-    expect(isNativeClientVersion("native-1.0.4")).toBe(true);
+    expect(isNativeClientVersion("native-1.0.5")).toBe(true);
     const request = new Request("https://kaifyai.org/api/auth/otp/verify", {
-      headers: { "x-client-version": "native-1.0.4" },
+      headers: { "x-client-version": "native-1.0.5" },
     });
     expect(isNativeWebViewRequest(request)).toBe(true);
   });

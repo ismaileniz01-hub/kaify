@@ -210,7 +210,7 @@ describe("POST /api/auth/otp/verify", () => {
       method: "POST",
       headers: new Headers({
         "content-type": "application/json",
-        "x-client-version": "native-1.0.4",
+        "x-client-version": "native-1.0.5",
         "user-agent":
           "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
       }),

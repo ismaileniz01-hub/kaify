@@ -18,6 +18,8 @@ describe("native local packaging contract", () => {
     expect(capacitor).toContain('androidScheme: "https"');
     expect(capacitor).not.toContain('iosScheme: "https"');
     expect(capacitor).toContain('hostname: "localhost"');
+    expect(capacitor).toContain("allowNavigation");
+    expect(capacitor).toContain("kaifyai.org");
   });
 
   it("packages native-dist and cannot accept a production remote WebView URL", () => {

@@ -15,6 +15,7 @@ import {
 } from "./api";
 import { sendNativeEmailOtp, verifyNativeEmailOtp } from "./auth-otp";
 import { NATIVE_CLIENT_VERSION } from "./client-version";
+import { enterRealKaify } from "./enter-kaify";
 import { hydrateSecureSession, supabase } from "./session";
 import { withTimeout } from "./boot-storage";
 import {
@@ -97,15 +98,10 @@ export function App() {
           2_500,
           { data: { session: null }, error: null },
         );
-        if (cancelled || !data.session) return;
-        try {
-          await resolveSignedInDestination();
-        } catch (cause) {
-          setError(
-            cause instanceof Error ? cause.message : "Hesap kontrolü başarısız.",
-          );
-          setScreen("plan");
+        if (cancelled || !data.session?.access_token || !data.session.refresh_token) {
+          return;
         }
+        enterRealKaify(data.session.access_token, data.session.refresh_token);
       } catch {
         // Stay on login. Never keep a boot spinner.
       }
@@ -206,17 +202,10 @@ export function App() {
         if (acceptedLegal && acceptedAi) {
           await recordNativeSignupConsents();
         }
-        await resolveSignedInDestination();
-      } catch (cause) {
-        const raw =
-          cause instanceof Error ? cause.message : "Hesap bilgisi yüklenemedi.";
-        setError(
-          /load failed|failed to fetch|networkerror/i.test(raw)
-            ? "Giriş oldu; hesap bilgisi yüklenirken bağlantı koptu. Uygulamayı yeniden açmayı dene."
-            : raw,
-        );
-        // Stay on the OTP UI. Jumping to the post-auth shell made iOS look destroyed.
+      } catch {
+        // Consent can be recorded after the real app opens.
       }
+      enterRealKaify(result.accessToken, result.refreshToken);
       return result;
     } catch (cause) {
       const raw =

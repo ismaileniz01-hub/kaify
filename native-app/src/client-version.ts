@@ -1,1 +1,1 @@
-export const NATIVE_CLIENT_VERSION = "native-1.0.4";
+export const NATIVE_CLIENT_VERSION = "native-1.0.5";
