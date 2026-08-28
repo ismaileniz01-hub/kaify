@@ -6,8 +6,14 @@
 const WORKOUT_DONE_RE =
   /(?:antrenman(?:[ıi])?|workout|session|gym|spor(?:u)?|salon(?:u)?)\s*(?:mı\s+)?(?:bitirdim|tamamladım|tamamladim|yaptım|yaptim|bitti)|(?:bitirdim|tamamladım|tamamladim|finished|completed)\s+(?:(?:the|my|a)\s+)?(?:antrenman|workout|session|gym|spor)|(?:i(?:['’]ve| have)?\s+)?(?:just\s+)?(?:finished|completed|done)\s+(?:(?:a|my|the)\s+)?(?:workout|session|gym)|workout\s+done|log(?:ged)?(?:\s+my)?\s+workout|salondan\s+ç[ıi]kt[ıi]m/i;
 
+const SESSION_DONE_SHORT_RE =
+  /^(?:today(?:['’]s| is)? done|done for today|i(?:['’]m| am) done(?: for today)?|bugün (?:bitti|tamam|bitirdim|oldu)|bitti(?:\s+bugün)?|session done|gym done)[\s!.?…]*$/iu;
+
 export function looksLikeWorkoutCompletion(message: string): boolean {
-  return WORKOUT_DONE_RE.test(message.trim());
+  const msg = message.trim();
+  if (!msg) return false;
+  if (WORKOUT_DONE_RE.test(msg)) return true;
+  return msg.length <= 48 && SESSION_DONE_SHORT_RE.test(msg);
 }
 
 export function parseWorkoutCompletion(

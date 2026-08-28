@@ -17,8 +17,6 @@ import { useLang, LANG_OPTIONS, hasStoredLangPreference } from "@/lib/lang-conte
 import { captureReferralFromUrl, getPendingReferral } from "@/lib/referral";
 import { InlineAlert } from "@/components/InlineAlert";
 import { AppHeader } from "@/components/navigation/AppHeader";
-import { TodaysJobCard } from "@/components/welcome/TodaysJobCard";
-import { WeeklyReviewCard } from "@/components/welcome/WeeklyReviewCard";
 import { FirstTaskChecklist } from "@/components/welcome/FirstTaskChecklist";
 import { GoalsEditor } from "@/components/goals/GoalsEditor";
 
@@ -180,7 +178,14 @@ function WelcomeContent() {
 
         {isAuthenticated && <PendingGiftCard />}
 
-        {isAuthenticated && home && (
+        {isAuthenticated &&
+          home &&
+          (goalsOpen ||
+            !(
+              home.firstTask.checkInDone &&
+              home.firstTask.goalsDone &&
+              home.firstTask.chatDone
+            )) && (
           <section className="animate-in animate-in--3 mt-6 space-y-3 px-4">
             {goalsOpen ? (
               <GoalsEditor
@@ -196,13 +201,7 @@ function WelcomeContent() {
                   await refreshHome(lang);
                 }}
               />
-            ) : (
-              <TodaysJobCard
-                job={home.todayJob}
-                onGoalsClick={() => setGoalsOpen(true)}
-              />
-            )}
-            {home.weeklyReview ? <WeeklyReviewCard review={home.weeklyReview} /> : null}
+            ) : null}
             <FirstTaskChecklist
               progress={{
                 checkInDone: home.firstTask.checkInDone,

@@ -69,6 +69,15 @@ describe("action truth contract", () => {
     ]);
     expect(scrubbed.toLowerCase()).not.toMatch(/kaydettim/);
   });
+
+  it("does not let Alex claim a weekly log without SUCCEEDED", () => {
+    const scrubbed = scrubFalseSuccessClaims(
+      "Good session. That's 1 of 5 logged for the week. I can't log it for you.",
+      [],
+    );
+    expect(scrubbed.toLowerCase()).not.toMatch(/1 of 5 logged/);
+    expect(scrubbed.toLowerCase()).not.toMatch(/can't log it for you/);
+  });
 });
 
 describe("tool allowlists", () => {

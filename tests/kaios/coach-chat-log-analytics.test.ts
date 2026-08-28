@@ -19,6 +19,9 @@ describe("Alex workout completion → analytics patch", () => {
     expect(looksLikeWorkoutCompletion("I finished my workout")).toBe(true);
     expect(looksLikeWorkoutCompletion("workout done")).toBe(true);
     expect(looksLikeWorkoutCompletion("log my workout")).toBe(true);
+    expect(looksLikeWorkoutCompletion("Today is done")).toBe(true);
+    expect(looksLikeWorkoutCompletion("done for today")).toBe(true);
+    expect(looksLikeWorkoutCompletion("bugün bitti")).toBe(true);
   });
 
   it("does not treat programming or form questions as logs", () => {

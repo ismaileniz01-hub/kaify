@@ -138,6 +138,18 @@ export function scrubFalseSuccessClaims(
         ? "meal is ready for confirmation — not saved yet"
         : "I can propose saving those macros, but they aren't saved yet",
     ],
+    [
+      /\b\d+\s+of\s+\d+\s+logged\b/gi,
+      hasPending
+        ? "ready to log once you confirm"
+        : "not logged yet",
+    ],
+    [
+      /\bi can(?:not|['’]t)\s+log it for you\b/gi,
+      hasPending
+        ? "tap Yes on the card and it counts"
+        : "tell me the session is done and I'll queue the log",
+    ],
   ];
 
   for (const [re, replacement] of replacements) {

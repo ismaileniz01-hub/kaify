@@ -78,6 +78,9 @@ describe("resolveIntent", () => {
     expect(
       resolveIntent({ coach: "alex", message: "antrenmanı bitirdim" }),
     ).toBe("motivation");
+    expect(
+      resolveIntent({ coach: "alex", message: "Today is done" }),
+    ).toBe("motivation");
   });
 
   it("keeps Alex programming on elliptical answers to a program interview", () => {
