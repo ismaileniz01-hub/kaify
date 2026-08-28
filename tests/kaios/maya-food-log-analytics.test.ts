@@ -35,6 +35,19 @@ describe("extractMealMacrosFromCoachText", () => {
     ).toEqual({ calories: 520, protein: 32, carbs: 48, fat: 18 });
   });
 
+  it("parses a bullet shawarma estimate", () => {
+    expect(
+      extractMealMacrosFromCoachText(
+        `That looks like a solid meal! For a typical shawarma wrap with chicken or beef, I'd estimate around:
+• Kalori: ~600 kcal
+• Protein: ~35 g
+• Karbonhidrat: ~60 g
+• Yağ: ~25 g
+Want me to add this to analytics? Also a glass of water after that wrap wouldn't hurt.`,
+      ),
+    ).toEqual({ calories: 600, protein: 35, carbs: 60, fat: 25 });
+  });
+
   it("parses compact kcal · P · C · F lines", () => {
     expect(
       extractMealMacrosFromCoachText("Sütlaç ≈ 280 kcal · 4g protein · 48g carbs · 8g fat"),
@@ -83,6 +96,21 @@ describe("macrosForMayaFoodLogConfirm", () => {
         assistantText: "Salut, je vois une liste.",
       }),
     ).toMatchObject({ calories: 1500, protein: 60 });
+  });
+
+  it("queues confirmation from a yes after the meal estimate", () => {
+    expect(
+      macrosForMayaFoodLogConfirm({
+        coach: "maya",
+        userMessage: "Yes",
+        assistantText: "Great — I'll log that glass of water for you.",
+        previousAssistantText: `Kalori: ~600 kcal
+Protein: ~35 g
+Karbonhidrat: ~60 g
+Yağ: ~25 g
+Want me to add this to analytics? Also a glass of water after that wrap wouldn't hurt.`,
+      }),
+    ).toEqual({ calories: 600, protein: 35, carbs: 60, fat: 25 });
   });
 
   it("skips other coaches", () => {

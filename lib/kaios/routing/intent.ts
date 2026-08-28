@@ -153,23 +153,53 @@ const NUTRITION_Q_RE =
 const FOOD_EAT_VERB_RE =
   /\b(yedim|yuttum|gomdum|gömdüm|\bgom\b|i ate|just ate|ate a|ate an|devoured|scoffed|j'ai mangé|jai mange|ich habe gegessen)\b/i;
 const FOOD_DISH_RE =
-  /\b(doner|döner|durum|dürüm|wrap|burger|pizza|kebab|lahmacun|pide|tost|sandwich|breakfast|lunch|dinner|brunch|snack|öğün|ogun|sutlac|sütlaç|tavuk|simit|çiğköfte|cigkofte)\b/i;
+  /\b(doner|döner|durum|dürüm|shawarma|shaurma|gyro|falafel|wrap|burger|pizza|kebab|lahmacun|pide|tost|sandwich|breakfast|lunch|dinner|brunch|snack|öğün|ogun|sutlac|sütlaç|tavuk|simit|çiğköfte|cigkofte)\b/i;
+const DISH_FILLER_RE =
+  /^(?:a|an|the|bir|adet|porsiyon|today|dün|dun|hatay|tavuklu|etli)$/i;
 
 export function looksLikeFoodConsumption(message: string): boolean {
   const msg = normalizeMessage(message);
   if (FOOD_EAT_VERB_RE.test(msg)) return true;
   if (/\b(i had|had a)\b/i.test(msg) && FOOD_DISH_RE.test(msg)) return true;
   if (/\b(yemek yedim|food log|meal i)\b/i.test(msg)) return true;
+  const tokens = msg.split(/\s+/).filter(Boolean);
+  if (
+    tokens.length > 0 &&
+    tokens.length <= 5 &&
+    !/[?]/.test(msg) &&
+    tokens.some((token) => FOOD_DISH_RE.test(token))
+  ) {
+    const leftover = tokens.filter(
+      (token) => !FOOD_DISH_RE.test(token) && !/^\d+$/.test(token) && !DISH_FILLER_RE.test(token),
+    );
+    if (leftover.length <= 1) return true;
+  }
   return false;
 }
 
 /** Asking if the prior meal was saved, or re-pasting the macro estimate. */
 const MEAL_SAVE_FOLLOWUP_RE =
   /\b(ekledin\s*mi|kaydettin\s*mi|analize\s*ekle(?:din)?|yeme[gğ]i\s*analize|did you (?:add|save)|add(?:ed)? (?:it|this|the meal)|save(?:d)? (?:it|this|the meal)|tu l['’]as (?:ajouté|ajoute|enregistré|enregistre)|hast du (?:es )?(?:gespeichert|eingetragen)|lo (?:guardaste|añadiste|anadiste))\b/i;
+const MEAL_SAVE_ASK_RE =
+  /\b(kaydet|kaydedeyim|ekleyeyim|eklememi|onaylıyor|onayliyor|confirm|save (this|it)|add (this|it) to (your )?analytics|analize ekle|want me to add)\b/i;
 
-export function looksLikeMealSaveFollowUp(message: string): boolean {
+/** Previous Maya turn offered to save the meal — a bare yes is for that, not water. */
+export function previousOffersMealSave(previousAssistant?: string): boolean {
+  const prev = (previousAssistant ?? "").trim();
+  if (!prev) return false;
+  if (MEAL_SAVE_ASK_RE.test(prev)) return true;
+  return /\b(kalori|calories?|kcal)\b/i.test(prev) && /\bprotein/i.test(prev);
+}
+
+export function looksLikeMealSaveFollowUp(
+  message: string,
+  previousAssistant?: string,
+): boolean {
   const msg = normalizeMessage(message);
   if (MEAL_SAVE_FOLLOWUP_RE.test(msg)) return true;
+  if (looksLikeBareConfirm(msg) && previousOffersMealSave(previousAssistant)) {
+    return true;
+  }
   if (msg.length >= 40 && /\b(?:kcal|kalori)\b/i.test(msg) && /\bprotein/i.test(msg)) {
     return true;
   }
@@ -319,6 +349,7 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
     ) &&
     /\b(su|suyu|water|hydrat|bardak)\b/i.test(prev)
   ) {
+    if (previousOffersMealSave(prev)) return "nutrition_question";
     return "hydration";
   }
 
@@ -336,7 +367,7 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
   ) {
     return "hydration";
   }
-  if (input.coach === "maya" && looksLikeMealSaveFollowUp(msg)) {
+  if (input.coach === "maya" && looksLikeMealSaveFollowUp(msg, prev)) {
     return "nutrition_question";
   }
   if (
@@ -364,7 +395,7 @@ export function resolveIntent(input: ResolveIntentInput): Intent {
     if (input.coach === "maya" && looksLikeHydrationLog(msg)) {
       return "hydration";
     }
-    if (input.coach === "maya" && looksLikeMealSaveFollowUp(msg)) {
+    if (input.coach === "maya" && looksLikeMealSaveFollowUp(msg, prevMsg)) {
       return "nutrition_question";
     }
     return (

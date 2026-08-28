@@ -194,6 +194,18 @@ Mercredi – Jambes
     expect(
       resolveIntent({
         coach: "maya",
+        message: "Doner durum",
+      }),
+    ).toBe("nutrition_question");
+    expect(
+      resolveIntent({
+        coach: "maya",
+        message: "I ate doner today",
+      }),
+    ).toBe("nutrition_question");
+    expect(
+      resolveIntent({
+        coach: "maya",
         message: "What is on my plate?",
         hasImage: true,
       }),
@@ -206,13 +218,34 @@ Mercredi – Jambes
     ).toBe("meal_plan");
   });
 
-  it("keeps Maya water yes as hydration instead of continuing a meal plan", () => {
+  it("treats a yes after meal save + water nudge as nutrition, not hydration", () => {
+    expect(
+      resolveIntent({
+        coach: "maya",
+        message: "Yes",
+        previousAssistantMessage:
+          "Kalori: ~600 kcal. Protein: ~35 g. Want me to add this to analytics? Also a glass of water after that wrap wouldn't hurt.",
+        hasRecentHistory: true,
+      }),
+    ).toBe("nutrition_question");
     expect(
       resolveIntent({
         coach: "maya",
         message: "evet",
         previousAssistantMessage:
-          "Kalori 280. Öğünden sonra bir bardak su içmeyi unutma.",
+          "Kalori 280. Protein 20g. Öğünden sonra bir bardak su içmeyi unutma.",
+        hasRecentHistory: true,
+      }),
+    ).toBe("nutrition_question");
+  });
+
+  it("keeps Maya water yes as hydration when the last turn was water-only", () => {
+    expect(
+      resolveIntent({
+        coach: "maya",
+        message: "evet",
+        previousAssistantMessage:
+          "Öğünden sonra bir bardak su içmeyi unutma.",
         hasRecentHistory: true,
       }),
     ).toBe("hydration");

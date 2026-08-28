@@ -61,6 +61,26 @@ describe("corrected meal payload", () => {
       pendingId: "p1",
       calories: 650,
       protein: 38,
+      waterLiters: 0.25,
     });
+  });
+
+  it("does not invent calories on a water-only card", () => {
+    expect(
+      confirmationCardFromPending("p1", {
+        summary: "0.25L water",
+        patch: { waterLiters: 0.25 },
+      }),
+    ).toMatchObject({
+      pendingId: "p1",
+      summary: "0.25L water",
+      waterLiters: 0.25,
+    });
+    expect(
+      confirmationCardFromPending("p1", {
+        summary: "0.25L water",
+        patch: { waterLiters: 0.25 },
+      }).calories,
+    ).toBeUndefined();
   });
 });

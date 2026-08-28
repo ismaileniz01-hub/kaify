@@ -8,7 +8,11 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { resolveWeightKg } from "@/lib/supabase/profile-compat";
 import { localTodayDate } from "@/lib/date-utils";
 import { createPendingAnalyticsConfirmation } from "@/lib/services/analytics-confirmation.service";
-import type { CoachId } from "@/lib/kaios/routing/intent";
+import {
+  previousOffersMealSave,
+  type CoachId,
+} from "@/lib/kaios/routing/intent";
+import { confirmationCardFromPending } from "@/lib/analytics/confirmation-payload";
 import type { ActionTruthRecord } from "@/lib/kaios/tools/action-truth";
 import {
   estimateCaloriesFromWorkoutPlan,
@@ -54,6 +58,7 @@ function looksLikeWaterYes(
 ): boolean {
   const prev = previousAssistant?.trim() ?? "";
   if (!prev || !WATER_NUDGE_RE.test(prev)) return false;
+  if (previousOffersMealSave(prev)) return false;
   return looksLikeChatYes(message);
 }
 
@@ -265,14 +270,15 @@ export async function maybeQueueCoachLogConfirmation(input: {
   if (!spec) return { truths: [] };
 
   if (spec.tool === "recordHydration") {
+    const pendingPayload = { summary: spec.summary, patch: spec.patch };
     const pendingId = await createPendingAnalyticsConfirmation({
       userId: input.userId,
       coachId: input.coach,
       source: "chat",
-      payload: { summary: spec.summary, patch: spec.patch },
+      payload: pendingPayload,
     });
     return {
-      confirmation: { pendingId, summary: spec.summary },
+      confirmation: confirmationCardFromPending(pendingId, pendingPayload),
       truths: [
         {
           status: "PENDING_CONFIRMATION",

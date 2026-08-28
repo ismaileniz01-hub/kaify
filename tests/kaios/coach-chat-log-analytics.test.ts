@@ -76,9 +76,8 @@ describe("Maya hydration log → analytics patch", () => {
     expect(parseHydrationLiters("I drank water")).toBeNull();
   });
 
-  it("logs a glass when they say evet after Maya's water nudge", () => {
-    const prev =
-      "Kalori 280. Öğünden sonra bir bardak su içmeyi unutma.";
+  it("logs a glass when they say evet after Maya's water-only nudge", () => {
+    const prev = "Öğünden sonra bir bardak su içmeyi unutma.";
     expect(looksLikeChatYes("evet")).toBe(true);
     expect(parseHydrationLiters("evet", prev)).toBe(0.25);
     expect(
@@ -87,6 +86,18 @@ describe("Maya hydration log → analytics patch", () => {
         currentWater: 0,
       })?.patch,
     ).toEqual({ waterLiters: 0.25 });
+  });
+
+  it("does not steal a meal-save yes for a glass of water", () => {
+    const prev =
+      "Kalori: ~600 kcal. Protein: ~35 g. Want me to add this to analytics? Also a glass of water after that wrap wouldn't hurt.";
+    expect(parseHydrationLiters("Yes", prev)).toBeNull();
+    expect(
+      patchForCoachChatLog("maya", "Yes", {
+        previousAssistant: prev,
+        currentWater: 0,
+      }),
+    ).toBeNull();
   });
 
   it("logs a glass when they say su içtim after Maya's water nudge", () => {

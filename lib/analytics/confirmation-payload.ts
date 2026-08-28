@@ -9,6 +9,7 @@ export type ChatConfirmationPayload = {
   protein?: number;
   carbs?: number;
   fat?: number;
+  waterLiters?: number;
 };
 
 export type PendingAnalyticsPayload = {
@@ -42,6 +43,9 @@ export function confirmationCardFromPending(
   pendingId: string,
   payload: PendingAnalyticsPayload,
 ): ChatConfirmationPayload {
+  const waterLiters = Number(
+    payload.patch?.waterLiters ?? payload.patch?.water_liters,
+  );
   return {
     pendingId,
     summary: payload.summary,
@@ -49,6 +53,9 @@ export function confirmationCardFromPending(
     protein: payload.meal?.protein,
     carbs: payload.meal?.carbs,
     fat: payload.meal?.fat,
+    ...(Number.isFinite(waterLiters) && waterLiters > 0
+      ? { waterLiters }
+      : {}),
   };
 }
 

@@ -24,6 +24,10 @@ export function AnalyticsConfirmationCard({
   const [pendingAction, setPendingAction] = useState<"confirm" | "reject" | null>(null);
   const initialCalories = payload.calories;
   const initialProtein = payload.protein;
+  const isWaterOnly =
+    payload.calories == null &&
+    payload.protein == null &&
+    payload.waterLiters != null;
   const [calories, setCalories] = useState(
     initialCalories != null ? String(initialCalories) : "",
   );
@@ -82,6 +86,7 @@ export function AnalyticsConfirmationCard({
       {typeof payload.confidence === "number" && payload.confidence < 0.7 ? (
         <p className="mt-1 text-[11px] text-amber-300">{t("analytics.confirm.low_confidence")}</p>
       ) : null}
+      {isWaterOnly ? null : (
       <div className="mt-2 grid grid-cols-2 gap-2">
         <label className="text-[11px] text-zinc-500">
           {t("analytics.confirm.calories")}
@@ -102,6 +107,7 @@ export function AnalyticsConfirmationCard({
           />
         </label>
       </div>
+      )}
       <div className="mt-2 flex gap-2">
         {failed ? (
           <p className="w-full text-xs text-red-300" role="alert">

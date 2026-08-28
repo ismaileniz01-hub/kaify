@@ -450,7 +450,10 @@ export function macrosForMayaFoodLogConfirm(input: {
 }): ReturnType<typeof extractMealMacrosFromCoachText> {
   if (input.alreadyConfirming) return null;
   if (input.coach !== "maya") return null;
-  const followUp = looksLikeMealSaveFollowUp(input.userMessage);
+  const followUp = looksLikeMealSaveFollowUp(
+    input.userMessage,
+    input.previousAssistantText,
+  );
   if (!looksLikeFoodConsumption(input.userMessage) && !followUp) return null;
   return (
     extractMealMacrosFromCoachText(input.assistantText) ??

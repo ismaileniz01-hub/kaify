@@ -32,6 +32,7 @@ import { buildRuntimeContext } from "@/lib/kaios/context/builder";
 import { compilePrompt } from "@/lib/kaios/compiler/prompt";
 import {
   needsStructuredOutput,
+  previousOffersMealSave,
   resolveIntent,
   type CoachId,
   type Intent,
@@ -53,6 +54,7 @@ import {
 } from "@/lib/kaios/tools/dispatch";
 import { maybeQueueCoachLogConfirmation, looksLikeChatYes } from "@/lib/kaios/analytics/chat-log";
 import { confirmLatestPendingAnalytics } from "@/lib/services/analytics-confirmation.service";
+import type { PendingAnalyticsPayload } from "@/lib/analytics/confirmation-payload";
 import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
 import { ensureAlexDailyCardio } from "@/lib/kaios/alex/daily-cardio";
 import { ensureMayaMealSaveAsk } from "@/lib/kaios/maya/meal-save-ask";
@@ -74,6 +76,44 @@ import {
 import { logger } from "@/lib/logger";
 import type { SseChunk } from "@/lib/api/sse";
 import type { MessageType } from "@/lib/types/database.types";
+
+function truthsFromChatYes(
+  applied: PendingAnalyticsPayload,
+): ActionTruthRecord[] {
+  const truths: ActionTruthRecord[] = [];
+  if (applied.meal) {
+    truths.push({
+      status: "SUCCEEDED",
+      tool: "saveMealMacros",
+      message: "Confirmed from chat yes",
+      data: { saved: true, ...applied.meal },
+    });
+  }
+  const waterLiters = Number(
+    applied.patch?.waterLiters ?? applied.patch?.water_liters,
+  );
+  if (Number.isFinite(waterLiters) && waterLiters > 0) {
+    truths.push({
+      status: "SUCCEEDED",
+      tool: "recordHydration",
+      message: "Confirmed from chat yes",
+      data: { saved: true, waterLiters },
+    });
+  }
+  if (
+    truths.length === 0 &&
+    applied.patch &&
+    Object.keys(applied.patch).length > 0
+  ) {
+    truths.push({
+      status: "SUCCEEDED",
+      tool: "logWorkout",
+      message: "Confirmed from chat yes",
+      data: { saved: true, ...applied.patch },
+    });
+  }
+  return truths;
+}
 
 export type OrchestrateChatInput = {
   userId: string;
@@ -303,6 +343,7 @@ export async function* orchestrateCoachChat(
         protein?: number;
         carbs?: number;
         fat?: number;
+        waterLiters?: number;
       }
     | undefined;
   let appliedExistingConfirmation = false;
@@ -551,39 +592,7 @@ export async function* orchestrateCoachChat(
       const applied = await confirmLatestPendingAnalytics(input.userId);
       if (applied) {
         appliedExistingConfirmation = true;
-        const truths: ActionTruthRecord[] = [];
-        if (applied.meal) {
-          truths.push({
-            status: "SUCCEEDED",
-            tool: "saveMealMacros",
-            message: "Confirmed from chat yes",
-            data: { saved: true, ...applied.meal },
-          });
-        }
-        const waterLiters = Number(
-          applied.patch?.waterLiters ?? applied.patch?.water_liters,
-        );
-        if (Number.isFinite(waterLiters) && waterLiters > 0) {
-          truths.push({
-            status: "SUCCEEDED",
-            tool: "recordHydration",
-            message: "Confirmed from chat yes",
-            data: { saved: true, waterLiters },
-          });
-        }
-        if (
-          truths.length === 0 &&
-          applied.patch &&
-          Object.keys(applied.patch).length > 0
-        ) {
-          truths.push({
-            status: "SUCCEEDED",
-            tool: "logWorkout",
-            message: "Confirmed from chat yes",
-            data: { saved: true, ...applied.patch },
-          });
-        }
-        actionTruth = [...actionTruth, ...truths];
+        actionTruth = [...actionTruth, ...truthsFromChatYes(applied)];
       }
     } catch (error) {
       logger.warn("[orchestrator] chat-yes confirmation failed", {
@@ -605,6 +614,29 @@ export async function* orchestrateCoachChat(
     });
     actionTruth = [...actionTruth, ...foodLog.truths];
     if (foodLog.confirmation) confirmation = foodLog.confirmation;
+
+    if (
+      confirmation &&
+      looksLikeChatYes(input.message) &&
+      input.coachId === "maya" &&
+      previousOffersMealSave(previousAssistant)
+    ) {
+      try {
+        const applied = await confirmLatestPendingAnalytics(input.userId);
+        if (applied) {
+          appliedExistingConfirmation = true;
+          confirmation = undefined;
+          actionTruth = [
+            ...actionTruth.filter((t) => t.status !== "PENDING_CONFIRMATION"),
+            ...truthsFromChatYes(applied),
+          ];
+        }
+      } catch (error) {
+        logger.warn("[orchestrator] reconstructed meal yes failed", {
+          error: error instanceof Error ? error.message : "unknown",
+        });
+      }
+    }
   }
 
   const mealSaved = actionTruth.some(
@@ -787,6 +819,9 @@ export async function* orchestrateCoachChat(
         ...(confirmation.protein != null ? { protein: confirmation.protein } : {}),
         ...(confirmation.carbs != null ? { carbs: confirmation.carbs } : {}),
         ...(confirmation.fat != null ? { fat: confirmation.fat } : {}),
+        ...(confirmation.waterLiters != null
+          ? { waterLiters: confirmation.waterLiters }
+          : {}),
       },
       saved: false,
     };
