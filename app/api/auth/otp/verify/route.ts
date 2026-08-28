@@ -67,7 +67,7 @@ export const POST = defineRouteRaw(
       });
 
       // Capacitor shells need bearer tokens (no shared cookie jar with kaifyai.org).
-      // Use the same WebView detection as OTP send (origin + Android wv UA).
+      // Origin, UA, or X-Client-Version: native-* — iOS WKWebView often omits Origin.
       const returnNativeSession =
         Boolean(session?.access_token && session.refresh_token) &&
         isNativeWebViewRequest(request);

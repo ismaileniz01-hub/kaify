@@ -25,9 +25,12 @@ const config: CapacitorConfig = {
   appName: "Kaify Ai",
   webDir: "native-dist",
   loggingBehavior: isLocal ? "debug" : "none",
-  // Stable Android WebView origin (https://localhost) for OTP CORS / captcha skip.
+  // https origin (not capacitor://) so WKWebView CORS matches Android and
+  // third-party APIs that reject custom-scheme origins as "Load failed".
   server: {
     androidScheme: "https",
+    iosScheme: "https",
+    hostname: "localhost",
     ...(devServerUrl
       ? {
           url: devServerUrl,

@@ -43,6 +43,7 @@ describe("middleware security contracts", () => {
     expect(middleware).toContain("isNativeShellOrigin(origin)");
     expect(middleware).toContain('"Access-Control-Allow-Origin"');
     expect(middleware).toContain('request.method === "OPTIONS"');
+    expect(middleware).toContain("NATIVE_CORS_ALLOW_HEADERS");
   });
 
   it("gives auth pages a bounded, non-JS-only recovery fallback", () => {

@@ -1,8 +1,9 @@
 import { isCompleteOtp, normalizeOtpInput } from "@/lib/auth/otp";
 import { DEFAULT_RESEND_AFTER_SECONDS } from "./otp-resend-timer";
+import { NATIVE_CLIENT_VERSION } from "./client-version";
 import { supabase } from "./session";
 
-const NATIVE_CLIENT_VERSION = "native-1.0.3";
+export { NATIVE_CLIENT_VERSION };
 
 type ApiSuccess<T> = { success: true; data: T };
 type ApiFailure = {
@@ -21,6 +22,14 @@ export type NativeOtpFailure = {
   code?: string;
   retryAfterSeconds?: number;
 };
+
+function friendlyNetworkMessage(raw: string, fallback: string): string {
+  return /load failed|failed to fetch|networkerror|the internet connection appears to be offline/i.test(
+    raw,
+  )
+    ? "Bağlantı hatası. İnternetini kontrol edip tekrar dene."
+    : fallback || raw;
+}
 
 async function parseApiJson<T>(
   response: Response,
@@ -74,7 +83,7 @@ function mapSendErrorMessage(code: string | undefined, fallback: string): string
 /**
  * Public Kaify OTP APIs (same server path as web). No Bearer — cookies unused;
  * verify returns access/refresh tokens for Capacitor origins.
- * No captcha token — backend skips captcha for exact native origins.
+ * No captcha token — backend skips captcha for native client versions/origins.
  */
 async function publicAuthPost<T>(
   path: string,
@@ -94,10 +103,14 @@ async function publicAuthPost<T>(
       },
       body: JSON.stringify(body),
     });
-  } catch {
+  } catch (cause) {
+    const raw = cause instanceof Error ? cause.message : "";
     return {
       ok: false,
-      message: "Bağlantı hatası. İnternetini kontrol edip tekrar dene.",
+      message: friendlyNetworkMessage(
+        raw,
+        "Bağlantı hatası. İnternetini kontrol edip tekrar dene.",
+      ),
       code: "NETWORK_ERROR",
     };
   }
@@ -174,9 +187,13 @@ export async function verifyNativeEmailOtp(
     refresh_token: session.refreshToken,
   });
   if (error) {
-    return { ok: false, message: error.message };
+    return {
+      ok: false,
+      message: friendlyNetworkMessage(
+        error.message,
+        error.message || "Oturum kaydedilemedi. Lütfen tekrar dene.",
+      ),
+    };
   }
   return { ok: true };
 }
-
-export { NATIVE_CLIENT_VERSION };

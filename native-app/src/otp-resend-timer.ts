@@ -1,10 +1,16 @@
-import { SecureStorage } from "@aparajita/capacitor-secure-storage";
+import {
+  NATIVE_PLUGIN_TIMEOUT_MS,
+  readWebStorage,
+  removeWebStorage,
+  withTimeout,
+  writeWebStorage,
+} from "./boot-storage";
 
 export const DEFAULT_RESEND_AFTER_SECONDS = 60;
 
 const STORAGE_PREFIX = "otp_resend_at:";
 
-/** SHA-256 hex prefix for SecureStorage keys — never store plaintext email. */
+/** SHA-256 hex prefix for storage keys — never store plaintext email. */
 export async function hashEmailForStorage(email: string): Promise<string> {
   const normalized = email.trim().toLowerCase();
   const data = new TextEncoder().encode(normalized);
@@ -50,12 +56,30 @@ function storageKey(emailHash: string): string {
   return `${STORAGE_PREFIX}${emailHash}`;
 }
 
+async function withSecureStorage<T>(
+  run: (secure: typeof import("@aparajita/capacitor-secure-storage").SecureStorage) => Promise<T>,
+  fallback: T,
+): Promise<T> {
+  try {
+    const { SecureStorage } = await import("@aparajita/capacitor-secure-storage");
+    return await withTimeout(run(SecureStorage), NATIVE_PLUGIN_TIMEOUT_MS, fallback);
+  } catch {
+    return fallback;
+  }
+}
+
 export async function persistResendAvailableAt(
   email: string,
   resendAvailableAt: number,
 ): Promise<void> {
   const hash = await hashEmailForStorage(email);
-  await SecureStorage.setItem(storageKey(hash), String(resendAvailableAt));
+  const key = storageKey(hash);
+  const value = String(resendAvailableAt);
+  writeWebStorage(key, value);
+  await withSecureStorage(
+    (secure) => secure.setItem(key, value),
+    undefined,
+  );
 }
 
 export async function loadResendAvailableAt(
@@ -63,7 +87,14 @@ export async function loadResendAvailableAt(
 ): Promise<number | null> {
   try {
     const hash = await hashEmailForStorage(email);
-    const raw = await SecureStorage.getItem(storageKey(hash));
+    const key = storageKey(hash);
+    const local = readWebStorage(key);
+    const raw =
+      local ??
+      (await withSecureStorage(
+        (secure) => secure.getItem(key).then((item) => item ?? null),
+        null,
+      ));
     if (!raw) return null;
     const value = Number(raw);
     if (!Number.isFinite(value) || value <= 0) return null;
@@ -76,7 +107,9 @@ export async function loadResendAvailableAt(
 export async function clearResendAvailableAt(email: string): Promise<void> {
   try {
     const hash = await hashEmailForStorage(email);
-    await SecureStorage.removeItem(storageKey(hash));
+    const key = storageKey(hash);
+    removeWebStorage(key);
+    await withSecureStorage((secure) => secure.removeItem(key), undefined);
   } catch {
     // ignore
   }

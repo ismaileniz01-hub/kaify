@@ -1,5 +1,5 @@
 import { supabase } from "./session";
-import { NATIVE_CLIENT_VERSION } from "./auth-otp";
+import { NATIVE_CLIENT_VERSION } from "./client-version";
 import {
   CONSENT_TYPES,
   PRIVACY_VERSION,

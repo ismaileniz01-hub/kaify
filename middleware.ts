@@ -16,7 +16,10 @@ import {
   isLegacyPublicApi,
   legacyApiDeprecationHeaders,
 } from "@/lib/api/v1-manifest";
-import { isNativeShellOrigin } from "@/lib/native/webview-request";
+import {
+  isNativeShellOrigin,
+  NATIVE_CORS_ALLOW_HEADERS,
+} from "@/lib/native/webview-request";
 
 const RATE_LIMIT_CONFIG = {
   api: { requests: 400, windowMs: 60 * 1000 },
@@ -46,7 +49,7 @@ function attachCorsHeaders(request: NextRequest, response: NextResponse) {
     response.headers.set("Access-Control-Allow-Credentials", "true");
     response.headers.set(
       "Access-Control-Allow-Headers",
-      "Authorization, Content-Type, Idempotency-Key, X-CSRF-Token",
+      NATIVE_CORS_ALLOW_HEADERS,
     );
     response.headers.set(
       "Access-Control-Allow-Methods",
@@ -114,7 +117,7 @@ async function finalizeResponse(
     );
     response.headers.set(
       "Access-Control-Allow-Headers",
-      "Authorization,Content-Type,Idempotency-Key,X-Client-Version,x-csrf-token",
+      NATIVE_CORS_ALLOW_HEADERS,
     );
     response.headers.set("Access-Control-Max-Age", "600");
     response.headers.append("Vary", "Origin");

@@ -14,6 +14,12 @@ describe("native local packaging contract", () => {
   const serverAuth = source("lib/supabase/server.ts");
   const middleware = source("middleware.ts");
 
+  it("uses https WebView origins on both iOS and Android", () => {
+    expect(capacitor).toContain('androidScheme: "https"');
+    expect(capacitor).toContain('iosScheme: "https"');
+    expect(capacitor).toContain('hostname: "localhost"');
+  });
+
   it("packages native-dist and cannot accept a production remote WebView URL", () => {
     expect(capacitor).toContain('webDir: "native-dist"');
     expect(capacitor).toContain('startsWith("http://")');
@@ -39,6 +45,16 @@ describe("native local packaging contract", () => {
     expect(nativeOtp).toContain("setSession");
     expect(nativeOtp).not.toContain("SERVICE_ROLE");
     expect(nativeOtp).not.toContain("service_role");
+    expect(nativeSession).toContain("nativeGoTrueFetch");
+    expect(nativeSession).not.toContain(
+      'from "@aparajita/capacitor-secure-storage"',
+    );
+    expect(source("native-app/src/native-gotrue-fetch.ts")).toContain(
+      "/api/auth/session/refresh",
+    );
+    expect(source("app/api/auth/session/refresh/route.ts")).toContain(
+      "refreshSession",
+    );
   });
 
   it("locks coaching before payment on both navigation and send", () => {
@@ -51,6 +67,9 @@ describe("native local packaging contract", () => {
   it("uses secure native session storage and bearer API authentication", () => {
     expect(nativeSession).toContain("SecureStorage");
     expect(nativeSession).toContain("persistSession: true");
+    expect(nativeSession).toContain("readWebStorage");
+    expect(nativeApp).toContain("useState(false)");
+    expect(nativeApp).toContain("SplashScreen.hide");
     expect(nativeApi).toContain('"Authorization"');
     expect(nativeApi).toContain("Bearer ${await accessToken()}");
     expect(serverAuth).toContain("supabase.auth.getUser(bearerToken");

@@ -51,4 +51,13 @@ describe("native auth bootstrap packaging", () => {
     expect(codemagic).toContain("npx cap sync android");
     expect(codemagic).not.toMatch(/npm run build:cap/);
   });
+
+  it("keeps WebView auth off supabase.co and login unblocked at boot", () => {
+    const session = source("native-app/src/session.ts");
+    const app = source("native-app/src/App.tsx");
+    const capacitor = source("capacitor.config.ts");
+    expect(session).toContain("nativeGoTrueFetch");
+    expect(app).toContain("const [busy, setBusy] = useState(false)");
+    expect(capacitor).toContain('iosScheme: "https"');
+  });
 });

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
+import { Capacitor } from "@capacitor/core";
+import { SplashScreen } from "@capacitor/splash-screen";
 import { PRICING_PLANS } from "@/lib/marketing/pricing-plans";
 import { nativeScreenFromUrl } from "@/lib/native/deep-links";
 import {
@@ -11,8 +13,10 @@ import {
   sendKaiMessage,
   type NativeProfile,
 } from "./api";
-import { sendNativeEmailOtp, verifyNativeEmailOtp, NATIVE_CLIENT_VERSION } from "./auth-otp";
-import { supabase } from "./session";
+import { sendNativeEmailOtp, verifyNativeEmailOtp } from "./auth-otp";
+import { NATIVE_CLIENT_VERSION } from "./client-version";
+import { hydrateSecureSession, supabase } from "./session";
+import { withTimeout } from "./boot-storage";
 import {
   NativeLoginBoot,
   NativeLoginScreen,
@@ -22,6 +26,14 @@ import {
 import { useNativeKeyboardOffset } from "./login/useNativeKeyboardOffset";
 
 type Screen = "login" | "signup" | "verify" | "plan" | "welcome" | "chat";
+
+function nativeOs(): string {
+  try {
+    return Capacitor.getPlatform();
+  } catch {
+    return "web";
+  }
+}
 
 function postNativeEvent(
   name: string,
@@ -34,7 +46,7 @@ function postNativeEvent(
     body: JSON.stringify({
       name,
       installId,
-      platform: "android",
+      platform: nativeOs(),
       properties,
     }),
   }).catch(() => undefined);
@@ -51,7 +63,7 @@ export function App() {
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [acceptedAi, setAcceptedAi] = useState(false);
   const [profile, setProfile] = useState<NativeProfile | null>(null);
-  const [busy, setBusy] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
   const [error, setError] = useState("");
@@ -67,40 +79,36 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    void SplashScreen.hide().catch(() => undefined);
+
     const onlineListener = () => setOnline(true);
     const offlineListener = () => setOnline(false);
     window.addEventListener("online", onlineListener);
     window.addEventListener("offline", offlineListener);
 
     let cancelled = false;
-    // Absolute fallback so SecureStorage / getSession hangs never blank the app.
-    const bootWatchdog = window.setTimeout(() => {
-      if (!cancelled) setBusy(false);
-    }, 4_000);
-
-    void supabase.auth
-      .getSession()
-      .then(async ({ data }) => {
+    void (async () => {
+      try {
+        await hydrateSecureSession();
         if (cancelled) return;
+        const { data } = await withTimeout(
+          supabase.auth.getSession(),
+          2_500,
+          { data: { session: null }, error: null },
+        );
+        if (cancelled || !data.session) return;
         try {
-          if (data.session) await resolveSignedInDestination();
+          await resolveSignedInDestination();
         } catch (cause) {
           setError(
             cause instanceof Error ? cause.message : "Hesap kontrolü başarısız.",
           );
+          setScreen("plan");
         }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setError("Oturum kontrolü zaman aşımına uğradı. Tekrar giriş yapabilirsin.");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          window.clearTimeout(bootWatchdog);
-          setBusy(false);
-        }
-      });
+      } catch {
+        // Stay on login. Never keep a boot spinner.
+      }
+    })();
 
     const installKey = "kaify_install_id";
     let installId = localStorage.getItem(installKey);
@@ -108,10 +116,11 @@ export function App() {
       installId = crypto.randomUUID();
       localStorage.setItem(installKey, installId);
     }
+    const os = nativeOs();
     if (!localStorage.getItem("kaify_native_first_open")) {
       localStorage.setItem("kaify_native_first_open", "1");
       postNativeEvent("native.first_opened", installId, {
-        os: "android",
+        os,
         app_version: NATIVE_CLIENT_VERSION,
       });
     }
@@ -119,7 +128,7 @@ export function App() {
     let removeResumeListener: (() => void) | undefined;
     void CapacitorApp.addListener("appStateChange", (state) => {
       if (state.isActive) {
-        postNativeEvent("native.app_resumed", installId, { os: "android" });
+        postNativeEvent("native.app_resumed", installId, { os });
       }
     }).then((handle) => {
       removeResumeListener = () => {
@@ -142,7 +151,8 @@ export function App() {
       if (next === "login" || next === "signup") {
         setAuthMode(next === "signup" ? "signup" : "login");
         setAuthStep("email");
-      }    }).then((handle) => {
+      }
+    }).then((handle) => {
       removeUrlListener = () => {
         void handle.remove();
       };
@@ -151,7 +161,6 @@ export function App() {
     });
     return () => {
       cancelled = true;
-      window.clearTimeout(bootWatchdog);
       window.removeEventListener("online", onlineListener);
       window.removeEventListener("offline", offlineListener);
       removeUrlListener?.();
@@ -192,16 +201,30 @@ export function App() {
         setError(result.message);
         return result;
       }
-      if (acceptedLegal && acceptedAi) {
-        await recordNativeSignupConsents();
+      try {
+        if (acceptedLegal && acceptedAi) {
+          await recordNativeSignupConsents();
+        }
+        await resolveSignedInDestination();
+      } catch (cause) {
+        const raw =
+          cause instanceof Error ? cause.message : "Hesap bilgisi yüklenemedi.";
+        setError(
+          /load failed|failed to fetch|networkerror/i.test(raw)
+            ? "Giriş oldu; hesap bilgisi yüklenirken bağlantı koptu. Uygulamayı yeniden açmayı dene."
+            : raw,
+        );
+        setScreen("plan");
       }
-      await resolveSignedInDestination();
       return result;
     } catch (cause) {
-      const message =
+      const raw =
         cause instanceof Error
           ? cause.message
           : "Doğrulama başarısız. Lütfen tekrar dene.";
+      const message = /load failed|failed to fetch|networkerror/i.test(raw)
+        ? "Bağlantı hatası. İnternetini kontrol edip tekrar dene."
+        : raw;
       setError(message);
       return { ok: false as const, message };
     } finally {
