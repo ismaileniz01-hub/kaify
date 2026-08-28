@@ -133,6 +133,7 @@ describe("KAIOS capsules", () => {
     expect(MAYA_CORE).toContain("after_every_meal");
     expect(MAYA_FOOD_LOG).toContain("after_every_meal");
     expect(MAYA_FOOD_LOG).toMatch(/always ask to save|ask_before_saving/i);
+    expect(MAYA_FOOD_LOG).toMatch(/macro_labels MUST match the active locale/);
     expect(LEO_CORE).toContain("validate_image_before_scoring");
     expect(LEO_CORE).toContain("do_not_inflate_scores_for_motivation");
     expect(LEO_CORE).toMatch(/no nicknames|never nicknames/i);

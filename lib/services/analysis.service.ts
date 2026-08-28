@@ -25,6 +25,7 @@ import { loadCrossCoachSnapshot } from "@/lib/kaios/context/coach-snapshot";
 import { formatTrustedProfileContext } from "@/lib/ai/chat-context";
 import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
 import { ensureMayaMealSaveAsk } from "@/lib/kaios/maya/meal-save-ask";
+import { relabelMayaMacroLabels } from "@/lib/kaios/maya/macro-labels";
 import { parseHydrationLiters } from "@/lib/kaios/analytics/chat-log";
 import { getTodayNutritionSnapshot } from "@/lib/services/analytics.service";
 import { sanitizeCoachVisibleText } from "@/lib/kaios/coach-retry";
@@ -380,9 +381,15 @@ export async function analyzePhoto(
   if (persona.kind === "food") {
     result = {
       ...result,
-      summary: ensureMayaMealSaveAsk({
-        text: ensureMayaMealWaterReminder({
-          text: sanitizeCoachVisibleText(result.summary, locale, "maya"),
+      summary: relabelMayaMacroLabels({
+        text: ensureMayaMealSaveAsk({
+          text: ensureMayaMealWaterReminder({
+            text: sanitizeCoachVisibleText(result.summary, locale, "maya"),
+            locale,
+            coachId: "maya",
+            intent: "meal_analysis",
+            userMessage: params.note,
+          }),
           locale,
           coachId: "maya",
           intent: "meal_analysis",
@@ -390,8 +397,6 @@ export async function analyzePhoto(
         }),
         locale,
         coachId: "maya",
-        intent: "meal_analysis",
-        userMessage: params.note,
       }),
     };
   } else {

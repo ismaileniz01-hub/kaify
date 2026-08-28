@@ -56,6 +56,7 @@ import { maybeQueueCoachLogConfirmation, looksLikeChatYes } from "@/lib/kaios/an
 import { confirmLatestPendingAnalytics } from "@/lib/services/analytics-confirmation.service";
 import type { PendingAnalyticsPayload } from "@/lib/analytics/confirmation-payload";
 import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
+import { relabelMayaMacroLabels } from "@/lib/kaios/maya/macro-labels";
 import { ensureAlexDailyCardio } from "@/lib/kaios/alex/daily-cardio";
 import { ensureMayaMealSaveAsk } from "@/lib/kaios/maya/meal-save-ask";
 import { ensureMayaAlexHandoff } from "@/lib/kaios/maya/alex-handoff";
@@ -691,13 +692,19 @@ export async function* orchestrateCoachChat(
   }
 
   assistantText = ensureMayaAlexHandoff({
-    text: ensureMayaMealSaveAsk({
-      text: ensureMayaMealWaterReminder({
-        text: sanitizeCoachVisibleText(
-          coachVisibleMessage(scrubFalseSuccessClaims(assistantText, actionTruth)),
-          input.locale,
-          input.coachId,
-        ),
+    text: relabelMayaMacroLabels({
+      text: ensureMayaMealSaveAsk({
+        text: ensureMayaMealWaterReminder({
+          text: sanitizeCoachVisibleText(
+            coachVisibleMessage(scrubFalseSuccessClaims(assistantText, actionTruth)),
+            input.locale,
+            input.coachId,
+          ),
+          locale: input.locale,
+          coachId: input.coachId,
+          intent,
+          userMessage: input.message,
+        }),
         locale: input.locale,
         coachId: input.coachId,
         intent,
@@ -705,8 +712,6 @@ export async function* orchestrateCoachChat(
       }),
       locale: input.locale,
       coachId: input.coachId,
-      intent,
-      userMessage: input.message,
     }),
     locale: input.locale,
     coachId: input.coachId,

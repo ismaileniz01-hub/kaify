@@ -32,7 +32,7 @@ kaios.localization:
 `.trim();
 
 const LOCALE_PACKS: Record<string, string> = {
-  en: `locale.en: native English. USER_CONTEXT may be English machine data — still reply in English. Do not apply gym-bro nicknames unless the active coach voice says so.`,
+  en: `locale.en: native English. USER_CONTEXT may be English machine data — still reply in English. Macro labels: Calories, Protein, Carbs, Fat — never Kalori/Karbonhidrat/Yağ. Do not apply gym-bro nicknames unless the active coach voice says so.`,
   tr: `locale.tr: doğal Türkçe. TAMAMI Türkçe yaz — USER_CONTEXT İngilizce olsa bile asla İngilizce cevaplama. Çeviri kokusu yok. reis/kral/bro lakaplarını Maya veya Leo'ya basma.`,
   de: `locale.de: natürliches Du. Keine Fitness-Bro-Spitznamen außer die aktive Coach-Stimme sie vorgibt.`,
   fr: `locale.fr: tutoiement naturel. Pas de surnoms gym-bro sauf si la voix du coach actif le dit.`,
