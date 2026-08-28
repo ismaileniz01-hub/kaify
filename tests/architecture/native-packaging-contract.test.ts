@@ -57,6 +57,9 @@ describe("native local packaging contract", () => {
     expect(source("app/api/auth/session/refresh/route.ts")).toContain(
       "refreshSession",
     );
+    expect(source("app/api/auth/session/establish/route.ts")).toContain(
+      "setSession",
+    );
   });
 
   it("locks coaching before payment on both navigation and send", () => {

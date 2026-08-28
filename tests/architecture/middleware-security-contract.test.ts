@@ -46,6 +46,21 @@ describe("middleware security contracts", () => {
     expect(middleware).toContain("NATIVE_CORS_ALLOW_HEADERS");
   });
 
+  it("does not hang Android WebView on login Suspense fallback", () => {
+    const loginPage = readFileSync(
+      join(process.cwd(), "app", "(app)", "login", "page.tsx"),
+      "utf8",
+    );
+    const nativeEntry = readFileSync(
+      join(process.cwd(), "app", "(app)", "login", "native-entry", "page.tsx"),
+      "utf8",
+    );
+    expect(loginPage).not.toContain('from "@/components/auth/AuthLoadingFallback"');
+    expect(loginPage).not.toContain('from "next/navigation"');
+    expect(loginPage).not.toContain("<Suspense");
+    expect(nativeEntry).toContain("/api/auth/session/establish");
+  });
+
   it("gives auth pages a bounded, non-JS-only recovery fallback", () => {
     expect(authFallback).toContain("RECOVERY_MS = 8_000");
     expect(authFallback).toContain("<noscript>");
