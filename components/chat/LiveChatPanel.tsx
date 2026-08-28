@@ -29,7 +29,7 @@ import { useSession } from "@/lib/session-context";
 import { ChatComposer } from "@/components/chat/ChatComposer";
 import { ChatDeliveryTicks } from "@/components/chat/ChatDeliveryTicks";
 import { chatBubbleEnterClass } from "@/lib/chat/message-motion";
-import { errorToMessage, quotaErrorMessage, quotaResourceFromError, visionQuotaResourceFromError, isAnalyzeQuotaDenied } from "@/lib/i18n/api-error";
+import { errorToMessage, photoAnalysisFailureText, quotaErrorMessage, quotaResourceFromError, visionQuotaResourceFromError, isAnalyzeQuotaDenied } from "@/lib/i18n/api-error";
 import { coachRetryLine, isSoftCoachFailure, isUsableCoachReply } from "@/lib/kaios/coach-retry";
 import { MessageCircle, MoreVertical, Check } from "lucide-react";
 import {
@@ -822,13 +822,13 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             ),
           );
         } else {
-          const retry = coachRetryLine(lang);
+          const text = photoAnalysisFailureText(err, t);
           setErrorUpgrade(false);
           setMessages((prev) =>
             markMessageFailed(
               prev.map((msg) =>
                 msg.id === coachPlaceholderId
-                  ? { ...msg, text: retry, streaming: false }
+                  ? { ...msg, text, streaming: false }
                   : msg,
               ),
               photoUserId,

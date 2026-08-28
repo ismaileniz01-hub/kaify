@@ -1,4 +1,5 @@
 import { AiError } from "@/lib/ai/errors";
+import { aiCopy } from "@/lib/ai/ai-copy";
 import { logger } from "@/lib/logger";
 import {
   imageQualitySchema,
@@ -27,4 +28,18 @@ export function parseImageQuality(raw: unknown): ImageQuality {
     throw new AiError("AI_BAD_OUTPUT", "Image quality result was malformed");
   }
   return parsed.data;
+}
+
+/** User-facing blur/dark photo copy, with up to three provider tips. */
+export function formatLowQualityUserMessage(
+  locale: string | null | undefined,
+  quality: ImageQuality,
+): string {
+  const base = aiCopy(locale, "low_quality_image");
+  const tips = quality.tips
+    .map((tip) => tip.trim())
+    .filter((tip) => tip.length > 0)
+    .slice(0, 3);
+  if (tips.length === 0) return base;
+  return `${base}\n${tips.map((tip) => `• ${tip}`).join("\n")}`;
 }

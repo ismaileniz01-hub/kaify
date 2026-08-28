@@ -1,6 +1,7 @@
 import { getGeminiConfig } from "@/lib/ai/env";
 import { AiError } from "@/lib/ai/errors";
 import { TOKEN_BUDGET } from "@/lib/ai/budget";
+import { extractFirstJsonObjectLenient } from "@/lib/ai/extract-json";
 import { logger as geminiLogger } from "@/lib/logger";
 import { isGemini3Model, type GeminiThinkingLevel } from "@/lib/ai/models";
 import { resilient, classifyStatus, UpstreamHttpError } from "@/lib/resilience";
@@ -115,9 +116,23 @@ export type GenerateJsonParams = {
   /** Optional image for vision tasks. */
   image?: ImageInput;
   temperature?: number;
+  /** Override Gemini 3 thinking; defaults to env/config (MEDIUM). */
+  thinkingLevel?: GeminiThinkingLevel;
   signal?: AbortSignal;
   usageContext?: UsageContext;
 };
+
+/** Parse Gemini JSON text, salvaging fenced / prose-wrapped objects. */
+export function parseGeminiJsonText(text: string): unknown {
+  const stripped = stripCodeFences(text);
+  try {
+    return JSON.parse(stripped) as unknown;
+  } catch {
+    const salvaged = extractFirstJsonObjectLenient(stripped);
+    if (salvaged.ok) return salvaged.value;
+    throw new AiError("AI_BAD_OUTPUT", "Gemini did not return valid JSON");
+  }
+}
 
 function withTimeout(
   external: AbortSignal | undefined,
@@ -175,7 +190,7 @@ export async function generateGeminiJson(
     contents: [{ role: "user", parts }],
     generationConfig: buildGeminiGenerationConfig(config.model, {
       temperature: params.temperature,
-      thinkingLevel: config.thinkingLevel,
+      thinkingLevel: params.thinkingLevel ?? config.thinkingLevel,
     }),
   };
   if (params.systemInstruction) {
@@ -261,13 +276,15 @@ export async function generateGeminiJson(
     }
 
     try {
-      return JSON.parse(stripCodeFences(text)) as unknown;
-    } catch {
+      return parseGeminiJsonText(text);
+    } catch (error) {
       geminiLogger.error("[gemini] invalid JSON", {
         finishReason: candidate?.finishReason ?? null,
         text: text.slice(0, 600),
       });
-      throw new AiError("AI_BAD_OUTPUT", "Gemini did not return valid JSON");
+      throw error instanceof AiError
+        ? error
+        : new AiError("AI_BAD_OUTPUT", "Gemini did not return valid JSON");
     } finally {
       if (params.usageContext) {
         const usage = usageFromGemini(json.usageMetadata);

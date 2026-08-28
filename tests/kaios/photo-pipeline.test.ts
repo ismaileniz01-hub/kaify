@@ -91,4 +91,47 @@ describe("photo pipeline provider calls", () => {
     ).rejects.toMatchObject({ code: "AI_LOW_QUALITY" } satisfies Partial<AiError>);
     expect(createChatCompletion).not.toHaveBeenCalled();
   });
+
+  it("retries Gemini once when the first envelope is invalid", async () => {
+    generateGeminiJson
+      .mockResolvedValueOnce({ quality: { score: 8 } })
+      .mockResolvedValueOnce(validEnvelope);
+    const result = await ModelRouter.analyzeImagePipeline({
+      persona: "maya",
+      locale: "en",
+      image: { base64: "abc", mimeType: "image/jpeg" },
+    });
+    expect(generateGeminiJson).toHaveBeenCalledTimes(2);
+    expect(result.geminiCalls).toBe(2);
+    expect(result.summary).toBe("Coach synthesis");
+    const retryArgs = generateGeminiJson.mock.calls[1][0] as {
+      thinkingLevel?: string;
+    };
+    expect(retryArgs.thinkingLevel).toBe("LOW");
+  });
+
+  it("keeps a usable Maya summary when language rewrite still mismatches", async () => {
+    const turkish = [
+      "Bu tabakta tavuk pilav yoğurt ve bol yeşil salata görünüyor.",
+      "Kalori tahminim altı yüz elli, protein otuz beş gram civarında.",
+      "Kaydetmemi ister misin acaba?",
+    ].join(" ");
+    createChatCompletion
+      .mockResolvedValueOnce({
+        content: turkish,
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+      })
+      .mockResolvedValueOnce({
+        content: turkish,
+        usage: { prompt_tokens: 8, completion_tokens: 12, total_tokens: 20 },
+      });
+    generateGeminiJson.mockResolvedValue(validEnvelope);
+    const result = await ModelRouter.analyzeImagePipeline({
+      persona: "maya",
+      locale: "en",
+      image: { base64: "abc", mimeType: "image/jpeg" },
+    });
+    expect(result.summary).toContain("tavuk pilav");
+    expect(createChatCompletion).toHaveBeenCalledTimes(2);
+  });
 });

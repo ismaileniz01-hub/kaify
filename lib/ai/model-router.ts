@@ -4,7 +4,7 @@ import {
   type CompletionOptions,
 } from "@/lib/ai/deepseek.client";
 import { generateGeminiJson } from "@/lib/ai/gemini.client";
-import { MIN_QUALITY_SCORE } from "@/lib/ai/image-quality";
+import { MIN_QUALITY_SCORE, formatLowQualityUserMessage } from "@/lib/ai/image-quality";
 import { computeScoreDrift, type ScoreDrift } from "@/lib/ai/consistency";
 import { AiError } from "@/lib/ai/errors";
 import { aiCopy } from "@/lib/ai/ai-copy";
@@ -16,7 +16,7 @@ import {
   type AnalysisPersona,
 } from "@/lib/ai/personas";
 import { scrubModelOutput, wrapUntrustedInput } from "@/lib/ai/prompt-safety";
-import { sanitizeCoachVisibleText } from "@/lib/kaios/coach-retry";
+import { isUsableCoachReply, sanitizeCoachVisibleText } from "@/lib/kaios/coach-retry";
 import { TOKEN_BUDGET } from "@/lib/ai/budget";
 import { resolveLocale } from "@/lib/i18n/dictionary";
 import { buildReplyLanguageDirective } from "@/lib/i18n/reply-language-directive";
@@ -86,17 +86,52 @@ export const ModelRouter = {
   ): Promise<ImagePipelineResult> {
     const profile = ANALYSIS_PERSONAS[params.persona];
 
-    const raw = await generateGeminiJson({
+    const visionRequest = {
       prompt: buildVisionPrompt(profile.kind, params.userNote),
       image: params.image,
       temperature: 0.2,
       signal: params.signal,
       usageContext: params.userId
-        ? { userId: params.userId, operation: "vision" }
-        : { operation: "vision" },
-    });
+        ? { userId: params.userId, operation: "vision" as const }
+        : { operation: "vision" as const },
+    };
 
-    const interpreted = interpretVisionEnvelope(raw, MIN_QUALITY_SCORE);
+    let geminiCalls = 1;
+    let raw: unknown;
+    try {
+      raw = await generateGeminiJson(visionRequest);
+    } catch (error) {
+      if (
+        !(error instanceof AiError) ||
+        (error.code !== "AI_BAD_OUTPUT" && error.code !== "AI_UPSTREAM")
+      ) {
+        throw error;
+      }
+      aiLogger.warn("[model-router] vision json retry after provider failure", {
+        code: error.code,
+        kind: profile.kind,
+      });
+      raw = await generateGeminiJson({
+        ...visionRequest,
+        thinkingLevel: "LOW",
+      });
+      geminiCalls = 2;
+    }
+
+    let interpreted = interpretVisionEnvelope(raw, MIN_QUALITY_SCORE);
+    if (interpreted.status === "INVALID_PROVIDER_OUTPUT" && geminiCalls < 2) {
+      aiLogger.warn("[model-router] vision envelope invalid; retrying", {
+        kind: profile.kind,
+        raw: JSON.stringify(raw).slice(0, 600),
+      });
+      raw = await generateGeminiJson({
+        ...visionRequest,
+        thinkingLevel: "LOW",
+      });
+      geminiCalls = 2;
+      interpreted = interpretVisionEnvelope(raw, MIN_QUALITY_SCORE);
+    }
+
     if (interpreted.status === "INVALID_PROVIDER_OUTPUT") {
       aiLogger.error("[model-router] combined vision envelope invalid", {
         kind: profile.kind,
@@ -107,7 +142,7 @@ export const ModelRouter = {
     if (interpreted.status === "INSUFFICIENT_QUALITY") {
       throw new AiError(
         "AI_LOW_QUALITY",
-        aiCopy(params.locale, "low_quality_image"),
+        formatLowQualityUserMessage(params.locale, interpreted.quality),
         {
           status: interpreted.status,
           score: interpreted.quality.score,
@@ -145,46 +180,54 @@ export const ModelRouter = {
     let usage = first.usage;
     let deepseekCalls = 1;
     if (isReplyLanguageMismatch(rawSummary, params.locale)) {
-      const retry = await createChatCompletion(
-        [
+      const originalSummary = rawSummary;
+      try {
+        const retry = await createChatCompletion(
+          [
+            {
+              role: "system",
+              content: [
+                buildReplyLanguageDirective(resolveLocale(params.locale)),
+                "Rewrite the supplied coach reply faithfully in the mandatory language. Preserve numbers and safety meaning. Return only the rewritten reply.",
+              ].join("\n\n"),
+            },
+            {
+              role: "user",
+              content: wrapUntrustedInput("COACH_REPLY_TO_REWRITE", rawSummary),
+            },
+          ],
           {
-            role: "system",
-            content: [
-              buildReplyLanguageDirective(resolveLocale(params.locale)),
-              "Rewrite the supplied coach reply faithfully in the mandatory language. Preserve numbers and safety meaning. Return only the rewritten reply.",
-            ].join("\n\n"),
+            temperature: 0.2,
+            maxTokens: TOKEN_BUDGET.synthesis,
+            signal: params.signal,
+            usageContext: params.userId
+              ? { userId: params.userId, operation: "synthesis" }
+              : { operation: "synthesis" },
           },
-          {
-            role: "user",
-            content: wrapUntrustedInput("COACH_REPLY_TO_REWRITE", rawSummary),
-          },
-        ],
-        {
-          temperature: 0.2,
-          maxTokens: TOKEN_BUDGET.synthesis,
-          signal: params.signal,
-          usageContext: params.userId
-            ? { userId: params.userId, operation: "synthesis" }
-            : { operation: "synthesis" },
-        },
-      );
-      deepseekCalls += 1;
-      rawSummary = retry.content;
-      if (usage && retry.usage) {
-        usage = {
-          prompt_tokens: usage.prompt_tokens + retry.usage.prompt_tokens,
-          completion_tokens:
-            usage.completion_tokens + retry.usage.completion_tokens,
-          total_tokens: usage.total_tokens + retry.usage.total_tokens,
-        };
-      } else {
-        usage = retry.usage ?? usage;
-      }
-      if (isReplyLanguageMismatch(rawSummary, params.locale)) {
-        throw new AiError(
-          "AI_BAD_OUTPUT",
-          aiCopy(params.locale, "bad_analysis_output"),
         );
+        deepseekCalls += 1;
+        rawSummary = retry.content;
+        if (usage && retry.usage) {
+          usage = {
+            prompt_tokens: usage.prompt_tokens + retry.usage.prompt_tokens,
+            completion_tokens:
+              usage.completion_tokens + retry.usage.completion_tokens,
+            total_tokens: usage.total_tokens + retry.usage.total_tokens,
+          };
+        } else {
+          usage = retry.usage ?? usage;
+        }
+      } catch (error) {
+        aiLogger.warn("[model-router] photo language rewrite failed; keeping original", {
+          error: error instanceof Error ? error.message : "unknown",
+        });
+        rawSummary = originalSummary;
+      }
+      if (
+        isReplyLanguageMismatch(rawSummary, params.locale) &&
+        isUsableCoachReply(originalSummary)
+      ) {
+        rawSummary = originalSummary;
       }
     }
 
@@ -200,7 +243,7 @@ export const ModelRouter = {
       drift,
       summary,
       usage,
-      geminiCalls: 1,
+      geminiCalls,
       deepseekCalls,
     };
   },

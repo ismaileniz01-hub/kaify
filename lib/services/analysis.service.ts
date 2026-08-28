@@ -28,7 +28,7 @@ import { ensureMayaMealSaveAsk } from "@/lib/kaios/maya/meal-save-ask";
 import { relabelMayaMacroLabels } from "@/lib/kaios/maya/macro-labels";
 import { parseHydrationLiters } from "@/lib/kaios/analytics/chat-log";
 import { getTodayNutritionSnapshot } from "@/lib/services/analytics.service";
-import { sanitizeCoachVisibleText } from "@/lib/kaios/coach-retry";
+import { resolvePhotoCoachSummary } from "@/lib/ai/photo-summary-fallback";
 import { parseGenderInput } from "@/lib/profile-mapper";
 import type { ScoreDrift } from "@/lib/ai/consistency";
 import type {
@@ -378,13 +378,21 @@ export async function analyzePhoto(
     throw toApiError(error, locale);
   }
 
+  const polished = resolvePhotoCoachSummary({
+    summary: result.summary,
+    locale,
+    coachId: persona.id,
+    kind: persona.kind,
+    analysis: result.analysis,
+  });
+
   if (persona.kind === "food") {
     result = {
       ...result,
       summary: relabelMayaMacroLabels({
         text: ensureMayaMealSaveAsk({
           text: ensureMayaMealWaterReminder({
-            text: sanitizeCoachVisibleText(result.summary, locale, "maya"),
+            text: polished,
             locale,
             coachId: "maya",
             intent: "meal_analysis",
@@ -402,7 +410,7 @@ export async function analyzePhoto(
   } else {
     result = {
       ...result,
-      summary: sanitizeCoachVisibleText(result.summary, locale, "leo"),
+      summary: polished,
     };
   }
 

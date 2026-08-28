@@ -146,6 +146,98 @@ export const visionEnvelopeSchema = z.object({
   observations: z.unknown().optional(),
 });
 
+const OBSERVATION_KEYS = [
+  "visible_muscles",
+  "scores",
+  "overall_score",
+  "food_analysis",
+  "ambiguity",
+] as const;
+
+function hasFoodMacroKeys(value: Record<string, unknown>): boolean {
+  return (
+    value.calories != null ||
+    value.protein != null ||
+    value.carb != null ||
+    value.carbs != null ||
+    value.carbohydrates != null ||
+    value.fat != null
+  );
+}
+
+function foodAnalysisFromLooseMacros(
+  value: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    calories: value.calories,
+    protein: value.protein,
+    carb: value.carb ?? value.carbs ?? value.carbohydrates,
+    fat: value.fat,
+  };
+}
+
+function parseJsonObjectString(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("{")) return value;
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    return value;
+  }
+}
+
+/**
+ * Gemini often drifts from `{ quality, observations }`: macros at the top
+ * level, observations as a JSON string, or a `{ data: envelope }` wrapper.
+ * Lift those shapes before the fail-closed parse so a usable plate read is
+ * not thrown away as INVALID_PROVIDER_OUTPUT.
+ */
+export function normalizeVisionEnvelopeRaw(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const obj = { ...(raw as Record<string, unknown>) };
+
+  if (obj.quality == null) {
+    for (const key of ["data", "result", "response", "json"] as const) {
+      const nested = obj[key];
+      if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+        return normalizeVisionEnvelopeRaw(nested);
+      }
+    }
+  }
+
+  let observations = parseJsonObjectString(obj.observations);
+  if (
+    observations == null ||
+    typeof observations !== "object" ||
+    Array.isArray(observations)
+  ) {
+    const lifted: Record<string, unknown> = {};
+    let hasLifted = false;
+    for (const key of OBSERVATION_KEYS) {
+      if (obj[key] != null) {
+        lifted[key] = obj[key];
+        hasLifted = true;
+      }
+    }
+    if (!lifted.food_analysis && hasFoodMacroKeys(obj)) {
+      lifted.food_analysis = foodAnalysisFromLooseMacros(obj);
+      hasLifted = true;
+    }
+    if (hasLifted) observations = lifted;
+  } else {
+    const obs = {
+      ...(observations as Record<string, unknown>),
+    };
+    if (obs.food_analysis == null && hasFoodMacroKeys(obs)) {
+      obs.food_analysis = foodAnalysisFromLooseMacros(obs);
+    }
+    observations = obs;
+  }
+
+  return { ...obj, observations };
+}
+
 export type VisionQualityStatus =
   | "VALID"
   | "INSUFFICIENT_QUALITY"
@@ -173,7 +265,9 @@ export function interpretVisionEnvelope(
   raw: unknown,
   minQualityScore: number,
 ): InterpretedVisionEnvelope {
-  const envelope = visionEnvelopeSchema.safeParse(raw);
+  const envelope = visionEnvelopeSchema.safeParse(
+    normalizeVisionEnvelopeRaw(raw),
+  );
   if (!envelope.success) {
     return { status: "INVALID_PROVIDER_OUTPUT" };
   }

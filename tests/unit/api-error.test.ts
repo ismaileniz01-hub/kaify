@@ -3,6 +3,7 @@ import {
   apiErrorMessage,
   errorToMessage,
   isAnalyzeQuotaDenied,
+  photoAnalysisFailureText,
   visionQuotaResourceFromError,
 } from "@/lib/i18n/api-error";
 
@@ -57,5 +58,27 @@ describe("api error taxonomy (UX-004)", () => {
     expect(
       isAnalyzeQuotaDenied({ quotaExceeded: true, resource: "maya_photo" }),
     ).toBe(true);
+  });
+});
+
+describe("photoAnalysisFailureText", () => {
+  it("keeps the blurry-photo server copy instead of a generic validation line", () => {
+    expect(
+      photoAnalysisFailureText(
+        {
+          code: "VALIDATION_ERROR",
+          message: "This photo is not clear enough for analysis. Follow the tips and try again.",
+        },
+        t,
+      ),
+    ).toBe(
+      "This photo is not clear enough for analysis. Follow the tips and try again.",
+    );
+  });
+
+  it("uses photo-analysis copy for provider faults, not the spoken retry line", () => {
+    expect(
+      photoAnalysisFailureText({ code: "INTERNAL_ERROR", message: "AI_BAD_OUTPUT" }, t),
+    ).toBe("L:chat.error.photo");
   });
 });
