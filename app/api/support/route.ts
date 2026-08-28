@@ -7,7 +7,7 @@ import {
 } from "@/lib/security/body-limit";
 import { ApiError } from "@/lib/api/errors";
 import {
-  getOrCreateUserTicket,
+  getUserSupportTicket,
   sendUserSupportMessage,
 } from "@/lib/services/support.service";
 
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 export const GET = defineRoute(
   { route: "GET /api/support", auth: "user" },
-  async ({ user }) => getOrCreateUserTicket(user.id),
+  async ({ user }) => getUserSupportTicket(user.id),
 );
 
 export const POST = defineRoute(

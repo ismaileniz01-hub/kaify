@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2, Send } from "lucide-react";
 import { apiGet, apiPost } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
+import { InlineAlert } from "@/components/InlineAlert";
 import type {
   AdminSupportTicketSummary,
   SupportMessageDTO,
@@ -18,19 +19,27 @@ export function AdminSupportPanel() {
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const loadList = useCallback(() => {
-    setLoading(true);
-    void apiGet<{ tickets: AdminSupportTicketSummary[] }>("/api/admin/support")
-      .then((res) => setTickets(res.tickets))
-      .finally(() => setLoading(false));
-  }, []);
+  const loadList = useCallback(async () => {
+    setError(null);
+    try {
+      const res = await apiGet<{ tickets: AdminSupportTicketSummary[] }>(
+        "/api/admin/support",
+      );
+      setTickets(res.tickets ?? []);
+    } catch {
+      setError(t("admin.support.error"));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
 
   const loadTicket = useCallback((ticketId: string) => {
     void apiGet<{
       ticket: AdminSupportTicketSummary;
       messages: SupportMessageDTO[];
-    }>(`/api/admin/support?ticketId=${ticketId}`).then((res) => {
+    }>(`/api/admin/support?ticketId=${encodeURIComponent(ticketId)}`).then((res) => {
       setDetail(res.ticket);
       setMessages(res.messages);
       setSelectedId(ticketId);
@@ -38,7 +47,12 @@ export function AdminSupportPanel() {
   }, []);
 
   useEffect(() => {
-    loadList();
+    setLoading(true);
+    void loadList();
+    const timer = window.setInterval(() => {
+      void loadList();
+    }, 20_000);
+    return () => window.clearInterval(timer);
   }, [loadList]);
 
   const sendReply = async () => {
@@ -52,7 +66,7 @@ export function AdminSupportPanel() {
       setDetail(res.ticket);
       setMessages(res.messages);
       setReply("");
-      loadList();
+      void loadList();
     } finally {
       setBusy(false);
     }
@@ -70,7 +84,17 @@ export function AdminSupportPanel() {
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-white">{t("admin.support.inbox")}</h3>
-        {tickets.length === 0 ? (
+        {error && (
+          <InlineAlert
+            variant="error"
+            message={error}
+            onRetry={() => {
+              setLoading(true);
+              void loadList();
+            }}
+          />
+        )}
+        {!error && tickets.length === 0 ? (
           <p className="text-xs text-zinc-500">{t("admin.support.empty")}</p>
         ) : (
           tickets.map((ticket) => (
@@ -85,7 +109,9 @@ export function AdminSupportPanel() {
               }`}
             >
               <p className="text-sm font-medium text-white">{ticket.userName}</p>
-              <p className="truncate text-[10px] text-zinc-500">{ticket.userEmail ?? ticket.userId}</p>
+              <p className="truncate text-[10px] text-zinc-500">
+                {ticket.userEmail ?? ticket.userId}
+              </p>
               <p className="mt-1 truncate text-xs text-zinc-400">{ticket.lastMessage}</p>
             </button>
           ))
@@ -107,7 +133,9 @@ export function AdminSupportPanel() {
                 <div
                   key={m.id}
                   className={`rounded-lg px-2.5 py-2 text-xs ${
-                    m.sender === "admin" ? "bg-purple-500/20 text-purple-100" : "bg-white/10 text-zinc-200"
+                    m.sender === "admin"
+                      ? "bg-purple-500/20 text-purple-100"
+                      : "bg-white/10 text-zinc-200"
                   }`}
                 >
                   {m.body}

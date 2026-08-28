@@ -364,7 +364,11 @@ export default function AdminHubPage() {
           </div>
         )}
 
-        {tab === "support" && <AdminSupportPanel />}
+        {tab === "support" && (
+          <div className="mt-6">
+            <AdminSupportPanel />
+          </div>
+        )}
       </div>
     </div>
   );

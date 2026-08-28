@@ -1165,6 +1165,42 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["workout_set_logs"]["Row"]>;
         Relationships: [];
       };
+      support_tickets: {
+        Row: {
+          id: string;
+          user_id: string;
+          subject: string;
+          status: "open" | "closed";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          subject?: string;
+          status?: "open" | "closed";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["support_tickets"]["Row"]>;
+        Relationships: [];
+      };
+      support_messages: {
+        Row: {
+          id: string;
+          ticket_id: string;
+          sender: "user" | "admin";
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          ticket_id: string;
+          sender: "user" | "admin";
+          body: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["support_messages"]["Row"]>;
+        Relationships: [];
+      };
     };
     Views: {
       user_gem_balances: {

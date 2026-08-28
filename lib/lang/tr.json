@@ -1141,6 +1141,7 @@
   "admin.support.empty": "Henüz destek mesajı yok.",
   "admin.support.select": "Bir konuşma seç",
   "admin.support.reply_placeholder": "Kullanıcıya yanıt yaz…",
+  "admin.support.error": "Destek kutusu yüklenemedi.",
   "analytics.confirm.yes": "Evet, analize ekle",
   "analytics.confirm.no": "Şimdilik hayır",
   "analytics.confirm.done": "Analizine eklendi.",

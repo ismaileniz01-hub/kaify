@@ -1150,6 +1150,7 @@
   "admin.support.empty": "No support messages yet.",
   "admin.support.select": "Select a conversation",
   "admin.support.reply_placeholder": "Reply to user…",
+  "admin.support.error": "Support inbox could not be loaded.",
   "analytics.confirm.yes": "Yes, add to analytics",
   "analytics.confirm.no": "Not now",
   "analytics.confirm.done": "Added to your analytics.",
