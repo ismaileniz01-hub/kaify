@@ -421,20 +421,21 @@ html.native-app .pt-app-header {
   padding-top: var(--app-header-top);
 }
 
-/* Native WebView: paint at display refresh (120/144Hz) instead of blur-bound 30fps. */
+/* Native WebView: cheaper paints without locking pan/scroll. */
 html.native-app {
   text-rendering: optimizeSpeed;
   scroll-behavior: auto;
   -webkit-tap-highlight-color: transparent;
 }
 
-html.native-app body,
-html.native-app .phone-shell {
-  overscroll-behavior: none;
-}
-
 html.native-app .phone-shell {
   animation: none;
+}
+
+html.native-app .phone-shell > main,
+html.native-app .overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 html.native-app .animate-in {
@@ -462,12 +463,6 @@ html.native-app .fitness-layer-icon:nth-child(n + 16) {
 html.native-app .fire-spark,
 html.native-app [class*="fire-aura"] {
   animation: none !important;
-}
-
-html.native-app button,
-html.native-app a,
-html.native-app [role="button"] {
-  touch-action: manipulation;
 }
 
 .app-navigation-root {
