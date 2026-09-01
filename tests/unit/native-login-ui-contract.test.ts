@@ -24,6 +24,7 @@ describe("native login UI contract (canonical web parity)", () => {
     expect(login).toContain("Kaify Ai");
     expect(login).toContain("4 coaches. One team. Designed for you.");
     expect(login).toContain("Send login code");
+    expect(login).toContain("Sign in with password");
     expect(login).toContain("Check your email");
     expect(login).toContain("Your email address");
     expect(login).not.toContain("Sign in locally");

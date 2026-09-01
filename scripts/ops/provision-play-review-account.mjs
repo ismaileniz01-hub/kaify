@@ -9,7 +9,9 @@
  *
  * Optional env:
  *   PLAY_REVIEW_EMAIL     (default play-review@kaifyai.org)
- *   PLAY_REVIEW_PASSWORD  (alphanumeric, min 8; generated if omitted)
+ *   PLAY_REVIEW_PASSWORD  (alphanumeric, min 8; generated only for a new user)
+ *   PLAY_REVIEW_TIER      (default essential)
+ *   PLAY_REVIEW_ROTATE=1  force a new password even if the user already exists
  */
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
@@ -19,23 +21,26 @@ import { createClient } from "@supabase/supabase-js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const DEFAULT_EMAIL = "play-review@kaifyai.org";
+const DEFAULT_TIER = "essential";
 const EXPIRES_AT = "2099-12-31T23:59:59.000Z";
 const ALPHABET = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function load(key) {
   if (process.env[key]?.trim()) return process.env[key].trim();
-  const path = join(ROOT, ".env.local");
-  if (!existsSync(path)) return null;
-  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
-    if (!line.startsWith(`${key}=`)) continue;
-    let v = line.slice(key.length + 1).trim();
-    if (
-      (v.startsWith('"') && v.endsWith('"')) ||
-      (v.startsWith("'") && v.endsWith("'"))
-    ) {
-      v = v.slice(1, -1);
+  for (const file of [".env.local", ".env.vercel.prod.tmp"]) {
+    const path = join(ROOT, file);
+    if (!existsSync(path)) continue;
+    for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+      if (!line.startsWith(`${key}=`)) continue;
+      let v = line.slice(key.length + 1).trim();
+      if (
+        (v.startsWith('"') && v.endsWith('"')) ||
+        (v.startsWith("'") && v.endsWith("'"))
+      ) {
+        v = v.slice(1, -1);
+      }
+      if (v && v !== "[SENSITIVE]") return v;
     }
-    return v || null;
   }
   return null;
 }
@@ -80,8 +85,14 @@ if (!url || !anonKey || !serviceRoleKey) {
 }
 
 const email = (load("PLAY_REVIEW_EMAIL") || DEFAULT_EMAIL).toLowerCase();
-const password = load("PLAY_REVIEW_PASSWORD") || generatePassword();
-if (password.length < 8 || /[^A-Za-z0-9]/.test(password)) {
+const requestedTier = (load("PLAY_REVIEW_TIER") || DEFAULT_TIER).toLowerCase();
+const allowedTiers = new Set(["essential", "pro", "premium_max"]);
+if (!allowedTiers.has(requestedTier)) {
+  fail("tier", new Error("PLAY_REVIEW_TIER must be essential, pro, or premium_max"));
+}
+const rotate = load("PLAY_REVIEW_ROTATE") === "1";
+const suppliedPassword = load("PLAY_REVIEW_PASSWORD");
+if (suppliedPassword && (suppliedPassword.length < 8 || /[^A-Za-z0-9]/.test(suppliedPassword))) {
   fail(
     "password",
     new Error("PLAY_REVIEW_PASSWORD must be alphanumeric and at least 8 characters"),
@@ -93,31 +104,54 @@ const admin = createClient(url, serviceRoleKey, {
 });
 
 let userId = null;
-const created = await admin.auth.admin.createUser({
-  email,
-  password,
-  email_confirm: true,
-  user_metadata: { display_name: "Play Reviewer" },
-});
+let password = suppliedPassword;
+let passwordRotated = false;
+const existing = await findUserByEmail(admin, email);
 
-if (created.data.user) {
-  userId = created.data.user.id;
-} else {
-  const existing = await findUserByEmail(admin, email);
-  if (!existing) fail("createUser", created.error);
-  userId = existing.id;
-  const updated = await admin.auth.admin.updateUserById(userId, {
+if (!existing) {
+  password = suppliedPassword || generatePassword();
+  if (password.length < 8 || /[^A-Za-z0-9]/.test(password)) {
+    fail(
+      "password",
+      new Error("PLAY_REVIEW_PASSWORD must be alphanumeric and at least 8 characters"),
+    );
+  }
+  const created = await admin.auth.admin.createUser({
+    email,
     password,
     email_confirm: true,
+    user_metadata: { display_name: "Play Reviewer" },
   });
-  if (updated.error) fail("updateUser", updated.error);
+  if (!created.data.user) fail("createUser", created.error);
+  userId = created.data.user.id;
+  passwordRotated = true;
+} else {
+  userId = existing.id;
+  if (rotate || suppliedPassword) {
+    password = suppliedPassword || generatePassword();
+    const updated = await admin.auth.admin.updateUserById(userId, {
+      password,
+      email_confirm: true,
+    });
+    if (updated.error) fail("updateUser", updated.error);
+    passwordRotated = true;
+  } else {
+    const confirmed = await admin.auth.admin.updateUserById(userId, {
+      email_confirm: true,
+    });
+    if (confirmed.error) fail("confirmUser", confirmed.error);
+  }
 }
 
 const userClient = createClient(url, anonKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
-const signedIn = await userClient.auth.signInWithPassword({ email, password });
-if (signedIn.error || !signedIn.data.user) fail("signIn", signedIn.error);
+let passwordLoginOk = false;
+if (password) {
+  const signedIn = await userClient.auth.signInWithPassword({ email, password });
+  if (signedIn.error || !signedIn.data.user) fail("signIn", signedIn.error);
+  passwordLoginOk = true;
+}
 
 const { data: profile, error: profileError } = await admin
   .from("profiles")
@@ -127,6 +161,12 @@ const { data: profile, error: profileError } = await admin
 if (profileError) fail("loadProfile", profileError);
 
 if (profile.onboarding_status !== "ACTIVE") {
+  if (!passwordLoginOk) {
+    fail(
+      "complete_onboarding",
+      new Error("Account exists but is not onboarded. Set PLAY_REVIEW_PASSWORD to finish setup."),
+    );
+  }
   const onboarded = await userClient.rpc("complete_onboarding", {
     p_display_name: "Play Reviewer",
     p_gender: "prefer_not_to_say",
@@ -153,7 +193,7 @@ if (profile.onboarding_status !== "ACTIVE") {
 
 const subscribed = await admin.rpc("apply_subscription", {
   p_user_id: userId,
-  p_tier: "premium_max",
+  p_tier: requestedTier,
   p_billing_cycle: "yearly",
   p_expires_at: EXPIRES_AT,
 });
@@ -193,31 +233,41 @@ for (const row of consentRows) {
   if (inserted.error) fail(`consent:${row.type}`, inserted.error);
 }
 
-await userClient.auth.signOut();
+if (passwordLoginOk) {
+  await userClient.auth.signOut();
+}
 
 const { data: finalProfile, error: finalError } = await admin
   .from("profiles")
-  .select("onboarding_status, tier, team_chat_unlocked, locale")
+  .select("onboarding_status, tier, tier_started_at, team_chat_unlocked, locale")
   .eq("id", userId)
   .single();
 if (finalError) fail("verifyProfile", finalError);
+
+const passwordLine = passwordRotated
+  ? `Password: ${password}`
+  : "Password: (unchanged — existing reviewer password kept)";
+const loginLine = passwordLoginOk
+  ? "Password sign-in: OK"
+  : "Password sign-in: not re-tested (existing password kept; set PLAY_REVIEW_PASSWORD to verify)";
 
 console.log(`
 Google Play Console → App content → App access
 ----------------------------------------------
 Restricted: All or some functionality is restricted
 Username / email: ${email}
-Password: ${password}
+${passwordLine}
 
 Other instructions (paste in English):
 1. Open the app and stay on Sign in.
 2. Enter the email and password above.
 3. Tap "Sign in with password". Do not tap "Send login code" and do not request an email OTP.
-4. The account lands on Home / Welcome in English with a Premium plan already active.
-5. Coaches, streak, market, analytics, meal photo, and weekly team meeting are available.
+4. The account lands on Home / Welcome in English with an Essential plan already active.
+5. Coaches, streak, market, analytics, and meal photo are available.
 
-Account status: ${finalProfile.onboarding_status} / ${finalProfile.tier} / team=${finalProfile.team_chat_unlocked}
+Account status: ${finalProfile.onboarding_status} / ${finalProfile.tier} / started=${Boolean(finalProfile.tier_started_at)} / team=${finalProfile.team_chat_unlocked}
+${loginLine}
 User id: ${userId}
 
-Keep this password private. Re-run the script to rotate it.
+Keep this password private. Re-run with PLAY_REVIEW_ROTATE=1 to rotate it.
 `);

@@ -7,13 +7,15 @@ async function text(relativePath) {
   return readFile(path.join(root, relativePath), "utf8");
 }
 
-const [aasa, assetLinks, privacy, infoPlist, androidManifest] =
+const [aasa, assetLinks, privacy, infoPlist, androidManifest, nativeLogin, passwordRoute] =
   await Promise.all([
     text("public/.well-known/apple-app-site-association"),
     text("public/.well-known/assetlinks.json"),
     text("ios/App/App/PrivacyInfo.xcprivacy"),
     text("ios/App/App/Info.plist"),
     text("android/app/src/main/AndroidManifest.xml"),
+    text("native-app/src/login/NativeLoginScreen.tsx"),
+    text("app/api/auth/password/route.ts"),
   ]);
 
 const errors = [];
@@ -94,6 +96,21 @@ requireMatch(
   androidManifest,
   /android:scheme="kaify"/,
   "AndroidManifest.xml is missing the kaify URL scheme.",
+);
+requireMatch(
+  nativeLogin,
+  /Sign in with password/,
+  "Native login must include password sign-in for Play reviewers.",
+);
+requireMatch(
+  passwordRoute,
+  /isNativeWebViewRequest/,
+  "Password login must return native session tokens for Capacitor.",
+);
+forbid(
+  androidManifest,
+  /com\.android\.vending\.BILLING/,
+  "AndroidManifest must not declare Play Billing for this consumption-only app.",
 );
 
 if (errors.length > 0) {

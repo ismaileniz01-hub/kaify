@@ -12,6 +12,7 @@ vi.mock("../../native-app/src/session", () => ({
 
 import {
   sendNativeEmailOtp,
+  signInNativeWithPassword,
   verifyNativeEmailOtp,
 } from "../../native-app/src/auth-otp";
 
@@ -104,5 +105,44 @@ describe("native Kaify OTP client (resend contract)", () => {
       access_token: "access",
       refresh_token: "refresh",
     });
+  });
+
+  it("sets supabase session from password sign-in tokens", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => ({
+        success: true,
+        data: {
+          verified: true,
+          session: {
+            accessToken: "access",
+            refreshToken: "refresh",
+          },
+        },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    setSession.mockResolvedValue({ error: null });
+
+    const result = await signInNativeWithPassword(
+      "play-review@kaifyai.org",
+      "KaifyPlay1",
+    );
+    expect(result).toEqual({
+      ok: true,
+      accessToken: "access",
+      refreshToken: "refresh",
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://kaifyai.org/api/auth/password",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "X-Client-Version": "native-1.0.5",
+        }),
+      }),
+    );
   });
 });

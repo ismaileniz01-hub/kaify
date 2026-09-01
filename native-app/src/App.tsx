@@ -13,7 +13,7 @@ import {
   sendKaiMessage,
   type NativeProfile,
 } from "./api";
-import { sendNativeEmailOtp, verifyNativeEmailOtp } from "./auth-otp";
+import { sendNativeEmailOtp, signInNativeWithPassword, verifyNativeEmailOtp } from "./auth-otp";
 import { NATIVE_CLIENT_VERSION } from "./client-version";
 import { enterRealKaify } from "./enter-kaify";
 import { hydrateSecureSession, supabase } from "./session";
@@ -61,6 +61,7 @@ export function App() {
   const [authMode, setAuthMode] = useState<NativeAuthMode>("login");
   const [authStep, setAuthStep] = useState<NativeAuthStep>("email");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [acceptedAi, setAcceptedAi] = useState(false);
@@ -189,6 +190,33 @@ export function App() {
     }
   }
 
+  async function signInWithPassword() {
+    setAuthBusy(true);
+    setError("");
+    try {
+      const result = await signInNativeWithPassword(email, password);
+      if (!result.ok) {
+        setError(result.message);
+        return result;
+      }
+      setPassword("");
+      enterRealKaify(result.accessToken, result.refreshToken);
+      return result;
+    } catch (cause) {
+      const raw =
+        cause instanceof Error
+          ? cause.message
+          : "Sign-in failed. Please try again.";
+      const message = /load failed|failed to fetch|networkerror/i.test(raw)
+        ? "Bağlantı hatası. İnternetini kontrol edip tekrar dene."
+        : raw;
+      setError(message);
+      return { ok: false as const, message };
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
   async function verifyCode() {
     setAuthBusy(true);
     setError("");
@@ -282,6 +310,7 @@ export function App() {
   async function signOut() {
     await supabase.auth.signOut();
     setProfile(null);
+    setPassword("");
     setAuthStep("email");
     setScreen("login");
   }
@@ -299,6 +328,7 @@ export function App() {
         mode={authMode}
         step={screen === "verify" || authStep === "code" ? "code" : "email"}
         email={email}
+        password={password}
         otp={otp}
         busy={authBusy}
         online={online}
@@ -306,6 +336,7 @@ export function App() {
         acceptedLegal={acceptedLegal}
         acceptedAi={acceptedAi}
         onEmailChange={setEmail}
+        onPasswordChange={setPassword}
         onOtpChange={setOtp}
         onAcceptedLegalChange={setAcceptedLegal}
         onAcceptedAiChange={setAcceptedAi}
@@ -322,6 +353,7 @@ export function App() {
           }
         }}
         onSendCode={sendCode}
+        onPasswordSignIn={signInWithPassword}
         onVerifyCode={verifyCode}
         onClearError={() => setError("")}
       />

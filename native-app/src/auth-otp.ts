@@ -155,6 +155,65 @@ export async function sendNativeEmailOtp(
   return { ok: true, resendAfterSeconds };
 }
 
+export async function signInNativeWithPassword(
+  email: string,
+  password: string,
+): Promise<
+  | { ok: true; accessToken: string; refreshToken: string }
+  | NativeOtpFailure
+> {
+  const trimmed = email.trim().toLowerCase();
+  if (!trimmed.includes("@") || password.length < 8) {
+    return { ok: false, message: "Enter your email and password." };
+  }
+
+  const result = await publicAuthPost<{
+    verified: true;
+    session?: { accessToken: string; refreshToken: string };
+  }>("/api/auth/password", {
+    email: trimmed,
+    password,
+  });
+  if (!result.ok) {
+    return {
+      ok: false,
+      message:
+        result.code === "UNAUTHORIZED"
+          ? "Invalid email or password."
+          : result.message || "Sign-in failed. Please try again.",
+      code: result.code,
+    };
+  }
+
+  const session = result.data.session;
+  if (!session?.accessToken || !session.refreshToken) {
+    return {
+      ok: false,
+      message:
+        "Sunucu girişi tamamladı ama uygulama oturumu dönmedi. Lütfen tekrar dene.",
+    };
+  }
+
+  const { error } = await supabase.auth.setSession({
+    access_token: session.accessToken,
+    refresh_token: session.refreshToken,
+  });
+  if (error) {
+    return {
+      ok: false,
+      message: friendlyNetworkMessage(
+        error.message,
+        error.message || "Oturum kaydedilemedi. Lütfen tekrar dene.",
+      ),
+    };
+  }
+  return {
+    ok: true,
+    accessToken: session.accessToken,
+    refreshToken: session.refreshToken,
+  };
+}
+
 export async function verifyNativeEmailOtp(
   email: string,
   token: string,

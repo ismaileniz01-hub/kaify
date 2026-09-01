@@ -15,5 +15,11 @@ Terms: https://kaifyai.org/terms
 Support: https://kaifyai.org
 
 Reviewer notes (Play Console → App content / notes):
-This is a consumption-only app. Account creation and Paddle checkout exist only on the website. The Android app is email sign-in for existing customers. After login, members land on /welcome. Website-only routes / /signup /pricing are not available in the app.
-Reviewer: sign in with the email and password provided in the review credentials. Website signup is not offered inside the APK.
+This is a consumption-only app. There are no Google Play in-app purchases. Billing is only on the website (Paddle).
+
+Restricted access: use the App access email and password.
+1. Open the app and stay on Sign in.
+2. Enter the reviewer email and password.
+3. Tap "Sign in with password". Do not tap "Send login code" and do not request an email OTP.
+4. The account lands on Home / Welcome in English with an Essential plan already active.
+5. Coaches, streak, market, analytics, and meal photo are available.

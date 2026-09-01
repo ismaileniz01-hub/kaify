@@ -34,6 +34,7 @@ describe("native local packaging contract", () => {
     }
     expect(nativeApp).toContain('from "@/lib/marketing/pricing-plans"');
     expect(nativeApp).toContain("sendNativeEmailOtp");
+    expect(nativeApp).toContain("signInNativeWithPassword");
     expect(nativeApp).toContain("verifyNativeEmailOtp");
     expect(nativeApp).not.toContain("signInWithOtp");
     expect(nativeApp).not.toContain("shouldCreateUser");
@@ -43,6 +44,7 @@ describe("native local packaging contract", () => {
     const nativeOtp = source("native-app/src/auth-otp.ts");
     expect(nativeOtp).toContain("/api/auth/otp/send");
     expect(nativeOtp).toContain("/api/auth/otp/verify");
+    expect(nativeOtp).toContain("/api/auth/password");
     expect(nativeOtp).toContain("__KAIFY_API_BASE__");
     expect(nativeOtp).toContain("setSession");
     expect(nativeOtp).not.toContain("SERVICE_ROLE");

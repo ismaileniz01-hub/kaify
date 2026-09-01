@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
+  Lock,
   Mail,
   ShieldCheck,
 } from "lucide-react";
@@ -37,6 +38,7 @@ export type NativeLoginScreenProps = {
   mode: NativeAuthMode;
   step: NativeAuthStep;
   email: string;
+  password: string;
   otp: string;
   busy: boolean;
   online: boolean;
@@ -44,12 +46,14 @@ export type NativeLoginScreenProps = {
   acceptedLegal: boolean;
   acceptedAi: boolean;
   onEmailChange: (value: string) => void;
+  onPasswordChange: (value: string) => void;
   onOtpChange: (value: string) => void;
   onAcceptedLegalChange: (value: boolean) => void;
   onAcceptedAiChange: (value: boolean) => void;
   onModeChange: (mode: NativeAuthMode) => void;
   onStepChange: (step: NativeAuthStep) => void;
   onSendCode: () => Promise<NativeOtpSendSuccess | NativeOtpFailure>;
+  onPasswordSignIn: () => Promise<{ ok: true } | NativeOtpFailure>;
   onVerifyCode: () => Promise<{ ok: true } | NativeOtpFailure>;
   onClearError: () => void;
 };
@@ -62,6 +66,7 @@ export function NativeLoginScreen({
   mode,
   step,
   email,
+  password,
   otp,
   busy,
   online,
@@ -69,17 +74,20 @@ export function NativeLoginScreen({
   acceptedLegal,
   acceptedAi,
   onEmailChange,
+  onPasswordChange,
   onOtpChange,
   onAcceptedLegalChange,
   onAcceptedAiChange,
   onModeChange,
   onStepChange,
   onSendCode,
+  onPasswordSignIn,
   onVerifyCode,
   onClearError,
 }: NativeLoginScreenProps) {
   const idPrefix = useId();
   const emailId = `${idPrefix}-email`;
+  const passwordId = `${idPrefix}-password`;
   const errorId = `${idPrefix}-error`;
   const resendStatusId = `${idPrefix}-resend-status`;
   const isSignup = mode === "signup";
@@ -168,6 +176,14 @@ export function NativeLoginScreen({
     !sendInFlight &&
     (!isSignup || (acceptedLegal && acceptedAi));
 
+  const canPasswordSignIn =
+    !isSignup &&
+    email.trim().includes("@") &&
+    password.length >= 8 &&
+    online &&
+    !busy &&
+    !sendInFlight;
+
   async function handleSend(event?: FormEvent) {
     event?.preventDefault();
     if (!canSend || sendInFlight) return;
@@ -198,6 +214,11 @@ export function NativeLoginScreen({
       await clearCooldownForEmail(emailRef.current);
       setResendAvailableAt(null);
     }
+  }
+
+  async function handlePasswordSignIn() {
+    if (!canPasswordSignIn) return;
+    await onPasswordSignIn();
   }
 
   function handleEmailChange(value: string) {
@@ -444,6 +465,46 @@ export function NativeLoginScreen({
                 : "Send login code"}
             <ArrowRight className="icon-md" aria-hidden />
           </button>
+
+          {!isSignup ? (
+            <>
+              <p className="login-password-or">or</p>
+              <label htmlFor={passwordId} className="sr-only">
+                Password
+              </label>
+              <div className="login-field-pill">
+                <Lock className="icon-sm text-purple" aria-hidden />
+                <input
+                  id={passwordId}
+                  type="password"
+                  value={password}
+                  onChange={(e) => {
+                    onPasswordChange(e.target.value);
+                    onClearError();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void handlePasswordSignIn();
+                    }
+                  }}
+                  placeholder="Password"
+                  autoComplete="current-password"
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={error ? errorId : undefined}
+                />
+              </div>
+              <button
+                type="button"
+                className="btn-password"
+                disabled={!canPasswordSignIn}
+                onClick={() => void handlePasswordSignIn()}
+              >
+                {busy ? "Signing in…" : "Sign in with password"}
+                <ArrowRight className="icon-md" aria-hidden />
+              </button>
+            </>
+          ) : null}
 
           {!isSignup ? (
             <button

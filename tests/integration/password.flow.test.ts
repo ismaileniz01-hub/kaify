@@ -30,10 +30,16 @@ vi.mock("@/lib/supabase/route-handler", () => ({
 import { POST as passwordPost } from "@/app/api/auth/password/route";
 import { passwordLoginSchema } from "@/lib/validations/auth-otp.schema";
 
-function jsonRequest(body: unknown): NextRequest {
+function jsonRequest(
+  body: unknown,
+  extraHeaders: Record<string, string> = {},
+): NextRequest {
   return {
     method: "POST",
-    headers: new Headers({ "content-type": "application/json" }),
+    headers: new Headers({
+      "content-type": "application/json",
+      ...extraHeaders,
+    }),
     json: async () => body,
   } as unknown as NextRequest;
 }
@@ -78,7 +84,12 @@ describe("POST /api/auth/password", () => {
   });
 
   it("returns verified:true when sign-in succeeds", async () => {
-    signInWithPassword.mockResolvedValueOnce({ data: {}, error: null });
+    signInWithPassword.mockResolvedValueOnce({
+      data: {
+        session: { access_token: "access", refresh_token: "refresh" },
+      },
+      error: null,
+    });
     const res = await passwordPost(
       jsonRequest({ email: "ok@example.com", password: "KaifyPlay1" }),
     );
@@ -88,8 +99,39 @@ describe("POST /api/auth/password", () => {
       email: "ok@example.com",
       password: "KaifyPlay1",
     });
-    const body = (await res.json()) as { success: true; data: { verified: true } };
+    const body = (await res.json()) as {
+      success: true;
+      data: { verified: true; session?: { accessToken: string } };
+    };
     expect(body.data.verified).toBe(true);
+    expect(body.data.session).toBeUndefined();
+  });
+
+  it("returns native session tokens for Capacitor clients", async () => {
+    signInWithPassword.mockResolvedValueOnce({
+      data: {
+        session: { access_token: "access", refresh_token: "refresh" },
+      },
+      error: null,
+    });
+    const res = await passwordPost(
+      jsonRequest(
+        { email: "ok@example.com", password: "KaifyPlay1" },
+        { "x-client-version": "native-1.0.5" },
+      ),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      success: true;
+      data: {
+        verified: true;
+        session: { accessToken: string; refreshToken: string };
+      };
+    };
+    expect(body.data.session).toEqual({
+      accessToken: "access",
+      refreshToken: "refresh",
+    });
   });
 
   it("returns UNAUTHORIZED for invalid credentials", async () => {

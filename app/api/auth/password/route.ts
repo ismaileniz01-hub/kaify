@@ -4,6 +4,7 @@ import { fail, ok } from "@/lib/api/response";
 import { createRouteHandlerSupabase } from "@/lib/supabase/route-handler";
 import { SupabaseEnvError } from "@/lib/supabase/env";
 import { passwordLoginSchema } from "@/lib/validations/auth-otp.schema";
+import { isNativeWebViewRequest } from "@/lib/native/webview-request";
 
 export const runtime = "nodejs";
 
@@ -25,7 +26,7 @@ export const POST = defineRouteRaw(
 
     try {
       const { supabase, withCookies } = createRouteHandlerSupabase(request);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: parsed.data.email.toLowerCase(),
         password: parsed.data.password,
       });
@@ -36,7 +37,24 @@ export const POST = defineRouteRaw(
         );
       }
 
-      return withCookies(ok({ verified: true as const }));
+      const session = data.session;
+      const returnNativeSession =
+        Boolean(session?.access_token && session.refresh_token) &&
+        isNativeWebViewRequest(request);
+
+      return withCookies(
+        ok({
+          verified: true as const,
+          ...(returnNativeSession && session
+            ? {
+                session: {
+                  accessToken: session.access_token,
+                  refreshToken: session.refresh_token,
+                },
+              }
+            : {}),
+        }),
+      );
     } catch (error) {
       if (error instanceof SupabaseEnvError) {
         return fail(
