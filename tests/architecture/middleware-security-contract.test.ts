@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -48,17 +48,37 @@ describe("middleware security contracts", () => {
 
   it("does not hang Android WebView on login Suspense fallback", () => {
     const loginPage = readFileSync(
-      join(process.cwd(), "app", "(app)", "login", "page.tsx"),
+      join(process.cwd(), "app", "(app)", "login", "(form)", "page.tsx"),
       "utf8",
     );
     const nativeEntry = readFileSync(
       join(process.cwd(), "app", "(app)", "login", "native-entry", "page.tsx"),
       "utf8",
     );
+    const nativeEntryLoading = readFileSync(
+      join(
+        process.cwd(),
+        "app",
+        "(app)",
+        "login",
+        "native-entry",
+        "loading.tsx",
+      ),
+      "utf8",
+    );
     expect(loginPage).not.toContain('from "@/components/auth/AuthLoadingFallback"');
     expect(loginPage).not.toContain('from "next/navigation"');
     expect(loginPage).not.toContain("<Suspense");
-    expect(nativeEntry).toContain("/api/auth/session/establish");
+    expect(nativeEntry).not.toContain('"use client"');
+    expect(nativeEntry).toContain("x-nonce");
+    expect(nativeEntry).toContain("NATIVE_ENTRY_BOOT_SCRIPT");
+    expect(nativeEntryLoading).toContain("Kaify açılıyor");
+    expect(nativeEntryLoading).not.toContain("premium-skeleton");
+    expect(
+      existsSync(
+        join(process.cwd(), "app", "(app)", "login", "loading.tsx"),
+      ),
+    ).toBe(false);
   });
 
   it("gives auth pages a bounded, non-JS-only recovery fallback", () => {

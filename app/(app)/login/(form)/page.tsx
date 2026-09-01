@@ -1,4 +1,4 @@
-import { LoginPageContent } from "./login-page-content";
+import { LoginPageContent } from "../login-page-content";
 import { parseAuthMode, sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 
 /**
