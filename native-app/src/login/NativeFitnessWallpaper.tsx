@@ -56,7 +56,7 @@ export function NativeFitnessWallpaper() {
       {FITNESS_ICONS.map((item, i) => (
         <div
           key={i}
-          className="fitness-wallpaper__icon"
+          className="fitness-wallpaper__icon fitness-layer-icon"
           style={{ top: item.top, left: item.left }}
         >
           <item.Icon

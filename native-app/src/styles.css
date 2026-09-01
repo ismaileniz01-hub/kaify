@@ -108,8 +108,8 @@ a { color: #d8b4fe; }
   width: 13rem;
   height: 13rem;
   border-radius: 999px;
-  background: rgba(168, 85, 247, 0.25);
-  filter: blur(48px);
+  background: rgba(168, 85, 247, 0.22);
+  opacity: 0.9;
 }
 
 .login-logo {
@@ -475,11 +475,11 @@ a { color: #d8b4fe; }
   background: linear-gradient(165deg, #2d0a5c 0%, #4a148c 38%, #3b0764 72%, #1a0530 100%);
 }
 .fitness-wallpaper__icon { position: absolute; }
+.fitness-wallpaper__icon:nth-child(n + 16) {
+  display: none;
+}
 .fitness-emboss {
-  color: rgba(255, 255, 255, 0.55);
-  filter:
-    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.25))
-    drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.45));
+  color: rgba(216, 160, 255, 0.42);
 }
 .fitness-wallpaper__vignette {
   position: absolute;

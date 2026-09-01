@@ -121,7 +121,7 @@ export function FitnessWallpaper({ softVignette = false }: FitnessWallpaperProps
       {FITNESS_ICONS.map((item, i) => (
         <div
           key={i}
-          className="absolute"
+          className="absolute fitness-layer-icon"
           style={{ top: item.top, left: item.left }}
         >
           <EmbossedFitnessIcon

@@ -62,6 +62,8 @@ describe("native local packaging contract", () => {
     expect(source("app/api/auth/session/establish/route.ts")).toContain(
       "setSession",
     );
+    expect(source("app/api/auth/session/logout/route.ts")).toContain("signOut");
+    expect(source("native-app/src/App.tsx")).toContain("signed_out");
   });
 
   it("locks coaching before payment on both navigation and send", () => {

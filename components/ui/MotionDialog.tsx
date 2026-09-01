@@ -201,6 +201,7 @@ export function MotionDialog({
       } ${fullBleed ? "" : "p-4"} ${className}`}
       data-state={state}
       onMouseDown={handleBackdrop}
+      onClick={handleBackdrop}
     >
       <div
         ref={panelRef}

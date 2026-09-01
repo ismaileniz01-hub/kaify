@@ -421,6 +421,55 @@ html.native-app .pt-app-header {
   padding-top: var(--app-header-top);
 }
 
+/* Native WebView: paint at display refresh (120/144Hz) instead of blur-bound 30fps. */
+html.native-app {
+  text-rendering: optimizeSpeed;
+  scroll-behavior: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.native-app body,
+html.native-app .phone-shell {
+  overscroll-behavior: none;
+}
+
+html.native-app .phone-shell {
+  animation: none;
+}
+
+html.native-app .animate-in {
+  animation-duration: 0.16s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.native-app .app-header::before,
+html.native-app .motion-overlay,
+html.native-app .chat-composer,
+html.native-app .glass-input {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html.native-app .fitness-emboss {
+  filter: none;
+  color: rgba(216, 160, 255, 0.42);
+}
+
+html.native-app .fitness-layer-icon:nth-child(n + 16) {
+  display: none;
+}
+
+html.native-app .fire-spark,
+html.native-app [class*="fire-aura"] {
+  animation: none !important;
+}
+
+html.native-app button,
+html.native-app a,
+html.native-app [role="button"] {
+  touch-action: manipulation;
+}
+
 .app-navigation-root {
   min-height: 100dvh;
 }

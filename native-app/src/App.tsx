@@ -16,7 +16,7 @@ import {
 import { sendNativeEmailOtp, signInNativeWithPassword, verifyNativeEmailOtp } from "./auth-otp";
 import { NATIVE_CLIENT_VERSION } from "./client-version";
 import { enterRealKaify } from "./enter-kaify";
-import { hydrateSecureSession, supabase } from "./session";
+import { hydrateSecureSession, supabase, clearNativeAuthStorage } from "./session";
 import { withTimeout } from "./boot-storage";
 import {
   NativeLoginBoot,
@@ -92,6 +92,12 @@ export function App() {
     let cancelled = false;
     void (async () => {
       try {
+        const signedOut = new URLSearchParams(window.location.search).get("signed_out") === "1";
+        if (signedOut) {
+          await clearNativeAuthStorage();
+          window.history.replaceState(null, "", window.location.pathname);
+          return;
+        }
         await hydrateSecureSession();
         if (cancelled) return;
         const { data } = await withTimeout(

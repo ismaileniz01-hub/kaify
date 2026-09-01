@@ -112,6 +112,29 @@ export const supabase = createClient(__SUPABASE_URL__, __SUPABASE_ANON_KEY__, {
   },
 });
 
+export async function clearNativeAuthStorage(): Promise<void> {
+  const key = authStorageKey();
+  memory.delete(key);
+  removeWebStorage(key);
+  try {
+    const { SecureStorage } = await import(
+      "@aparajita/capacitor-secure-storage"
+    );
+    await withTimeout(
+      SecureStorage.removeItem(key),
+      NATIVE_PLUGIN_TIMEOUT_MS,
+      undefined,
+    );
+  } catch {
+    // Keystore clear is best-effort.
+  }
+  try {
+    await supabase.auth.signOut({ scope: "local" });
+  } catch {
+    // Stay on login even if GoTrue logout is mocked locally.
+  }
+}
+
 export async function hydrateSecureSession(): Promise<void> {
   const key = authStorageKey();
   let raw = memory.get(key) ?? readWebStorage(key);

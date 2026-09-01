@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Fingerprint,
   Bell,
@@ -201,7 +200,6 @@ async function copyTextToClipboard(value: string): Promise<boolean> {
 }
 
 export default function SettingsPage() {
-  const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const { lang, setLang, unit, setUnit, t } = useLang();
   const { referralCode: sessionReferralCode, isAuthenticated, profile, isAdmin, signOut } =
@@ -291,10 +289,15 @@ export default function SettingsPage() {
   const handleLogout = useCallback(async () => {
     if (logoutLoading) return;
     setLogoutLoading(true);
-    await signOut();
-    router.replace("/login");
-    setLogoutLoading(false);
-  }, [logoutLoading, router, signOut]);
+    try {
+      await signOut();
+      if (window.location.pathname.startsWith("/settings")) {
+        window.location.replace("/login");
+      }
+    } finally {
+      setLogoutLoading(false);
+    }
+  }, [logoutLoading, signOut]);
 
   useEffect(() => {
     reloadSettings();

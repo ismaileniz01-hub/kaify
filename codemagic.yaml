@@ -154,11 +154,11 @@ workflows:
 
       - name: Set Android version metadata
         script: |
-          VERSION_CODE="${VERSION_CODE:-${CM_BUILD_NUMBER:-24}}"
-          if [ "$VERSION_CODE" -lt 24 ]; then VERSION_CODE=24; fi
-          echo "Using Android versionCode=$VERSION_CODE versionName=1.0.5"
+          VERSION_CODE="${VERSION_CODE:-${CM_BUILD_NUMBER:-25}}"
+          if [ "$VERSION_CODE" -lt 25 ]; then VERSION_CODE=25; fi
+          echo "Using Android versionCode=$VERSION_CODE versionName=1.0.6"
           sed -i.bak -E "s/versionCode [0-9]+/versionCode ${VERSION_CODE}/" android/app/build.gradle
-          sed -i.bak -E 's/versionName "[^"]+"/versionName "1.0.5"/' android/app/build.gradle
+          sed -i.bak -E 's/versionName "[^"]+"/versionName "1.0.6"/' android/app/build.gradle
 
       - name: Assert Codemagic Android signing env
         script: |
