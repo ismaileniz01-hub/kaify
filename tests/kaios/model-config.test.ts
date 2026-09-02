@@ -44,7 +44,9 @@ describe("KAIOS model config contract", () => {
     expect(config).not.toHaveProperty("thinkingLevel");
   });
 
-  it("Gemini 2.5 Flash retry (LOW) disables thinking so JSON can fit", () => {
+  it("2.5 Flash default thinking budget is off so vision JSON is not starved", () => {
+    expect(gemini25ThinkingBudget("MEDIUM")).toBe(0);
+    expect(gemini25ThinkingBudget("LOW")).toBe(0);
     const config = buildGeminiGenerationConfig("gemini-2.5-flash", {
       thinkingLevel: "LOW",
     });

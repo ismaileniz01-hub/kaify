@@ -235,7 +235,69 @@ export function normalizeVisionEnvelopeRaw(raw: unknown): unknown {
     observations = obs;
   }
 
-  return { ...obj, observations };
+  const next: Record<string, unknown> = { ...obj, observations };
+  if (
+    !qualityScoreIsInRange(next.quality) &&
+    envelopeHasUsableFoodMacros(next)
+  ) {
+    const prior =
+      next.quality && typeof next.quality === "object" && !Array.isArray(next.quality)
+        ? (next.quality as Record<string, unknown>)
+        : {};
+    next.quality = {
+      ...prior,
+      score: 7,
+      issues: Array.isArray(prior.issues) ? prior.issues : [],
+      tips: Array.isArray(prior.tips) ? prior.tips : [],
+    };
+  }
+  return next;
+}
+
+function qualityScoreIsInRange(quality: unknown): boolean {
+  if (!quality || typeof quality !== "object" || Array.isArray(quality)) {
+    return false;
+  }
+  const score = (quality as Record<string, unknown>).score;
+  const n =
+    typeof score === "number"
+      ? score
+      : typeof score === "string"
+        ? Number.parseFloat(score)
+        : Number.NaN;
+  return Number.isFinite(n) && n >= 1 && n <= 10;
+}
+
+function foodMacrosAreUsable(value: Record<string, unknown>): boolean {
+  const numbers = [
+    value.calories,
+    value.protein,
+    value.carb ?? value.carbs ?? value.carbohydrates,
+    value.fat,
+  ].map((item) => {
+    if (typeof item === "number") return item;
+    if (typeof item === "string") return Number.parseFloat(item);
+    return Number.NaN;
+  });
+  return numbers.some((n) => Number.isFinite(n) && n > 0);
+}
+
+function envelopeHasUsableFoodMacros(envelope: Record<string, unknown>): boolean {
+  if (hasFoodMacroKeys(envelope) && foodMacrosAreUsable(envelope)) return true;
+  const food = envelope.food_analysis;
+  if (food && typeof food === "object" && !Array.isArray(food)) {
+    if (foodMacrosAreUsable(food as Record<string, unknown>)) return true;
+  }
+  const observations = envelope.observations;
+  if (observations && typeof observations === "object" && !Array.isArray(observations)) {
+    const obs = observations as Record<string, unknown>;
+    if (hasFoodMacroKeys(obs) && foodMacrosAreUsable(obs)) return true;
+    const nested = obs.food_analysis;
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+      return foodMacrosAreUsable(nested as Record<string, unknown>);
+    }
+  }
+  return false;
 }
 
 export type VisionQualityStatus =

@@ -63,14 +63,15 @@ export type GeminiThinkingLevel = (typeof GEMINI_THINKING_LEVELS)[number];
 export const GEMINI_DEFAULT_THINKING_LEVEL: GeminiThinkingLevel = "MEDIUM";
 
 /**
- * Gemini 2.5 Flash thinks by default (budget 8192). That collides with
- * vision JSON `maxOutputTokens` and returns empty candidates. Cap the
- * budget so JSON still fits. Lite keeps thinking off unless configured.
+ * Gemini 2.5 Flash thinks by default (budget 8192). Vision JSON must keep
+ * thinking off so candidates are not empty and photo calls stay under the
+ * function deadline. Lite already defaults thinking off.
  */
 export const GEMINI_25_FLASH_THINKING_BUDGET = {
   MINIMAL: 0,
   LOW: 0,
-  MEDIUM: 2048,
+  /** Vision returns strict JSON — thinking tokens steal the output budget and time out. */
+  MEDIUM: 0,
   HIGH: 4096,
 } as const satisfies Record<GeminiThinkingLevel, number>;
 

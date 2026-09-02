@@ -110,6 +110,20 @@ describe("photo pipeline provider calls", () => {
     expect(retryArgs.thinkingLevel).toBe("LOW");
   });
 
+  it("retries Gemini once after a vision timeout", async () => {
+    generateGeminiJson
+      .mockRejectedValueOnce(new AiError("AI_TIMEOUT", "Gemini request timed out"))
+      .mockResolvedValueOnce(validEnvelope);
+    const result = await ModelRouter.analyzeImagePipeline({
+      persona: "maya",
+      locale: "en",
+      image: { base64: "abc", mimeType: "image/jpeg" },
+    });
+    expect(generateGeminiJson).toHaveBeenCalledTimes(2);
+    expect(result.geminiCalls).toBe(2);
+    expect(result.summary).toBe("Coach synthesis");
+  });
+
   it("keeps a usable Maya summary when language rewrite still mismatches", async () => {
     const turkish = [
       "Bu tabakta tavuk pilav yoğurt ve bol yeşil salata görünüyor.",

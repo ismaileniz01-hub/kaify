@@ -110,4 +110,22 @@ describe("interpretVisionEnvelope Gemini drift", () => {
     expect(interpreted.analysis.food_analysis?.calories).toBe(610);
     expect(interpreted.analysis.food_analysis?.carb).toBe(70);
   });
+
+  it("keeps a plate read when Gemini omits quality but returns macros", () => {
+    const interpreted = interpretVisionEnvelope(
+      {
+        food_analysis: {
+          calories: 540,
+          protein: 31,
+          carbs: 48,
+          fat: 16,
+        },
+      },
+      3,
+    );
+    expect(interpreted.status).toBe("VALID");
+    if (interpreted.status !== "VALID") return;
+    expect(interpreted.quality.score).toBe(7);
+    expect(interpreted.analysis.food_analysis?.calories).toBe(540);
+  });
 });

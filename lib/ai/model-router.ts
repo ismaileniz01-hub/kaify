@@ -62,6 +62,15 @@ export type ImagePipelineResult = {
   deepseekCalls: number;
 };
 
+function isVisionRetryable(error: unknown): error is AiError {
+  return (
+    error instanceof AiError &&
+    (error.code === "AI_BAD_OUTPUT" ||
+      error.code === "AI_UPSTREAM" ||
+      error.code === "AI_TIMEOUT")
+  );
+}
+
 export const ModelRouter = {
   streamText(
     messages: ChatTurn[],
@@ -101,14 +110,11 @@ export const ModelRouter = {
     try {
       raw = await generateGeminiJson(visionRequest);
     } catch (error) {
-      if (
-        !(error instanceof AiError) ||
-        (error.code !== "AI_BAD_OUTPUT" && error.code !== "AI_UPSTREAM")
-      ) {
+      if (!isVisionRetryable(error)) {
         throw error;
       }
       aiLogger.warn("[model-router] vision json retry after provider failure", {
-        code: error.code,
+        code: error instanceof AiError ? error.code : "unknown",
         kind: profile.kind,
       });
       raw = await generateGeminiJson({
