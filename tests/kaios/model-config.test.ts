@@ -3,8 +3,10 @@ import {
   DEEPSEEK_DEFAULT_MODEL,
   GEMINI_DEFAULT_MODEL,
   GEMINI_DEFAULT_THINKING_LEVEL,
+  gemini25ThinkingBudget,
   isAllowedDeepSeekModel,
   isAllowedGeminiModel,
+  isGemini25FlashModel,
   isGemini3Model,
 } from "@/lib/ai/models";
 import { AiEnvError, getDeepSeekConfig, getGeminiConfig } from "@/lib/ai/env";
@@ -13,11 +15,12 @@ import { buildGeminiGenerationConfig } from "@/lib/ai/gemini.client";
 describe("KAIOS model config contract", () => {
   it("defaults are the intended production IDs", () => {
     expect(DEEPSEEK_DEFAULT_MODEL).toBe("deepseek-chat");
-    expect(GEMINI_DEFAULT_MODEL).toBe("gemini-3.5-flash-lite");
+    expect(GEMINI_DEFAULT_MODEL).toBe("gemini-2.5-flash");
     expect(GEMINI_DEFAULT_THINKING_LEVEL).toBe("MEDIUM");
     expect(isAllowedDeepSeekModel(DEEPSEEK_DEFAULT_MODEL)).toBe(true);
     expect(isAllowedGeminiModel(GEMINI_DEFAULT_MODEL)).toBe(true);
-    expect(isGemini3Model(GEMINI_DEFAULT_MODEL)).toBe(true);
+    expect(isGemini25FlashModel(GEMINI_DEFAULT_MODEL)).toBe(true);
+    expect(isGemini3Model(GEMINI_DEFAULT_MODEL)).toBe(false);
   });
 
   it("rejects unknown / obsolete model IDs", () => {
@@ -25,6 +28,27 @@ describe("KAIOS model config contract", () => {
     expect(isAllowedDeepSeekModel("deepseek-chat-old")).toBe(false);
     expect(isAllowedGeminiModel("gemini-pro-vision")).toBe(false);
     expect(isAllowedGeminiModel("gemini-1.5-flash")).toBe(false);
+  });
+
+  it("Gemini 2.5 Flash generation config uses thinkingBudget and temperature", () => {
+    const config = buildGeminiGenerationConfig("gemini-2.5-flash", {
+      temperature: 0.2,
+      thinkingLevel: "MEDIUM",
+    });
+    expect(config).toEqual({
+      responseMimeType: "application/json",
+      maxOutputTokens: 8192,
+      temperature: 0.2,
+      thinkingConfig: { thinkingBudget: gemini25ThinkingBudget("MEDIUM") },
+    });
+    expect(config).not.toHaveProperty("thinkingLevel");
+  });
+
+  it("Gemini 2.5 Flash retry (LOW) disables thinking so JSON can fit", () => {
+    const config = buildGeminiGenerationConfig("gemini-2.5-flash", {
+      thinkingLevel: "LOW",
+    });
+    expect(config.thinkingConfig).toEqual({ thinkingBudget: 0 });
   });
 
   it("Gemini 3 generation config uses thinking medium and omits temperature", () => {
@@ -40,7 +64,7 @@ describe("KAIOS model config contract", () => {
     expect(config).not.toHaveProperty("temperature");
   });
 
-  it("legacy Gemini 2 generation config keeps temperature", () => {
+  it("legacy Gemini 2 Flash-Lite generation config keeps temperature without thinking", () => {
     const config = buildGeminiGenerationConfig("gemini-2.5-flash-lite", {
       temperature: 0.2,
     });

@@ -31,7 +31,7 @@ export const TOKEN_BUDGET = {
   synthesis: envInt("AI_MAX_SYNTHESIS_TOKENS", 700),
   /**
    * Gemini vision JSON (quality + observations). Must leave headroom above
-   * thinking tokens — Gemini 3 counts thoughts against maxOutputTokens and
+   * thinking tokens — Gemini counts thoughts against maxOutputTokens and
    * otherwise returns empty candidates (Maya/Leo photo hard-fail).
    */
   visionJson: envInt("AI_MAX_VISION_TOKENS", 8192),

@@ -3,7 +3,12 @@ import { AiError } from "@/lib/ai/errors";
 import { TOKEN_BUDGET } from "@/lib/ai/budget";
 import { extractFirstJsonObjectLenient } from "@/lib/ai/extract-json";
 import { logger as geminiLogger } from "@/lib/logger";
-import { isGemini3Model, type GeminiThinkingLevel } from "@/lib/ai/models";
+import {
+  gemini25ThinkingBudget,
+  isGemini25FlashModel,
+  isGemini3Model,
+  type GeminiThinkingLevel,
+} from "@/lib/ai/models";
 import { resilient, classifyStatus, UpstreamHttpError } from "@/lib/resilience";
 import type { ImageInput } from "@/lib/ai/types";
 import type { TokenUsage } from "@/lib/ai/types";
@@ -42,7 +47,7 @@ type GeminiResponse = {
 
 /**
  * Visible answer text only — never concatenate thought/summary parts into the
- * JSON payload (Gemini 3 thinking returns mixed parts; joining them breaks
+ * JSON payload (thinking models return mixed parts; joining them breaks
  * Maya/Leo photo analysis with AI_BAD_OUTPUT).
  */
 export function extractGeminiAnswerText(
@@ -68,7 +73,7 @@ export function extractGeminiAnswerText(
     .trim();
 }
 
-/** REST generateContent config: Gemini 3 omits temperature; thinking MEDIUM. */
+/** REST generateContent config: Gemini 3 uses thinkingLevel; 2.5 Flash uses thinkingBudget. */
 export function buildGeminiGenerationConfig(
   model: string,
   options?: {
@@ -79,18 +84,23 @@ export function buildGeminiGenerationConfig(
 ): Record<string, unknown> {
   const generationConfig: Record<string, unknown> = {
     responseMimeType: "application/json",
-    // Thinking tokens count against this budget. Without headroom, Gemini 3
+    // Thinking tokens count against this budget. Without headroom, Gemini
     // returns empty candidates (finishReason MAX_TOKENS) and photo analysis fails.
     maxOutputTokens: options?.maxOutputTokens ?? TOKEN_BUDGET.visionJson,
   };
+  const thinkingLevel = options?.thinkingLevel ?? "MEDIUM";
   if (isGemini3Model(model)) {
-    const thinkingLevel = options?.thinkingLevel ?? "MEDIUM";
     generationConfig.thinkingConfig = {
       thinkingLevel: thinkingLevel.toLowerCase(),
     };
     return generationConfig;
   }
   generationConfig.temperature = options?.temperature ?? 0.2;
+  if (isGemini25FlashModel(model)) {
+    generationConfig.thinkingConfig = {
+      thinkingBudget: gemini25ThinkingBudget(thinkingLevel),
+    };
+  }
   return generationConfig;
 }
 
@@ -116,7 +126,7 @@ export type GenerateJsonParams = {
   /** Optional image for vision tasks. */
   image?: ImageInput;
   temperature?: number;
-  /** Override Gemini 3 thinking; defaults to env/config (MEDIUM). */
+  /** Override thinking depth; defaults to env/config (MEDIUM). */
   thinkingLevel?: GeminiThinkingLevel;
   signal?: AbortSignal;
   usageContext?: UsageContext;

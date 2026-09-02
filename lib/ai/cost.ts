@@ -2,7 +2,7 @@
  * AI provider pricing — SERVER ONLY.
  *
  * Costs are estimated from env-tunable rates (USD per 1M tokens). Defaults reflect
- * public DeepSeek / Gemini 3.5 Flash-Lite list pricing; override in production when
+ * public DeepSeek / Gemini 2.5 Flash list pricing; override in production when
  * your contract differs.
  */
 

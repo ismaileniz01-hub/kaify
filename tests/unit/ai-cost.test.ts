@@ -23,7 +23,7 @@ describe("ai/cost", () => {
     expect(result.promptTokens + result.completionTokens).toBe(1000);
   });
 
-  it("defaults Gemini 3.5 Flash-Lite list rates when env unset", () => {
+  it("defaults Gemini 2.5 Flash list rates when env unset", () => {
     const prevIn = process.env.AI_COST_GEMINI_INPUT_PER_1M;
     const prevOut = process.env.AI_COST_GEMINI_OUTPUT_PER_1M;
     delete process.env.AI_COST_GEMINI_INPUT_PER_1M;
