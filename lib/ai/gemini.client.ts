@@ -104,6 +104,28 @@ export function buildGeminiGenerationConfig(
   return generationConfig;
 }
 
+/**
+ * REST Part JSON is proto3 camelCase (`inlineData` / `mimeType`).
+ * Snake_case (`inline_data`) is the protobuf field name — Gemini 2.5 Flash
+ * rejects it with HTTP 400 "Unknown name inline_data", which the UI surfaces
+ * as photo analysis failed.
+ */
+export function buildGeminiUserParts(
+  prompt: string,
+  image?: ImageInput,
+): Array<Record<string, unknown>> {
+  const parts: Array<Record<string, unknown>> = [{ text: prompt }];
+  if (image) {
+    parts.push({
+      inlineData: {
+        mimeType: image.mimeType,
+        data: image.base64,
+      },
+    });
+  }
+  return parts;
+}
+
 function usageFromGemini(meta: GeminiUsageMetadata | undefined): TokenUsage | null {
   if (!meta) return null;
   const prompt = meta.promptTokenCount ?? 0;
@@ -186,18 +208,8 @@ export async function generateGeminiJson(
   const config = getGeminiConfig();
   const { signal, cancel } = withTimeout(params.signal, DEFAULT_TIMEOUT_MS);
 
-  const parts: Array<Record<string, unknown>> = [{ text: params.prompt }];
-  if (params.image) {
-    parts.push({
-      inline_data: {
-        mime_type: params.image.mimeType,
-        data: params.image.base64,
-      },
-    });
-  }
-
   const body: Record<string, unknown> = {
-    contents: [{ role: "user", parts }],
+    contents: [{ role: "user", parts: buildGeminiUserParts(params.prompt, params.image) }],
     generationConfig: buildGeminiGenerationConfig(config.model, {
       temperature: params.temperature,
       thinkingLevel: params.thinkingLevel ?? config.thinkingLevel,
@@ -247,6 +259,7 @@ export async function generateGeminiJson(
       const errBody = await response.text().catch(() => "");
       geminiLogger.error("[gemini] http error", {
         status: response.status,
+        model: config.model,
         body: errBody.slice(0, 400),
       });
       throw new AiError(

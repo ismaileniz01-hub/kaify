@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   extractGeminiAnswerText,
   parseGeminiJsonText,
+  buildGeminiUserParts,
 } from "@/lib/ai/gemini.client";
 import { interpretVisionEnvelope } from "@/lib/validations/analysis.schema";
 
@@ -37,6 +38,21 @@ describe("parseGeminiJsonText", () => {
       'Here you go\n{"quality":{"score":8,"issues":[],"tips":[]},"observations":{"visible_muscles":[],"scores":{},"overall_score":0,"food_analysis":null}}\nthanks',
     ) as { quality: { score: number } };
     expect(parsed.quality.score).toBe(8);
+  });
+});
+
+describe("buildGeminiUserParts", () => {
+  it("sends vision bytes as REST camelCase inlineData, not protobuf snake_case", () => {
+    const parts = buildGeminiUserParts("Caption this meal.", {
+      base64: "abc123",
+      mimeType: "image/jpeg",
+    });
+    expect(parts).toEqual([
+      { text: "Caption this meal." },
+      { inlineData: { mimeType: "image/jpeg", data: "abc123" } },
+    ]);
+    expect(JSON.stringify(parts)).not.toContain("inline_data");
+    expect(JSON.stringify(parts)).not.toContain("mime_type");
   });
 });
 
