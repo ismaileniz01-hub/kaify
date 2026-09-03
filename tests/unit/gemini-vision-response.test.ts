@@ -3,6 +3,7 @@ import {
   extractGeminiAnswerText,
   parseGeminiJsonText,
   buildGeminiUserParts,
+  isGeminiUnknownImageFieldError,
 } from "@/lib/ai/gemini.client";
 import { interpretVisionEnvelope } from "@/lib/validations/analysis.schema";
 
@@ -53,6 +54,38 @@ describe("buildGeminiUserParts", () => {
     ]);
     expect(JSON.stringify(parts)).not.toContain("inline_data");
     expect(JSON.stringify(parts)).not.toContain("mime_type");
+  });
+
+  it("can emit protobuf snake_case when a backend rejects camelCase", () => {
+    const parts = buildGeminiUserParts(
+      "Caption this meal.",
+      { base64: "abc123", mimeType: "image/jpeg" },
+      "proto",
+    );
+    expect(parts[1]).toEqual({
+      inline_data: { mime_type: "image/jpeg", data: "abc123" },
+    });
+  });
+});
+
+describe("isGeminiUnknownImageFieldError", () => {
+  it("detects REST field-name 400s so vision can retry the other casing", () => {
+    expect(
+      isGeminiUnknownImageFieldError(
+        400,
+        'Unknown name "inline_data": Field could not be found',
+      ),
+    ).toBe(true);
+    expect(
+      isGeminiUnknownImageFieldError(
+        400,
+        'Unknown name "inlineData": Field could not be found',
+      ),
+    ).toBe(true);
+    expect(isGeminiUnknownImageFieldError(400, "RESOURCE_EXHAUSTED")).toBe(false);
+    expect(isGeminiUnknownImageFieldError(500, 'Unknown name "inline_data"')).toBe(
+      false,
+    );
   });
 });
 

@@ -29,6 +29,12 @@ import { useSession } from "@/lib/session-context";
 import { ChatComposer } from "@/components/chat/ChatComposer";
 import { ChatDeliveryTicks } from "@/components/chat/ChatDeliveryTicks";
 import { chatBubbleEnterClass } from "@/lib/chat/message-motion";
+import {
+  ChatPhotoError,
+  CHAT_PHOTO_MAX_SOURCE_BYTES,
+  canAttachChatPhoto,
+  prepareChatPhoto,
+} from "@/lib/chat/prepare-chat-photo";
 import { errorToMessage, photoAnalysisFailureText, quotaErrorMessage, quotaResourceFromError, visionQuotaResourceFromError, isAnalyzeQuotaDenied } from "@/lib/i18n/api-error";
 import { coachRetryLine, isSoftCoachFailure, isUsableCoachReply } from "@/lib/kaios/coach-retry";
 import { MessageCircle, MoreVertical, Check } from "lucide-react";
@@ -629,13 +635,12 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   ) => {
     if (!VISION_COACHES.has(coachId) || sending) return;
 
-    const allowed = ["image/jpeg", "image/png", "image/webp"];
-    if (!allowed.includes(file.type)) {
-      setError(t("chat.error.photoFormat"));
-      return;
-    }
-    if (file.size > 9 * 1024 * 1024) {
-      setError(t("chat.error.photoSize"));
+    if (!canAttachChatPhoto(file)) {
+      setError(
+        file.size > CHAT_PHOTO_MAX_SOURCE_BYTES
+          ? t("chat.error.photoSize")
+          : t("chat.error.photoFormat"),
+      );
       return;
     }
 
@@ -709,100 +714,98 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
       );
     };
 
-    const reader = new FileReader();
-    reader.onerror = () => {
-      setError(t("chat.error.photo"));
-      failPhotoMessage();
-      clearTyping();
-    };
-    reader.onload = async () => {
-      try {
-        const result = reader.result as string;
-        const base64 = result.split(",")[1] ?? "";
-        const mimeType = file.type as "image/jpeg" | "image/png" | "image/webp";
-
-        const analysis = await apiPost<
-          | {
-              quotaExceeded: true;
-              resource: "maya_photo" | "leo_photo" | "text_tokens";
-            }
-              | {
+    try {
+      const prepared = await prepareChatPhoto(file);
+      const analysis = await apiPost<
+        | {
+            quotaExceeded: true;
+            resource: "maya_photo" | "leo_photo" | "text_tokens";
+          }
+            | {
+            summary: string;
+            messageId: string | null;
+            userMessageId?: string | null;
+            analysis: unknown;
+            confirmation?: {
+              pendingId: string;
               summary: string;
-              messageId: string | null;
-              userMessageId?: string | null;
-              analysis: unknown;
-              confirmation?: {
-                pendingId: string;
-                summary: string;
-                content: string;
-                messageId: string;
-              } | null;
-            }
-        >(`/api/chat/${coachId}/analyze`, {
-          imageBase64: base64,
-          mimeType,
-          locale: lang,
-          ...(caption ? { note: caption.slice(0, 500) } : {}),
-          ...(PERSISTED_ID_RE.test(photoUserId)
-            ? { clientMessageId: photoUserId }
-            : {}),
-        });
+              content: string;
+              messageId: string;
+            } | null;
+          }
+      >(`/api/chat/${coachId}/analyze`, {
+        imageBase64: prepared.base64,
+        mimeType: prepared.mimeType,
+        locale: lang,
+        ...(caption ? { note: caption.slice(0, 500) } : {}),
+        ...(PERSISTED_ID_RE.test(photoUserId)
+          ? { clientMessageId: photoUserId }
+          : {}),
+      });
 
-        if (isAnalyzeQuotaDenied(analysis)) {
-          const text = quotaErrorMessage(analysis.resource, t);
-          setErrorUpgrade(true);
-          setError(text);
-          photoFileByMsgIdRef.current.delete(photoUserId);
-          setMessages((prev) =>
-            markMessageDelivered(
-              prev.map((msg) =>
-                msg.id === coachPlaceholderId
-                  ? { ...msg, text, streaming: false }
-                  : msg.id === photoUserId
-                    ? { ...msg, photoRetry: undefined }
-                    : msg,
-              ),
-              photoUserId,
-            ),
-          );
-          return;
-        }
-
+      if (isAnalyzeQuotaDenied(analysis)) {
+        const text = quotaErrorMessage(analysis.resource, t);
+        setErrorUpgrade(true);
+        setError(text);
         photoFileByMsgIdRef.current.delete(photoUserId);
-        const persistedPhotoUserId =
-          typeof analysis.userMessageId === "string" && analysis.userMessageId.length > 0
-            ? analysis.userMessageId
-            : photoUserId;
         setMessages((prev) =>
           markMessageDelivered(
             prev.map((msg) =>
               msg.id === coachPlaceholderId
-                ? {
-                    ...msg,
-                    id: analysis.messageId ?? coachPlaceholderId,
-                    text: analysis.summary,
-                    streaming: false,
-                    messageType: coachId === "leo" ? "score" : "analysis",
-                    payload: {
-                      analysis: analysis.analysis,
-                      ...(analysis.confirmation
-                        ? {
-                            confirmation: {
-                              pendingId: analysis.confirmation.pendingId,
-                              summary: analysis.confirmation.summary,
-                            },
-                          }
-                        : {}),
-                    },
-                  }
+                ? { ...msg, text, streaming: false }
                 : msg.id === photoUserId
-                  ? { ...msg, id: persistedPhotoUserId, photoRetry: undefined }
+                  ? { ...msg, photoRetry: undefined }
                   : msg,
             ),
-            persistedPhotoUserId,
+            photoUserId,
           ),
         );
-      } catch (err) {
+        return;
+      }
+
+      photoFileByMsgIdRef.current.delete(photoUserId);
+      const persistedPhotoUserId =
+        typeof analysis.userMessageId === "string" && analysis.userMessageId.length > 0
+          ? analysis.userMessageId
+          : photoUserId;
+      setMessages((prev) =>
+        markMessageDelivered(
+          prev.map((msg) =>
+            msg.id === coachPlaceholderId
+              ? {
+                  ...msg,
+                  id: analysis.messageId ?? coachPlaceholderId,
+                  text: analysis.summary,
+                  streaming: false,
+                  messageType: coachId === "leo" ? "score" : "analysis",
+                  payload: {
+                    analysis: analysis.analysis,
+                    ...(analysis.confirmation
+                      ? {
+                          confirmation: {
+                            pendingId: analysis.confirmation.pendingId,
+                            summary: analysis.confirmation.summary,
+                          },
+                        }
+                      : {}),
+                  },
+                }
+              : msg.id === photoUserId
+                ? { ...msg, id: persistedPhotoUserId, photoRetry: undefined }
+                : msg,
+          ),
+          persistedPhotoUserId,
+        ),
+      );
+    } catch (err) {
+      if (err instanceof ChatPhotoError) {
+        const text =
+          err.code === "too_large"
+            ? t("chat.error.photoSize")
+            : t("chat.error.photoFormat");
+        setError(text);
+        failPhotoMessage();
+      } else {
         const quota = visionQuotaResourceFromError(coachId, err);
         if (quota) {
           const text = quotaErrorMessage(quota, t);
@@ -835,21 +838,19 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
             ),
           );
         }
-      } finally {
-        clearTyping();
       }
-    };
-    reader.readAsDataURL(file);
+    } finally {
+      clearTyping();
+    }
   };
 
   const attachPhotoToComposer = (file: File) => {
-    const allowed = ["image/jpeg", "image/png", "image/webp"];
-    if (!allowed.includes(file.type)) {
-      setError(t("chat.error.photoFormat"));
-      return;
-    }
-    if (file.size > 9 * 1024 * 1024) {
-      setError(t("chat.error.photoSize"));
+    if (!canAttachChatPhoto(file)) {
+      setError(
+        file.size > CHAT_PHOTO_MAX_SOURCE_BYTES
+          ? t("chat.error.photoSize")
+          : t("chat.error.photoFormat"),
+      );
       return;
     }
     setError(null);

@@ -104,24 +104,40 @@ export function buildGeminiGenerationConfig(
   return generationConfig;
 }
 
+export type GeminiImagePartCasing = "camel" | "proto";
+
+export function isGeminiUnknownImageFieldError(status: number, body: string): boolean {
+  if (status !== 400) return false;
+  return /unknown name ["']?(inline_data|inlineData|mime_type|mimeType)/i.test(body);
+}
+
 /**
  * REST Part JSON is proto3 camelCase (`inlineData` / `mimeType`).
- * Snake_case (`inline_data`) is the protobuf field name — Gemini 2.5 Flash
- * rejects it with HTTP 400 "Unknown name inline_data", which the UI surfaces
- * as photo analysis failed.
+ * Snake_case (`inline_data`) is the protobuf field name — some Gemini
+ * backends reject one or the other with HTTP 400.
  */
 export function buildGeminiUserParts(
   prompt: string,
   image?: ImageInput,
+  casing: GeminiImagePartCasing = "camel",
 ): Array<Record<string, unknown>> {
   const parts: Array<Record<string, unknown>> = [{ text: prompt }];
   if (image) {
-    parts.push({
-      inlineData: {
-        mimeType: image.mimeType,
-        data: image.base64,
-      },
-    });
+    parts.push(
+      casing === "proto"
+        ? {
+            inline_data: {
+              mime_type: image.mimeType,
+              data: image.base64,
+            },
+          }
+        : {
+            inlineData: {
+              mimeType: image.mimeType,
+              data: image.base64,
+            },
+          },
+    );
   }
   return parts;
 }
@@ -208,23 +224,31 @@ export async function generateGeminiJson(
   const config = getGeminiConfig();
   const { signal, cancel } = withTimeout(params.signal, DEFAULT_TIMEOUT_MS);
 
-  const body: Record<string, unknown> = {
-    contents: [{ role: "user", parts: buildGeminiUserParts(params.prompt, params.image) }],
-    generationConfig: buildGeminiGenerationConfig(config.model, {
-      temperature: params.temperature,
-      thinkingLevel: params.thinkingLevel ?? config.thinkingLevel,
-    }),
-  };
-  if (params.systemInstruction) {
-    body.systemInstruction = { parts: [{ text: params.systemInstruction }] };
-  }
-
+  const generationConfig = buildGeminiGenerationConfig(config.model, {
+    temperature: params.temperature,
+    thinkingLevel: params.thinkingLevel ?? config.thinkingLevel,
+  });
   const url =
     `${GEMINI_BASE_URL}/models/${encodeURIComponent(config.model)}:generateContent`;
 
-  let response: Response;
-  try {
-    response = await resilient(
+  const buildBody = (casing: GeminiImagePartCasing): Record<string, unknown> => {
+    const payload: Record<string, unknown> = {
+      contents: [
+        {
+          role: "user",
+          parts: buildGeminiUserParts(params.prompt, params.image, casing),
+        },
+      ],
+      generationConfig,
+    };
+    if (params.systemInstruction) {
+      payload.systemInstruction = { parts: [{ text: params.systemInstruction }] };
+    }
+    return payload;
+  };
+
+  const postOnce = async (casing: GeminiImagePartCasing): Promise<Response> =>
+    resilient(
       "gemini",
       async () => {
         const res = await fetch(url, {
@@ -233,7 +257,7 @@ export async function generateGeminiJson(
             "Content-Type": "application/json",
             "x-goog-api-key": config.apiKey,
           },
-          body: JSON.stringify(body),
+          body: JSON.stringify(buildBody(casing)),
           signal,
         });
         if (!res.ok && classifyStatus(res.status).retryable) {
@@ -243,6 +267,10 @@ export async function generateGeminiJson(
       },
       { retries: 2, signal: params.signal },
     );
+
+  let response: Response;
+  try {
+    response = await postOnce("camel");
   } catch (error) {
     cancel();
     throw error instanceof AiError
@@ -255,6 +283,36 @@ export async function generateGeminiJson(
   }
 
   try {
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => "");
+      if (params.image && isGeminiUnknownImageFieldError(response.status, errBody)) {
+        geminiLogger.warn("[gemini] retrying vision parts with protobuf field names", {
+          status: response.status,
+          model: config.model,
+          body: errBody.slice(0, 200),
+        });
+        try {
+          response = await postOnce("proto");
+        } catch (error) {
+          throw error instanceof AiError
+            ? error
+            : error instanceof UpstreamHttpError
+              ? new AiError("AI_UPSTREAM", error.message)
+              : new AiError("AI_UPSTREAM", "Gemini request failed");
+        }
+      } else {
+        geminiLogger.error("[gemini] http error", {
+          status: response.status,
+          model: config.model,
+          body: errBody.slice(0, 400),
+        });
+        throw new AiError(
+          "AI_UPSTREAM",
+          `Gemini request failed with status ${response.status}`,
+        );
+      }
+    }
+
     if (!response.ok) {
       const errBody = await response.text().catch(() => "");
       geminiLogger.error("[gemini] http error", {

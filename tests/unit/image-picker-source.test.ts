@@ -8,6 +8,8 @@ describe("authenticated image picker wiring", () => {
       join(process.cwd(), "components/chat/LiveChatPanel.tsx"),
       "utf8",
     );
+    expect(source).toContain("prepareChatPhoto");
+    expect(source).toContain("canAttachChatPhoto");
     expect(source).toContain("<ImagePickerModal");
     expect(source).toContain("onCameraClick={() => setImagePickerOpen(true)}");
     expect(source).toContain("onImageSelect={handlePhoto}");
@@ -18,6 +20,7 @@ describe("authenticated image picker wiring", () => {
       join(process.cwd(), "components/ImagePickerModal.tsx"),
       "utf8",
     );
+    expect(source).toContain("CHAT_PHOTO_ACCEPT");
     expect(source).toContain('capture = "environment"');
     expect(source).toContain('removeAttribute("capture")');
   });
