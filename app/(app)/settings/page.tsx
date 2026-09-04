@@ -30,6 +30,8 @@ import { UsageQuotaSection } from "@/components/settings/UsageQuotaSection";
 import { HealthStepsSection } from "@/components/settings/HealthStepsSection";
 import { NotificationScheduleSection } from "@/components/settings/NotificationScheduleSection";
 import { AppHeader } from "@/components/navigation/AppHeader";
+import { useScrollFocusedInputIntoView } from "@/hooks/useScrollFocusedInputIntoView";
+import { useAndroidBackClose } from "@/hooks/useAndroidBackClose";
 import { DeleteAccountSection } from "@/components/settings/DeleteAccountSection";
 import { MarketAuraPreview } from "@/components/market/MarketAuraPreview";
 import { MotionDialog } from "@/components/ui/MotionDialog";
@@ -203,6 +205,7 @@ async function copyTextToClipboard(value: string): Promise<boolean> {
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { lang, setLang, unit, setUnit, t } = useLang();
+  useScrollFocusedInputIntoView();
   const { referralCode: sessionReferralCode, isAuthenticated, profile, isAdmin, signOut } =
     useSession();
 
@@ -211,6 +214,10 @@ export default function SettingsPage() {
   const [userIdCopied, setUserIdCopied] = useState(false);
   const [langPickerOpen, setLangPickerOpen] = useState(false);
   const [langSearch, setLangSearch] = useState("");
+  useAndroidBackClose(langPickerOpen, () => {
+    setLangPickerOpen(false);
+    setLangSearch("");
+  });
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -603,6 +610,7 @@ export default function SettingsPage() {
                         {langPickerOpen && (
                           <>
                             <div
+                              data-app-overlay="open"
                               className="fixed inset-0 z-40"
                               onClick={() => {
                                 setLangPickerOpen(false);

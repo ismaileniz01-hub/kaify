@@ -20,6 +20,7 @@ import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 import { isNativePlatform } from "@/lib/native/platform";
 import { useLang } from "@/lib/lang-context";
 import { hapticSelection } from "@/lib/native/haptics";
+import { useScrollFocusedInputIntoView } from "@/hooks/useScrollFocusedInputIntoView";
 import {
   PENDING_LEGAL_CONSENT_KEY,
   PRIVACY_VERSION,
@@ -67,6 +68,7 @@ export function EmailOtpLogin({
   onStepChange,
 }: EmailOtpLoginProps) {
   const { lang, t } = useLang();
+  useScrollFocusedInputIntoView();
   const router = useRouter();
   const { isAuthenticated, isLoading, profile, refreshSession } = useSession();
   const idPrefix = useId();

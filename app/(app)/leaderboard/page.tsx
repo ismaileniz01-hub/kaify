@@ -12,8 +12,7 @@ import {
   Zap,
   TrendingUp,
 } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
-import { OFFLINE_RETRY_EVENT } from "@/lib/offline-retry";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { InlineAlert } from "@/components/InlineAlert";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { useLang } from "@/lib/lang-context";
@@ -21,6 +20,8 @@ import { formatNumber } from "@/lib/i18n/format";
 import { useSession } from "@/lib/session-context";
 import { prefersReducedMotion } from "@/lib/motion/perf-guards";
 import { apiGet } from "@/lib/api/client";
+import { errorToMessage } from "@/lib/i18n/api-error";
+import { useOfflineRetry } from "@/hooks/useOfflineRetry";
 import type { UserSettingsDTO } from "@/lib/services/settings.service";
 import { getCountryName } from "@/lib/country-names";
 import type { CountryLeaderboardDTO } from "@/lib/types/domain.types";
@@ -187,32 +188,39 @@ export default function LeaderboardPage() {
   const { profile, isAuthenticated } = useSession();
   const [data, setData] = useState<CountryLeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [leaderboardHidden, setLeaderboardHidden] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
 
-  useEffect(() => {
-    const onRetry = () => setRetryTick((n) => n + 1);
-    window.addEventListener(OFFLINE_RETRY_EVENT, onRetry);
-    return () => window.removeEventListener(OFFLINE_RETRY_EVENT, onRetry);
-  }, []);
+  const bumpRetry = useCallback(() => setRetryTick((n) => n + 1), []);
+  useOfflineRetry(bumpRetry);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
     if (!isAuthenticated) {
-      fetch(resolveApiPath("/api/country-leaderboard"))
+      fetch(resolveApiPath("/api/country-leaderboard"), {
+        signal:
+          typeof AbortSignal.timeout === "function"
+            ? AbortSignal.timeout(12_000)
+            : undefined,
+      })
         .then((res) => res.json())
         .then((json) => {
+          if (cancelled) return;
           setData(json);
           setLoading(false);
         })
         .catch(() => {
-          setLoadError(true);
+          if (cancelled) return;
+          setLoadError(t("errors.NETWORK"));
           setLoading(false);
         });
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
-
-    let cancelled = false;
 
     Promise.all([
       apiGet<UserSettingsDTO>("/api/settings"),
@@ -240,9 +248,9 @@ export default function LeaderboardPage() {
         });
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
         if (!cancelled) {
-          setLoadError(true);
+          setLoadError(errorToMessage(err, t) || t("errors.NETWORK"));
           setLoading(false);
         }
       });
@@ -250,7 +258,7 @@ export default function LeaderboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, profile?.countryCode, retryTick]);
+  }, [isAuthenticated, profile?.countryCode, retryTick, t]);
 
   return (
     <div className="phone-shell relative flex flex-col overflow-hidden">
@@ -291,12 +299,12 @@ export default function LeaderboardPage() {
         ) : loadError ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
             <p className="text-sm text-zinc-300" role="alert">
-              {t("leaderboard.load_error")}
+              {loadError}
             </p>
             <button
               type="button"
               className="touch-44 rounded-full bg-white/10 px-4 text-sm text-white"
-              onClick={() => window.location.reload()}
+              onClick={bumpRetry}
             >
               {t("common.retry")}
             </button>

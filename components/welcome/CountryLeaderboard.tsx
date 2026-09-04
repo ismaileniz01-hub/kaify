@@ -1,12 +1,13 @@
 "use client";
 
 import { Globe, X, Crown, Medal, Award, Flame } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLang } from "@/lib/lang-context";
 import { formatNumber } from "@/lib/i18n/format";
 import { FlagImage } from "@/components/FlagImage";
 import { MotionDialog } from "@/components/ui/MotionDialog";
 import { getApiAuthHeaders, resolveApiPath } from "@/lib/api/client";
+import { useOfflineRetry } from "@/hooks/useOfflineRetry";
 
 type CountryEntry = {
   countryCode: string;
@@ -34,19 +35,38 @@ export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClo
   const { t, lang } = useLang();
   const [data, setData] = useState<CountryLeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadLeaderboard = useCallback(() => {
     if (!isOpen) return;
     setLoading(true);
+    setLoadError(null);
     void getApiAuthHeaders()
-      .then((headers) => fetch(resolveApiPath("/api/country-leaderboard"), { headers }))
+      .then((headers) =>
+        fetch(resolveApiPath("/api/country-leaderboard"), {
+          headers,
+          signal:
+            typeof AbortSignal.timeout === "function"
+              ? AbortSignal.timeout(12_000)
+              : undefined,
+        }),
+      )
       .then((res) => res.json())
       .then((json) => {
         setData(json);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, [isOpen]);
+      .catch(() => {
+        setLoadError(t("errors.NETWORK"));
+        setLoading(false);
+      });
+  }, [isOpen, t]);
+
+  useOfflineRetry(loadLeaderboard);
+
+  useEffect(() => {
+    loadLeaderboard();
+  }, [loadLeaderboard]);
 
   return (
     <MotionDialog
@@ -168,7 +188,9 @@ export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClo
             </p>
           </>
         ) : (
-          <p className="py-8 text-center text-sm text-zinc-500">{t("leaderboard.error.load")}</p>
+          <p className="py-8 text-center text-sm text-zinc-500">
+            {loadError || t("leaderboard.error.load")}
+          </p>
         )}
       </div>
     </MotionDialog>

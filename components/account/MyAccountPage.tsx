@@ -38,6 +38,7 @@ import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
 import { parseGenderInput } from "@/lib/profile-mapper";
 import { useLang } from "@/lib/lang-context";
 import { formatNumber } from "@/lib/i18n/format";
+import { errorToMessage } from "@/lib/i18n/api-error";
 import { useSession } from "@/lib/session-context";
 import { useNativeApp } from "@/lib/native/platform";
 import { WEB_PRICING_URL } from "@/lib/billing/native-web-checkout";
@@ -119,6 +120,7 @@ export function MyAccountPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [equipmentDraft, setEquipmentDraft] =
     useState<EquipmentAccess>("gym");
+  const [loadStuck, setLoadStuck] = useState(false);
   const [billingStatus, setBillingStatus] = useState<string | null>(null);
   const [billingEndsAt, setBillingEndsAt] = useState<string | null>(null);
   const {
@@ -136,6 +138,15 @@ export function MyAccountPage() {
       router.replace("/login?next=/myaccount");
     }
   }, [isAuthenticated, isLoading, router]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadStuck(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setLoadStuck(true), 12_000);
+    return () => window.clearTimeout(timer);
+  }, [isLoading]);
 
   useEffect(() => {
     if (userProfile?.name) setNameDraft(userProfile.name);
@@ -163,8 +174,25 @@ export function MyAccountPage() {
 
   if (isLoading || !isAuthenticated || !profile || !userProfile) {
     return (
-      <div className="landing-site flex min-h-screen items-center justify-center">
+      <div className="landing-site flex min-h-screen flex-col items-center justify-center gap-4 px-6">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-purple-500/30 border-t-purple-400" />
+        {loadStuck ? (
+          <>
+            <p className="text-center text-sm text-zinc-400">{t("errors.NETWORK")}</p>
+            <button
+              type="button"
+              className="touch-44 rounded-full bg-purple-600 px-5 py-2 text-sm font-semibold text-white"
+              onClick={() => {
+                setLoadStuck(false);
+                void refreshSession();
+              }}
+            >
+              {t("offline.retry")}
+            </button>
+          </>
+        ) : (
+          <p className="sr-only">{t("common.loading")}</p>
+        )}
       </div>
     );
   }
@@ -181,8 +209,8 @@ export function MyAccountPage() {
       setAvatarPreview(null);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
-    } catch {
-      setSaveError(t("profile.save_error"));
+    } catch (err) {
+      setSaveError(errorToMessage(err, t) || t("profile.save_error"));
     } finally {
       setSaving(false);
     }

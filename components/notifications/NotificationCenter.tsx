@@ -164,7 +164,7 @@ function NotificationPanel({
         className="flex min-h-0 flex-1 flex-col"
       >
         {/* Header */}
-        <div className="relative shrink-0 overflow-hidden border-b border-white/10 px-4 pb-4 pt-14">
+        <div className="relative shrink-0 overflow-hidden border-b border-white/10 px-4 pb-4 pt-[calc(var(--safe-top)+0.75rem)]">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 bg-gradient-to-br from-purple-600/30 via-violet-900/20 to-transparent"

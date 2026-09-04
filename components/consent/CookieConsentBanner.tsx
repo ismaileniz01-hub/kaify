@@ -90,7 +90,7 @@ export function CookieConsentBanner() {
       aria-labelledby="cookie-banner-title"
       aria-live="polite"
       data-state={presence.state}
-      className="motion-sheet fixed inset-x-0 bottom-0 z-[9999] border-t border-white/10 bg-zinc-950/98 p-4 shadow-[0_-8px_40px_rgba(0,0,0,0.45)] backdrop-blur-md sm:p-5"
+      className="motion-sheet fixed inset-x-0 bottom-0 z-[9999] border-t border-white/10 bg-zinc-950/98 p-4 pb-[calc(var(--safe-bottom)+1rem)] shadow-[0_-8px_40px_rgba(0,0,0,0.45)] backdrop-blur-md sm:p-5 sm:pb-[calc(var(--safe-bottom)+1.25rem)]"
     >
       <div className="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">

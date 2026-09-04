@@ -3,6 +3,7 @@
 import type { CalorieDayDTO } from "@/lib/services/analytics.service";
 import { useLang } from "@/lib/lang-context";
 import { formatNumber } from "@/lib/i18n/format";
+import { useAndroidBackClose } from "@/hooks/useAndroidBackClose";
 
 export function CalorieHistorySheet({
   days,
@@ -12,13 +13,15 @@ export function CalorieHistorySheet({
   onClose: () => void;
 }) {
   const { t, lang } = useLang();
+  useAndroidBackClose(true, onClose);
   const hasAny = days.some(
     (d) => d.caloriesConsumed > 0 || d.caloriesBurned > 0 || d.workoutsCompleted > 0,
   );
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center"
+      data-app-overlay="open"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 pt-[calc(var(--safe-top)+1rem)] pb-[calc(var(--safe-bottom)+1rem)] sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="calorie-history-title"

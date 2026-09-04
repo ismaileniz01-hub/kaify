@@ -24,6 +24,7 @@ import {
 } from "@/components/security/InvisibleRecaptcha";
 import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
 import { hapticSelection } from "@/lib/native/haptics";
+import { useScrollFocusedInputIntoView } from "@/hooks/useScrollFocusedInputIntoView";
 import { redirectToWebCheckoutAfterSignup } from "@/lib/billing/native-web-checkout";
 import {
   PENDING_LEGAL_CONSENT_KEY,
@@ -139,6 +140,7 @@ function storePendingLegalConsent(): void {
 export function SignupWizard({ redirectTo = "/pricing" }: Props) {
   void redirectTo;
   const { lang, t } = useLang();
+  useScrollFocusedInputIntoView();
   const { isAuthenticated, isLoading, profile, refreshSession } = useSession();
   const idPrefix = useId();
   const errorId = `${idPrefix}-error`;

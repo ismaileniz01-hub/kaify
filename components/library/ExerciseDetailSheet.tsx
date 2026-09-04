@@ -8,6 +8,8 @@ import { setAlexDraft } from "@/lib/chat/alex-draft";
 import { useLang } from "@/lib/lang-context";
 import type { ExerciseGroupId } from "@/lib/exercise-library";
 import { InlineAlert } from "@/components/InlineAlert";
+import { useAndroidBackClose } from "@/hooks/useAndroidBackClose";
+import { useScrollFocusedInputIntoView } from "@/hooks/useScrollFocusedInputIntoView";
 
 type Place = "gym" | "home";
 
@@ -25,6 +27,8 @@ export function ExerciseDetailSheet({
   onClose,
 }: Props) {
   const { t } = useLang();
+  useAndroidBackClose(true, onClose);
+  useScrollFocusedInputIntoView();
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -75,7 +79,10 @@ export function ExerciseDetailSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
+    <div
+      data-app-overlay="open"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 pt-[calc(var(--safe-top)+1rem)] pb-[calc(var(--safe-bottom)+1rem)] sm:items-center"
+    >
       <div
         role="dialog"
         aria-modal="true"
@@ -97,7 +104,7 @@ export function ExerciseDetailSheet({
           <button
             type="button"
             onClick={onClose}
-            className="text-xs font-medium text-zinc-400 hover:text-white"
+            className="touch-44 min-h-11 text-xs font-medium text-zinc-400 hover:text-white"
           >
             {t("common.cancel")}
           </button>

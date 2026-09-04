@@ -18,6 +18,7 @@ import { formatTime } from "@/lib/i18n/format";
 import { apiGet } from "@/lib/api/client";
 import type { AnalyticsBundleDTO } from "@/lib/services/analytics.service";
 import { AppHeader } from "@/components/navigation/AppHeader";
+import { useOfflineRetry } from "@/hooks/useOfflineRetry";
 import { syncNativeHealthSteps } from "@/lib/native/health-steps";
 
 export default function AnalyticsPage() {
@@ -45,6 +46,8 @@ export default function AnalyticsPage() {
       })
       .finally(() => setRefreshing(false));
   }, [isAuthenticated, t]);
+
+  useOfflineRetry(loadAnalytics);
 
   useEffect(() => {
     loadAnalytics();

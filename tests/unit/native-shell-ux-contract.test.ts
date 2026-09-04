@@ -72,6 +72,57 @@ describe("chrome haptics and 44px targets (wave B)", () => {
   });
 });
 
+describe("wave C+D native UX remaining gaps", () => {
+  it("closes custom sheets on Android back", () => {
+    expect(source("components/analytics/CalorieHistorySheet.tsx")).toContain(
+      'data-app-overlay="open"',
+    );
+    expect(source("components/library/ExerciseDetailSheet.tsx")).toContain(
+      'data-app-overlay="open"',
+    );
+    expect(source("components/market/DailyChestOpening.tsx")).toContain(
+      'data-app-overlay="open"',
+    );
+    expect(source("hooks/useAndroidBackClose.ts")).toContain("ANDROID_BACK_EVENT");
+  });
+
+  it("scrolls focused inputs above the native keyboard", () => {
+    expect(source("hooks/useScrollFocusedInputIntoView.ts")).toContain(
+      "visualViewport",
+    );
+    expect(source("app/(app)/settings/page.tsx")).toContain(
+      "useScrollFocusedInputIntoView",
+    );
+    expect(source("components/auth/SignupWizard.tsx")).toContain(
+      "useScrollFocusedInputIntoView",
+    );
+    expect(source("components/auth/EmailOtpLogin.tsx")).toContain(
+      "useScrollFocusedInputIntoView",
+    );
+  });
+
+  it("refetches list screens on offline retry", () => {
+    expect(source("app/(app)/analytics/page.tsx")).toContain("useOfflineRetry");
+    expect(source("app/(app)/chat/team/page.tsx")).toContain("useOfflineRetry");
+    expect(source("app/(app)/messages/page.tsx")).toContain("useOfflineRetry");
+    expect(source("app/(app)/trophy-road/page.tsx")).toContain("useOfflineRetry");
+    expect(source("app/(app)/leaderboard/page.tsx")).toContain("useOfflineRetry");
+    expect(source("components/welcome/CountryLeaderboard.tsx")).toContain(
+      "useOfflineRetry",
+    );
+  });
+
+  it("does not hang account loading without a retry path", () => {
+    expect(source("components/account/MyAccountPage.tsx")).toContain("loadStuck");
+    expect(source("components/account/MyAccountPage.tsx")).toContain("offline.retry");
+  });
+
+  it("reads saved theme before first paint and keeps chat delete undo", () => {
+    expect(source("lib/theme-context.tsx")).toContain('localStorage.getItem("kaify-theme")');
+    expect(source("components/chat/LiveChatPanel.tsx")).toContain('t("chat.delete.undo")');
+  });
+});
+
 describe("signup legal gate (source contract)", () => {
   it("blocks web OTP signup until terms are accepted", () => {
     const login = source("components/auth/EmailOtpLogin.tsx");
