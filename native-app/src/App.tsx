@@ -13,6 +13,10 @@ import {
   sendKaiMessage,
   type NativeProfile,
 } from "./api";
+import {
+  detectLangFromNavigator,
+  otpLocaleForLang,
+} from "@/lib/i18n/detect-lang";
 import { sendNativeEmailOtp, signInNativeWithPassword, verifyNativeEmailOtp } from "./auth-otp";
 import { NATIVE_CLIENT_VERSION } from "./client-version";
 import { enterRealKaify } from "./enter-kaify";
@@ -74,11 +78,17 @@ export function App() {
   const [reply, setReply] = useState("");
   const profileRef = useRef(profile);
   profileRef.current = profile;
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
 
   const resolveSignedInDestination = useCallback(async () => {
     const nextProfile = await loadProfile();
     setProfile(nextProfile);
     setScreen(profileHasPaidAccess(nextProfile) ? "welcome" : "plan");
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = detectLangFromNavigator();
   }, []);
 
   useEffect(() => {
@@ -130,6 +140,7 @@ export function App() {
     }
     let removeUrlListener: (() => void) | undefined;
     let removeResumeListener: (() => void) | undefined;
+    let removeBackListener: (() => void) | undefined;
     void CapacitorApp.addListener("appStateChange", (state) => {
       if (state.isActive) {
         postNativeEvent("native.app_resumed", installId, { os });
@@ -163,12 +174,27 @@ export function App() {
     }).catch(() => {
       // Browser/dev shells do not expose the native App plugin.
     });
+    void CapacitorApp.addListener("backButton", () => {
+      const current = screenRef.current;
+      if (current === "chat") {
+        setScreen("welcome");
+        return;
+      }
+      void CapacitorApp.minimizeApp();
+    })
+      .then((handle) => {
+        removeBackListener = () => {
+          void handle.remove();
+        };
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
       window.removeEventListener("online", onlineListener);
       window.removeEventListener("offline", offlineListener);
       removeUrlListener?.();
       removeResumeListener?.();
+      removeBackListener?.();
     };
   }, [resolveSignedInDestination]);
 
@@ -176,7 +202,10 @@ export function App() {
     setAuthBusy(true);
     setError("");
     try {
-      const result = await sendNativeEmailOtp(email);
+      const result = await sendNativeEmailOtp(
+        email,
+        otpLocaleForLang(detectLangFromNavigator()),
+      );
       if (!result.ok) {
         setError(result.message);
         return result;

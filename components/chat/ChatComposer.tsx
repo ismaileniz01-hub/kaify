@@ -5,7 +5,9 @@ import { Camera, Mic, Send, X } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
 import { useSpeechRecognition } from "@/lib/use-speech-recognition";
 import { speechLocaleForLang } from "@/lib/speech-locale";
-import { hapticImpact } from "@/lib/native/haptics";
+import { hapticImpact, hapticSelection } from "@/lib/native/haptics";
+import { isNativeSpeechGranted } from "@/lib/native/speech-platform";
+import { isNativePlatform } from "@/lib/native/platform";
 
 type ChatComposerProps = {
   input: string;
@@ -40,6 +42,7 @@ export function ChatComposer({
   const { t, lang } = useLang();
   const [sendBurst, setSendBurst] = useState(false);
   const [launchText, setLaunchText] = useState<string | null>(null);
+  const [speechRationaleOpen, setSpeechRationaleOpen] = useState(false);
   const burstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -95,6 +98,18 @@ export function ChatComposer({
       stopListening();
       return;
     }
+    void hapticSelection();
+    void (async () => {
+      if ((await isNativePlatform()) && !(await isNativeSpeechGranted())) {
+        setSpeechRationaleOpen(true);
+        return;
+      }
+      startListening();
+    })();
+  };
+
+  const confirmSpeechRationale = () => {
+    setSpeechRationaleOpen(false);
     startListening();
   };
 
@@ -178,11 +193,37 @@ export function ChatComposer({
           </button>
         </div>
       ) : null}
+      {speechRationaleOpen ? (
+        <div className="mb-2 rounded-2xl border border-white/10 bg-black/40 px-3 py-2.5">
+          <p className="text-xs leading-relaxed text-zinc-300">
+            {t("speech.permission.rationale")}
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              className="touch-44 rounded-xl bg-purple-600 px-3 text-xs font-semibold text-white"
+              onClick={confirmSpeechRationale}
+            >
+              {t("speech.permission.continue")}
+            </button>
+            <button
+              type="button"
+              className="touch-44 rounded-xl px-3 text-xs text-zinc-400"
+              onClick={() => setSpeechRationaleOpen(false)}
+            >
+              {t("speech.permission.not_now")}
+            </button>
+          </div>
+        </div>
+      ) : null}
       <div className="glass-input chat-composer__surface flex items-center gap-1.5 rounded-[1.35rem] px-1.5 py-1.5 sm:gap-2">
         {showCamera && (
           <button
             type="button"
-            onClick={onCameraClick}
+            onClick={() => {
+              void hapticSelection();
+              onCameraClick?.();
+            }}
             disabled={sending}
             className="touch-44 flex shrink-0 items-center justify-center rounded-2xl text-zinc-400 hover:bg-white/[0.07] hover:text-white disabled:opacity-40"
             aria-label={t("chat.aria.photo")}

@@ -376,7 +376,7 @@ export function MyAccountPage() {
                           setEditingName(true);
                           setSaveError(null);
                         }}
-                        className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-400 transition hover:border-purple-400/40 hover:text-white"
+                        className="touch-44 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-400 transition hover:border-purple-400/40 hover:text-white"
                         aria-label={t("myaccount.edit_name")}
                       >
                         <Pencil className="h-4 w-4" />

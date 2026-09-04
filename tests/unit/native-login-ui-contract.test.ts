@@ -8,6 +8,7 @@ function source(path: string): string {
 
 describe("native login UI contract (canonical web parity)", () => {
   const login = source("native-app/src/login/NativeLoginScreen.tsx");
+  const copy = source("native-app/src/login/native-login-copy.ts");
   const wallpaper = source("native-app/src/login/NativeFitnessWallpaper.tsx");
   const otp = source("native-app/src/login/NativeOtpDigitInput.tsx");
   const css = source("native-app/src/styles.css");
@@ -22,11 +23,12 @@ describe("native login UI contract (canonical web parity)", () => {
 
   it("matches canonical web login copy and CTA", () => {
     expect(login).toContain("Kaify Ai");
-    expect(login).toContain("4 coaches. One team. Designed for you.");
-    expect(login).toContain("Send login code");
-    expect(login).toContain("Sign in with password");
-    expect(login).toContain("Check your email");
-    expect(login).toContain("Your email address");
+    expect(login).toContain("nativeLoginCopy");
+    expect(copy).toContain("4 coaches. One team. Designed for you.");
+    expect(copy).toContain("Send login code");
+    expect(copy).toContain("Sign in with password");
+    expect(copy).toContain("Check your email");
+    expect(copy).toContain("Your email address");
     expect(login).not.toContain("Sign in locally");
   });
 

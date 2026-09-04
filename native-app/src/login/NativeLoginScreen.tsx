@@ -30,6 +30,11 @@ import {
 } from "../otp-resend-timer";
 import { NativeFitnessWallpaper } from "./NativeFitnessWallpaper";
 import { NativeOtpDigitInput } from "./NativeOtpDigitInput";
+import { nativeLoginCopy } from "./native-login-copy";
+import {
+  detectLangFromNavigator,
+  otpLocaleForLang,
+} from "@/lib/i18n/detect-lang";
 
 export type NativeAuthMode = "login" | "signup";
 export type NativeAuthStep = "email" | "code";
@@ -86,6 +91,7 @@ export function NativeLoginScreen({
   onClearError,
 }: NativeLoginScreenProps) {
   const idPrefix = useId();
+  const copy = nativeLoginCopy(otpLocaleForLang(detectLangFromNavigator()));
   const emailId = `${idPrefix}-email`;
   const passwordId = `${idPrefix}-password`;
   const errorId = `${idPrefix}-error`;
@@ -103,6 +109,10 @@ export function NativeLoginScreen({
 
   const refreshNow = useCallback(() => {
     setNowTick(Date.now());
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = detectLangFromNavigator();
   }, []);
 
   // Tick from absolute timestamp — survives background by recomputing on focus.
@@ -239,11 +249,9 @@ export function NativeLoginScreen({
         <main className="login-page-main">
           <div className="login-otp-panel login-otp-panel--code">
             <div className="login-otp-heading">
-              <h2>Check your email</h2>
+              <h2>{copy.checkEmail}</h2>
               <p>
-                {isSignup
-                  ? "Enter the code to finish creating your account."
-                  : "Enter the 6-digit code from your email."}
+                {isSignup ? copy.enterCodeSignup : copy.enterCodeLogin}
               </p>
             </div>
 
@@ -257,7 +265,7 @@ export function NativeLoginScreen({
               }}
             >
               <ArrowLeft className="icon-sm" aria-hidden />
-              Change email
+              {copy.changeEmail}
             </button>
 
             <div className="login-otp-sent-card">
@@ -265,7 +273,7 @@ export function NativeLoginScreen({
                 <CheckCircle2 className="icon-md text-emerald" aria-hidden />
               </div>
               <p className="login-otp-sent-hint">
-                Check your inbox for a 6-digit code (email is in English).
+                {copy.inboxHint}
               </p>
               <p className="login-otp-email-chip">
                 <Mail className="icon-sm text-purple" aria-hidden />
@@ -274,7 +282,7 @@ export function NativeLoginScreen({
             </div>
 
             <div className="login-otp-code-block" data-otp-code>
-              <p className="login-otp-code-label">6-digit code</p>
+              <p className="login-otp-code-label">{copy.codeLabel}</p>
               <NativeOtpDigitInput
                 value={otp}
                 onChange={onOtpChange}
@@ -290,7 +298,7 @@ export function NativeLoginScreen({
               disabled={busy || !online || !isCompleteOtp(otp)}
               onClick={() => void handleVerify()}
             >
-              {busy ? "Verifying…" : isSignup ? "Create account" : "Sign in"}
+              {busy ? copy.verifying : isSignup ? copy.createAccount : copy.signIn}
               <ArrowRight className="icon-md" aria-hidden />
             </button>
 
@@ -312,7 +320,7 @@ export function NativeLoginScreen({
               </span>
               <p className="login-otp-expires">
                 <ShieldCheck className="icon-sm" aria-hidden />
-                Kod birkaç dakika içinde geçersiz olur
+                {copy.codeExpires}
               </p>
             </div>
 
@@ -345,11 +353,11 @@ export function NativeLoginScreen({
           <div className="login-hero-copy">
             <h1>Kaify Ai</h1>
             <p className="login-subtitle">
-              4 coaches. One team. Designed for you.
+              {copy.subtitle}
             </p>
             {isSignup ? (
               <p className="login-mode-line">
-                Already have an account?{" "}
+                {copy.haveAccount}{" "}
                 <button
                   type="button"
                   className="link-purple"
@@ -358,13 +366,12 @@ export function NativeLoginScreen({
                     onModeChange("login");
                   }}
                 >
-                  Sign in
+                  {copy.signIn}
                 </button>
               </p>
             ) : (
               <p className="login-mode-line login-mode-line--notice">
-                New to Kaify Ai? Create your account at kaifyai.org, then return
-                here to sign in.
+                {copy.newUserHint}
               </p>
             )}
           </div>
@@ -375,7 +382,7 @@ export function NativeLoginScreen({
           onSubmit={(event) => void handleSend(event)}
         >
           <label htmlFor={emailId} className="sr-only">
-            Your email address
+            {copy.emailPlaceholder}
           </label>
           <div className="login-field-pill">
             <Mail className="icon-sm text-purple" aria-hidden />
@@ -384,7 +391,7 @@ export function NativeLoginScreen({
               type="email"
               value={email}
               onChange={(e) => handleEmailChange(e.target.value)}
-              placeholder="Your email address"
+              placeholder={copy.emailPlaceholder}
               autoComplete="email"
               inputMode="email"
               aria-invalid={error ? true : undefined}
@@ -401,21 +408,21 @@ export function NativeLoginScreen({
                   onChange={(e) => onAcceptedLegalChange(e.target.checked)}
                 />
                 <span>
-                  I accept the{" "}
+                  {copy.acceptTermsPrefix}{" "}
                   <a
                     href="https://kaifyai.org/terms"
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Terms
+                    {copy.terms}
                   </a>{" "}
-                  and{" "}
+                  {copy.and}{" "}
                   <a
                     href="https://kaifyai.org/privacy"
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Privacy Policy
+                    {copy.privacy}
                   </a>
                   .
                 </span>
@@ -426,29 +433,26 @@ export function NativeLoginScreen({
                   checked={acceptedAi}
                   onChange={(e) => onAcceptedAiChange(e.target.checked)}
                 />
-                <span>
-                  I explicitly consent to AI processing of fitness and health
-                  data. I can withdraw this optional consent later.
-                </span>
+                <span>{copy.aiConsent}</span>
               </label>
             </div>
           ) : (
             <p className="login-terms">
-              By continuing, you agree to our{" "}
+              {copy.byContinuing}{" "}
               <a
                 href="https://kaifyai.org/terms"
                 target="_blank"
                 rel="noreferrer"
               >
-                Terms of Service
+                {copy.termsOfService}
               </a>{" "}
-              and{" "}
+              {copy.and}{" "}
               <a
                 href="https://kaifyai.org/privacy"
                 target="_blank"
                 rel="noreferrer"
               >
-                Privacy Policy
+                {copy.privacy}
               </a>
             </p>
           )}
@@ -459,18 +463,18 @@ export function NativeLoginScreen({
             disabled={!canSend}
           >
             {busy
-              ? "Sending…"
+              ? copy.sending
               : isSignup
-                ? "Send verification code"
-                : "Send login code"}
+                ? copy.sendVerify
+                : copy.sendLogin}
             <ArrowRight className="icon-md" aria-hidden />
           </button>
 
           {!isSignup ? (
             <>
-              <p className="login-password-or">or</p>
+              <p className="login-password-or">{copy.or}</p>
               <label htmlFor={passwordId} className="sr-only">
-                Password
+                {copy.password}
               </label>
               <div className="login-field-pill">
                 <Lock className="icon-sm text-purple" aria-hidden />
@@ -488,7 +492,7 @@ export function NativeLoginScreen({
                       void handlePasswordSignIn();
                     }
                   }}
-                  placeholder="Password"
+                  placeholder={copy.password}
                   autoComplete="current-password"
                   aria-invalid={error ? true : undefined}
                   aria-describedby={error ? errorId : undefined}
@@ -500,7 +504,7 @@ export function NativeLoginScreen({
                 disabled={!canPasswordSignIn}
                 onClick={() => void handlePasswordSignIn()}
               >
-                {busy ? "Signing in…" : "Sign in with password"}
+                {busy ? copy.signingIn : copy.signInPassword}
                 <ArrowRight className="icon-md" aria-hidden />
               </button>
             </>
@@ -515,7 +519,7 @@ export function NativeLoginScreen({
                 onModeChange("signup");
               }}
             >
-              Create an account
+              {copy.createAnAccount}
             </button>
           ) : null}
 
@@ -531,12 +535,13 @@ export function NativeLoginScreen({
 }
 
 export function NativeLoginBoot() {
+  const copy = nativeLoginCopy(otpLocaleForLang(detectLangFromNavigator()));
   return (
     <div className="phone-shell login-page login-boot" data-testid="native-login-boot">
       <NativeFitnessWallpaper />
       <main className="login-page-main login-boot-main">
         <div className="login-spinner" aria-hidden />
-        <p>Giriş hazırlanıyor…</p>
+        <p>{copy.preparing}</p>
       </main>
     </div>
   );

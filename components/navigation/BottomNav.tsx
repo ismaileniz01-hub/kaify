@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { BarChart3, BookOpen, Flame, Home, MessageCircle } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
 import { shouldShowBottomNav } from "@/lib/navigation/bottom-nav";
+import { hapticSelection } from "@/lib/native/haptics";
 
 const TABS = [
   {
@@ -62,6 +63,9 @@ export function BottomNav() {
                 prefetch
                 className={`bottom-nav__link touch-44 ${active ? "bottom-nav__link--active" : ""}`}
                 aria-current={active ? "page" : undefined}
+                onClick={() => {
+                  if (!active) void hapticSelection();
+                }}
               >
                 <Icon className="bottom-nav__icon" strokeWidth={active ? 2.35 : 1.85} aria-hidden />
                 <span className="bottom-nav__label">{t(tab.labelKey)}</span>

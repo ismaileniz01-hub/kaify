@@ -142,7 +142,7 @@ export function PushToggle() {
             type="button"
             onClick={() => (state === "on" ? void disable() : void enable())}
             disabled={state === "busy" || (state === "off" && !hasConsent && !consentChecked)}
-            className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold text-white ring-1 transition hover:brightness-110 active:scale-95 disabled:opacity-60"
+            className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-semibold text-white ring-1 transition hover:brightness-110 active:scale-95 disabled:opacity-60"
             style={{
               background: `${accent}26`,
               boxShadow: `inset 0 0 0 1px ${accent}55`,

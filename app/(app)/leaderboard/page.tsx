@@ -13,6 +13,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
+import { OFFLINE_RETRY_EVENT } from "@/lib/offline-retry";
 import { InlineAlert } from "@/components/InlineAlert";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { useLang } from "@/lib/lang-context";
@@ -188,6 +189,13 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [leaderboardHidden, setLeaderboardHidden] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
+
+  useEffect(() => {
+    const onRetry = () => setRetryTick((n) => n + 1);
+    window.addEventListener(OFFLINE_RETRY_EVENT, onRetry);
+    return () => window.removeEventListener(OFFLINE_RETRY_EVENT, onRetry);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -242,7 +250,7 @@ export default function LeaderboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, profile?.countryCode]);
+  }, [isAuthenticated, profile?.countryCode, retryTick]);
 
   return (
     <div className="phone-shell relative flex flex-col overflow-hidden">

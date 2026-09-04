@@ -35,7 +35,7 @@ export function CalorieHistorySheet({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-2 py-1 text-xs text-zinc-400 hover:text-white"
+            className="touch-44 rounded-lg px-3 text-xs text-zinc-400 hover:text-white"
           >
             {t("analytics.history.close")}
           </button>

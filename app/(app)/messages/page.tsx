@@ -13,6 +13,7 @@ import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { apiGet } from "@/lib/api/client";
+import { useOfflineRetry } from "@/hooks/useOfflineRetry";
 import { canUseTeamChat, isTeamChatPlan } from "@/lib/billing/team-chat-access";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import { formatInboxTime } from "@/lib/i18n/format";
@@ -40,6 +41,8 @@ export default function MessagesPage() {
       })
       .finally(() => setLoading(false));
   }, [isAuthenticated, t]);
+
+  useOfflineRetry(loadInbox);
 
   useEffect(() => {
     if (!isAuthenticated) return;

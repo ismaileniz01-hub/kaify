@@ -211,7 +211,7 @@ function NotificationPanel({
               <button
                 type="button"
                 onClick={() => void handleMarkAllRead()}
-                className="flex items-center gap-1.5 rounded-full bg-purple-500/20 px-3 py-1.5 text-[11px] font-semibold text-purple-200 ring-1 ring-purple-400/30 transition hover:bg-purple-500/30 active:scale-95"
+                className="flex min-h-11 items-center gap-1.5 rounded-full bg-purple-500/20 px-3 py-2 text-[11px] font-semibold text-purple-200 ring-1 ring-purple-400/30 transition hover:bg-purple-500/30 active:scale-95"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
                 {t("notif.mark_all_read")}

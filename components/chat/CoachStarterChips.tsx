@@ -3,6 +3,7 @@
 import { COACH_STARTERS } from "@/lib/chat/starters";
 import type { ContactId } from "@/lib/contacts";
 import { useLang } from "@/lib/lang-context";
+import { hapticSelection } from "@/lib/native/haptics";
 
 export function CoachStarterChips({
   coachId,
@@ -22,8 +23,11 @@ export function CoachStarterChips({
         <button
           key={starter.id}
           type="button"
-          onClick={() => onPick(t(starter.promptKey as "chat.starter.kai.today"))}
-          className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-zinc-200"
+          onClick={() => {
+            void hapticSelection();
+            onPick(t(starter.promptKey as "chat.starter.kai.today"));
+          }}
+          className="min-h-11 rounded-full border border-white/15 bg-white/5 px-3 py-2 text-xs text-zinc-200"
         >
           {t(starter.promptKey as "chat.starter.kai.today")}
         </button>

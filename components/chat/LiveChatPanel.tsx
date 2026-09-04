@@ -36,6 +36,7 @@ import {
   prepareChatPhoto,
 } from "@/lib/chat/prepare-chat-photo";
 import { errorToMessage, photoAnalysisFailureText, quotaErrorMessage, quotaResourceFromError, visionQuotaResourceFromError, isAnalyzeQuotaDenied } from "@/lib/i18n/api-error";
+import { useToast } from "@/components/ui/ToastProvider";
 import { coachRetryLine, isSoftCoachFailure, isUsableCoachReply } from "@/lib/kaios/coach-retry";
 import { MessageCircle, MoreVertical, Check } from "lucide-react";
 import {
@@ -175,6 +176,7 @@ function canSelectForDelete(msg: LiveMessage): boolean {
 export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const contact = CONTACTS[coachId];
   const { t, lang } = useLang();
+  const { toast } = useToast();
   const { avatar: kaiAvatar } = useKai();
   const { userProfile, refreshHome } = useSession();
   const { primary, primaryLight, secondary, ring, shadow } = contact.color;
@@ -212,6 +214,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     async () => undefined,
   );
   const [queueNotice, setQueueNotice] = useState(false);
+  const pendingDeleteTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const previewUrls = transferredPreviewRef.current;
@@ -612,21 +615,48 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         ? false
         : window.confirm(t("chat.delete.confirmSelected", { count: ids.length }));
     if (!confirmed) return;
-    setDeleting(true);
+
+    const previous = messages;
+    const removed = new Set(ids);
+    setMessages((prev) => prev.filter((item) => !removed.has(item.id)));
+    setSelectingDelete(false);
+    setSelectedIds(new Set());
     setError(null);
-    try {
-      const result = await apiPost<{
-        deletedIds: string[];
-      }>("/api/chat/messages/delete", { ids });
-      const removed = new Set(result.deletedIds ?? ids);
-      setMessages((prev) => prev.filter((item) => !removed.has(item.id)));
-      setSelectingDelete(false);
-      setSelectedIds(new Set());
-    } catch (err) {
-      setError(errorToMessage(err, t));
-    } finally {
-      setDeleting(false);
+
+    if (pendingDeleteTimerRef.current) {
+      window.clearTimeout(pendingDeleteTimerRef.current);
     }
+
+    const commit = async () => {
+      pendingDeleteTimerRef.current = null;
+      try {
+        await apiPost<{ deletedIds: string[] }>("/api/chat/messages/delete", {
+          ids,
+        });
+      } catch (err) {
+        setMessages(previous);
+        setError(errorToMessage(err, t));
+      }
+    };
+
+    pendingDeleteTimerRef.current = window.setTimeout(() => {
+      void commit();
+    }, 7000);
+
+    toast({
+      title: t("chat.delete.deleted"),
+      duration: 7000,
+      action: {
+        label: t("chat.delete.undo"),
+        onClick: () => {
+          if (pendingDeleteTimerRef.current) {
+            window.clearTimeout(pendingDeleteTimerRef.current);
+            pendingDeleteTimerRef.current = null;
+          }
+          setMessages(previous);
+        },
+      },
+    });
   };
 
   const uploadPhoto = async (

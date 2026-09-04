@@ -69,6 +69,45 @@ function resolveMutationIdempotencyKey(
   return createIdempotencyKey();
 }
 
+const FETCH_TIMEOUT_MS = 12_000;
+
+function isAbortLike(error: unknown): boolean {
+  if (typeof DOMException !== "undefined" && error instanceof DOMException) {
+    return error.name === "AbortError" || error.name === "TimeoutError";
+  }
+  return error instanceof Error && /abort|timeout/i.test(error.name + error.message);
+}
+
+function isLikelyNetworkFailure(error: unknown): boolean {
+  if (error instanceof TypeError) return true;
+  if (isAbortLike(error)) return true;
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    return (
+      msg.includes("fetch failed") ||
+      msg.includes("network") ||
+      msg.includes("failed to fetch")
+    );
+  }
+  return false;
+}
+
+function abortSignalWithTimeout(user?: AbortSignal): AbortSignal {
+  const timeout =
+    typeof AbortSignal.timeout === "function"
+      ? AbortSignal.timeout(FETCH_TIMEOUT_MS)
+      : (() => {
+          const controller = new AbortController();
+          globalThis.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+          return controller.signal;
+        })();
+  if (!user) return timeout;
+  if (typeof AbortSignal.any === "function") {
+    return AbortSignal.any([timeout, user]);
+  }
+  return timeout;
+}
+
 /** Typed fetch wrapper for Kaify Ai API routes (cookie session). Soft-retries GETs. */
 export async function apiFetch<T>(
   path: string,
@@ -84,56 +123,55 @@ export async function apiFetch<T>(
   if (idempotencyKey) {
     baseHeaders[IDEMPOTENCY_HEADER] = idempotencyKey;
   }
+  const signal = abortSignalWithTimeout(init?.signal ?? undefined);
 
-  return withRetry(
-    async () => {
-      let response: Response;
-      try {
-        response = await fetch(resolveApiPath(path), {
-          ...init,
-          method,
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            ...baseHeaders,
-          },
-        });
-      } catch (error) {
-        // Network / DNS — taxonomy marks retryable.
-        throw error;
-      }
-
-      if (
-        idempotent &&
-        (response.status === 502 || response.status === 503 || response.status === 504)
-      ) {
-        throw new UpstreamHttpError(response.status, `API ${response.status}`);
-      }
-
-      const json = (await response.json()) as ApiResponseBody<T>;
-      return json;
-    },
-    {
-      retries: idempotent ? 2 : 1,
-      baseDelayMs: 200,
-      maxDelayMs: 1500,
-      signal: init?.signal ?? undefined,
-      // Mutating calls: only retry pure network failures (no HTTP 5xx retry).
-      isRetryable: (error) => {
-        if (error instanceof UpstreamHttpError) return idempotent;
-        if (error instanceof TypeError) return true;
-        if (error instanceof Error) {
-          const msg = error.message.toLowerCase();
-          return (
-            msg.includes("fetch failed") ||
-            msg.includes("network") ||
-            msg.includes("failed to fetch")
-          );
+  try {
+    return await withRetry(
+      async () => {
+        let response: Response;
+        try {
+          response = await fetch(resolveApiPath(path), {
+            ...init,
+            method,
+            credentials: "include",
+            signal,
+            headers: {
+              "Content-Type": "application/json",
+              ...baseHeaders,
+            },
+          });
+        } catch (error) {
+          throw error;
         }
-        return false;
+
+        if (
+          idempotent &&
+          (response.status === 502 || response.status === 503 || response.status === 504)
+        ) {
+          throw new UpstreamHttpError(response.status, `API ${response.status}`);
+        }
+
+        const json = (await response.json()) as ApiResponseBody<T>;
+        return json;
       },
-    },
-  );
+      {
+        retries: idempotent ? 2 : 1,
+        baseDelayMs: 200,
+        maxDelayMs: 1500,
+        signal,
+        isRetryable: (error) => {
+          if (error instanceof UpstreamHttpError) return idempotent;
+          if (isLikelyNetworkFailure(error)) return true;
+          return false;
+        },
+      },
+    );
+  } catch (error) {
+    if (isLikelyNetworkFailure(error)) {
+      throw new ApiClientError("NETWORK", "Bağlantı kurulamadı.");
+    }
+    throw error;
+  }
 }
 
 export async function apiGet<T>(path: string): Promise<T> {

@@ -21,6 +21,7 @@ type ToastInput = {
   description?: string;
   tone?: ToastTone;
   duration?: number;
+  action?: { label: string; onClick: () => void };
 };
 
 type ToastItem = ToastInput & {
@@ -203,6 +204,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   <p className="mt-0.5 text-xs leading-relaxed text-zinc-400">
                     {item.description}
                   </p>
+                ) : null}
+                {item.action ? (
+                  <button
+                    type="button"
+                    className="mt-2 min-h-11 text-xs font-semibold text-white underline-offset-2 hover:underline"
+                    onClick={() => {
+                      item.action?.onClick();
+                      dismiss(item.id);
+                    }}
+                  >
+                    {item.action.label}
+                  </button>
                 ) : null}
               </div>
               <button

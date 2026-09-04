@@ -468,7 +468,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                         {pendingKaiLevel === kaiLevel && (
                           <button
                             onClick={handleClaimEvolution}
-                            className="mt-2 flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-lg shadow-orange-500/30 transition-all hover:from-orange-400 hover:to-amber-400 active:scale-95"
+                            className="mt-2 flex min-h-11 items-center gap-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-3 py-2 text-xs font-bold text-white shadow-lg shadow-orange-500/30 transition-all hover:from-orange-400 hover:to-amber-400 active:scale-95"
                           >
                             <Flame className="h-3.5 w-3.5" />
                             {t("streak.claim")}

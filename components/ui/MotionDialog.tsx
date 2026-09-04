@@ -11,6 +11,7 @@ import {
 } from "react";
 import { usePresence } from "@/lib/motion/use-presence";
 import { hapticSelection } from "@/lib/native/haptics";
+import { ANDROID_BACK_EVENT } from "@/lib/native/app-back-stack";
 
 type MotionDialogProps = {
   open: boolean;
@@ -133,12 +134,21 @@ export function MotionDialog({
       }
     };
     document.addEventListener("keydown", onKeyDown);
+    const onAndroidBack = () => {
+      const dialogs = document.querySelectorAll<HTMLElement>(
+        '[data-motion-dialog="true"]:not([data-state="exiting"])',
+      );
+      const isTopmost = dialogs.item(dialogs.length - 1) === panelRef.current;
+      if (isTopmost) onCloseRef.current?.();
+    };
+    window.addEventListener(ANDROID_BACK_EVENT, onAndroidBack);
 
     return () => {
       cancelAnimationFrame(frame);
       document.body.style.overflow = previousOverflow;
       inerted.forEach((el) => el.removeAttribute("inert"));
       document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener(ANDROID_BACK_EVENT, onAndroidBack);
       previousFocusRef.current?.focus();
     };
   }, [open]);
@@ -196,6 +206,7 @@ export function MotionDialog({
 
   return (
     <div
+      data-app-overlay="open"
       className={`motion-overlay fixed inset-0 flex justify-center bg-black/70 backdrop-blur-sm ${
         variant === "sheet" ? "items-end sm:items-center" : "items-center"
       } ${fullBleed ? "" : "p-4"} ${className}`}

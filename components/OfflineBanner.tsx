@@ -1,6 +1,7 @@
 "use client";
 
 import { ANALYTICS_UPDATED_EVENT } from "@/lib/analytics-client-cache";
+import { dispatchOfflineRetry } from "@/lib/offline-retry";
 import { InlineAlert } from "@/components/InlineAlert";
 import { useLang } from "@/lib/lang-context";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -20,7 +21,7 @@ export function OfflineBanner() {
         onRetry={() => {
           if (typeof window === "undefined") return;
           window.dispatchEvent(new Event(ANALYTICS_UPDATED_EVENT));
-          window.dispatchEvent(new Event("kaify:offline-retry"));
+          dispatchOfflineRetry();
         }}
         retryLabel={t("offline.retry")}
         dismissLabel={t("common.dismiss")}

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
+import { hapticSelection } from "@/lib/native/haptics";
 
 type AppHeaderProps = {
   title?: ReactNode;
@@ -35,6 +36,9 @@ export function AppHeader({
         prefetch
         className="app-header__action"
         aria-label={resolvedBackLabel}
+        onClick={() => {
+          void hapticSelection();
+        }}
       >
         <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
       </Link>

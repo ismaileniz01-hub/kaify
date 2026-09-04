@@ -255,3 +255,12 @@
     0 24px 80px rgba(0, 0, 0, 0.12),
     0 0 60px rgba(147, 51, 234, 0.04);
 }
+
+/* Welcome home hard-codes a near-black shell; keep light theme readable. */
+[data-theme="light"] .welcome-page .phone-shell {
+  background: #f5f5f5;
+}
+
+[data-theme="light"] .notif-panel {
+  background: linear-gradient(180deg, #f7f3fb 0%, #f5f5f5 50%, #efeaf6 100%);
+}

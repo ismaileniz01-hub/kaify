@@ -16,23 +16,25 @@ const ThemeContext = createContext<ThemeContextType>({
   toggleTheme: () => {},
 });
 
+function readStoredTheme(): Theme {
+  if (typeof window === "undefined") return "dark";
+  const saved = localStorage.getItem("kaify-theme");
+  return saved === "light" || saved === "dark" ? saved : "dark";
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const saved = localStorage.getItem("kaify-theme") as Theme | null;
-    if (saved === "light" || saved === "dark") {
-      setTheme(saved);
+  const [theme, setTheme] = useState<Theme>(() => {
+    const next = readStoredTheme();
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-theme", next);
     }
-  }, []);
+    return next;
+  });
 
   useEffect(() => {
-    if (!mounted) return;
     localStorage.setItem("kaify-theme", theme);
     document.documentElement.setAttribute("data-theme", theme);
-  }, [theme, mounted]);
+  }, [theme]);
 
   const toggleTheme = useCallback(
     () => setTheme((t) => (t === "dark" ? "light" : "dark")),

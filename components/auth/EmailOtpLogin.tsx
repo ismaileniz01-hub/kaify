@@ -19,6 +19,7 @@ import type { AuthMode } from "@/lib/auth/safe-redirect";
 import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 import { isNativePlatform } from "@/lib/native/platform";
 import { useLang } from "@/lib/lang-context";
+import { hapticSelection } from "@/lib/native/haptics";
 import {
   PENDING_LEGAL_CONSENT_KEY,
   PRIVACY_VERSION,
@@ -132,6 +133,19 @@ export function EmailOtpLogin({
     return () => clearTimeout(timer);
   }, [resendIn]);
 
+  useEffect(() => {
+    if (step !== "code") return;
+    const onViewport = () => {
+      document
+        .querySelector("[data-otp-code]")
+        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+    };
+    window.visualViewport?.addEventListener("resize", onViewport);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", onViewport);
+    };
+  }, [step]);
+
   const canSendCode =
     otpSendSchema.safeParse({ email: email.trim() }).success &&
     (!isSignup || legalAccepted);
@@ -151,6 +165,7 @@ export function EmailOtpLogin({
 
     setBusy("otp");
     setError(null);
+    void hapticSelection();
     try {
       storePendingLegalConsent();
       const native = await isNativePlatform();
@@ -310,7 +325,7 @@ export function EmailOtpLogin({
           </p>
         </div>
 
-        <div className="login-otp-code-block flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/25 p-4">
+        <div className="login-otp-code-block flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/25 p-4" data-otp-code>
           <p
             id={`${idPrefix}-code-label`}
             className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400"

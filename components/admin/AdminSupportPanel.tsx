@@ -5,6 +5,7 @@ import { Loader2, Send } from "lucide-react";
 import { apiGet, apiPost, ApiClientError } from "@/lib/api/client";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import { useLang } from "@/lib/lang-context";
+import { useOfflineRetry } from "@/hooks/useOfflineRetry";
 import { InlineAlert } from "@/components/InlineAlert";
 import type {
   AdminSupportTicketSummary,
@@ -39,6 +40,10 @@ export function AdminSupportPanel() {
       setLoading(false);
     }
   }, [t]);
+
+  useOfflineRetry(() => {
+    void loadList();
+  });
 
   const loadTicket = useCallback((ticketId: string) => {
     void apiGet<{
@@ -158,7 +163,7 @@ export function AdminSupportPanel() {
                 type="button"
                 disabled={busy || !reply.trim()}
                 onClick={() => void sendReply()}
-                className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-600 text-white disabled:opacity-40"
+                className="touch-44 flex h-11 w-11 items-center justify-center rounded-lg bg-purple-600 text-white disabled:opacity-40"
               >
                 <Send className="h-3.5 w-3.5" />
               </button>

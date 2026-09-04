@@ -7,6 +7,10 @@ import {
   type ReviewedLangOption,
 } from "@/lib/i18n/reviewed-locales";
 import type { LangCode } from "@/lib/lang-context-types";
+import {
+  detectLangFromNavigator,
+  isPlaceholderCopy,
+} from "@/lib/i18n/detect-lang";
 
 export type { LangCode } from "@/lib/lang-context-types";
 
@@ -81,12 +85,12 @@ function persistLangCookie(code: LangCode): void {
   document.cookie = `${STORAGE_KEY}=${encodeURIComponent(code)}; Path=/; Max-Age=${LANG_COOKIE_MAX_AGE}; SameSite=Lax`;
 }
 
-/** localStorage tercihini oku; yoksa sunucunun seçtiği istek dilini koru. */
-function getStoredLang(requestLang: LangCode): LangCode {
+/** Stored picker choice, else device language, else the SSR default. */
+function resolveClientLang(requestLang: LangCode): LangCode {
   if (typeof window === "undefined") return requestLang;
   const stored = localStorage.getItem(STORAGE_KEY);
   if (isSupportedLang(stored)) return stored;
-  return requestLang;
+  return detectLangFromNavigator();
 }
 
 /**
@@ -166,20 +170,25 @@ export function LangProvider({
   initialLang?: LangCode;
 }) {
   const initialDictionary = enFallback;
-  const [lang, setLangState] = useState<LangCode>(initialLang);
+  const [lang, setLangState] = useState<LangCode>(() =>
+    resolveClientLang(initialLang),
+  );
   const [unit, setUnitState] = useState<UnitSystem>("metric");
   const [dict, setDict] = useState<LangDict>(initialDictionary);
   const [enDict, setEnDict] = useState<LangDict>(enFallback);
 
-  // Hydration sonrası eski localStorage tercihini cookie ile eşitle.
+  // Hydration sonrası cookie / html lang'i cihaz veya kayıtlı tercih ile eşitle.
   useEffect(() => {
-    const detected = getStoredLang(initialLang);
-    if (detected !== initialLang) setLangState(detected);
+    const detected = resolveClientLang(initialLang);
+    if (detected !== lang) setLangState(detected);
     persistLangCookie(detected);
+    document.documentElement.lang = detected;
+    document.documentElement.dir = isRtlLang(detected) ? "rtl" : "ltr";
     const storedUnit = localStorage.getItem(UNIT_STORAGE_KEY) as UnitSystem | null;
     if (storedUnit === "metric" || storedUnit === "imperial") {
       setUnitState(storedUnit);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- first paint only; lang state is seeded from the same resolver
   }, [initialLang]);
 
 
@@ -226,16 +235,14 @@ export function LangProvider({
     (key: string, params?: Record<string, string | number>): string => {
       // 1. Önce mevcut dilin JSON'una bak
       let text = dict[key];
-      // 2. Bulamazsa İngilizce fallback'e bak
-      if (text === undefined) {
+      // 2. Missing or leftover UNSUPPORTED_LANG → English
+      if (isPlaceholderCopy(text)) {
         text = enDict[key];
       }
-      // 3. Onda da yoksa statik en.json (SSR / ilk paint)
-      if (text === undefined) {
+      if (isPlaceholderCopy(text)) {
         text = enFallback[key as keyof typeof enFallback];
       }
-      // 4. Onda da yoksa anahtarın kendisini göster
-      if (text === undefined) {
+      if (isPlaceholderCopy(text)) {
         return key;
       }
       if (params) {
