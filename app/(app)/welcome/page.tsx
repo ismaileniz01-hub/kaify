@@ -17,6 +17,7 @@ import { useLang, LANG_OPTIONS, hasStoredLangPreference } from "@/lib/lang-conte
 import { captureReferralFromUrl, getPendingReferral } from "@/lib/referral";
 import { InlineAlert } from "@/components/InlineAlert";
 import { AppHeader } from "@/components/navigation/AppHeader";
+import { hapticSelection } from "@/lib/native/haptics";
 import { FirstTaskChecklist } from "@/components/welcome/FirstTaskChecklist";
 import { GoalsEditor } from "@/components/goals/GoalsEditor";
 
@@ -109,7 +110,10 @@ function WelcomeContent() {
           <>
           <button
             type="button"
-            onClick={() => setProfileOpen(true)}
+            onClick={() => {
+              void hapticSelection();
+              setProfileOpen(true);
+            }}
               className="app-header__action border-purple-400/25 bg-purple-500/15 text-purple-300"
             aria-label={t("profile.title")}
           >
@@ -119,6 +123,9 @@ function WelcomeContent() {
               href="/leaderboard"
               className="app-header__action border-amber-400/25 bg-amber-500/10 text-amber-400"
               aria-label={t("nav.leaderboard")}
+              onClick={() => {
+                void hapticSelection();
+              }}
             >
               <Globe className="h-4 w-4" />
             </Link>
@@ -133,6 +140,9 @@ function WelcomeContent() {
             href="/settings"
               className="app-header__action"
             aria-label={t("nav.settings")}
+            onClick={() => {
+              void hapticSelection();
+            }}
           >
             <Settings className="h-4 w-4" strokeWidth={2} />
           </Link>

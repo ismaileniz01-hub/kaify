@@ -6,6 +6,7 @@ import { ArrowRight } from "lucide-react";
 import type { WeeklyReview } from "@/lib/activation/weekly-review";
 import { postClientProductEvent } from "@/lib/events/client-beacon";
 import { useLang } from "@/lib/lang-context";
+import { hapticSelection } from "@/lib/native/haptics";
 
 export function WeeklyReviewCard({ review }: { review: WeeklyReview }) {
   const { t } = useLang();
@@ -20,6 +21,7 @@ export function WeeklyReviewCard({ review }: { review: WeeklyReview }) {
       href={review.href}
       className="block rounded-2xl border border-white/10 bg-white/[0.04] p-4"
       onClick={() => {
+        void hapticSelection();
         postClientProductEvent({
           name: "session.weekly_review_completed",
           properties: { review_version: "v1" },

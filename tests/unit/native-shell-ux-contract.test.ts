@@ -43,6 +43,35 @@ describe("native shell UX contracts", () => {
   });
 });
 
+describe("chrome haptics and 44px targets (wave B)", () => {
+  it("fires selection haptics on primary chrome taps", () => {
+    const files = [
+      "components/navigation/BottomNav.tsx",
+      "components/navigation/AppHeader.tsx",
+      "app/(app)/welcome/page.tsx",
+      "components/notifications/NotificationCenter.tsx",
+      "components/auth/EmailOtpLogin.tsx",
+      "components/auth/SignupWizard.tsx",
+      "native-app/src/login/NativeLoginScreen.tsx",
+      "app/(app)/settings/page.tsx",
+      "app/(app)/streak/page.tsx",
+      "components/StreakRoad.tsx",
+      "components/welcome/WelcomeCard.tsx",
+      "components/welcome/WelcomeExtras.tsx",
+      "components/welcome/FirstTaskChecklist.tsx",
+      "components/chat/CoachStarterChips.tsx",
+    ];
+    for (const file of files) {
+      expect(source(file), file).toContain("hapticSelection");
+    }
+  });
+
+  it("keeps native login back control at 44px", () => {
+    expect(source("native-app/src/styles.css")).toContain("min-height: 44px");
+    expect(source("app/globals.css")).toContain(".touch-44");
+  });
+});
+
 describe("signup legal gate (source contract)", () => {
   it("blocks web OTP signup until terms are accepted", () => {
     const login = source("components/auth/EmailOtpLogin.tsx");

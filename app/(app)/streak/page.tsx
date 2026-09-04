@@ -14,7 +14,7 @@ import { useSession } from "@/lib/session-context";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/navigation/AppHeader";
 import { alreadyCheckedInOnLocalDay } from "@/lib/check-in-gate";
-import { hapticNotification } from "@/lib/native/haptics";
+import { hapticNotification, hapticSelection } from "@/lib/native/haptics";
 
 export default function StreakPage() {
   const { gemState } = useGem();
@@ -38,6 +38,7 @@ export default function StreakPage() {
 
   const handleCheckIn = async () => {
     if (!isAuthenticated || checkingIn || alreadyToday) return;
+    void hapticSelection();
     setCheckingIn(true);
     setCheckInMsg(null);
     try {
@@ -86,7 +87,10 @@ export default function StreakPage() {
         trailing={
           <>
             <button
-              onClick={() => setShowCard(true)}
+              onClick={() => {
+                void hapticSelection();
+                setShowCard(true);
+              }}
               className="app-header__action border-orange-500/25 bg-orange-500/10 text-orange-300"
               aria-label={t("streak.get_card")}
             >

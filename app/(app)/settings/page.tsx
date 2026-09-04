@@ -20,6 +20,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { InlineAlert } from "@/components/InlineAlert";
 import { PushToggle } from "@/components/notifications/PushToggle";
 import { useTheme } from "@/lib/theme-context";
+import { hapticSelection } from "@/lib/native/haptics";
 import { useLang, LANG_OPTIONS, hasStoredLangPreference } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { apiGet, apiPatch } from "@/lib/api/client";
@@ -382,6 +383,7 @@ export default function SettingsPage() {
   }, [theme]);
 
   const toggleSwitch = async (label: string) => {
+    void hapticSelection();
     if (label === "settings.dark_mode") {
       toggleTheme();
       return;
@@ -532,6 +534,9 @@ export default function SettingsPage() {
                       key={item.label}
                       href={navigableHref}
                       className={`${rowClass} transition hover:bg-white/[0.04]`}
+                      onClick={() => {
+                        void hapticSelection();
+                      }}
                     >
                       {iconAndLabels}
                       <span className="shrink-0 text-xs font-medium text-purple-400">

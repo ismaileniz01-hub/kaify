@@ -35,6 +35,7 @@ import {
   detectLangFromNavigator,
   otpLocaleForLang,
 } from "@/lib/i18n/detect-lang";
+import { hapticSelection } from "@/lib/native/haptics";
 
 export type NativeAuthMode = "login" | "signup";
 export type NativeAuthStep = "email" | "code";
@@ -198,6 +199,7 @@ export function NativeLoginScreen({
     event?.preventDefault();
     if (!canSend || sendInFlight) return;
     if (step === "code" && remaining > 0) return;
+    void hapticSelection();
     setSendInFlight(true);
     try {
       const result = await onSendCode();
@@ -219,6 +221,7 @@ export function NativeLoginScreen({
   async function handleVerify(event?: FormEvent) {
     event?.preventDefault();
     if (!isCompleteOtp(otp) || busy || !online) return;
+    void hapticSelection();
     const result = await onVerifyCode();
     if (result.ok) {
       await clearCooldownForEmail(emailRef.current);
@@ -228,6 +231,7 @@ export function NativeLoginScreen({
 
   async function handlePasswordSignIn() {
     if (!canPasswordSignIn) return;
+    void hapticSelection();
     await onPasswordSignIn();
   }
 

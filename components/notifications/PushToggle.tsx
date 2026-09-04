@@ -5,6 +5,7 @@ import { BellRing, BellOff, Loader2 } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
 import { apiPost, getApiAuthHeaders, resolveApiPath } from "@/lib/api/client";
 import { CONSENT_TYPES } from "@/lib/legal/constants";
+import { hapticSelection } from "@/lib/native/haptics";
 import {
   ensurePushReady,
   getPushPermission,
@@ -62,6 +63,7 @@ export function PushToggle() {
 
   async function enable() {
     if (!consentChecked && !hasConsent) return;
+    void hapticSelection();
     setState("busy");
     try {
       if (!hasConsent) {
@@ -80,6 +82,7 @@ export function PushToggle() {
   }
 
   async function disable() {
+    void hapticSelection();
     setState("busy");
     await unsubscribeFromPush();
     setState("off");

@@ -23,6 +23,7 @@ import {
   useInvisibleRecaptchaRef,
 } from "@/components/security/InvisibleRecaptcha";
 import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
+import { hapticSelection } from "@/lib/native/haptics";
 import { redirectToWebCheckoutAfterSignup } from "@/lib/billing/native-web-checkout";
 import {
   PENDING_LEGAL_CONSENT_KEY,
@@ -376,6 +377,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
 
   const goBack = useCallback(() => {
     if (stepIndex <= 0) return;
+    void hapticSelection();
     setDirection("back");
     setError(null);
     setStepIndex((i) => i - 1);
@@ -428,6 +430,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
   );
 
   const goNext = useCallback(async () => {
+    void hapticSelection();
     setError(null);
 
     if (currentStep === "referral") {
@@ -565,7 +568,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
               <button
                 type="button"
                 onClick={goBack}
-                className="signup-wizard-back mb-4 flex items-center gap-1.5 text-xs font-medium text-zinc-400 transition hover:text-white"
+                className="signup-wizard-back mb-4 flex min-h-11 items-center gap-1.5 text-xs font-medium text-zinc-400 transition hover:text-white"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 {t("signup.wizard.back")}
@@ -1139,7 +1142,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                       void goNext();
                     }}
                     disabled={busy}
-                    className="text-center text-sm text-zinc-500 transition hover:text-zinc-300"
+                    className="min-h-11 text-center text-sm text-zinc-500 transition hover:text-zinc-300"
                   >
                     {t("signup.wizard.skip_lifestyle")}
                   </button>

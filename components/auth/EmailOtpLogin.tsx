@@ -225,6 +225,7 @@ export function EmailOtpLogin({
 
       setBusy("otp");
       setError(null);
+      void hapticSelection();
       try {
         const result = await verifyEmailLoginCode(email, token);
         if (!result.ok) {
@@ -248,6 +249,7 @@ export function EmailOtpLogin({
 
     setBusy("password");
     setError(null);
+    void hapticSelection();
     try {
       storePendingLegalConsent();
       const result = await signInWithEmailPassword(trimmed, password);

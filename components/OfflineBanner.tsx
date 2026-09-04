@@ -2,6 +2,7 @@
 
 import { ANALYTICS_UPDATED_EVENT } from "@/lib/analytics-client-cache";
 import { dispatchOfflineRetry } from "@/lib/offline-retry";
+import { hapticNotification } from "@/lib/native/haptics";
 import { InlineAlert } from "@/components/InlineAlert";
 import { useLang } from "@/lib/lang-context";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -20,6 +21,7 @@ export function OfflineBanner() {
         message={t("offline.banner")}
         onRetry={() => {
           if (typeof window === "undefined") return;
+          void hapticNotification("warning");
           window.dispatchEvent(new Event(ANALYTICS_UPDATED_EVENT));
           dispatchOfflineRetry();
         }}

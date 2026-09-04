@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
+import { hapticSelection } from "@/lib/native/haptics";
 import { formatRelativeShort } from "@/lib/i18n/format";
 import { useNotifications } from "@/lib/notification-context";
 import { PushToggle } from "@/components/notifications/PushToggle";
@@ -277,7 +278,10 @@ export function NotificationCenter() {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          void hapticSelection();
+          setOpen(true);
+        }}
         aria-label={t("notif.title")}
         className="relative touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition hover:brightness-110 active:scale-95"
       >
