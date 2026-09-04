@@ -148,7 +148,60 @@ export type AdminSupportTicketSummary = {
   lastMessage: string;
 };
 
-export async function listAdminSupportTickets(): Promise<AdminSupportTicketSummary[]> {
+type PostgrestLikeError = {
+  message?: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+};
+
+function logSupportQueryError(scope: string, error: PostgrestLikeError): void {
+  logger.error(`[support] ${scope}`, {
+    code: error.code,
+    message: error.message,
+    details: error.details,
+    hint: error.hint,
+  });
+}
+
+const LAST_MESSAGE_CHUNK = 20;
+
+async function loadLastMessageBodies(
+  ticketIds: string[],
+): Promise<Map<string, string>> {
+  const admin = supportDb();
+  const lastBodyByTicket = new Map<string, string>();
+
+  for (let i = 0; i < ticketIds.length; i += LAST_MESSAGE_CHUNK) {
+    const chunk = ticketIds.slice(i, i + LAST_MESSAGE_CHUNK);
+    const rows = await Promise.all(
+      chunk.map(async (ticketId) => {
+        const { data, error } = await admin
+          .from("support_messages")
+          .select("ticket_id, body")
+          .eq("ticket_id", ticketId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (error) {
+          logSupportQueryError("list last message failed", error);
+          return null;
+        }
+        return data;
+      }),
+    );
+
+    for (const row of rows) {
+      if (row?.ticket_id && typeof row.body === "string") {
+        lastBodyByTicket.set(row.ticket_id, row.body);
+      }
+    }
+  }
+
+  return lastBodyByTicket;
+}
+
+async function listAdminSupportTicketsViaTables(): Promise<AdminSupportTicketSummary[]> {
   const admin = supportDb();
   const { data: tickets, error: ticketsError } = await admin
     .from("support_tickets")
@@ -157,7 +210,7 @@ export async function listAdminSupportTickets(): Promise<AdminSupportTicketSumma
     .limit(100);
 
   if (ticketsError) {
-    logger.error("[support] list tickets failed", { error: ticketsError.message });
+    logSupportQueryError("list tickets failed", ticketsError);
     throw new ApiError("INTERNAL_ERROR", "Destek kutusu yüklenemedi.");
   }
 
@@ -167,24 +220,18 @@ export async function listAdminSupportTickets(): Promise<AdminSupportTicketSumma
   const userIds = [...new Set(list.map((t) => t.user_id))];
   const ticketIds = list.map((t) => t.id);
 
-  const [{ data: profiles, error: profilesError }, { data: messages, error: messagesError }] =
-    await Promise.all([
-      admin.from("profiles").select("id, display_name").in("id", userIds),
-      admin
-        .from("support_messages")
-        .select("ticket_id, body, created_at")
-        .in("ticket_id", ticketIds)
-        .order("created_at", { ascending: false }),
-    ]);
+  const [{ data: profiles, error: profilesError }, lastBodyByTicket] = await Promise.all([
+    admin.from("profiles").select("id, display_name").in("id", userIds),
+    loadLastMessageBodies(ticketIds),
+  ]);
 
-  if (messagesError) {
-    logger.error("[support] list last messages failed", {
-      error: messagesError.message,
-    });
-    throw new ApiError("INTERNAL_ERROR", "Destek kutusu yüklenemedi.");
-  }
   if (profilesError) {
-    logger.warn("[support] list profiles failed", { error: profilesError.message });
+    logger.warn("[support] list profiles failed", {
+      code: profilesError.code,
+      message: profilesError.message,
+      details: profilesError.details,
+      hint: profilesError.hint,
+    });
   }
 
   const nameByUser = new Map<string, string>();
@@ -192,25 +239,45 @@ export async function listAdminSupportTickets(): Promise<AdminSupportTicketSumma
     nameByUser.set(p.id, p.display_name?.trim() || "User");
   }
 
-  const lastBodyByTicket = new Map<string, string>();
-  for (const m of messages ?? []) {
-    if (!lastBodyByTicket.has(m.ticket_id)) {
-      lastBodyByTicket.set(m.ticket_id, m.body ?? "");
-    }
+  const withMessages = list.filter((t) => lastBodyByTicket.has(t.id));
+  const source = withMessages.length > 0 ? withMessages : list;
+
+  return source.map((t) => ({
+    id: t.id,
+    userId: t.user_id,
+    userName: nameByUser.get(t.user_id) ?? "User",
+    userEmail: null,
+    subject: t.subject,
+    status: t.status,
+    updatedAt: t.updated_at,
+    lastMessage: lastBodyByTicket.get(t.id) ?? t.subject,
+  }));
+}
+
+export async function listAdminSupportTickets(): Promise<AdminSupportTicketSummary[]> {
+  const admin = supportDb();
+  const { data, error } = await admin.rpc("admin_list_support_inbox", {
+    p_limit: 100,
+  });
+
+  if (!error && Array.isArray(data)) {
+    return data.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      userName: row.user_name?.trim() || "User",
+      userEmail: null,
+      subject: row.subject,
+      status: row.status,
+      updatedAt: row.updated_at,
+      lastMessage: row.last_message || row.subject,
+    }));
   }
 
-  return list
-    .filter((t) => lastBodyByTicket.has(t.id))
-    .map((t) => ({
-      id: t.id,
-      userId: t.user_id,
-      userName: nameByUser.get(t.user_id) ?? "User",
-      userEmail: null,
-      subject: t.subject,
-      status: t.status,
-      updatedAt: t.updated_at,
-      lastMessage: lastBodyByTicket.get(t.id) ?? "",
-    }));
+  if (error) {
+    logSupportQueryError("admin_list_support_inbox rpc failed", error);
+  }
+
+  return listAdminSupportTicketsViaTables();
 }
 
 export async function getAdminSupportTicket(ticketId: string): Promise<{

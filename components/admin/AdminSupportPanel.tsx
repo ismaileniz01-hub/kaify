@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Send } from "lucide-react";
-import { apiGet, apiPost } from "@/lib/api/client";
+import { apiGet, apiPost, ApiClientError } from "@/lib/api/client";
+import { errorToMessage } from "@/lib/i18n/api-error";
 import { useLang } from "@/lib/lang-context";
 import { InlineAlert } from "@/components/InlineAlert";
 import type {
@@ -28,8 +29,12 @@ export function AdminSupportPanel() {
         "/api/admin/support",
       );
       setTickets(res.tickets ?? []);
-    } catch {
-      setError(t("admin.support.error"));
+    } catch (err) {
+      setError(
+        err instanceof ApiClientError && err.code !== "INTERNAL_ERROR"
+          ? errorToMessage(err, t)
+          : t("admin.support.error"),
+      );
     } finally {
       setLoading(false);
     }

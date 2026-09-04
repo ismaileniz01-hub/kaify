@@ -5,6 +5,7 @@
  * Original audit counted 43 names; Wave 5 clean schema has 41 SECURITY DEFINER functions.
  * Gem ledger → kai_state sync trigger adds trg_sync_kai_gems_from_ledger (42).
  * Library workout increment adds increment_analytics_workouts (43).
+ * Admin support inbox RPC adds admin_list_support_inbox (44).
  * The 4 removed names are NOT prosecdef on live schema:
  *   build_usage_node, is_valid_timezone, set_updated_at, protect_profile_columns.
  */
@@ -21,7 +22,7 @@ export type RpcRegistryEntry = {
 };
 
 /** Live clean-schema SECURITY DEFINER count (pg_proc.prosecdef). */
-export const AUDIT_SECURITY_DEFINER_COUNT = 43;
+export const AUDIT_SECURITY_DEFINER_COUNT = 44;
 
 export const RPC_REGISTRY: readonly RpcRegistryEntry[] = [
   // ---- client_callable (EXECUTE granted to authenticated and/or anon) ----
@@ -50,6 +51,7 @@ export const RPC_REGISTRY: readonly RpcRegistryEntry[] = [
     note: "SEC-009: returns raw user_id; HTTP API only (service_role). Not PostgREST for anon/authenticated",
   },
   { name: "admin_create_pending_gift", mode: "service_only" },
+  { name: "admin_list_support_inbox", mode: "service_only" },
   { name: "admin_get_ai_cost_by_user", mode: "service_only" },
   { name: "admin_get_ai_cost_summary", mode: "service_only" },
   { name: "admin_get_overview_stats", mode: "service_only" },

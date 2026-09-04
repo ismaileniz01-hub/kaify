@@ -1414,6 +1414,18 @@ export type Database = {
         };
         Returns: Json;
       };
+      admin_list_support_inbox: {
+        Args: { p_limit?: number };
+        Returns: {
+          id: string;
+          user_id: string;
+          user_name: string;
+          subject: string;
+          status: string;
+          updated_at: string;
+          last_message: string;
+        }[];
+      };
     };
     Enums: {
       onboarding_status: OnboardingStatus;
