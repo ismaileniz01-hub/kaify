@@ -226,7 +226,7 @@ function NotificationPanel({
         </div>
 
         {/* List */}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(var(--safe-bottom)+1rem)]">
           {loading && notifications.length === 0 ? (
             <div className="space-y-3 py-4">
               {[0, 1, 2].map((i) => (

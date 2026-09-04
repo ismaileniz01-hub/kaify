@@ -76,7 +76,7 @@ export function CountryLeaderboard({ isOpen, onClose }: { isOpen: boolean; onClo
       variant="sheet"
       fullBleed
       className="z-50 sm:p-4"
-      panelClassName="relative z-10 mx-4 mb-0 w-full max-w-sm rounded-t-2xl border border-white/[0.08] bg-zinc-900/95 p-5 shadow-2xl backdrop-blur-xl sm:mb-auto sm:rounded-2xl"
+      panelClassName="relative z-10 mx-4 mb-[var(--safe-bottom)] w-full max-w-sm rounded-t-2xl border border-white/[0.08] bg-zinc-900/95 p-5 pb-[calc(var(--safe-bottom)+1.25rem)] shadow-2xl backdrop-blur-xl sm:mb-auto sm:rounded-2xl"
     >
       <div>
         {/* Header */}

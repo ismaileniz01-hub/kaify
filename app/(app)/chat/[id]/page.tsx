@@ -11,6 +11,7 @@ import { getContact, type ContactId } from "@/lib/contacts";
 import { resolveAvatarEffect } from "@/lib/aura-effects";
 import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
+import { formatTime } from "@/lib/i18n/format";
 import { useSession } from "@/lib/session-context";
 import { AppHeader } from "@/components/navigation/AppHeader";
 import { coachAvatarTransitionName } from "@/lib/motion/shared-element";
@@ -80,8 +81,7 @@ export default function ChatPage() {
   const contactId = contact.id as ContactId;
   const patternClass = `chat-pattern chat-pattern--${contactId}`;
 
-  const formatGuestTime = () =>
-    new Date().toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit" });
+  const formatGuestTime = () => formatTime(new Date(), lang);
 
   const getAvatarSrc = () => {
     if (contactId === "alex") {

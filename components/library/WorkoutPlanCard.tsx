@@ -5,6 +5,8 @@ import { apiGet, apiPost } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
 import { InlineAlert } from "@/components/InlineAlert";
 import type { WorkoutPlanDTO } from "@/lib/training/plan-dto";
+import { useOfflineRetry } from "@/hooks/useOfflineRetry";
+import { errorToMessage } from "@/lib/i18n/api-error";
 
 export function WorkoutPlanCard() {
   const { t } = useLang();
@@ -17,10 +19,13 @@ export function WorkoutPlanCard() {
       const data = await apiGet<{ plan: WorkoutPlanDTO | null }>("/api/workout/plan");
       setPlan(data.plan);
       setError(null);
-    } catch {
+    } catch (err) {
       setPlan(null);
+      setError(errorToMessage(err, t) || t("workout.plan_error"));
     }
-  }, []);
+  }, [t]);
+
+  useOfflineRetry(load);
 
   useEffect(() => {
     void load();
@@ -36,8 +41,8 @@ export function WorkoutPlanCard() {
         templateSlug: slug,
       });
       setPlan(data.plan);
-    } catch {
-      setError(t("workout.plan_error"));
+    } catch (err) {
+      setError(errorToMessage(err, t) || t("workout.plan_error"));
     } finally {
       setBusy(false);
     }
@@ -49,8 +54,8 @@ export function WorkoutPlanCard() {
     try {
       await apiPost("/api/workout/session", { status });
       await load();
-    } catch {
-      setError(t("workout.plan_error"));
+    } catch (err) {
+      setError(errorToMessage(err, t) || t("workout.plan_error"));
     } finally {
       setBusy(false);
     }
@@ -65,8 +70,8 @@ export function WorkoutPlanCard() {
         toKey,
       });
       setPlan(data.plan);
-    } catch {
-      setError(t("workout.plan_error"));
+    } catch (err) {
+      setError(errorToMessage(err, t) || t("workout.plan_error"));
     } finally {
       setBusy(false);
     }

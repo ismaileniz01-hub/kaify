@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { BellRing, Gift, Loader2, MessageCircle, Send, Snowflake, User } from "lucide-react";
-import { apiPost, ApiClientError } from "@/lib/api/client";
+import { apiPost } from "@/lib/api/client";
+import { errorToMessage } from "@/lib/i18n/api-error";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { InlineAlert } from "@/components/InlineAlert";
@@ -68,8 +69,8 @@ export default function AdminHubPage() {
         ...(broadcastId.trim() ? { broadcastId: broadcastId.trim() } : {}),
       });
       setBroadcastResult(res);
-    } catch {
-      setBroadcastError(t("admin.notifications.error"));
+    } catch (err) {
+      setBroadcastError(errorToMessage(err, t) || t("admin.notifications.error"));
     } finally {
       setBroadcastBusy(false);
     }
@@ -88,8 +89,8 @@ export default function AdminHubPage() {
         body: singleBody.trim(),
       });
       setSingleSuccess(true);
-    } catch {
-      setSingleError(t("admin.single.error"));
+    } catch (err) {
+      setSingleError(errorToMessage(err, t) || t("admin.single.error"));
     } finally {
       setSingleBusy(false);
     }
@@ -111,7 +112,7 @@ export default function AdminHubPage() {
       });
       setGiftSuccess(true);
     } catch (err) {
-      setGiftError(err instanceof ApiClientError ? err.message : t("admin.gift.error"));
+      setGiftError(errorToMessage(err, t) || t("admin.gift.error"));
     } finally {
       setGiftBusy(false);
     }

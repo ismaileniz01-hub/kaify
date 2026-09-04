@@ -77,7 +77,7 @@ export default function SecuritySettingsPage() {
 
       const { data, error: enrollError } = await enrollTotp(supabase);
       if (enrollError || !data?.totp || !data.id) {
-        setError(enrollError?.message ?? t("mfa.error.enroll"));
+        setError(t("mfa.error.enroll"));
         return;
       }
 
@@ -135,7 +135,7 @@ export default function SecuritySettingsPage() {
 
       const { error: unenrollError } = await unenrollTotp(supabase, factorId);
       if (unenrollError) {
-        setError(unenrollError.message);
+        setError(t("mfa.error.enroll"));
         return;
       }
 
@@ -155,7 +155,7 @@ export default function SecuritySettingsPage() {
       if (!supabase) return;
       const { error: signOutError } = await supabase.auth.signOut({ scope: "others" });
       if (signOutError) {
-        setError(signOutError.message);
+        setError(t("login.error.failed"));
         return;
       }
       setMessage(t("settings.security.sessions.revoke_others_success"));
@@ -171,7 +171,7 @@ export default function SecuritySettingsPage() {
     try {
       const result = await signOutUser();
       if (!result.ok) {
-        setError(result.message);
+        setError(t("login.error.failed"));
         return;
       }
       window.location.href = "/login";

@@ -8,9 +8,13 @@ import type { SupportTicketDTO } from "@/lib/services/support.service";
 import { EmptyState } from "@/components/EmptyState";
 import { InlineAlert } from "@/components/InlineAlert";
 import { AppHeader } from "@/components/navigation/AppHeader";
+import { useOfflineRetry } from "@/hooks/useOfflineRetry";
+import { errorToMessage } from "@/lib/i18n/api-error";
+import { useScrollFocusedInputIntoView } from "@/hooks/useScrollFocusedInputIntoView";
 
 export default function ContactSupportPage() {
   const { t } = useLang();
+  useScrollFocusedInputIntoView();
   const [ticket, setTicket] = useState<SupportTicketDTO | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -19,8 +23,10 @@ export default function ContactSupportPage() {
   const load = useCallback(() => {
     void apiGet<SupportTicketDTO>("/api/support")
       .then(setTicket)
-      .catch(() => setError(t("support.error.load")));
+      .catch((err) => setError(errorToMessage(err, t) || t("support.error.load")));
   }, [t]);
+
+  useOfflineRetry(load);
 
   useEffect(() => {
     load();
@@ -36,8 +42,8 @@ export default function ContactSupportPage() {
       });
       setTicket(updated);
       setMessage("");
-    } catch {
-      setError(t("support.error.send"));
+    } catch (err) {
+      setError(errorToMessage(err, t) || t("support.error.send"));
     } finally {
       setBusy(false);
     }

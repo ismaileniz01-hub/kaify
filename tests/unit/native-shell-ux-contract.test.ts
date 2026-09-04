@@ -99,6 +99,9 @@ describe("wave C+D native UX remaining gaps", () => {
     expect(source("components/auth/EmailOtpLogin.tsx")).toContain(
       "useScrollFocusedInputIntoView",
     );
+    expect(source("app/(app)/settings/contact/page.tsx")).toContain(
+      "useScrollFocusedInputIntoView",
+    );
   });
 
   it("refetches list screens on offline retry", () => {
@@ -108,6 +111,12 @@ describe("wave C+D native UX remaining gaps", () => {
     expect(source("app/(app)/trophy-road/page.tsx")).toContain("useOfflineRetry");
     expect(source("app/(app)/leaderboard/page.tsx")).toContain("useOfflineRetry");
     expect(source("components/welcome/CountryLeaderboard.tsx")).toContain(
+      "useOfflineRetry",
+    );
+    expect(source("app/(app)/settings/contact/page.tsx")).toContain(
+      "useOfflineRetry",
+    );
+    expect(source("components/library/WorkoutPlanCard.tsx")).toContain(
       "useOfflineRetry",
     );
   });
@@ -120,6 +129,41 @@ describe("wave C+D native UX remaining gaps", () => {
   it("reads saved theme before first paint and keeps chat delete undo", () => {
     expect(source("lib/theme-context.tsx")).toContain('localStorage.getItem("kaify-theme")');
     expect(source("components/chat/LiveChatPanel.tsx")).toContain('t("chat.delete.undo")');
+  });
+});
+
+describe("wave E UX locks", () => {
+  it("asks for microphone permission only after an in-app rationale", () => {
+    const composer = source("components/chat/ChatComposer.tsx");
+    expect(composer).toContain("speech.permission.rationale");
+    expect(composer).toContain("isNativeSpeechGranted");
+    expect(source("lib/use-speech-recognition.ts")).toContain(
+      "SpeechRecognition.requestPermissions",
+    );
+  });
+
+  it("does not persist device-detected language to localStorage", () => {
+    const ctx = source("lib/lang-context.tsx");
+    expect(ctx).toContain("detectLangFromNavigator");
+    expect(ctx).toMatch(/if \(isSupportedLang\(stored\)\) return stored/);
+    expect(ctx.match(/localStorage\.setItem\(STORAGE_KEY/g)?.length).toBe(1);
+  });
+
+  it("maps security MFA errors to product copy, not raw SDK strings", () => {
+    const security = source("app/(app)/settings/security/page.tsx");
+    expect(security).not.toContain("enrollError?.message");
+    expect(security).not.toContain("unenrollError.message");
+    expect(security).not.toContain("signOutError.message");
+    expect(security).toContain('t("mfa.error.enroll")');
+  });
+
+  it("pads notification and country sheets for the home indicator", () => {
+    expect(source("components/notifications/NotificationCenter.tsx")).toContain(
+      "safe-bottom",
+    );
+    expect(source("components/welcome/CountryLeaderboard.tsx")).toContain(
+      "safe-bottom",
+    );
   });
 });
 

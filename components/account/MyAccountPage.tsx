@@ -37,7 +37,7 @@ import { formatTierLabel } from "@/lib/billing/tier-labels";
 import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
 import { parseGenderInput } from "@/lib/profile-mapper";
 import { useLang } from "@/lib/lang-context";
-import { formatNumber } from "@/lib/i18n/format";
+import { formatNumber, formatDate } from "@/lib/i18n/format";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import { useSession } from "@/lib/session-context";
 import { useNativeApp } from "@/lib/native/platform";
@@ -76,13 +76,13 @@ function formatGender(
   }
 }
 
-function formatMemberSince(iso: string | undefined, locale: string): string {
+function formatMemberSince(iso: string | undefined, lang: Parameters<typeof formatDate>[1]): string {
   if (!iso) return "—";
   try {
-    return new Intl.DateTimeFormat(locale, {
+    return formatDate(iso, lang, {
       month: "long",
       year: "numeric",
-    }).format(new Date(iso));
+    });
   } catch {
     return iso.slice(0, 10);
   }
