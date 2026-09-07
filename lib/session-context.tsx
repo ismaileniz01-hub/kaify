@@ -176,7 +176,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    let unsubscribe: (() => void) | undefined;
 
     const finishGuest = () => {
       if (cancelled) return;
@@ -222,7 +221,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         void refreshSession();
       }
     });
-    unsubscribe = () => subscription.unsubscribe();
 
     void (async () => {
       const { data } = await withTimeout(
@@ -240,7 +238,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
-      unsubscribe?.();
+      subscription.unsubscribe();
     };
   }, [applyGuestState, refreshSession]);
 
