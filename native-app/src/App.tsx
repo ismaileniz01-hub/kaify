@@ -111,10 +111,14 @@ export function App() {
         }
         await hydrateSecureSession();
         if (cancelled) return;
+        const emptyAuth = {
+          data: { session: null, user: null },
+          error: null,
+        };
         const { data } = await withTimeout(
           supabase.auth.getSession(),
           2_500,
-          { data: { session: null }, error: null },
+          emptyAuth,
         );
         if (cancelled) return;
         let access = data.session?.access_token;
@@ -123,7 +127,7 @@ export function App() {
           const refreshed = await withTimeout(
             supabase.auth.refreshSession(),
             2_500,
-            { data: { session: null }, error: null },
+            emptyAuth,
           );
           access = refreshed.data.session?.access_token;
           refresh = refreshed.data.session?.refresh_token;

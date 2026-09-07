@@ -207,7 +207,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const { data } = await withTimeout(
         supabase.auth.getSession(),
         SESSION_GET_TIMEOUT_MS,
-        { data: { session: null }, error: null },
+        { data: { session: null, user: null }, error: null },
       );
       if (cancelled) return;
       let nativeHandoff = false;
