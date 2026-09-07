@@ -4,8 +4,12 @@ import {
   NATIVE_ENTRY_ESTABLISH_PATH,
   NATIVE_ENTRY_SUCCESS_PATH,
   NATIVE_ENTRY_TIMEOUT_MS,
+  NATIVE_ENTRY_TOKEN_KEY,
+  clearNativeEntryTokens,
+  isCapacitorNativeShell,
   nativeEntryShellUrl,
   parseNativeEntryHash,
+  readNativeEntryAccessToken,
 } from "@/lib/native/native-entry-boot";
 
 describe("native-entry boot", () => {
@@ -37,5 +41,17 @@ describe("native-entry boot", () => {
     expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain("AbortController");
     expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain("sessionStorage");
     expect(NATIVE_ENTRY_BOOT_SCRIPT).not.toContain("useEffect");
+    expect(NATIVE_ENTRY_BOOT_SCRIPT).not.toContain("removeItem(TOKEN_KEY)");
+  });
+
+  it("reads stored native-entry tokens without calling supabase", () => {
+    sessionStorage.setItem(
+      NATIVE_ENTRY_TOKEN_KEY,
+      JSON.stringify({ accessToken: "abc", refreshToken: "def" }),
+    );
+    expect(readNativeEntryAccessToken()).toBe("abc");
+    clearNativeEntryTokens();
+    expect(readNativeEntryAccessToken()).toBeNull();
+    expect(isCapacitorNativeShell()).toBe(false);
   });
 });

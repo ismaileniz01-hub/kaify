@@ -20,9 +20,7 @@ import {
 import { sendNativeEmailOtp, signInNativeWithPassword, verifyNativeEmailOtp } from "./auth-otp";
 import { NATIVE_CLIENT_VERSION } from "./client-version";
 import { enterRealKaify } from "./enter-kaify";
-import { hydrateSecureSession, supabase, clearNativeAuthStorage } from "./session";
-import { withTimeout } from "./boot-storage";
-import { isJwtUnexpired } from "./jwt";
+import { supabase, clearNativeAuthStorage } from "./session";
 import {
   NativeLoginBoot,
   NativeLoginScreen,
@@ -100,39 +98,16 @@ export function App() {
     window.addEventListener("online", onlineListener);
     window.addEventListener("offline", offlineListener);
 
-    let cancelled = false;
     void (async () => {
       try {
         const signedOut = new URLSearchParams(window.location.search).get("signed_out") === "1";
         if (signedOut) {
           await clearNativeAuthStorage();
           window.history.replaceState(null, "", window.location.pathname);
-          return;
         }
-        await hydrateSecureSession();
-        if (cancelled) return;
-        const { data } = await withTimeout(
-          supabase.auth.getSession(),
-          2_500,
-          { data: { session: null }, error: null },
-        );
-        if (cancelled) return;
-        let access = data.session?.access_token;
-        let refresh = data.session?.refresh_token;
-        if (access && refresh && !isJwtUnexpired(access)) {
-          const refreshed = await withTimeout(
-            supabase.auth.refreshSession(),
-            2_500,
-            { data: { session: null, user: null }, error: null },
-          );
-          access = refreshed.data.session?.access_token;
-          refresh = refreshed.data.session?.refresh_token;
-        }
-        if (!access || !refresh) {
-          if (data.session) await clearNativeAuthStorage();
-          return;
-        }
-        enterRealKaify(access, refresh);
+        // Stay on NativeLoginScreen until the user verifies OTP or password.
+        // Auto-handoff from Keychain made login flash, then native-entry,
+        // then the web shell blocked forever on a loading placeholder.
       } catch {
         // Stay on login. Never keep a boot spinner.
       }
@@ -203,7 +178,6 @@ export function App() {
       })
       .catch(() => undefined);
     return () => {
-      cancelled = true;
       window.removeEventListener("online", onlineListener);
       window.removeEventListener("offline", offlineListener);
       removeUrlListener?.();

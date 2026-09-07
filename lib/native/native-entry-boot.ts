@@ -26,6 +26,63 @@ export function nativeEntryShellUrl(userAgent: string): string {
 export const NATIVE_ENTRY_HANDOFF_KEY = "kaify-native-handoff";
 export const NATIVE_ENTRY_TOKEN_KEY = "kaify-native-entry";
 
+/** WKWebView still reports native after loading kaifyai.org. Never await getSession there. */
+export function isCapacitorNativeShell(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const cap = (
+      window as unknown as {
+        Capacitor?: { isNativePlatform?: () => boolean };
+      }
+    ).Capacitor;
+    if (typeof cap?.isNativePlatform === "function" && cap.isNativePlatform()) {
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+  try {
+    return document.documentElement.classList.contains("native-app");
+  } catch {
+    return false;
+  }
+}
+
+export function readNativeEntryAccessToken(): string | null {
+  if (typeof sessionStorage === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(NATIVE_ENTRY_TOKEN_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { accessToken?: unknown };
+    return typeof parsed.accessToken === "string" && parsed.accessToken.trim()
+      ? parsed.accessToken.trim()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function consumeNativeEntryHandoff(): boolean {
+  if (typeof sessionStorage === "undefined") return false;
+  try {
+    const handoff = sessionStorage.getItem(NATIVE_ENTRY_HANDOFF_KEY) === "1";
+    if (handoff) sessionStorage.removeItem(NATIVE_ENTRY_HANDOFF_KEY);
+    return handoff;
+  } catch {
+    return false;
+  }
+}
+
+export function clearNativeEntryTokens(): void {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.removeItem(NATIVE_ENTRY_TOKEN_KEY);
+    sessionStorage.removeItem(NATIVE_ENTRY_HANDOFF_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Runs from a nonce'd inline script so iOS WKWebView can establish cookies
  * before React hydrates. Keep this IIFE free of imports.
@@ -103,7 +160,6 @@ export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
       fail("Oturum kaydedilemedi. Tekrar dene veya girişe dön.");
       return;
     }
-    try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
     location.replace("${NATIVE_ENTRY_SUCCESS_PATH}");
   }).catch(function () {
     if (controller.signal.aborted) return;

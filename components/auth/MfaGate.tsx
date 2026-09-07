@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import { getMfaAssurance } from "@/lib/auth/mfa";
+import { isCapacitorNativeShell } from "@/lib/native/native-entry-boot";
 
 const MFA_VERIFY_PATH = "/login/mfa";
 const PUBLIC_PREFIXES = ["/login", "/signup", "/api/auth"];
@@ -26,6 +27,10 @@ export function MfaGate() {
 
     void (async () => {
       try {
+        if (isCapacitorNativeShell()) {
+          setChecked(true);
+          return;
+        }
         const supabase = tryCreateBrowserSupabaseClient();
         if (!supabase) {
           setChecked(true);
@@ -44,6 +49,10 @@ export function MfaGate() {
           return;
         }
       } catch {
+        if (isCapacitorNativeShell()) {
+          setChecked(true);
+          return;
+        }
         // Fail closed — ambiguous MFA state requires verification.
         const supabase = tryCreateBrowserSupabaseClient();
         const { data: userData } = supabase

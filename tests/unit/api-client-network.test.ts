@@ -56,5 +56,7 @@ describe("apiFetch NETWORK taxonomy", () => {
     const src = readFileSync(join(process.cwd(), "lib/api/client.ts"), "utf8");
     expect(src).toContain("FETCH_TIMEOUT_MS = 12_000");
     expect(src).toContain("AbortSignal.timeout");
+    expect(src).toContain("GET_SESSION_HEADER_TIMEOUT_MS = 800");
+    expect(src).toContain("isCapacitorNativeShell");
   });
 });

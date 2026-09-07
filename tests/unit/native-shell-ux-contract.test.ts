@@ -40,9 +40,12 @@ describe("native shell UX contracts", () => {
     expect(app).toContain("otpLocaleForLang");
     expect(app).toContain("detectLangFromNavigator");
     expect(app).toContain("sendNativeEmailOtp(");
-    expect(app).toContain("isJwtUnexpired");
+    expect(app).toContain("enterRealKaify");
     expect(app).toContain("backButton");
     expect(app).toContain("minimizeApp");
+    const boot = app.slice(app.indexOf("SplashScreen.hide"), app.indexOf("kaify_install_id"));
+    expect(boot).not.toContain("enterRealKaify");
+    expect(boot).not.toContain("supabase.auth.getSession");
   });
 });
 
@@ -194,5 +197,29 @@ describe("signup legal gate (source contract)", () => {
     expect(native).toContain("acceptedLegal");
     expect(native).toContain("acceptedAi");
     expect(native).toContain("(!isSignup || (acceptedLegal && acceptedAi))");
+  });
+});
+
+describe("iOS login hang (no auto-handoff, no chrome loading gate)", () => {
+  it("never replaces app children with a loading page while session boots", () => {
+    const chrome = source("components/navigation/AppChrome.tsx");
+    expect(chrome).not.toContain("authPending");
+    expect(chrome).not.toContain("a11y.loading_page");
+    expect(chrome).not.toContain("bootStuck");
+    expect(chrome).toContain("{children}");
+  });
+
+  it("skips supabase getSession in the native WebView session boot", () => {
+    const session = source("lib/session-context.tsx");
+    expect(session).toContain("isCapacitorNativeShell()");
+    expect(session).toContain("readNativeEntryAccessToken");
+    expect(session.indexOf("if (isCapacitorNativeShell())")).toBeLessThan(
+      session.indexOf("supabase.auth.getSession()"),
+    );
+    const client = source("lib/api/client.ts");
+    expect(client).toContain("readNativeEntryAccessToken");
+    expect(client).toContain("isCapacitorNativeShell()");
+    expect(client).toContain("GET_SESSION_HEADER_TIMEOUT_MS");
+    expect(source("components/auth/MfaGate.tsx")).toContain("isCapacitorNativeShell()");
   });
 });

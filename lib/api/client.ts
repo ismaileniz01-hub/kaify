@@ -5,6 +5,10 @@ import { resolveApiPath } from "@/lib/api/resolve-api-path";
 import { withRetry } from "@/lib/resilience/retry";
 import { UpstreamHttpError } from "@/lib/resilience/error-taxonomy";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
+import {
+  isCapacitorNativeShell,
+  readNativeEntryAccessToken,
+} from "@/lib/native/native-entry-boot";
 
 export const IDEMPOTENCY_HEADER = "Idempotency-Key";
 
@@ -17,13 +21,40 @@ function mergeHeaders(init?: HeadersInit): HeadersInit {
   return { ...csrfHeaders(), ...(init ?? {}) };
 }
 
-/** Bearer auth is required when the UI is bundled under a Capacitor origin. */
+const GET_SESSION_HEADER_TIMEOUT_MS = 800;
+
+function withAuthHeaderTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = globalThis.setTimeout(() => resolve(fallback), GET_SESSION_HEADER_TIMEOUT_MS);
+    promise
+      .then((value) => {
+        globalThis.clearTimeout(timer);
+        resolve(value);
+      })
+      .catch(() => {
+        globalThis.clearTimeout(timer);
+        resolve(fallback);
+      });
+  });
+}
+
+/** Bearer from native-entry tokens; never wait on WKWebView navigator.locks. */
 export async function getApiAuthHeaders(): Promise<Record<string, string>> {
+  const nativeToken = readNativeEntryAccessToken();
+  if (nativeToken) {
+    return { Authorization: `Bearer ${nativeToken}` };
+  }
+  if (isCapacitorNativeShell()) {
+    return {};
+  }
   const supabase = tryCreateBrowserSupabaseClient();
   if (!supabase) return {};
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await withAuthHeaderTimeout(supabase.auth.getSession(), {
+    data: { session: null },
+    error: null,
+  });
   return session?.access_token
     ? { Authorization: `Bearer ${session.access_token}` }
     : {};

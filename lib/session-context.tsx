@@ -40,7 +40,12 @@ import { syncFreezieBalanceFromServer } from "@/lib/freezie";
 import { clearAuthLocalState, signOutUser } from "@/lib/auth/logout";
 import { hasBrowserAuthCookie } from "@/lib/auth/browser-auth-hint";
 import { alreadyCheckedInOnLocalDay } from "@/lib/check-in-gate";
-import { NATIVE_ENTRY_HANDOFF_KEY } from "@/lib/native/native-entry-boot";
+import {
+  clearNativeEntryTokens,
+  consumeNativeEntryHandoff,
+  isCapacitorNativeShell,
+  readNativeEntryAccessToken,
+} from "@/lib/native/native-entry-boot";
 
 const SESSION_GET_TIMEOUT_MS = 4_000;
 
@@ -123,6 +128,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setReferralCode(bundle.referral.referralCode);
       setHome(bundle.home);
       setKai(bundle.kai);
+      clearNativeEntryTokens();
 
       if (
         !alreadyCheckedInOnLocalDay(
@@ -169,8 +175,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [applyGuestState]);
 
   useEffect(() => {
-    const supabase = tryCreateBrowserSupabaseClient();
     let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
 
     const finishGuest = () => {
       if (cancelled) return;
@@ -179,12 +185,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setHasHydrated(true);
     };
 
-    if (!supabase) {
-      if (hasBrowserAuthCookie()) {
+    const probeCookieOrHandoff = () => {
+      const nativeHandoff = consumeNativeEntryHandoff();
+      const nativeToken = Boolean(readNativeEntryAccessToken());
+      if (nativeHandoff || nativeToken || hasBrowserAuthCookie()) {
         void refreshSession();
-      } else {
-        finishGuest();
+        return;
       }
+      finishGuest();
+    };
+
+    if (isCapacitorNativeShell()) {
+      probeCookieOrHandoff();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const supabase = tryCreateBrowserSupabaseClient();
+    if (!supabase) {
+      probeCookieOrHandoff();
       return () => {
         cancelled = true;
       };
@@ -202,6 +222,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         void refreshSession();
       }
     });
+    unsubscribe = () => subscription.unsubscribe();
 
     void (async () => {
       const { data } = await withTimeout(
@@ -210,14 +231,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         { data: { session: null }, error: null },
       );
       if (cancelled) return;
-      let nativeHandoff = false;
-      try {
-        nativeHandoff = sessionStorage.getItem(NATIVE_ENTRY_HANDOFF_KEY) === "1";
-        if (nativeHandoff) sessionStorage.removeItem(NATIVE_ENTRY_HANDOFF_KEY);
-      } catch {
-        nativeHandoff = false;
-      }
-      if (data.session || hasBrowserAuthCookie() || nativeHandoff) {
+      if (data.session || hasBrowserAuthCookie() || consumeNativeEntryHandoff()) {
         void refreshSession();
         return;
       }
@@ -226,7 +240,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
-      subscription.unsubscribe();
+      unsubscribe?.();
     };
   }, [applyGuestState, refreshSession]);
 
