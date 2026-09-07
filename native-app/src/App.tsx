@@ -22,6 +22,7 @@ import { NATIVE_CLIENT_VERSION } from "./client-version";
 import { enterRealKaify } from "./enter-kaify";
 import { hydrateSecureSession, supabase, clearNativeAuthStorage } from "./session";
 import { withTimeout } from "./boot-storage";
+import { isJwtUnexpired } from "./jwt";
 import {
   NativeLoginBoot,
   NativeLoginScreen,
@@ -115,10 +116,23 @@ export function App() {
           2_500,
           { data: { session: null }, error: null },
         );
-        if (cancelled || !data.session?.access_token || !data.session.refresh_token) {
+        if (cancelled) return;
+        let access = data.session?.access_token;
+        let refresh = data.session?.refresh_token;
+        if (access && refresh && !isJwtUnexpired(access)) {
+          const refreshed = await withTimeout(
+            supabase.auth.refreshSession(),
+            2_500,
+            { data: { session: null }, error: null },
+          );
+          access = refreshed.data.session?.access_token;
+          refresh = refreshed.data.session?.refresh_token;
+        }
+        if (!access || !refresh) {
+          if (data.session) await clearNativeAuthStorage();
           return;
         }
-        enterRealKaify(data.session.access_token, data.session.refresh_token);
+        enterRealKaify(access, refresh);
       } catch {
         // Stay on login. Never keep a boot spinner.
       }

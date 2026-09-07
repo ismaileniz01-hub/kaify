@@ -25,6 +25,7 @@ import {
 import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
 import { hapticSelection } from "@/lib/native/haptics";
 import { useScrollFocusedInputIntoView } from "@/hooks/useScrollFocusedInputIntoView";
+import { useKeyboardOffset } from "@/hooks/useKeyboardOffset";
 import { redirectToWebCheckoutAfterSignup } from "@/lib/billing/native-web-checkout";
 import {
   PENDING_LEGAL_CONSENT_KEY,
@@ -141,6 +142,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
   void redirectTo;
   const { lang, t } = useLang();
   useScrollFocusedInputIntoView();
+  useKeyboardOffset();
   const { isAuthenticated, isLoading, profile, refreshSession } = useSession();
   const idPrefix = useId();
   const errorId = `${idPrefix}-error`;
@@ -1123,6 +1125,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                   onClick={() => void goNext()}
                   disabled={!canContinue || busy}
                   className="landing-btn landing-btn--primary flex w-full items-center justify-center gap-2 disabled:opacity-40"
+                  data-keyboard-cta
                 >
                   {busy
                     ? t("login.otp.loading")

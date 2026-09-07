@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decodeJwtPayload, userFromAccessToken } from "../../native-app/src/jwt";
+import { decodeJwtPayload, isJwtUnexpired, userFromAccessToken } from "../../native-app/src/jwt";
 
 function fakeJwt(payload: Record<string, unknown>): string {
   const header = Buffer.from(JSON.stringify({ alg: "none" })).toString(
@@ -28,5 +28,12 @@ describe("native JWT helpers", () => {
 
   it("returns null for garbage tokens", () => {
     expect(userFromAccessToken("not-a-jwt")).toBeNull();
+  });
+
+  it("treats expired access tokens as unusable for auto-handoff", () => {
+    const expired = fakeJwt({ sub: "user-1", exp: 1 });
+    const fresh = fakeJwt({ sub: "user-1", exp: Math.floor(Date.now() / 1000) + 3600 });
+    expect(isJwtUnexpired(expired)).toBe(false);
+    expect(isJwtUnexpired(fresh)).toBe(true);
   });
 });

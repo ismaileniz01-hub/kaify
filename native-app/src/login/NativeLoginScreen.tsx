@@ -156,11 +156,10 @@ export function NativeLoginScreen({
   }, [email, refreshNow]);
 
   useEffect(() => {
-    if (step !== "code") return;
     const onViewport = () => {
       document
-        .querySelector("[data-otp-code]")
-        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+        .querySelector("[data-keyboard-cta]")
+        ?.scrollIntoView({ block: "end", behavior: "smooth" });
     };
     window.visualViewport?.addEventListener("resize", onViewport);
     return () => {
@@ -299,6 +298,7 @@ export function NativeLoginScreen({
             <button
               type="button"
               className="btn-primary-gradient"
+              data-keyboard-cta
               disabled={busy || !online || !isCompleteOtp(otp)}
               onClick={() => void handleVerify()}
             >
@@ -464,6 +464,7 @@ export function NativeLoginScreen({
           <button
             type="submit"
             className="btn-white"
+            data-keyboard-cta
             disabled={!canSend}
           >
             {busy
@@ -505,6 +506,7 @@ export function NativeLoginScreen({
               <button
                 type="button"
                 className="btn-password"
+                data-keyboard-cta
                 disabled={!canPasswordSignIn}
                 onClick={() => void handlePasswordSignIn()}
               >

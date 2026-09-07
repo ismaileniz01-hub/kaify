@@ -14,6 +14,15 @@ export function decodeJwtPayload(
   }
 }
 
+export function isJwtUnexpired(
+  token: string,
+  skewSeconds = 30,
+): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload || typeof payload.exp !== "number") return false;
+  return payload.exp * 1000 > Date.now() + skewSeconds * 1000;
+}
+
 export function userFromAccessToken(accessToken: string): {
   id: string;
   aud: string;

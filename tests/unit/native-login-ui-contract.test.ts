@@ -37,6 +37,7 @@ describe("native login UI contract (canonical web parity)", () => {
     expect(login).toContain("NativeLoginBoot");
     expect(login).toContain('role="alert"');
     expect(login).toContain("login-error");
+    expect(login).toContain("data-keyboard-cta");
     expect(otp).toContain("otp-digit-row");
   });
 
@@ -53,8 +54,10 @@ describe("native login UI contract (canonical web parity)", () => {
 
   it("applies safe-area and Capacitor keyboard offset handling", () => {
     expect(keyboard).toContain("keyboardWillShow");
+    expect(keyboard).toContain("keyboardDidShow");
     expect(keyboard).toContain("keyboardWillHide");
-    expect(keyboard).toContain("visualViewport");
+    expect(keyboard).toContain("coveredByKeyboard");
+    expect(keyboard).not.toContain("if (window.visualViewport)");
     expect(css).toContain("calc(100dvh - var(--keyboard-offset");
     expect(css).toContain("env(safe-area-inset-top");
     expect(css).toContain("env(safe-area-inset-bottom");

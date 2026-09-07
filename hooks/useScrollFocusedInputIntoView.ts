@@ -9,6 +9,10 @@ export function useScrollFocusedInputIntoView(): void {
       if (!(target instanceof HTMLElement)) return;
       if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") return;
       target.scrollIntoView({ block: "center", behavior: "smooth" });
+      const cta = target
+        .closest("form, .login-otp-panel, .phone-shell")
+        ?.querySelector<HTMLElement>("[data-keyboard-cta]");
+      cta?.scrollIntoView({ block: "end", behavior: "smooth" });
     };
 
     const onFocusIn = (event: FocusEvent) => {

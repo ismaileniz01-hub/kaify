@@ -80,6 +80,7 @@ a { color: #d8b4fe; }
     max(3rem, calc(var(--safe-top) + 2.5rem))
     1.5rem
     max(2rem, calc(var(--safe-bottom) + 1.25rem));
+  scroll-padding-bottom: calc(1.25rem + var(--keyboard-offset, 0px));
 }
 
 .login-page-main:has(.login-otp-panel--code) {

@@ -669,6 +669,8 @@ html.native-app .chat-composer {
 
 .login-page-main {
   min-height: min(100dvh, 100%);
+  padding-bottom: calc(2rem + var(--safe-bottom, 0px) + var(--keyboard-offset, 0px));
+  scroll-padding-bottom: calc(1.5rem + var(--keyboard-offset, 0px));
 }
 
 .login-otp-code-block {

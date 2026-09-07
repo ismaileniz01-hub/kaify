@@ -9,6 +9,7 @@ import { useLang } from "@/lib/lang-context";
 import type { AuthMode } from "@/lib/auth/safe-redirect";
 import { captureReferralFromUrl } from "@/lib/referral";
 import { useNativeApp } from "@/lib/native/platform";
+import { useKeyboardOffset } from "@/hooks/useKeyboardOffset";
 
 type LoginPageContentProps = {
   mode: AuthMode;
@@ -18,6 +19,7 @@ type LoginPageContentProps = {
 export function LoginPageContent({ mode, redirectTo }: LoginPageContentProps) {
   const { t } = useLang();
   const native = useNativeApp();
+  useKeyboardOffset();
   const [step, setStep] = useState<"email" | "code">("email");
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export function LoginPageContent({ mode, redirectTo }: LoginPageContentProps) {
     <div className="phone-shell login-page relative flex min-h-dvh flex-col">
       <FitnessWallpaper />
 
-      <main className="login-page-main relative z-10 flex min-h-0 flex-1 flex-col px-6 pb-8 pt-12 sm:px-8 sm:pb-10 sm:pt-14">
+      <main className="login-page-main relative z-10 flex min-h-0 flex-1 flex-col px-6 pt-12 sm:px-8 sm:pt-14">
         {step === "email" ? (
           <>
             <div className="flex flex-1 flex-col items-center justify-center gap-6">

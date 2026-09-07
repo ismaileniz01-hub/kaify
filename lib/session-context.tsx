@@ -40,6 +40,24 @@ import { syncFreezieBalanceFromServer } from "@/lib/freezie";
 import { clearAuthLocalState, signOutUser } from "@/lib/auth/logout";
 import { hasBrowserAuthCookie } from "@/lib/auth/browser-auth-hint";
 import { alreadyCheckedInOnLocalDay } from "@/lib/check-in-gate";
+import { NATIVE_ENTRY_HANDOFF_KEY } from "@/lib/native/native-entry-boot";
+
+const SESSION_GET_TIMEOUT_MS = 4_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = window.setTimeout(() => resolve(fallback), ms);
+    promise
+      .then((value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      })
+      .catch(() => {
+        window.clearTimeout(timer);
+        resolve(fallback);
+      });
+  });
+}
 
 const DEFAULT_GEMS: GemBalanceDTO = {
   balance: 0,
@@ -152,16 +170,24 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const supabase = tryCreateBrowserSupabaseClient();
+    let cancelled = false;
+
+    const finishGuest = () => {
+      if (cancelled) return;
+      applyGuestState();
+      setIsLoading(false);
+      setHasHydrated(true);
+    };
 
     if (!supabase) {
       if (hasBrowserAuthCookie()) {
         void refreshSession();
       } else {
-        applyGuestState();
-        setIsLoading(false);
-        setHasHydrated(true);
+        finishGuest();
       }
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
     const {
@@ -172,23 +198,36 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         applyGuestState();
         return;
       }
-      // TOKEN_REFRESHED already updates the client JWT — skip full /api/session + check-in cascade.
       if (event === "SIGNED_IN") {
         void refreshSession();
       }
     });
 
-    void supabase.auth.getSession().then(({ data }) => {
-      if (data.session || hasBrowserAuthCookie()) {
-        void refreshSession();
-      } else {
-        applyGuestState();
-        setIsLoading(false);
-        setHasHydrated(true);
+    void (async () => {
+      const { data } = await withTimeout(
+        supabase.auth.getSession(),
+        SESSION_GET_TIMEOUT_MS,
+        { data: { session: null }, error: null },
+      );
+      if (cancelled) return;
+      let nativeHandoff = false;
+      try {
+        nativeHandoff = sessionStorage.getItem(NATIVE_ENTRY_HANDOFF_KEY) === "1";
+        if (nativeHandoff) sessionStorage.removeItem(NATIVE_ENTRY_HANDOFF_KEY);
+      } catch {
+        nativeHandoff = false;
       }
-    });
+      if (data.session || hasBrowserAuthCookie() || nativeHandoff) {
+        void refreshSession();
+        return;
+      }
+      finishGuest();
+    })();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [applyGuestState, refreshSession]);
 
   const updateProfile = useCallback(

@@ -15,13 +15,10 @@ import {
 import { bindInAppNavigation } from "@/lib/native/in-app-navigation";
 import { consumeAppBack } from "@/lib/native/app-back-stack";
 import { useAppBackStack } from "@/hooks/useAppBackStack";
-
-function setKeyboardOffset(px: number): void {
-  document.documentElement.style.setProperty(
-    "--keyboard-offset",
-    `${Math.max(0, px)}px`,
-  );
-}
+import {
+  applyKeyboardOffset,
+  coveredByKeyboard,
+} from "@/lib/native/keyboard-covered";
 
 function statusBarStyleForTheme(): "DARK" | "LIGHT" {
   if (typeof document === "undefined") return "DARK";
@@ -84,6 +81,25 @@ export function CapacitorShell() {
           mode: (await import("@capacitor/keyboard")).KeyboardResize.None,
         }).catch(() => {});
 
+        let pluginHeight = 0;
+        const syncKeyboard = (nextPlugin?: number) => {
+          if (typeof nextPlugin === "number") pluginHeight = nextPlugin;
+          applyKeyboardOffset(coveredByKeyboard(pluginHeight));
+        };
+
+        const keyboardShow = await Keyboard.addListener(
+          "keyboardWillShow",
+          (info) => syncKeyboard(Math.max(0, info.keyboardHeight)),
+        );
+        const keyboardDidShow = await Keyboard.addListener(
+          "keyboardDidShow",
+          (info) => syncKeyboard(Math.max(0, info.keyboardHeight)),
+        );
+        const keyboardHide = await Keyboard.addListener("keyboardWillHide", () => {
+          pluginHeight = 0;
+          applyKeyboardOffset(0);
+        });
+
         void checkDeviceIntegrity().then((integrity) => {
           if (integrity.compromised) {
             console.warn(
@@ -92,14 +108,6 @@ export function CapacitorShell() {
             );
           }
         });
-
-        const keyboardShow = await Keyboard.addListener(
-          "keyboardWillShow",
-          (info) => setKeyboardOffset(info.keyboardHeight),
-        );
-        const keyboardHide = await Keyboard.addListener("keyboardWillHide", () =>
-          setKeyboardOffset(0),
-        );
 
         const themeObserver = new MutationObserver(() => {
           void applyStatusBar();
@@ -164,6 +172,7 @@ export function CapacitorShell() {
           unbindNavigation();
           themeObserver.disconnect();
           void keyboardShow.remove();
+          void keyboardDidShow.remove();
           void keyboardHide.remove();
           void regHandle.remove();
           void regErrHandle.remove();
@@ -171,7 +180,7 @@ export function CapacitorShell() {
           void appUrlHandle.remove();
           void appStateHandle.remove();
           void backHandle?.remove();
-          setKeyboardOffset(0);
+          applyKeyboardOffset(0);
           clearNativeAppRoot();
         };
       } catch {

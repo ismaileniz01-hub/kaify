@@ -138,6 +138,7 @@ export function SignupVerifyStep({ email, onVerified, onBack }: Props) {
         onClick={() => void verify()}
         disabled={loading || !isCompleteOtp(code)}
         className="landing-btn landing-btn--primary flex w-full items-center justify-center gap-2 disabled:opacity-45"
+        data-keyboard-cta
       >
         {loading ? t("login.otp.verifying") : t("signup.verify.submit")}
         <ArrowRight className="h-5 w-5 rtl:rotate-180" />

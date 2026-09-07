@@ -268,15 +268,6 @@ export function EmailOtpLogin({
     }
   }, [email, goAfterAuth, password, refreshSession, t]);
 
-  if (isLoading) {
-    return (
-      <div className="login-otp-panel flex w-full max-w-sm flex-col items-center gap-3 py-8">
-        <div className="h-9 w-9 animate-spin rounded-full border-2 border-white/15 border-t-purple-400" />
-        <p className="text-xs text-zinc-500">{t("login.otp.verifying")}</p>
-      </div>
-    );
-  }
-
   if (isAuthenticated && !skipAutoRedirect) {
     return (
       <div className="login-otp-panel flex w-full max-w-sm flex-col items-center gap-3 py-8">
@@ -350,6 +341,7 @@ export function EmailOtpLogin({
           onClick={() => void verifyCode()}
           disabled={loading || !isCompleteOtp(code)}
           className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-violet-600 px-6 py-4 text-sm font-semibold text-white shadow-[0_12px_40px_rgba(124,58,237,0.45)] transition hover:from-purple-400 hover:to-violet-500 disabled:opacity-45"
+          data-keyboard-cta
         >
           {busy === "otp"
             ? t("login.otp.verifying")
@@ -437,6 +429,7 @@ export function EmailOtpLogin({
         onClick={() => void sendCode()}
         disabled={loading || !canSendCode}
         className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-4 text-sm font-semibold text-zinc-900 shadow-xl transition hover:bg-zinc-100 disabled:opacity-50"
+        data-keyboard-cta
       >
         {busy === "otp"
           ? t("login.otp.loading")
@@ -478,6 +471,7 @@ export function EmailOtpLogin({
             onClick={() => void signInWithPassword()}
             disabled={loading || !canPasswordSignIn}
             className="flex w-full items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-6 py-4 text-sm font-semibold text-white transition hover:bg-white/[0.1] disabled:opacity-50"
+            data-keyboard-cta
           >
             {busy === "password" ? t("login.otp.verifying") : t("login.password.submit")}
             <ArrowRight className="h-5 w-5 rtl:rotate-180" />

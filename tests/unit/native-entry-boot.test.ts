@@ -35,6 +35,7 @@ describe("native-entry boot", () => {
     expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain(NATIVE_ENTRY_SUCCESS_PATH);
     expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain(String(NATIVE_ENTRY_TIMEOUT_MS));
     expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain("AbortController");
+    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain("sessionStorage");
     expect(NATIVE_ENTRY_BOOT_SCRIPT).not.toContain("useEffect");
   });
 });

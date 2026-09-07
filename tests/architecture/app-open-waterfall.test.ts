@@ -15,6 +15,7 @@ describe("app-open waterfall (PERF-003)", () => {
   it("skips /api/session bootstrap without an auth cookie", () => {
     expect(sessionSrc).toMatch(/hasBrowserAuthCookie\(\)[\s\S]*refreshSession/);
     expect(sessionSrc).toContain("applyGuestState()");
+    expect(sessionSrc).toContain("SESSION_GET_TIMEOUT_MS");
   });
 
   it("session bundle already includes home so open does not require /api/home", () => {

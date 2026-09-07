@@ -31,6 +31,8 @@ describe("native shell UX contracts", () => {
       'android:windowSoftInputMode="adjustNothing"',
     );
     expect(source("components/CapacitorShell.tsx")).toContain("KeyboardResize.None");
+    expect(source("components/CapacitorShell.tsx")).toContain("coveredByKeyboard");
+    expect(source("components/CapacitorShell.tsx")).toContain("keyboardDidShow");
   });
 
   it("sends native OTP with the detected locale", () => {
@@ -38,6 +40,7 @@ describe("native shell UX contracts", () => {
     expect(app).toContain("otpLocaleForLang");
     expect(app).toContain("detectLangFromNavigator");
     expect(app).toContain("sendNativeEmailOtp(");
+    expect(app).toContain("isJwtUnexpired");
     expect(app).toContain("backButton");
     expect(app).toContain("minimizeApp");
   });
@@ -101,6 +104,9 @@ describe("wave C+D native UX remaining gaps", () => {
     );
     expect(source("app/(app)/settings/contact/page.tsx")).toContain(
       "useScrollFocusedInputIntoView",
+    );
+    expect(source("hooks/useScrollFocusedInputIntoView.ts")).toContain(
+      "data-keyboard-cta",
     );
   });
 

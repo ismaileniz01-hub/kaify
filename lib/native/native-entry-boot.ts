@@ -23,6 +23,9 @@ export function nativeEntryShellUrl(userAgent: string): string {
   return "/login";
 }
 
+export const NATIVE_ENTRY_HANDOFF_KEY = "kaify-native-handoff";
+export const NATIVE_ENTRY_TOKEN_KEY = "kaify-native-entry";
+
 /**
  * Runs from a nonce'd inline script so iOS WKWebView can establish cookies
  * before React hydrates. Keep this IIFE free of imports.
@@ -30,6 +33,8 @@ export function nativeEntryShellUrl(userAgent: string): string {
 export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
   var status = document.getElementById("native-entry-status");
   var actions = document.getElementById("native-entry-actions");
+  var TOKEN_KEY = "${NATIVE_ENTRY_TOKEN_KEY}";
+  var HANDOFF_KEY = "${NATIVE_ENTRY_HANDOFF_KEY}";
   function fail(msg) {
     if (status) {
       status.textContent = msg;
@@ -44,19 +49,42 @@ export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
     else if (/iPhone|iPad|iPod/i.test(ua)) location.replace("capacitor://localhost/?signed_out=1");
     else location.replace("/login");
   }
+  function readStored() {
+    try {
+      var raw = sessionStorage.getItem(TOKEN_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
+  }
+  function saveStored(access, refresh) {
+    try {
+      sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ accessToken: access, refreshToken: refresh }));
+      sessionStorage.setItem(HANDOFF_KEY, "1");
+    } catch (e) {}
+  }
   var retry = document.getElementById("native-entry-retry");
   if (retry) retry.addEventListener("click", function () { location.reload(); });
   var back = document.getElementById("native-entry-back");
   if (back) back.addEventListener("click", goShell);
 
   var params = new URLSearchParams(location.hash.replace(/^#/, ""));
-  var accessToken = params.get("access_token");
-  var refreshToken = params.get("refresh_token");
+  var accessToken = params.get("access_token") || "";
+  var refreshToken = params.get("refresh_token") || "";
+  if (!accessToken || !refreshToken) {
+    var stored = readStored();
+    if (stored) {
+      accessToken = stored.accessToken || "";
+      refreshToken = stored.refreshToken || "";
+    }
+  }
   history.replaceState(null, "", location.pathname);
   if (!accessToken || !refreshToken) {
     fail("Oturum bilgisi eksik. Uygulamayı kapatıp tekrar aç.");
     return;
   }
+  saveStored(accessToken, refreshToken);
   var controller = new AbortController();
   var timer = setTimeout(function () {
     controller.abort();
@@ -75,6 +103,7 @@ export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
       fail("Oturum kaydedilemedi. Tekrar dene veya girişe dön.");
       return;
     }
+    try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
     location.replace("${NATIVE_ENTRY_SUCCESS_PATH}");
   }).catch(function () {
     if (controller.signal.aborted) return;
