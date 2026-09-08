@@ -20,6 +20,7 @@ import {
   isNativeShellOrigin,
   NATIVE_CORS_ALLOW_HEADERS,
 } from "@/lib/native/webview-request";
+import { NATIVE_SESSION_HINT_COOKIE } from "@/lib/native/native-entry-boot";
 
 const RATE_LIMIT_CONFIG = {
   api: { requests: 400, windowMs: 60 * 1000 },
@@ -68,6 +69,10 @@ function hasSupabaseAuthCookie(request: NextRequest): boolean {
         c.name.includes("auth-token") ||
         (c.name.startsWith("sb-") && c.name.includes("auth")),
     );
+}
+
+function hasNativeSessionHint(request: NextRequest): boolean {
+  return request.cookies.get(NATIVE_SESSION_HINT_COOKIE)?.value === "1";
 }
 
 function getRateLimitBucket(pathname: string): keyof typeof RATE_LIMIT_CONFIG {
@@ -270,10 +275,13 @@ export async function middleware(request: NextRequest) {
   }
 
   // Guest product routes: send to login (cookie presence only — not a security check).
+  // Native WebView often cannot attach httpOnly auth cookies after OTP; the
+  // first-party hint cookie lets /welcome render while Bearer hydrates session.
   if (
     isProtectedProductPath(pathname) &&
     !pathname.startsWith("/api/") &&
-    !hasSupabaseAuthCookie(request)
+    !hasSupabaseAuthCookie(request) &&
+    !hasNativeSessionHint(request)
   ) {
     const login = request.nextUrl.clone();
     login.pathname = "/login";
@@ -313,7 +321,10 @@ export async function middleware(request: NextRequest) {
     pathname,
     contentSecurityPolicy,
     { limit: rateLimit.limit, remaining: rateLimit.remaining },
-    pathname === "/api/health" ? { skipSessionRefresh: true } : undefined,
+    pathname === "/api/health" ||
+      (hasNativeSessionHint(request) && !hasSupabaseAuthCookie(request))
+      ? { skipSessionRefresh: true }
+      : undefined,
   );
 }
 

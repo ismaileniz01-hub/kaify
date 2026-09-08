@@ -60,8 +60,8 @@ describe("native auth bootstrap packaging", () => {
     expect(app).toContain("enterRealKaify");
     expect(app).toContain("const [busy, setBusy] = useState(false)");
     const boot = app.slice(app.indexOf("SplashScreen.hide"), app.indexOf("kaify_install_id"));
-    expect(boot).not.toContain("enterRealKaify");
-    expect(boot).not.toContain("supabase.auth.getSession");
+    expect(boot).toContain("hydrateSecureSession");
+    expect(boot).toContain("isJwtUnexpired");
     expect(capacitor).not.toContain('iosScheme: "https"');
   });
 });

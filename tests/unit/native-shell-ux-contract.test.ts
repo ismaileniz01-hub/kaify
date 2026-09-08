@@ -41,11 +41,12 @@ describe("native shell UX contracts", () => {
     expect(app).toContain("detectLangFromNavigator");
     expect(app).toContain("sendNativeEmailOtp(");
     expect(app).toContain("enterRealKaify");
+    expect(app).toContain("isJwtUnexpired");
     expect(app).toContain("backButton");
     expect(app).toContain("minimizeApp");
     const boot = app.slice(app.indexOf("SplashScreen.hide"), app.indexOf("kaify_install_id"));
-    expect(boot).not.toContain("enterRealKaify");
-    expect(boot).not.toContain("supabase.auth.getSession");
+    expect(boot).toContain("enterRealKaify");
+    expect(boot).toContain("isJwtUnexpired");
   });
 });
 
@@ -200,7 +201,7 @@ describe("signup legal gate (source contract)", () => {
   });
 });
 
-describe("iOS login hang (no auto-handoff, no chrome loading gate)", () => {
+describe("iOS native session after OTP", () => {
   it("never replaces app children with a loading page while session boots", () => {
     const chrome = source("components/navigation/AppChrome.tsx");
     expect(chrome).not.toContain("authPending");

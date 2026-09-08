@@ -32,11 +32,10 @@ describe("middleware security contracts", () => {
       'if (pathname === "/api/health") return "health"',
     );
     const limiter = middleware.indexOf("checkRateLimit(");
-    const healthFinalize = middleware.indexOf(
-      'pathname === "/api/health" ? { skipSessionRefresh: true }',
-    );
     expect(limiter).toBeGreaterThan(0);
-    expect(healthFinalize).toBeGreaterThan(limiter);
+    expect(middleware).toContain("hasNativeSessionHint");
+    expect(middleware).toContain("NATIVE_SESSION_HINT_COOKIE");
+    expect(middleware).toContain('pathname === "/api/health"');
   });
 
   it("restricts native CORS to known shell origins", () => {

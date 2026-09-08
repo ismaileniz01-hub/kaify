@@ -194,6 +194,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       finishGuest();
     };
 
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname.startsWith("/login/native-entry")
+    ) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
     if (isCapacitorNativeShell()) {
       probeCookieOrHandoff();
       return () => {

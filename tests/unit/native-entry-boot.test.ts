@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   NATIVE_ENTRY_BOOT_SCRIPT,
   NATIVE_ENTRY_ESTABLISH_PATH,
+  NATIVE_ENTRY_NAVIGATE_MS,
   NATIVE_ENTRY_SUCCESS_PATH,
-  NATIVE_ENTRY_TIMEOUT_MS,
   NATIVE_ENTRY_TOKEN_KEY,
+  NATIVE_SESSION_HINT_COOKIE,
   clearNativeEntryTokens,
   isCapacitorNativeShell,
   nativeEntryShellUrl,
@@ -34,14 +35,17 @@ describe("native-entry boot", () => {
     );
   });
 
-  it("posts cookies then opens welcome, with a bounded wait", () => {
+  it("opens welcome even if cookie establish hangs, using a first-party hint", () => {
     expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain(NATIVE_ENTRY_ESTABLISH_PATH);
     expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain(NATIVE_ENTRY_SUCCESS_PATH);
-    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain(String(NATIVE_ENTRY_TIMEOUT_MS));
+    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain(String(NATIVE_ENTRY_NAVIGATE_MS));
+    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain(NATIVE_SESSION_HINT_COOKIE);
+    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain("goWelcome");
+    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain("localStorage");
     expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain("AbortController");
-    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain("sessionStorage");
     expect(NATIVE_ENTRY_BOOT_SCRIPT).not.toContain("useEffect");
     expect(NATIVE_ENTRY_BOOT_SCRIPT).not.toContain("removeItem(TOKEN_KEY)");
+    expect(NATIVE_ENTRY_BOOT_SCRIPT).not.toContain("if (!res.ok)");
   });
 
   it("reads stored native-entry tokens without calling supabase", () => {

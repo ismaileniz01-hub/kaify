@@ -124,19 +124,13 @@ function isLikelyNetworkFailure(error: unknown): boolean {
 }
 
 function abortSignalWithTimeout(user?: AbortSignal): AbortSignal {
-  const timeout =
-    typeof AbortSignal.timeout === "function"
-      ? AbortSignal.timeout(FETCH_TIMEOUT_MS)
-      : (() => {
-          const controller = new AbortController();
-          globalThis.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-          return controller.signal;
-        })();
-  if (!user) return timeout;
+  const controller = new AbortController();
+  globalThis.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  if (!user) return controller.signal;
   if (typeof AbortSignal.any === "function") {
-    return AbortSignal.any([timeout, user]);
+    return AbortSignal.any([controller.signal, user]);
   }
-  return timeout;
+  return controller.signal;
 }
 
 /** Typed fetch wrapper for Kaify Ai API routes (cookie session). Soft-retries GETs. */

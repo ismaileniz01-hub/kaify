@@ -55,7 +55,8 @@ describe("apiFetch NETWORK taxonomy", () => {
   it("keeps a 12s client timeout", () => {
     const src = readFileSync(join(process.cwd(), "lib/api/client.ts"), "utf8");
     expect(src).toContain("FETCH_TIMEOUT_MS = 12_000");
-    expect(src).toContain("AbortSignal.timeout");
+    expect(src).toContain("controller.abort()");
+    expect(src).not.toContain("AbortSignal.timeout");
     expect(src).toContain("GET_SESSION_HEADER_TIMEOUT_MS = 800");
     expect(src).toContain("isCapacitorNativeShell");
   });
