@@ -40,6 +40,7 @@ import { syncFreezieBalanceFromServer } from "@/lib/freezie";
 import { clearAuthLocalState, signOutUser } from "@/lib/auth/logout";
 import { hasBrowserAuthCookie } from "@/lib/auth/browser-auth-hint";
 import { alreadyCheckedInOnLocalDay } from "@/lib/check-in-gate";
+import { returnToNativeLoginShell } from "@/lib/native/sign-out-native";
 import {
   clearNativeEntryTokens,
   consumeNativeEntryHandoff,
@@ -173,6 +174,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       if (error instanceof ApiClientError && error.code === "UNAUTHORIZED") {
         applyGuestState();
+        // No-ops in mobile Safari. Native WebView must not stay on guest "Joe" Home.
+        void returnToNativeLoginShell();
       } else {
         setSessionError(true);
       }

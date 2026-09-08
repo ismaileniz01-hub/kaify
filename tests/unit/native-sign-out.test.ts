@@ -17,6 +17,7 @@ describe("native sign-out handoff", () => {
     );
     expect(source).toContain("https://localhost/?${SIGNED_OUT_QUERY}");
     expect(source).toContain("capacitor://localhost/?${SIGNED_OUT_QUERY}");
+    expect(source).toContain("export function looksLikeNativeWebView");
     expect(source).not.toContain('iosScheme: "https"');
   });
 });

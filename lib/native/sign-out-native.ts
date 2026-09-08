@@ -1,13 +1,38 @@
 const SIGNED_OUT_QUERY = "signed_out=1";
 
+export function looksLikeNativeWebView(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (document.documentElement.classList.contains("native-app")) return true;
+    const platform = document.documentElement.dataset.platform;
+    if (platform === "ios" || platform === "android") return true;
+  } catch {
+    // ignore
+  }
+  const ua = (navigator.userAgent || "").toLowerCase();
+  if (ua.includes("capacitor")) return true;
+  if (ua.includes("; wv)") && ua.includes("android")) return true;
+  const apple =
+    ua.includes("iphone") || ua.includes("ipad") || ua.includes("ipod");
+  return (
+    apple &&
+    ua.includes("applewebkit") &&
+    ua.includes("mobile") &&
+    !ua.includes("safari/")
+  );
+}
+
 export function nativeShellLoginUrl(): string {
   if (typeof window === "undefined") return "/login";
   const platform = document.documentElement.dataset.platform;
-  if (platform === "android") {
+  const ua = navigator.userAgent || "";
+  if (platform === "android" || (/Android/i.test(ua) && looksLikeNativeWebView())) {
     return `https://localhost/?${SIGNED_OUT_QUERY}`;
   }
-  if (platform === "ios") {
-    return `capacitor://localhost/?${SIGNED_OUT_QUERY}`;
+  if (platform === "ios" || /iPhone|iPad|iPod/i.test(ua)) {
+    if (platform === "ios" || looksLikeNativeWebView()) {
+      return `capacitor://localhost/?${SIGNED_OUT_QUERY}`;
+    }
   }
   return `/login?${SIGNED_OUT_QUERY}`;
 }
@@ -68,15 +93,17 @@ async function clearNativeSecureSession(): Promise<void> {
   }
 }
 
-/** After website logout, drop the native keystore session and reopen the local login shell. */
+/** After website logout or a failed native session, reopen the local login shell. */
 export async function returnToNativeLoginShell(): Promise<void> {
   if (typeof window === "undefined") return;
+  let capacitorNative = false;
   try {
     const { Capacitor } = await import("@capacitor/core");
-    if (!Capacitor.isNativePlatform()) return;
+    capacitorNative = Capacitor.isNativePlatform();
   } catch {
-    return;
+    capacitorNative = false;
   }
+  if (!capacitorNative && !looksLikeNativeWebView()) return;
   await clearNativeSecureSession();
   window.location.replace(nativeShellLoginUrl());
 }

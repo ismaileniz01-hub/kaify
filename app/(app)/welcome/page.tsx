@@ -18,6 +18,11 @@ import { AppHeader } from "@/components/navigation/AppHeader";
 import { hapticSelection } from "@/lib/native/haptics";
 import { FirstTaskChecklist } from "@/components/welcome/FirstTaskChecklist";
 import { GoalsEditor } from "@/components/goals/GoalsEditor";
+import { hasNativeHandoffClient } from "@/lib/native/native-entry-boot";
+import {
+  looksLikeNativeWebView,
+  returnToNativeLoginShell,
+} from "@/lib/native/sign-out-native";
 
 const ProfileModal = dynamic(
   () =>
@@ -50,6 +55,7 @@ function WelcomeContent() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [pendingReferral, setPendingReferral] = useState<string | null>(null);
+  const [nativeHandoff, setNativeHandoff] = useState(false);
   const { t, setLang, lang } = useLang();
   const {
     displayName,
@@ -61,12 +67,14 @@ function WelcomeContent() {
     updateProfile,
     profile,
     isAuthenticated,
+    isLoading,
     refreshHome,
   } = useSession();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("native_handoff") === "1") {
+      setNativeHandoff(true);
       params.delete("native_handoff");
       const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`;
       window.history.replaceState(null, "", next);
@@ -90,6 +98,14 @@ function WelcomeContent() {
     const match = LANG_OPTIONS.find((opt) => opt.code === base);
     if (match) setLang(match.code);
   }, [isAuthenticated, profile?.locale, setLang]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (isAuthenticated) return;
+    if (hasNativeHandoffClient() || nativeHandoff || looksLikeNativeWebView()) {
+      void returnToNativeLoginShell();
+    }
+  }, [isLoading, isAuthenticated, nativeHandoff]);
 
   useEffect(() => {
     if (isAuthenticated) void refreshHome(lang);

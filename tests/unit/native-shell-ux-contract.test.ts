@@ -41,12 +41,11 @@ describe("native shell UX contracts", () => {
     expect(app).toContain("detectLangFromNavigator");
     expect(app).toContain("sendNativeEmailOtp(");
     expect(app).toContain("enterRealKaify");
-    expect(app).toContain("isJwtUnexpired");
     expect(app).toContain("backButton");
     expect(app).toContain("minimizeApp");
     const boot = app.slice(app.indexOf("SplashScreen.hide"), app.indexOf("kaify_install_id"));
-    expect(boot).toContain("enterRealKaify");
-    expect(boot).toContain("isJwtUnexpired");
+    expect(boot).not.toContain("enterRealKaify");
+    expect(boot).toContain("hydrateSecureSession");
   });
 });
 
@@ -231,6 +230,9 @@ describe("iOS native session after OTP", () => {
     expect(welcome).not.toContain("welcome.loading");
     expect(welcome).not.toContain("isLoading && isAuthenticated");
     expect(welcome).toContain("window.location.search");
+    expect(welcome).toContain("returnToNativeLoginShell");
+    expect(welcome).toContain("looksLikeNativeWebView");
+    expect(welcome).toContain("nativeHandoff");
   });
 
   it("does not keep Home on a route-level skeleton while the page loads", () => {
@@ -245,5 +247,6 @@ describe("iOS native session after OTP", () => {
     );
     expect(source("lib/session-context.tsx")).toContain("if (!nativeShell)");
     expect(source("lib/auth/logout.ts")).toContain("clearNativeEntryTokens");
+    expect(source("lib/session-context.tsx")).toContain("returnToNativeLoginShell");
   });
 });
