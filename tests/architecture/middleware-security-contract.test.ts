@@ -36,7 +36,7 @@ describe("middleware security contracts", () => {
     expect(middleware).toContain("hasNativeSessionHint");
     expect(middleware).toContain("NATIVE_SESSION_HINT_COOKIE");
     expect(middleware).toContain('pathname === "/api/health"');
-    expect(middleware).toContain('Cache-Control", "private, no-store"');
+    expect(middleware).toContain("/api/auth/session/native-complete");
   });
 
   it("restricts native CORS to known shell origins", () => {

@@ -43,6 +43,7 @@ import { alreadyCheckedInOnLocalDay } from "@/lib/check-in-gate";
 import {
   clearNativeEntryTokens,
   consumeNativeEntryHandoff,
+  hasNativeSessionHintCookie,
   isCapacitorNativeShell,
   readNativeEntryAccessToken,
 } from "@/lib/native/native-entry-boot";
@@ -129,7 +130,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setReferralCode(bundle.referral.referralCode);
       setHome(bundle.home);
       setKai(bundle.kai);
-      clearNativeEntryTokens();
+      if (!nativeShell) {
+        clearNativeEntryTokens();
+      }
 
       if (
         !alreadyCheckedInOnLocalDay(
@@ -188,7 +191,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const probeCookieOrHandoff = () => {
       const nativeHandoff = consumeNativeEntryHandoff();
       const nativeToken = Boolean(readNativeEntryAccessToken());
-      if (nativeHandoff || nativeToken || hasBrowserAuthCookie()) {
+      if (nativeHandoff || nativeToken || hasBrowserAuthCookie() || hasNativeSessionHintCookie()) {
         void refreshSession();
         return;
       }
@@ -205,7 +208,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     if (isCapacitorNativeShell()) {
-      probeCookieOrHandoff();
+      void refreshSession();
       return () => {
         cancelled = true;
       };

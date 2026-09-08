@@ -62,6 +62,17 @@ describe("native local packaging contract", () => {
     expect(source("app/api/auth/session/establish/route.ts")).toContain(
       "setSession",
     );
+    expect(source("app/api/auth/session/native-complete/route.ts")).toContain(
+      "NextResponse.redirect",
+    );
+    expect(source("app/api/auth/session/native-complete/route.ts")).toContain(
+      "formData",
+    );
+    expect(source("lib/native/native-entry-boot.ts")).toContain(
+      'form.method = "POST"',
+    );
+    expect(source("lib/native/native-entry-boot.ts")).toContain("form.submit()");
+    expect(source("lib/native/native-entry-boot.ts")).not.toContain("goWelcome");
     expect(source("app/api/auth/session/logout/route.ts")).toContain("signOut");
     expect(source("native-app/src/App.tsx")).toContain("signed_out");
   });

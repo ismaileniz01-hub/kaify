@@ -240,5 +240,10 @@ describe("iOS native session after OTP", () => {
     expect(source("lib/session-context.tsx")).toContain(
       "nativeShell || (hasHydrated && isAuthenticated)",
     );
+    expect(source("lib/session-context.tsx")).toMatch(
+      /if \(isCapacitorNativeShell\(\)\) \{\r?\n\s*void refreshSession\(\);/,
+    );
+    expect(source("lib/session-context.tsx")).toContain("if (!nativeShell)");
+    expect(source("lib/auth/logout.ts")).toContain("clearNativeEntryTokens");
   });
 });

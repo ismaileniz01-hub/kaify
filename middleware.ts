@@ -238,6 +238,18 @@ export async function middleware(request: NextRequest) {
     );
   }
 
+  if (pathname === "/api/auth/session/native-complete") {
+    return finalizeResponse(
+      forwardedRequest,
+      nonce,
+      requestId,
+      pathname,
+      contentSecurityPolicy,
+      undefined,
+      { skipSessionRefresh: true },
+    );
+  }
+
   if (pathname === CSP_REPORT_PATH) {
     return finalizeResponse(
       forwardedRequest,

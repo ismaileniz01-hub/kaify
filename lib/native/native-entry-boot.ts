@@ -1,5 +1,6 @@
 /** Hash tokens stay in the browser; this boot script never sends them in the URL path. */
 export const NATIVE_ENTRY_ESTABLISH_PATH = "/api/auth/session/establish";
+export const NATIVE_ENTRY_COMPLETE_PATH = "/api/auth/session/native-complete";
 export const NATIVE_ENTRY_SUCCESS_PATH = "/welcome";
 export const NATIVE_ENTRY_TIMEOUT_MS = 12_000;
 export const NATIVE_ENTRY_STATUS_ID = "native-entry-status";
@@ -114,18 +115,27 @@ export function clearNativeEntryTokens(): void {
     storageRemove(localStorage, NATIVE_ENTRY_TOKEN_KEY);
     storageRemove(localStorage, NATIVE_ENTRY_HANDOFF_KEY);
   }
+  if (typeof document !== "undefined") {
+    document.cookie = `${NATIVE_SESSION_HINT_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax; Secure`;
+  }
+}
+
+export function hasNativeSessionHintCookie(): boolean {
+  if (typeof document === "undefined") return false;
+  return document.cookie.split(";").some((part) =>
+    part.trim().startsWith(`${NATIVE_SESSION_HINT_COOKIE}=`),
+  );
 }
 
 /**
- * Runs from a nonce'd inline script so iOS WKWebView can establish cookies
- * before React hydrates. Keep this IIFE free of imports.
+ * Same-origin document POST. WKWebView keeps Set-Cookie on this navigation;
+ * it does not reliably keep Set-Cookie from fetch(). Keep this IIFE import-free.
  */
 export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
   var status = document.getElementById("native-entry-status");
   var actions = document.getElementById("native-entry-actions");
   var TOKEN_KEY = "${NATIVE_ENTRY_TOKEN_KEY}";
   var HANDOFF_KEY = "${NATIVE_ENTRY_HANDOFF_KEY}";
-  var HINT_COOKIE = "${NATIVE_SESSION_HINT_COOKIE}";
   function fail(msg) {
     if (status) {
       status.textContent = msg;
@@ -160,18 +170,6 @@ export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
       localStorage.setItem(HANDOFF_KEY, "1");
     } catch (e) {}
   }
-  function markNativeSession() {
-    try {
-      document.cookie = HINT_COOKIE + "=1; Path=/; Max-Age=2592000; Secure; SameSite=Lax";
-    } catch (e) {}
-  }
-  var navigated = false;
-  function goWelcome() {
-    if (navigated) return;
-    navigated = true;
-    markNativeSession();
-    location.replace("${NATIVE_ENTRY_SUCCESS_PATH}");
-  }
   var retry = document.getElementById("native-entry-retry");
   if (retry) retry.addEventListener("click", function () { location.reload(); });
   var back = document.getElementById("native-entry-back");
@@ -187,29 +185,26 @@ export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
       refreshToken = stored.refreshToken || "";
     }
   }
-  history.replaceState(null, "", location.pathname);
   if (!accessToken || !refreshToken) {
     fail("Oturum bilgisi eksik. Uygulamayı kapatıp tekrar aç.");
     return;
   }
   saveStored(accessToken, refreshToken);
-  markNativeSession();
-  var controller = new AbortController();
-  var timer = setTimeout(function () {
-    controller.abort();
-    goWelcome();
-  }, ${NATIVE_ENTRY_NAVIGATE_MS});
-  fetch("${NATIVE_ENTRY_ESTABLISH_PATH}", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ accessToken: accessToken, refreshToken: refreshToken }),
-    signal: controller.signal
-  }).then(function () {
-    clearTimeout(timer);
-    goWelcome();
-  }).catch(function () {
-    clearTimeout(timer);
-    goWelcome();
-  });
+  var form = document.createElement("form");
+  form.method = "POST";
+  form.enctype = "application/x-www-form-urlencoded";
+  form.action = "${NATIVE_ENTRY_COMPLETE_PATH}";
+  form.setAttribute("accept-charset", "UTF-8");
+  function addField(name, value) {
+    var input = document.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  }
+  addField("accessToken", accessToken);
+  addField("refreshToken", refreshToken);
+  document.body.appendChild(form);
+  form.submit();
 })();`;
+
