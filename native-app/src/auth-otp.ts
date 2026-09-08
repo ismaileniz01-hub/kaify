@@ -80,6 +80,19 @@ function mapSendErrorMessage(code: string | undefined, fallback: string): string
   }
 }
 
+function nativeSessionSuccess(
+  accessToken: string,
+  refreshToken: string,
+  handoffTicket?: string,
+) {
+  return {
+    ok: true as const,
+    accessToken,
+    refreshToken,
+    ...(handoffTicket ? { handoffTicket } : {}),
+  };
+}
+
 /**
  * Public Kaify OTP APIs (same server path as web). No Bearer — cookies unused;
  * verify returns access/refresh tokens for Capacitor origins.
@@ -159,7 +172,7 @@ export async function signInNativeWithPassword(
   email: string,
   password: string,
 ): Promise<
-  | { ok: true; accessToken: string; refreshToken: string }
+  | { ok: true; accessToken: string; refreshToken: string; handoffTicket?: string }
   | NativeOtpFailure
 > {
   const trimmed = email.trim().toLowerCase();
@@ -170,6 +183,7 @@ export async function signInNativeWithPassword(
   const result = await publicAuthPost<{
     verified: true;
     session?: { accessToken: string; refreshToken: string };
+    handoffTicket?: string;
   }>("/api/auth/password", {
     email: trimmed,
     password,
@@ -207,18 +221,18 @@ export async function signInNativeWithPassword(
       ),
     };
   }
-  return {
-    ok: true,
-    accessToken: session.accessToken,
-    refreshToken: session.refreshToken,
-  };
+  return nativeSessionSuccess(
+    session.accessToken,
+    session.refreshToken,
+    result.data.handoffTicket,
+  );
 }
 
 export async function verifyNativeEmailOtp(
   email: string,
   token: string,
 ): Promise<
-  | { ok: true; accessToken: string; refreshToken: string }
+  | { ok: true; accessToken: string; refreshToken: string; handoffTicket?: string }
   | NativeOtpFailure
 > {
   const normalized = normalizeOtpInput(token);
@@ -229,6 +243,7 @@ export async function verifyNativeEmailOtp(
   const result = await publicAuthPost<{
     verified: true;
     session?: { accessToken: string; refreshToken: string };
+    handoffTicket?: string;
   }>("/api/auth/otp/verify", {
     email: email.trim().toLowerCase(),
     token: normalized,
@@ -257,9 +272,9 @@ export async function verifyNativeEmailOtp(
       ),
     };
   }
-  return {
-    ok: true,
-    accessToken: session.accessToken,
-    refreshToken: session.refreshToken,
-  };
+  return nativeSessionSuccess(
+    session.accessToken,
+    session.refreshToken,
+    result.data.handoffTicket,
+  );
 }

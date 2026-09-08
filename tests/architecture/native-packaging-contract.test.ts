@@ -65,8 +65,11 @@ describe("native local packaging contract", () => {
     expect(source("app/api/auth/session/native-complete/route.ts")).toContain(
       "NextResponse.redirect",
     );
-    expect(source("app/api/auth/session/native-complete/route.ts")).toContain(
-      "formData",
+    expect(source("app/api/auth/session/native-consume/route.ts")).toContain(
+      "consumeNativeHandoffTicket",
+    );
+    expect(source("native-app/src/enter-kaify.ts")).toContain(
+      "/api/auth/session/native-consume",
     );
     expect(source("lib/native/native-entry-boot.ts")).toContain(
       "location.replace(",

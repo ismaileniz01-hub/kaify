@@ -41,7 +41,9 @@ describe("native session complete (document POST)", () => {
 
     const response = await POST(request as never);
     expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe("https://kaifyai.org/welcome");
+    expect(response.headers.get("location")).toBe(
+      "https://kaifyai.org/welcome?native_handoff=1",
+    );
     expect(setSession).toHaveBeenCalledWith({
       access_token: "a".repeat(24),
       refresh_token: "r".repeat(16),

@@ -39,6 +39,7 @@ describe("middleware security contracts", () => {
     expect(middleware).toContain("hasNativeHandoffQuery");
     expect(middleware).toContain("NATIVE_HANDOFF_QUERY");
     expect(middleware).toContain("/api/auth/session/native-complete");
+    expect(middleware).toContain("/api/auth/session/native-consume");
   });
 
   it("restricts native CORS to known shell origins", () => {

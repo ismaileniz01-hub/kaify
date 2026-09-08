@@ -249,7 +249,7 @@ export function App() {
         return result;
       }
       setPassword("");
-      enterRealKaify(result.accessToken, result.refreshToken);
+      enterRealKaify(result.accessToken, result.refreshToken, result.handoffTicket);
       return result;
     } catch (cause) {
       const raw =
@@ -282,7 +282,7 @@ export function App() {
       } catch {
         // Consent can be recorded after the real app opens.
       }
-      enterRealKaify(result.accessToken, result.refreshToken);
+      enterRealKaify(result.accessToken, result.refreshToken, result.handoffTicket);
       return result;
     } catch (cause) {
       const raw =

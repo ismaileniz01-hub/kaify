@@ -5,6 +5,7 @@ import { createRouteHandlerSupabase } from "@/lib/supabase/route-handler";
 import { SupabaseEnvError } from "@/lib/supabase/env";
 import { passwordLoginSchema } from "@/lib/validations/auth-otp.schema";
 import { isNativeWebViewRequest } from "@/lib/native/webview-request";
+import { issueNativeHandoffTicket } from "@/lib/auth/native-handoff-ticket";
 
 export const runtime = "nodejs";
 
@@ -42,6 +43,18 @@ export const POST = defineRouteRaw(
         Boolean(session?.access_token && session.refresh_token) &&
         isNativeWebViewRequest(request);
 
+      let handoffTicket: string | undefined;
+      if (returnNativeSession && session?.access_token && session.refresh_token) {
+        try {
+          handoffTicket = await issueNativeHandoffTicket({
+            accessToken: session.access_token,
+            refreshToken: session.refresh_token,
+          });
+        } catch {
+          // Tokens still return; native can mint a ticket itself.
+        }
+      }
+
       return withCookies(
         ok({
           verified: true as const,
@@ -51,6 +64,7 @@ export const POST = defineRouteRaw(
                   accessToken: session.access_token,
                   refreshToken: session.refresh_token,
                 },
+                ...(handoffTicket ? { handoffTicket } : {}),
               }
             : {}),
         }),

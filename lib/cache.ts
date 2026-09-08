@@ -129,6 +129,28 @@ export async function cacheDelete(key: string): Promise<void> {
   }
 }
 
+/** GET + DEL. Returns null when Redis is unavailable or the key is missing. */
+export async function cacheTake<T>(key: string): Promise<T | null> {
+  if (!isConfigured()) return null;
+  try {
+    const taken = await redisCommand<string>(["GETDEL", key]);
+    if (taken) return JSON.parse(taken) as T;
+  } catch {
+    // GETDEL missing on older Redis — fall through to GET + DEL.
+  }
+  try {
+    const raw = await cacheGet<T>(key);
+    if (raw) await cacheDelete(key);
+    return raw;
+  } catch (error) {
+    logger.warn("cache take failed", {
+      key,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+    return null;
+  }
+}
+
 /** Stale companion key written by `cachedWithStale`. */
 export function staleCompanionKey(key: string): string {
   return `${key}:stale`;

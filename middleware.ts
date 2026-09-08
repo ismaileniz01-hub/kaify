@@ -259,7 +259,10 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  if (pathname === "/api/auth/session/native-complete") {
+  if (
+    pathname === "/api/auth/session/native-complete" ||
+    pathname === "/api/auth/session/native-consume"
+  ) {
     return finalizeResponse(
       forwardedRequest,
       nonce,
