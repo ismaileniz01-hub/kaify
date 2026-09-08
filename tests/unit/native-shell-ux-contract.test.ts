@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -231,5 +231,14 @@ describe("iOS native session after OTP", () => {
     expect(welcome).not.toContain("welcome.loading");
     expect(welcome).not.toContain("isLoading && isAuthenticated");
     expect(welcome).toContain("window.location.search");
+  });
+
+  it("does not keep Home on a route-level skeleton while the page loads", () => {
+    expect(
+      existsSync(join(process.cwd(), "app", "(app)", "welcome", "loading.tsx")),
+    ).toBe(false);
+    expect(source("lib/session-context.tsx")).toContain(
+      "nativeShell || (hasHydrated && isAuthenticated)",
+    );
   });
 });

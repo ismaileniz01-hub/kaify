@@ -36,6 +36,7 @@ describe("middleware security contracts", () => {
     expect(middleware).toContain("hasNativeSessionHint");
     expect(middleware).toContain("NATIVE_SESSION_HINT_COOKIE");
     expect(middleware).toContain('pathname === "/api/health"');
+    expect(middleware).toContain('Cache-Control", "private, no-store"');
   });
 
   it("restricts native CORS to known shell origins", () => {
@@ -76,6 +77,11 @@ describe("middleware security contracts", () => {
     expect(
       existsSync(
         join(process.cwd(), "app", "(app)", "login", "loading.tsx"),
+      ),
+    ).toBe(false);
+    expect(
+      existsSync(
+        join(process.cwd(), "app", "(app)", "welcome", "loading.tsx"),
       ),
     ).toBe(false);
   });

@@ -110,7 +110,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshSession = useCallback(async () => {
-    const isBackgroundRefresh = hasHydrated && isAuthenticated;
+    const nativeShell = isCapacitorNativeShell();
+    const isBackgroundRefresh = nativeShell || (hasHydrated && isAuthenticated);
     if (!isBackgroundRefresh) {
       setIsLoading(true);
     }

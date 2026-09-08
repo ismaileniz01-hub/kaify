@@ -148,6 +148,9 @@ async function finalizeResponse(
   }
 
   const finalized = await attachCsrfCookie(forwardedRequest, response);
+  if (hasNativeSessionHint(forwardedRequest)) {
+    finalized.headers.set("Cache-Control", "private, no-store");
+  }
   return attachCorsHeaders(forwardedRequest, finalized);
 }
 
@@ -321,8 +324,7 @@ export async function middleware(request: NextRequest) {
     pathname,
     contentSecurityPolicy,
     { limit: rateLimit.limit, remaining: rateLimit.remaining },
-    pathname === "/api/health" ||
-      (hasNativeSessionHint(request) && !hasSupabaseAuthCookie(request))
+    pathname === "/api/health" || hasNativeSessionHint(request)
       ? { skipSessionRefresh: true }
       : undefined,
   );
