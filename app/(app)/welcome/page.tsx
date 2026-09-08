@@ -66,6 +66,11 @@ function WelcomeContent() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    if (params.get("native_handoff") === "1") {
+      params.delete("native_handoff");
+      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`;
+      window.history.replaceState(null, "", next);
+    }
     if (params.get("profile") === "1") {
       setProfileOpen(true);
     }

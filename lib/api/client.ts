@@ -6,7 +6,7 @@ import { withRetry } from "@/lib/resilience/retry";
 import { UpstreamHttpError } from "@/lib/resilience/error-taxonomy";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
-  isCapacitorNativeShell,
+  hasNativeHandoffClient,
   readNativeEntryAccessToken,
 } from "@/lib/native/native-entry-boot";
 
@@ -44,7 +44,7 @@ export async function getApiAuthHeaders(): Promise<Record<string, string>> {
   if (nativeToken) {
     return { Authorization: `Bearer ${nativeToken}` };
   }
-  if (isCapacitorNativeShell()) {
+  if (hasNativeHandoffClient()) {
     return {};
   }
   const supabase = tryCreateBrowserSupabaseClient();

@@ -11,7 +11,7 @@ import {
   TERMS_VERSION,
 } from "@/lib/legal/constants";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
-import { isCapacitorNativeShell } from "@/lib/native/native-entry-boot";
+import { hasNativeHandoffClient } from "@/lib/native/native-entry-boot";
 
 const SKIP_PREFIXES = [
   "/login",
@@ -54,7 +54,7 @@ export function LegalConsentSync() {
         return;
       }
 
-      if (!isCapacitorNativeShell()) {
+      if (!hasNativeHandoffClient()) {
         const supabase = tryCreateBrowserSupabaseClient();
         if (!supabase) return;
         const { data: userData } = await supabase.auth.getUser();

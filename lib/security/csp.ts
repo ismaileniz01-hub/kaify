@@ -1,4 +1,5 @@
 import { CSP_REPORT_GROUP, CSP_REPORT_PATH } from "@/lib/security/csp-report";
+import { NATIVE_ENTRY_BOOT_CSP_HASH } from "@/lib/native/native-entry-boot";
 
 /** Builds a per-request Content-Security-Policy with a cryptographic nonce. */
 export function isLegalContentPath(pathname: string): boolean {
@@ -46,6 +47,7 @@ export function buildContentSecurityPolicy(
     "script-src",
     "'self'",
     `'nonce-${nonce}'`,
+    `'${NATIVE_ENTRY_BOOT_CSP_HASH}'`,
     "'strict-dynamic'",
     "https://www.google.com",
     "https://www.gstatic.com",

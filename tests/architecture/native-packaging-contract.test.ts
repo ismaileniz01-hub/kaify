@@ -69,9 +69,15 @@ describe("native local packaging contract", () => {
       "formData",
     );
     expect(source("lib/native/native-entry-boot.ts")).toContain(
-      'form.method = "POST"',
+      "location.replace(",
     );
-    expect(source("lib/native/native-entry-boot.ts")).toContain("form.submit()");
+    expect(source("lib/native/native-entry-boot.ts")).toContain(
+      "NATIVE_WELCOME_HANDOFF_PATH",
+    );
+    expect(source("lib/native/native-entry-boot.ts")).toContain(
+      "NATIVE_HANDOFF_QUERY",
+    );
+    expect(source("lib/native/native-entry-boot.ts")).not.toContain("form.submit()");
     expect(source("lib/native/native-entry-boot.ts")).not.toContain("goWelcome");
     expect(source("app/api/auth/session/logout/route.ts")).toContain("signOut");
     expect(source("native-app/src/App.tsx")).toContain("signed_out");

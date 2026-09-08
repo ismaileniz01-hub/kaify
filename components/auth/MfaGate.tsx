@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import { getMfaAssurance } from "@/lib/auth/mfa";
-import { isCapacitorNativeShell } from "@/lib/native/native-entry-boot";
+import { hasNativeHandoffClient } from "@/lib/native/native-entry-boot";
 
 const MFA_VERIFY_PATH = "/login/mfa";
 const PUBLIC_PREFIXES = ["/login", "/signup", "/api/auth"];
@@ -27,7 +27,7 @@ export function MfaGate() {
 
     void (async () => {
       try {
-        if (isCapacitorNativeShell()) {
+        if (hasNativeHandoffClient()) {
           setChecked(true);
           return;
         }
@@ -49,7 +49,7 @@ export function MfaGate() {
           return;
         }
       } catch {
-        if (isCapacitorNativeShell()) {
+        if (hasNativeHandoffClient()) {
           setChecked(true);
           return;
         }

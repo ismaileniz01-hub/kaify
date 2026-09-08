@@ -20,7 +20,10 @@ import {
   isNativeShellOrigin,
   NATIVE_CORS_ALLOW_HEADERS,
 } from "@/lib/native/webview-request";
-import { NATIVE_SESSION_HINT_COOKIE } from "@/lib/native/native-entry-boot";
+import {
+  NATIVE_HANDOFF_QUERY,
+  NATIVE_SESSION_HINT_COOKIE,
+} from "@/lib/native/native-entry-boot";
 
 const RATE_LIMIT_CONFIG = {
   api: { requests: 400, windowMs: 60 * 1000 },
@@ -73,6 +76,21 @@ function hasSupabaseAuthCookie(request: NextRequest): boolean {
 
 function hasNativeSessionHint(request: NextRequest): boolean {
   return request.cookies.get(NATIVE_SESSION_HINT_COOKIE)?.value === "1";
+}
+
+function hasNativeHandoffQuery(request: NextRequest): boolean {
+  return request.nextUrl.searchParams.get(NATIVE_HANDOFF_QUERY) === "1";
+}
+
+function attachNativeSessionHint(response: NextResponse): void {
+  response.cookies.set(NATIVE_SESSION_HINT_COOKIE, "1", {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+    sameSite: "lax",
+    secure: true,
+    httpOnly: false,
+  });
+  response.headers.set("Cache-Control", "private, no-store");
 }
 
 function getRateLimitBucket(pathname: string): keyof typeof RATE_LIMIT_CONFIG {
@@ -148,8 +166,11 @@ async function finalizeResponse(
   }
 
   const finalized = await attachCsrfCookie(forwardedRequest, response);
-  if (hasNativeSessionHint(forwardedRequest)) {
-    finalized.headers.set("Cache-Control", "private, no-store");
+  if (
+    hasNativeSessionHint(forwardedRequest) ||
+    hasNativeHandoffQuery(forwardedRequest)
+  ) {
+    attachNativeSessionHint(finalized);
   }
   return attachCorsHeaders(forwardedRequest, finalized);
 }
@@ -296,7 +317,8 @@ export async function middleware(request: NextRequest) {
     isProtectedProductPath(pathname) &&
     !pathname.startsWith("/api/") &&
     !hasSupabaseAuthCookie(request) &&
-    !hasNativeSessionHint(request)
+    !hasNativeSessionHint(request) &&
+    !hasNativeHandoffQuery(request)
   ) {
     const login = request.nextUrl.clone();
     login.pathname = "/login";
@@ -336,7 +358,9 @@ export async function middleware(request: NextRequest) {
     pathname,
     contentSecurityPolicy,
     { limit: rateLimit.limit, remaining: rateLimit.remaining },
-    pathname === "/api/health" || hasNativeSessionHint(request)
+    pathname === "/api/health" ||
+    hasNativeSessionHint(request) ||
+    hasNativeHandoffQuery(request)
       ? { skipSessionRefresh: true }
       : undefined,
   );

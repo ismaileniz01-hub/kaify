@@ -43,9 +43,11 @@ import { alreadyCheckedInOnLocalDay } from "@/lib/check-in-gate";
 import {
   clearNativeEntryTokens,
   consumeNativeEntryHandoff,
+  hasNativeHandoffClient,
   hasNativeSessionHintCookie,
-  isCapacitorNativeShell,
+  NATIVE_ENTRY_ESTABLISH_PATH,
   readNativeEntryAccessToken,
+  readNativeEntrySession,
 } from "@/lib/native/native-entry-boot";
 
 const SESSION_GET_TIMEOUT_MS = 4_000;
@@ -111,7 +113,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshSession = useCallback(async () => {
-    const nativeShell = isCapacitorNativeShell();
+    const nativeShell = hasNativeHandoffClient();
     const isBackgroundRefresh = nativeShell || (hasHydrated && isAuthenticated);
     if (!isBackgroundRefresh) {
       setIsLoading(true);
@@ -132,6 +134,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setKai(bundle.kai);
       if (!nativeShell) {
         clearNativeEntryTokens();
+      } else {
+        const tokens = readNativeEntrySession();
+        if (tokens) {
+          void fetch(NATIVE_ENTRY_ESTABLISH_PATH, {
+            method: "POST",
+            credentials: "include",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(tokens),
+          }).catch(() => undefined);
+        }
       }
 
       if (
@@ -207,7 +219,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       };
     }
 
-    if (isCapacitorNativeShell()) {
+    if (hasNativeHandoffClient()) {
       void refreshSession();
       return () => {
         cancelled = true;
@@ -242,7 +254,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         { data: { session: null }, error: null },
       );
       if (cancelled) return;
-      if (data.session || hasBrowserAuthCookie() || consumeNativeEntryHandoff()) {
+      if (
+        data.session ||
+        hasBrowserAuthCookie() ||
+        consumeNativeEntryHandoff() ||
+        readNativeEntryAccessToken()
+      ) {
         void refreshSession();
         return;
       }

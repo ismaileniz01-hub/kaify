@@ -36,6 +36,8 @@ describe("middleware security contracts", () => {
     expect(middleware).toContain("hasNativeSessionHint");
     expect(middleware).toContain("NATIVE_SESSION_HINT_COOKIE");
     expect(middleware).toContain('pathname === "/api/health"');
+    expect(middleware).toContain("hasNativeHandoffQuery");
+    expect(middleware).toContain("NATIVE_HANDOFF_QUERY");
     expect(middleware).toContain("/api/auth/session/native-complete");
   });
 
@@ -55,25 +57,23 @@ describe("middleware security contracts", () => {
       join(process.cwd(), "app", "(app)", "login", "native-entry", "page.tsx"),
       "utf8",
     );
-    const nativeEntryLoading = readFileSync(
-      join(
-        process.cwd(),
-        "app",
-        "(app)",
-        "login",
-        "native-entry",
-        "loading.tsx",
-      ),
-      "utf8",
-    );
     expect(loginPage).not.toContain('from "@/components/auth/AuthLoadingFallback"');
     expect(loginPage).not.toContain('from "next/navigation"');
     expect(loginPage).not.toContain("<Suspense");
     expect(nativeEntry).not.toContain('"use client"');
-    expect(nativeEntry).toContain("x-nonce");
-    expect(nativeEntry).toContain("NATIVE_ENTRY_BOOT_SCRIPT");
-    expect(nativeEntryLoading).toContain("Kaify açılıyor");
-    expect(nativeEntryLoading).not.toContain("premium-skeleton");
+    expect(nativeEntry).not.toContain('from "next/headers"');
+    expect(nativeEntry).not.toContain("NATIVE_ENTRY_BOOT_SCRIPT");
+    const nativeEntryLayout = readFileSync(
+      join(process.cwd(), "app", "(app)", "login", "native-entry", "layout.tsx"),
+      "utf8",
+    );
+    expect(nativeEntryLayout).toContain("x-nonce");
+    expect(nativeEntryLayout).toContain("NATIVE_ENTRY_BOOT_SCRIPT");
+    expect(
+      existsSync(
+        join(process.cwd(), "app", "(app)", "login", "native-entry", "loading.tsx"),
+      ),
+    ).toBe(false);
     expect(
       existsSync(
         join(process.cwd(), "app", "(app)", "login", "loading.tsx"),

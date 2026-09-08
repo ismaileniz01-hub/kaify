@@ -1,13 +1,17 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
+  NATIVE_ENTRY_BOOT_CSP_HASH,
   NATIVE_ENTRY_BOOT_SCRIPT,
-  NATIVE_ENTRY_COMPLETE_PATH,
   NATIVE_ENTRY_TOKEN_KEY,
+  NATIVE_WELCOME_HANDOFF_PATH,
   clearNativeEntryTokens,
+  hasNativeHandoffQuery,
   isCapacitorNativeShell,
   nativeEntryShellUrl,
   parseNativeEntryHash,
   readNativeEntryAccessToken,
+  readNativeEntrySession,
 } from "@/lib/native/native-entry-boot";
 
 describe("native-entry boot", () => {
@@ -32,14 +36,20 @@ describe("native-entry boot", () => {
     );
   });
 
-  it("submits tokens as a same-origin document POST, not fetch", () => {
-    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain(NATIVE_ENTRY_COMPLETE_PATH);
-    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain('form.method = "POST"');
-    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain("form.submit()");
-    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain("accessToken");
-    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain("refreshToken");
+  it("opens Home immediately without fetch or form POST", () => {
+    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain("location.replace(");
+    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain(NATIVE_WELCOME_HANDOFF_PATH);
+    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain("document.cookie");
     expect(NATIVE_ENTRY_BOOT_SCRIPT).not.toContain("fetch(");
+    expect(NATIVE_ENTRY_BOOT_SCRIPT).not.toContain("form.submit()");
     expect(NATIVE_ENTRY_BOOT_SCRIPT).not.toContain("useEffect");
+    expect(hasNativeHandoffQuery("?native_handoff=1")).toBe(true);
+    expect(hasNativeHandoffQuery("?next=/welcome")).toBe(false);
+  });
+
+  it("pins a CSP hash that matches the boot script bytes", () => {
+    const hash = `sha256-${createHash("sha256").update(NATIVE_ENTRY_BOOT_SCRIPT.replace(/\r\n/g, "\n")).digest("base64")}`;
+    expect(NATIVE_ENTRY_BOOT_CSP_HASH).toBe(hash);
   });
 
   it("reads stored native-entry tokens without calling supabase", () => {
@@ -48,6 +58,10 @@ describe("native-entry boot", () => {
       JSON.stringify({ accessToken: "abc", refreshToken: "def" }),
     );
     expect(readNativeEntryAccessToken()).toBe("abc");
+    expect(readNativeEntrySession()).toEqual({
+      accessToken: "abc",
+      refreshToken: "def",
+    });
     clearNativeEntryTokens();
     expect(readNativeEntryAccessToken()).toBeNull();
     expect(isCapacitorNativeShell()).toBe(false);

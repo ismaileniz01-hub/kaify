@@ -44,6 +44,7 @@ describe("buildContentSecurityPolicy", () => {
   it("marketing and app CSPs both require a nonce and omit script unsafe-inline", () => {
     expect(csp).toContain(`'nonce-${nonce}'`);
     expect(csp).toContain("'strict-dynamic'");
+    expect(csp).toContain("'sha256-/KG0tyGqjuAMSc3v9TUCYb8RAJ3BPcaImOKMAmVUr80='");
     expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
     expect(csp).toContain("style-src 'self' 'unsafe-inline'");
   });

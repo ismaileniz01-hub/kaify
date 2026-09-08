@@ -16,7 +16,7 @@ describe("app-open waterfall (PERF-003)", () => {
     expect(sessionSrc).toMatch(/hasBrowserAuthCookie\(\)[\s\S]*refreshSession/);
     expect(sessionSrc).toContain("applyGuestState()");
     expect(sessionSrc).toContain("SESSION_GET_TIMEOUT_MS");
-    expect(sessionSrc).toContain("isCapacitorNativeShell");
+    expect(sessionSrc).toContain("hasNativeHandoffClient");
     expect(sessionSrc).toContain("probeCookieOrHandoff");
   });
 

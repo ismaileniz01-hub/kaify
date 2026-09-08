@@ -1,14 +1,10 @@
-import { headers } from "next/headers";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
-import { NATIVE_ENTRY_BOOT_SCRIPT } from "@/lib/native/native-entry-boot";
 
 /**
  * Capacitor hands off here after local auth. Hash tokens never hit the server.
- * Inline boot script sets cookies even if React hydration is delayed in WKWebView.
+ * The boot script is in layout.tsx so it runs with a CSP nonce on first HTML.
  */
-export default async function NativeEntryPage() {
-  const nonce = (await headers()).get("x-nonce") ?? "";
-
+export default function NativeEntryPage() {
   return (
     <div className="phone-shell login-page relative flex min-h-dvh flex-col">
       <FitnessWallpaper />
@@ -33,10 +29,6 @@ export default async function NativeEntryPage() {
           </button>
         </div>
       </main>
-      <script
-        nonce={nonce}
-        dangerouslySetInnerHTML={{ __html: NATIVE_ENTRY_BOOT_SCRIPT }}
-      />
     </div>
   );
 }

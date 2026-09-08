@@ -212,16 +212,16 @@ describe("iOS native session after OTP", () => {
 
   it("skips supabase getSession in the native WebView session boot", () => {
     const session = source("lib/session-context.tsx");
-    expect(session).toContain("isCapacitorNativeShell()");
+    expect(session).toContain("hasNativeHandoffClient()");
     expect(session).toContain("readNativeEntryAccessToken");
-    expect(session.indexOf("if (isCapacitorNativeShell())")).toBeLessThan(
+    expect(session.indexOf("if (hasNativeHandoffClient())")).toBeLessThan(
       session.indexOf("supabase.auth.getSession()"),
     );
     const client = source("lib/api/client.ts");
     expect(client).toContain("readNativeEntryAccessToken");
-    expect(client).toContain("isCapacitorNativeShell()");
+    expect(client).toContain("hasNativeHandoffClient()");
     expect(client).toContain("GET_SESSION_HEADER_TIMEOUT_MS");
-    expect(source("components/auth/MfaGate.tsx")).toContain("isCapacitorNativeShell()");
+    expect(source("components/auth/MfaGate.tsx")).toContain("hasNativeHandoffClient()");
   });
 
   it("does not suspend Home behind useSearchParams on iOS WebView", () => {
@@ -241,7 +241,7 @@ describe("iOS native session after OTP", () => {
       "nativeShell || (hasHydrated && isAuthenticated)",
     );
     expect(source("lib/session-context.tsx")).toMatch(
-      /if \(isCapacitorNativeShell\(\)\) \{\r?\n\s*void refreshSession\(\);/,
+      /if \(hasNativeHandoffClient\(\)\) \{\r?\n\s*void refreshSession\(\);/,
     );
     expect(source("lib/session-context.tsx")).toContain("if (!nativeShell)");
     expect(source("lib/auth/logout.ts")).toContain("clearNativeEntryTokens");

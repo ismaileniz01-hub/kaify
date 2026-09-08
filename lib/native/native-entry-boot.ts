@@ -2,6 +2,7 @@
 export const NATIVE_ENTRY_ESTABLISH_PATH = "/api/auth/session/establish";
 export const NATIVE_ENTRY_COMPLETE_PATH = "/api/auth/session/native-complete";
 export const NATIVE_ENTRY_SUCCESS_PATH = "/welcome";
+export const NATIVE_HANDOFF_QUERY = "native_handoff";
 export const NATIVE_ENTRY_TIMEOUT_MS = 12_000;
 export const NATIVE_ENTRY_STATUS_ID = "native-entry-status";
 
@@ -29,13 +30,28 @@ export const NATIVE_ENTRY_TOKEN_KEY = "kaify-native-entry";
 export const NATIVE_SESSION_HINT_COOKIE = "kaify_native_session";
 export const NATIVE_ENTRY_NAVIGATE_MS = 1_500;
 
-function readStoredNativeEntry(raw: string | null): string | null {
+/** Home after OTP. Query lets middleware skip guest redirect without Set-Cookie. */
+export const NATIVE_WELCOME_HANDOFF_PATH = `${NATIVE_ENTRY_SUCCESS_PATH}?${NATIVE_HANDOFF_QUERY}=1`;
+
+/** CSP hash of NATIVE_ENTRY_BOOT_SCRIPT so WKWebView can run it without a nonce race. */
+export const NATIVE_ENTRY_BOOT_CSP_HASH =
+  "sha256-/KG0tyGqjuAMSc3v9TUCYb8RAJ3BPcaImOKMAmVUr80=";
+
+type NativeEntryTokens = { accessToken: string; refreshToken: string };
+
+function readStoredNativeEntry(raw: string | null): NativeEntryTokens | null {
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as { accessToken?: unknown };
-    return typeof parsed.accessToken === "string" && parsed.accessToken.trim()
-      ? parsed.accessToken.trim()
-      : null;
+    const parsed = JSON.parse(raw) as {
+      accessToken?: unknown;
+      refreshToken?: unknown;
+    };
+    const accessToken =
+      typeof parsed.accessToken === "string" ? parsed.accessToken.trim() : "";
+    const refreshToken =
+      typeof parsed.refreshToken === "string" ? parsed.refreshToken.trim() : "";
+    if (!accessToken || !refreshToken) return null;
+    return { accessToken, refreshToken };
   } catch {
     return null;
   }
@@ -79,7 +95,7 @@ export function isCapacitorNativeShell(): boolean {
   }
 }
 
-export function readNativeEntryAccessToken(): string | null {
+export function readNativeEntrySession(): NativeEntryTokens | null {
   if (typeof sessionStorage !== "undefined") {
     const fromSession = readStoredNativeEntry(
       storageGet(sessionStorage, NATIVE_ENTRY_TOKEN_KEY),
@@ -90,6 +106,10 @@ export function readNativeEntryAccessToken(): string | null {
     return readStoredNativeEntry(storageGet(localStorage, NATIVE_ENTRY_TOKEN_KEY));
   }
   return null;
+}
+
+export function readNativeEntryAccessToken(): string | null {
+  return readNativeEntrySession()?.accessToken ?? null;
 }
 
 export function consumeNativeEntryHandoff(): boolean {
@@ -127,15 +147,37 @@ export function hasNativeSessionHintCookie(): boolean {
   );
 }
 
+export function hasNativeHandoffQuery(search = ""): boolean {
+  try {
+    const raw = search || (typeof window === "undefined" ? "" : window.location.search);
+    return new URLSearchParams(raw.replace(/^\?/, "")).get(NATIVE_HANDOFF_QUERY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Same-origin document POST. WKWebView keeps Set-Cookie on this navigation;
- * it does not reliably keep Set-Cookie from fetch(). Keep this IIFE import-free.
+ * iOS WebView after OTP: tokens in storage, hint cookie, or handoff query.
+ * Capacitor.isNativePlatform() is often missing on kaifyai.org allowNavigation.
+ */
+export function hasNativeHandoffClient(): boolean {
+  if (typeof window === "undefined") return false;
+  if (isCapacitorNativeShell()) return true;
+  if (readNativeEntryAccessToken()) return true;
+  if (hasNativeSessionHintCookie()) return true;
+  return hasNativeHandoffQuery();
+}
+
+/**
+ * Immediate Home handoff. Do not fetch or form-POST — WKWebView drops those
+ * cookies and the wait leaves users on "Kaify açılıyor". Keep this IIFE import-free.
  */
 export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
   var status = document.getElementById("native-entry-status");
   var actions = document.getElementById("native-entry-actions");
   var TOKEN_KEY = "${NATIVE_ENTRY_TOKEN_KEY}";
   var HANDOFF_KEY = "${NATIVE_ENTRY_HANDOFF_KEY}";
+  var HINT = "${NATIVE_SESSION_HINT_COOKIE}";
   function fail(msg) {
     if (status) {
       status.textContent = msg;
@@ -190,21 +232,8 @@ export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
     return;
   }
   saveStored(accessToken, refreshToken);
-  var form = document.createElement("form");
-  form.method = "POST";
-  form.enctype = "application/x-www-form-urlencoded";
-  form.action = "${NATIVE_ENTRY_COMPLETE_PATH}";
-  form.setAttribute("accept-charset", "UTF-8");
-  function addField(name, value) {
-    var input = document.createElement("input");
-    input.type = "hidden";
-    input.name = name;
-    input.value = value;
-    form.appendChild(input);
-  }
-  addField("accessToken", accessToken);
-  addField("refreshToken", refreshToken);
-  document.body.appendChild(form);
-  form.submit();
-})();`;
-
+  try {
+    document.cookie = HINT + "=1; Path=/; Max-Age=2592000; SameSite=Lax; Secure";
+  } catch (e) {}
+  location.replace("${NATIVE_WELCOME_HANDOFF_PATH}");
+})();`.replace(/\r\n/g, "\n");
