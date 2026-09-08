@@ -16,7 +16,6 @@ export const runtime = "nodejs";
  * WKWebView stores Set-Cookie on document navigations; it often drops
  * Set-Cookie from fetch/XHR. Do not convert this to JSON fetch.
  */
-export const NATIVE_SESSION_COMPLETE_PATH = "/api/auth/session/native-complete";
 
 function welcomeUrl(request: NextRequest): URL {
   return new URL("/welcome", request.url);
