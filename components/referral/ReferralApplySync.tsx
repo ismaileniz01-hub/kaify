@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { apiPost } from "@/lib/api/client";
 import { clearPendingReferral, getPendingReferral, REFERRAL_APPLIED_EVENT } from "@/lib/referral";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
+import { isCapacitorNativeShell } from "@/lib/native/native-entry-boot";
 
 const SKIP_PREFIXES = ["/login", "/signup", "/privacy", "/terms", "/cookies", "/api/"];
 
@@ -21,10 +22,12 @@ export function ReferralApplySync() {
       const code = getPendingReferral();
       if (!code) return;
 
-      const supabase = tryCreateBrowserSupabaseClient();
-      if (!supabase) return;
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
+      if (!isCapacitorNativeShell()) {
+        const supabase = tryCreateBrowserSupabaseClient();
+        if (!supabase) return;
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) return;
+      }
 
       try {
         await apiPost("/api/referral", { code });

@@ -8,11 +8,9 @@ import { WelcomeCard } from "@/components/welcome/WelcomeCard";
 import { StreakAtRiskBanner } from "@/components/streak/StreakAtRiskBanner";
 import { GemBalance } from "@/components/GemBalance";
 import { FreezieBalance } from "@/components/FreezieBalance";
-import { WelcomeSkeleton } from "@/components/welcome/WelcomeSkeleton";
 import { DailyMotivationQuote } from "@/components/welcome/DailyMotivationQuote";
 import { useSession } from "@/lib/session-context";
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import { useLang, LANG_OPTIONS, hasStoredLangPreference } from "@/lib/lang-context";
 import { captureReferralFromUrl, getPendingReferral } from "@/lib/referral";
 import { InlineAlert } from "@/components/InlineAlert";
@@ -52,7 +50,6 @@ function WelcomeContent() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [pendingReferral, setPendingReferral] = useState<string | null>(null);
-  const searchParams = useSearchParams();
   const { t, setLang, lang } = useLang();
   const {
     displayName,
@@ -61,27 +58,23 @@ function WelcomeContent() {
     gemBalance,
     streak,
     isPreviewMode,
-    isLoading,
     updateProfile,
     profile,
     isAuthenticated,
     refreshHome,
   } = useSession();
 
-  // ?profile=1 query param'ı ile gelindiyse profil modal'ını otomatik aç
   useEffect(() => {
-    if (searchParams?.get("profile") === "1") {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("profile") === "1") {
       setProfileOpen(true);
     }
-    if (searchParams?.get("goals") === "1") {
+    if (params.get("goals") === "1") {
       setGoalsOpen(true);
     }
-  }, [searchParams]);
-
-  useEffect(() => {
-    const code = captureReferralFromUrl(searchParams);
+    const code = captureReferralFromUrl(params);
     setPendingReferral(code ?? getPendingReferral());
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     // Kullanıcı cihazda açıkça bir dil seçtiyse, bayat profil locale'i
@@ -96,10 +89,6 @@ function WelcomeContent() {
   useEffect(() => {
     if (isAuthenticated) void refreshHome(lang);
   }, [lang, isAuthenticated, refreshHome]);
-
-  if (isLoading && isAuthenticated) {
-    return <WelcomeSkeleton />;
-  }
 
   return (
     <div className="phone-shell welcome-page relative flex flex-col overflow-hidden">
@@ -288,19 +277,6 @@ function WelcomeContent() {
   );
 }
 
-function WelcomeSuspenseFallback() {
-  const { t } = useLang();
-  return (
-    <div className="phone-shell flex items-center justify-center">
-      <p className="text-zinc-400">{t("welcome.loading")}</p>
-    </div>
-  );
-}
-
 export default function WelcomePage() {
-  return (
-    <Suspense fallback={<WelcomeSuspenseFallback />}>
-      <WelcomeContent />
-    </Suspense>
-  );
+  return <WelcomeContent />;
 }

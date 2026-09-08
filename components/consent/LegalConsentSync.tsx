@@ -11,6 +11,7 @@ import {
   TERMS_VERSION,
 } from "@/lib/legal/constants";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
+import { isCapacitorNativeShell } from "@/lib/native/native-entry-boot";
 
 const SKIP_PREFIXES = [
   "/login",
@@ -53,10 +54,12 @@ export function LegalConsentSync() {
         return;
       }
 
-      const supabase = tryCreateBrowserSupabaseClient();
-      if (!supabase) return;
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
+      if (!isCapacitorNativeShell()) {
+        const supabase = tryCreateBrowserSupabaseClient();
+        if (!supabase) return;
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) return;
+      }
 
       try {
         await apiPost("/api/consent", {

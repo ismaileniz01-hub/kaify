@@ -13,6 +13,7 @@ import {
 } from "@/lib/legal/constants";
 import { useLang } from "@/lib/lang-context";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
+import { isCapacitorNativeShell } from "@/lib/native/native-entry-boot";
 import { MotionDialog } from "@/components/ui/MotionDialog";
 
 const SKIP_PREFIXES = ["/login", "/signup", "/privacy", "/terms", "/cookies", "/kvkk", "/disclaimer", "/delete-account", "/api/"];
@@ -49,12 +50,14 @@ export function AiConsentGate() {
     }
 
     void (async () => {
-      const supabase = tryCreateBrowserSupabaseClient();
-      if (!supabase) return;
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
-        setStatus(null);
-        return;
+      if (!isCapacitorNativeShell()) {
+        const supabase = tryCreateBrowserSupabaseClient();
+        if (!supabase) return;
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) {
+          setStatus(null);
+          return;
+        }
       }
 
       try {

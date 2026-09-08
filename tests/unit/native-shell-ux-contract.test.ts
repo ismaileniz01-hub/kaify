@@ -223,4 +223,13 @@ describe("iOS native session after OTP", () => {
     expect(client).toContain("GET_SESSION_HEADER_TIMEOUT_MS");
     expect(source("components/auth/MfaGate.tsx")).toContain("isCapacitorNativeShell()");
   });
+
+  it("does not suspend Home behind useSearchParams on iOS WebView", () => {
+    const welcome = source("app/(app)/welcome/page.tsx");
+    expect(welcome).not.toContain("useSearchParams");
+    expect(welcome).not.toContain("WelcomeSuspenseFallback");
+    expect(welcome).not.toContain("welcome.loading");
+    expect(welcome).not.toContain("isLoading && isAuthenticated");
+    expect(welcome).toContain("window.location.search");
+  });
 });
