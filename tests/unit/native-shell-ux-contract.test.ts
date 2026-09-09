@@ -233,6 +233,10 @@ describe("iOS native session after OTP", () => {
     expect(welcome).toContain("returnToNativeLoginShell");
     expect(welcome).toContain("looksLikeNativeWebView");
     expect(welcome).toContain("nativeHandoff");
+    expect(welcome).toContain("sessionError");
+    expect(welcome).toContain(
+      "Keep ?native_handoff=1 until session authenticates",
+    );
   });
 
   it("does not keep Home on a route-level skeleton while the page loads", () => {
@@ -246,7 +250,14 @@ describe("iOS native session after OTP", () => {
       /if \(hasNativeHandoffClient\(\)\) \{\r?\n\s*void refreshSession\(\);/,
     );
     expect(source("lib/session-context.tsx")).toContain("if (!nativeShell)");
+    expect(source("lib/session-context.tsx")).toContain("tryEstablishNativeCookies");
     expect(source("lib/auth/logout.ts")).toContain("clearNativeEntryTokens");
     expect(source("lib/session-context.tsx")).toContain("returnToNativeLoginShell");
+    expect(source("lib/auth/native-session-redirect.ts")).toContain(
+      "nativeEntryHandoffUrl",
+    );
+    expect(source("lib/auth/native-session-redirect.ts")).toContain(
+      "/login/native-entry",
+    );
   });
 });

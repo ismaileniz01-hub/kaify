@@ -29,7 +29,7 @@ describe("native session consume (document GET)", () => {
     withCookies.mockImplementation((response: unknown) => response);
   });
 
-  it("sets cookies on a 303 to welcome after a valid ticket GET", async () => {
+  it("sets cookies on a 303 to native-entry hash after a valid ticket GET", async () => {
     setSession.mockResolvedValue({ error: null });
     const ticket = await issueNativeHandoffTicket({
       accessToken: "a".repeat(24),
@@ -40,9 +40,12 @@ describe("native session consume (document GET)", () => {
     );
     const response = await GET(request);
     expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe(
-      "https://kaifyai.org/welcome?native_handoff=1",
+    const location = response.headers.get("location") ?? "";
+    expect(location.startsWith("https://kaifyai.org/login/native-entry#")).toBe(
+      true,
     );
+    expect(location).toContain("access_token=");
+    expect(location).toContain("refresh_token=");
     expect(setSession).toHaveBeenCalledWith({
       access_token: "a".repeat(24),
       refresh_token: "r".repeat(16),

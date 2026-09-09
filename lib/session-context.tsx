@@ -120,8 +120,46 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
     }
     setSessionError(false);
+
+    const loadBundle = async () => apiGet<SessionBundleDTO>("/api/session");
+
+    const tryEstablishNativeCookies = async (): Promise<boolean> => {
+      const tokens = readNativeEntrySession();
+      if (!tokens) return false;
+      try {
+        const response = await fetch(NATIVE_ENTRY_ESTABLISH_PATH, {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(tokens),
+        });
+        return response.ok;
+      } catch {
+        return false;
+      }
+    };
+
     try {
-      const bundle = await apiGet<SessionBundleDTO>("/api/session");
+      let bundle: SessionBundleDTO;
+      try {
+        bundle = await loadBundle();
+      } catch (firstError) {
+        // Cookie jar empty but storage has tokens — establish once, then retry.
+        if (
+          firstError instanceof ApiClientError &&
+          firstError.code === "UNAUTHORIZED" &&
+          (nativeShell || Boolean(readNativeEntryAccessToken()))
+        ) {
+          const established = await tryEstablishNativeCookies();
+          if (established) {
+            bundle = await loadBundle();
+          } else {
+            throw firstError;
+          }
+        } else {
+          throw firstError;
+        }
+      }
       setIsAuthenticated(true);
       setIsPreviewMode(false);
       setProfile(bundle.profile);
@@ -136,15 +174,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (!nativeShell) {
         clearNativeEntryTokens();
       } else {
-        const tokens = readNativeEntrySession();
-        if (tokens) {
-          void fetch(NATIVE_ENTRY_ESTABLISH_PATH, {
-            method: "POST",
-            credentials: "include",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(tokens),
-          }).catch(() => undefined);
-        }
+        void tryEstablishNativeCookies();
       }
 
       if (

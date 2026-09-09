@@ -68,6 +68,9 @@ function WelcomeContent() {
     profile,
     isAuthenticated,
     isLoading,
+    sessionError,
+    clearSessionError,
+    refreshSession,
     refreshHome,
   } = useSession();
 
@@ -75,9 +78,8 @@ function WelcomeContent() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("native_handoff") === "1") {
       setNativeHandoff(true);
-      params.delete("native_handoff");
-      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`;
-      window.history.replaceState(null, "", next);
+      // Keep ?native_handoff=1 until session authenticates — SessionProvider
+      // and middleware both need it; stripping early races child effects.
     }
     if (params.get("profile") === "1") {
       setProfileOpen(true);
@@ -88,6 +90,16 @@ function WelcomeContent() {
     const code = captureReferralFromUrl(params);
     setPendingReferral(code ?? getPendingReferral());
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || !nativeHandoff) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("native_handoff") !== "1") return;
+    params.delete("native_handoff");
+    const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`;
+    window.history.replaceState(null, "", next);
+    setNativeHandoff(false);
+  }, [isAuthenticated, nativeHandoff]);
 
   useEffect(() => {
     // Kullanıcı cihazda açıkça bir dil seçtiyse, bayat profil locale'i
@@ -102,10 +114,13 @@ function WelcomeContent() {
   useEffect(() => {
     if (isLoading) return;
     if (isAuthenticated) return;
-    if (hasNativeHandoffClient() || nativeHandoff || looksLikeNativeWebView()) {
+    // Transient /api/session failures must not kick a fresh OTP handoff to login.
+    if (sessionError) return;
+    if (nativeHandoff || hasNativeHandoffClient()) return;
+    if (looksLikeNativeWebView()) {
       void returnToNativeLoginShell();
     }
-  }, [isLoading, isAuthenticated, nativeHandoff]);
+  }, [isLoading, isAuthenticated, nativeHandoff, sessionError]);
 
   useEffect(() => {
     if (isAuthenticated) void refreshHome(lang);
@@ -186,6 +201,17 @@ function WelcomeContent() {
                 {t("welcome.sign_in_cta")}
               </Link>
             </div>
+          )}
+          {sessionError && !isAuthenticated && (
+            <InlineAlert
+              variant="error"
+              className="mt-3 max-w-xs"
+              message="Bağlantı kurulamadı. Oturumun açık kalması için tekrar dene."
+              onRetry={() => {
+                clearSessionError();
+                void refreshSession();
+              }}
+            />
           )}
           {!isAuthenticated && pendingReferral && (
             <InlineAlert

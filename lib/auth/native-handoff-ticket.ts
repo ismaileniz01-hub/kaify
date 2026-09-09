@@ -92,8 +92,13 @@ export async function issueNativeHandoffTicket(
 ): Promise<string> {
   if (isCacheConfigured()) {
     const id = `${REDIS_PREFIX}${randomBytes(24).toString("base64url")}`;
-    await cacheSet(`${CACHE_KEY_PREFIX}${id}`, tokens, NATIVE_HANDOFF_TTL_SECONDS);
-    return id;
+    const stored = await cacheSet(
+      `${CACHE_KEY_PREFIX}${id}`,
+      tokens,
+      NATIVE_HANDOFF_TTL_SECONDS,
+    );
+    // Never hand out an r.* id that Redis did not store — consume would 303 to login.
+    if (stored) return id;
   }
   return `${SEALED_PREFIX}${seal(tokens)}`;
 }

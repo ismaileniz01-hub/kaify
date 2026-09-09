@@ -44,6 +44,8 @@ export async function getApiAuthHeaders(): Promise<Record<string, string>> {
   if (nativeToken) {
     return { Authorization: `Bearer ${nativeToken}` };
   }
+  // Cookie-only handoff: credentials:include carries sb-* cookies. Do not call
+  // getSession() while the hint cookie is the only signal — it can hang locks.
   if (hasNativeHandoffClient()) {
     return {};
   }
