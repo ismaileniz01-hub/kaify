@@ -1,12 +1,15 @@
 import { createHash } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
+  NATIVE_BEARER_COOKIE,
   NATIVE_ENTRY_BOOT_CSP_HASH,
   NATIVE_ENTRY_BOOT_SCRIPT,
   NATIVE_ENTRY_TOKEN_KEY,
   NATIVE_WELCOME_HANDOFF_PATH,
   clearNativeEntryTokens,
+  encodeNativeBearerCookieValue,
   hasNativeHandoffQuery,
+  hydrateNativeBearerCookie,
   isCapacitorNativeShell,
   nativeEntryShellUrl,
   parseNativeEntryHash,
@@ -40,6 +43,7 @@ describe("native-entry boot", () => {
     expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain("location.replace(");
     expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain(NATIVE_WELCOME_HANDOFF_PATH);
     expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain("document.cookie");
+    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain(NATIVE_BEARER_COOKIE);
     expect(NATIVE_ENTRY_BOOT_SCRIPT).not.toContain("fetch(");
     expect(NATIVE_ENTRY_BOOT_SCRIPT).not.toContain("form.submit()");
     expect(NATIVE_ENTRY_BOOT_SCRIPT).not.toContain("useEffect");
@@ -65,5 +69,34 @@ describe("native-entry boot", () => {
     clearNativeEntryTokens();
     expect(readNativeEntryAccessToken()).toBeNull();
     expect(isCapacitorNativeShell()).toBe(false);
+  });
+
+  it("hydrates a short-lived bearer cookie into storage", () => {
+    clearNativeEntryTokens();
+    const value = encodeNativeBearerCookieValue({
+      accessToken: "tok-access",
+      refreshToken: "tok-refresh",
+    });
+    let jar = `${NATIVE_BEARER_COOKIE}=${value}`;
+    vi.stubGlobal("document", {
+      get cookie() {
+        return jar;
+      },
+      set cookie(next: string) {
+        if (next.includes("Max-Age=0")) {
+          const name = next.split("=")[0] ?? "";
+          jar = jar
+            .split("; ")
+            .filter((part) => !part.startsWith(`${name}=`))
+            .join("; ");
+          return;
+        }
+        jar = next.split(";")[0] ?? next;
+      },
+    });
+    expect(hydrateNativeBearerCookie()).toBe(true);
+    expect(readNativeEntryAccessToken()).toBe("tok-access");
+    clearNativeEntryTokens();
+    vi.unstubAllGlobals();
   });
 });

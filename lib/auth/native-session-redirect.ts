@@ -1,18 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerSupabase } from "@/lib/supabase/route-handler";
 import {
+  NATIVE_BEARER_COOKIE,
+  NATIVE_BEARER_COOKIE_MAX_AGE_SEC,
   NATIVE_SESSION_HINT_COOKIE,
+  encodeNativeBearerCookieValue,
   nativeEntryShellUrl,
 } from "@/lib/native/native-entry-boot";
 
-/** Legacy direct Home URL — prefer nativeEntryHandoffUrl so Bearer lands in storage. */
+/** Home after a successful native session establish. */
 export function nativeWelcomeUrl(request: NextRequest): URL {
   return new URL("/welcome?native_handoff=1", request.url);
 }
 
 /**
- * First-party hash handoff on kaifyai.org. Boot script stores tokens then opens Home.
- * WKWebView often drops httpOnly cookies after OTP; Bearer in origin storage is the backup.
+ * Legacy hash handoff via native-entry. Prefer welcome + bearer cookie —
+ * WKWebView often drops Location fragments on 303 redirects.
  */
 export function nativeEntryHandoffUrl(
   request: NextRequest,
@@ -47,10 +50,8 @@ export async function redirectNativeSession(
   if (error) {
     return NextResponse.redirect(nativeLoginErrorUrl(request), 303);
   }
-  const redirect = NextResponse.redirect(
-    nativeEntryHandoffUrl(request, tokens),
-    303,
-  );
+  // Direct Home — bearer cookie carries JWTs when httpOnly sb-* cookies are dropped.
+  const redirect = NextResponse.redirect(nativeWelcomeUrl(request), 303);
   withCookies(redirect);
   redirect.cookies.set(NATIVE_SESSION_HINT_COOKIE, "1", {
     path: "/",
@@ -59,6 +60,17 @@ export async function redirectNativeSession(
     secure: true,
     httpOnly: false,
   });
+  redirect.cookies.set(
+    NATIVE_BEARER_COOKIE,
+    encodeNativeBearerCookieValue(tokens),
+    {
+      path: "/",
+      maxAge: NATIVE_BEARER_COOKIE_MAX_AGE_SEC,
+      sameSite: "lax",
+      secure: true,
+      httpOnly: false,
+    },
+  );
   redirect.headers.set("Cache-Control", "private, no-store");
   return redirect;
 }

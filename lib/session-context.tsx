@@ -46,6 +46,7 @@ import {
   consumeNativeEntryHandoff,
   hasNativeHandoffClient,
   hasNativeSessionHintCookie,
+  hydrateNativeBearerCookie,
   NATIVE_ENTRY_ESTABLISH_PATH,
   readNativeEntryAccessToken,
   readNativeEntrySession,
@@ -114,6 +115,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshSession = useCallback(async () => {
+    hydrateNativeBearerCookie();
     const nativeShell = hasNativeHandoffClient();
     const isBackgroundRefresh = nativeShell || (hasHydrated && isAuthenticated);
     if (!isBackgroundRefresh) {
@@ -251,6 +253,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         cancelled = true;
       };
     }
+
+    hydrateNativeBearerCookie();
 
     if (hasNativeHandoffClient()) {
       void refreshSession();

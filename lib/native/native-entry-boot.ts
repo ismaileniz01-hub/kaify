@@ -28,6 +28,9 @@ export function nativeEntryShellUrl(userAgent: string): string {
 export const NATIVE_ENTRY_HANDOFF_KEY = "kaify-native-handoff";
 export const NATIVE_ENTRY_TOKEN_KEY = "kaify-native-entry";
 export const NATIVE_SESSION_HINT_COOKIE = "kaify_native_session";
+/** Short-lived JS-readable bearer after native-consume — survives WKWebView hash drops. */
+export const NATIVE_BEARER_COOKIE = "kaify_native_bearer";
+export const NATIVE_BEARER_COOKIE_MAX_AGE_SEC = 120;
 export const NATIVE_ENTRY_NAVIGATE_MS = 1_500;
 
 /** Home after OTP. Query lets middleware skip guest redirect without Set-Cookie. */
@@ -35,9 +38,36 @@ export const NATIVE_WELCOME_HANDOFF_PATH = `${NATIVE_ENTRY_SUCCESS_PATH}?${NATIV
 
 /** CSP hash of NATIVE_ENTRY_BOOT_SCRIPT so WKWebView can run it without a nonce race. */
 export const NATIVE_ENTRY_BOOT_CSP_HASH =
-  "sha256-/KG0tyGqjuAMSc3v9TUCYb8RAJ3BPcaImOKMAmVUr80=";
+  "sha256-8FHQQnrmGEZYMi8klN8ug8Y+0REq7qOXbi2JUhAm76Y=";
 
 type NativeEntryTokens = { accessToken: string; refreshToken: string };
+
+/** base64url(JSON) for Set-Cookie — avoids `;` / space breakage in WKWebView. */
+export function encodeNativeBearerCookieValue(
+  tokens: NativeEntryTokens,
+): string {
+  return Buffer.from(
+    JSON.stringify({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    }),
+    "utf8",
+  ).toString("base64url");
+}
+
+function decodeBase64UrlJson(raw: string): NativeEntryTokens | null {
+  try {
+    const normalized = raw.replace(/-/g, "+").replace(/_/g, "/");
+    const pad = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+    const json =
+      typeof atob === "function"
+        ? atob(normalized + pad)
+        : Buffer.from(raw, "base64url").toString("utf8");
+    return readStoredNativeEntry(json);
+  } catch {
+    return null;
+  }
+}
 
 function readStoredNativeEntry(raw: string | null): NativeEntryTokens | null {
   if (!raw) return null;
@@ -73,6 +103,64 @@ function storageRemove(storage: Storage, key: string): void {
   }
 }
 
+function writeNativeEntryTokens(tokens: NativeEntryTokens): void {
+  const payload = JSON.stringify(tokens);
+  if (typeof sessionStorage !== "undefined") {
+    try {
+      sessionStorage.setItem(NATIVE_ENTRY_TOKEN_KEY, payload);
+      sessionStorage.setItem(NATIVE_ENTRY_HANDOFF_KEY, "1");
+    } catch {
+      // ignore
+    }
+  }
+  if (typeof localStorage !== "undefined") {
+    try {
+      localStorage.setItem(NATIVE_ENTRY_TOKEN_KEY, payload);
+      localStorage.setItem(NATIVE_ENTRY_HANDOFF_KEY, "1");
+    } catch {
+      // ignore
+    }
+  }
+}
+
+function readCookieValue(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const prefix = `${name}=`;
+  for (const part of document.cookie.split(";")) {
+    const trimmed = part.trim();
+    if (trimmed.startsWith(prefix)) {
+      return trimmed.slice(prefix.length);
+    }
+  }
+  return null;
+}
+
+function clearCookie(name: string): void {
+  if (typeof document === "undefined") return;
+  document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax; Secure`;
+}
+
+/**
+ * Move the short-lived Set-Cookie bearer into origin storage, then clear the cookie.
+ * Must run before the first /api/session call on Welcome.
+ */
+export function hydrateNativeBearerCookie(): boolean {
+  const raw = readCookieValue(NATIVE_BEARER_COOKIE);
+  if (!raw) return false;
+  let decoded = decodeBase64UrlJson(raw);
+  if (!decoded) {
+    try {
+      decoded = readStoredNativeEntry(decodeURIComponent(raw));
+    } catch {
+      decoded = null;
+    }
+  }
+  clearCookie(NATIVE_BEARER_COOKIE);
+  if (!decoded) return false;
+  writeNativeEntryTokens(decoded);
+  return true;
+}
+
 /** WKWebView still reports native after loading kaifyai.org. Never await getSession there. */
 export function isCapacitorNativeShell(): boolean {
   if (typeof window === "undefined") return false;
@@ -96,6 +184,7 @@ export function isCapacitorNativeShell(): boolean {
 }
 
 export function readNativeEntrySession(): NativeEntryTokens | null {
+  hydrateNativeBearerCookie();
   if (typeof sessionStorage !== "undefined") {
     const fromSession = readStoredNativeEntry(
       storageGet(sessionStorage, NATIVE_ENTRY_TOKEN_KEY),
@@ -113,6 +202,7 @@ export function readNativeEntryAccessToken(): string | null {
 }
 
 export function consumeNativeEntryHandoff(): boolean {
+  hydrateNativeBearerCookie();
   let handoff = false;
   if (typeof sessionStorage !== "undefined") {
     handoff = storageGet(sessionStorage, NATIVE_ENTRY_HANDOFF_KEY) === "1";
@@ -135,9 +225,8 @@ export function clearNativeEntryTokens(): void {
     storageRemove(localStorage, NATIVE_ENTRY_TOKEN_KEY);
     storageRemove(localStorage, NATIVE_ENTRY_HANDOFF_KEY);
   }
-  if (typeof document !== "undefined") {
-    document.cookie = `${NATIVE_SESSION_HINT_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax; Secure`;
-  }
+  clearCookie(NATIVE_SESSION_HINT_COOKIE);
+  clearCookie(NATIVE_BEARER_COOKIE);
 }
 
 export function hasNativeSessionHintCookie(): boolean {
@@ -145,6 +234,10 @@ export function hasNativeSessionHintCookie(): boolean {
   return document.cookie.split(";").some((part) =>
     part.trim().startsWith(`${NATIVE_SESSION_HINT_COOKIE}=`),
   );
+}
+
+export function hasNativeBearerCookie(): boolean {
+  return Boolean(readCookieValue(NATIVE_BEARER_COOKIE));
 }
 
 export function hasNativeHandoffQuery(search = ""): boolean {
@@ -162,9 +255,11 @@ export function hasNativeHandoffQuery(search = ""): boolean {
  */
 export function hasNativeHandoffClient(): boolean {
   if (typeof window === "undefined") return false;
+  hydrateNativeBearerCookie();
   if (isCapacitorNativeShell()) return true;
   if (readNativeEntryAccessToken()) return true;
   if (hasNativeSessionHintCookie()) return true;
+  if (hasNativeBearerCookie()) return true;
   return hasNativeHandoffQuery();
 }
 
@@ -178,6 +273,7 @@ export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
   var TOKEN_KEY = "${NATIVE_ENTRY_TOKEN_KEY}";
   var HANDOFF_KEY = "${NATIVE_ENTRY_HANDOFF_KEY}";
   var HINT = "${NATIVE_SESSION_HINT_COOKIE}";
+  var BEARER = "${NATIVE_BEARER_COOKIE}";
   function fail(msg) {
     if (status) {
       status.textContent = msg;
@@ -191,6 +287,33 @@ export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
     if (/Android/i.test(ua)) location.replace("https://localhost/?signed_out=1");
     else if (/iPhone|iPad|iPod/i.test(ua)) location.replace("capacitor://localhost/?signed_out=1");
     else location.replace("/login");
+  }
+  function readCookie(name) {
+    var prefix = name + "=";
+    var parts = document.cookie.split(";");
+    for (var i = 0; i < parts.length; i++) {
+      var trimmed = parts[i].trim();
+      if (trimmed.indexOf(prefix) === 0) return trimmed.slice(prefix.length);
+    }
+    return "";
+  }
+  function clearCookie(name) {
+    document.cookie = name + "=; Path=/; Max-Age=0; SameSite=Lax; Secure";
+  }
+  function decodeBearer(raw) {
+    if (!raw) return null;
+    try {
+      var normalized = raw.replace(/-/g, "+").replace(/_/g, "/");
+      var pad = normalized.length % 4 === 0 ? "" : Array(5 - normalized.length % 4).join("=");
+      var json = atob(normalized + pad);
+      return JSON.parse(json);
+    } catch (e) {
+      try {
+        return JSON.parse(decodeURIComponent(raw));
+      } catch (e2) {
+        return null;
+      }
+    }
   }
   function readStored() {
     try {
@@ -220,6 +343,14 @@ export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
   var params = new URLSearchParams(location.hash.replace(/^#/, ""));
   var accessToken = params.get("access_token") || "";
   var refreshToken = params.get("refresh_token") || "";
+  if (!accessToken || !refreshToken) {
+    var fromCookie = decodeBearer(readCookie(BEARER));
+    if (fromCookie) {
+      accessToken = fromCookie.accessToken || "";
+      refreshToken = fromCookie.refreshToken || "";
+      clearCookie(BEARER);
+    }
+  }
   if (!accessToken || !refreshToken) {
     var stored = readStored();
     if (stored) {

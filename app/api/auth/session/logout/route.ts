@@ -3,7 +3,7 @@ import { ApiError } from "@/lib/api/errors";
 import { fail, ok } from "@/lib/api/response";
 import { createRouteHandlerSupabase } from "@/lib/supabase/route-handler";
 import { SupabaseEnvError } from "@/lib/supabase/env";
-import { NATIVE_SESSION_HINT_COOKIE } from "@/lib/native/native-entry-boot";
+import { NATIVE_BEARER_COOKIE, NATIVE_SESSION_HINT_COOKIE } from "@/lib/native/native-entry-boot";
 
 export const runtime = "nodejs";
 
@@ -24,6 +24,13 @@ export const POST = defineRouteRaw(
       await supabase.auth.signOut({ scope: "local" });
       const signedOut = withCookies(ok({ signedOut: true as const }));
       signedOut.cookies.set(NATIVE_SESSION_HINT_COOKIE, "", {
+        path: "/",
+        maxAge: 0,
+        sameSite: "lax",
+        secure: true,
+        httpOnly: false,
+      });
+      signedOut.cookies.set(NATIVE_BEARER_COOKIE, "", {
         path: "/",
         maxAge: 0,
         sameSite: "lax",

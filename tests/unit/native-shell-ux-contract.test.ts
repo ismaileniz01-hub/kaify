@@ -251,13 +251,20 @@ describe("iOS native session after OTP", () => {
     );
     expect(source("lib/session-context.tsx")).toContain("if (!nativeShell)");
     expect(source("lib/session-context.tsx")).toContain("tryEstablishNativeCookies");
+    expect(source("lib/session-context.tsx")).toContain("hydrateNativeBearerCookie");
     expect(source("lib/auth/logout.ts")).toContain("clearNativeEntryTokens");
     expect(source("lib/session-context.tsx")).toContain("returnToNativeLoginShell");
     expect(source("lib/auth/native-session-redirect.ts")).toContain(
-      "nativeEntryHandoffUrl",
+      "NATIVE_BEARER_COOKIE",
     );
     expect(source("lib/auth/native-session-redirect.ts")).toContain(
-      "/login/native-entry",
+      "nativeWelcomeUrl",
+    );
+    expect(source("lib/native/native-entry-boot.ts")).toContain(
+      "hydrateNativeBearerCookie",
+    );
+    expect(existsSync(join(process.cwd(), "app", "(app)", "messages", "loading.tsx"))).toBe(
+      false,
     );
   });
 });

@@ -183,7 +183,12 @@ function WelcomeContent() {
               fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
             }}
           >
-            {t("welcome.title", { name: displayName })}
+            {t("welcome.title", {
+              name:
+                isAuthenticated || (!isLoading && !nativeHandoff)
+                  ? displayName
+                  : "…",
+            })}
           </h1>
           <p className="mt-4 max-w-[280px] text-sm font-medium leading-relaxed text-purple-100/80">
             <DailyMotivationQuote
@@ -191,7 +196,10 @@ function WelcomeContent() {
               fallback={t("welcome.subtitle")}
             />
           </p>
-          {isPreviewMode && (
+          {isPreviewMode &&
+            !isLoading &&
+            !nativeHandoff &&
+            !hasNativeHandoffClient() && (
             <div className="mt-3 space-y-2">
               <p className="text-[10px] text-amber-400/80">{t("welcome.preview_mode")}</p>
               <Link

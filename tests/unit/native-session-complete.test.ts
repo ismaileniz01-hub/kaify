@@ -27,7 +27,7 @@ describe("native session complete (document POST)", () => {
     withCookies.mockImplementation((response: unknown) => response);
   });
 
-  it("sets cookies on a 303 to native-entry hash after a form POST", async () => {
+  it("sets cookies on a 303 to welcome after a form POST", async () => {
     setSession.mockResolvedValue({ error: null });
     const body = new URLSearchParams({
       accessToken: "a".repeat(24),
@@ -41,11 +41,9 @@ describe("native session complete (document POST)", () => {
 
     const response = await POST(request as never);
     expect(response.status).toBe(303);
-    const location = response.headers.get("location") ?? "";
-    expect(location.startsWith("https://kaifyai.org/login/native-entry#")).toBe(
-      true,
+    expect(response.headers.get("location")).toBe(
+      "https://kaifyai.org/welcome?native_handoff=1",
     );
-    expect(location).toContain(`access_token=${"a".repeat(24)}`);
     expect(setSession).toHaveBeenCalledWith({
       access_token: "a".repeat(24),
       refresh_token: "r".repeat(16),
