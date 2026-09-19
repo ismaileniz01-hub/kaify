@@ -29,7 +29,7 @@ describe("native session consume (document GET)", () => {
     withCookies.mockImplementation((response: unknown) => response);
   });
 
-  it("sets cookies on a 303 to welcome with a short-lived bearer cookie", async () => {
+  it("returns HTML that embeds tokens so iOS can store them without Set-Cookie", async () => {
     setSession.mockResolvedValue({ error: null });
     const ticket = await issueNativeHandoffTicket({
       accessToken: "a".repeat(24),
@@ -39,10 +39,13 @@ describe("native session consume (document GET)", () => {
       `https://kaifyai.org/api/auth/session/native-consume?ticket=${encodeURIComponent(ticket)}`,
     );
     const response = await GET(request);
-    expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe(
-      "https://kaifyai.org/welcome?native_handoff=1",
-    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/html");
+    const html = await response.text();
+    expect(html).toContain("kaify-native-handoff");
+    expect(html).toContain("a".repeat(24));
+    expect(html).toContain("r".repeat(16));
+    expect(html).toContain("/welcome?native_handoff=1");
     expect(setSession).toHaveBeenCalledWith({
       access_token: "a".repeat(24),
       refresh_token: "r".repeat(16),

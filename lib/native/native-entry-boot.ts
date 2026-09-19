@@ -31,6 +31,8 @@ export const NATIVE_SESSION_HINT_COOKIE = "kaify_native_session";
 /** Short-lived JS-readable bearer after native-consume — survives WKWebView hash drops. */
 export const NATIVE_BEARER_COOKIE = "kaify_native_bearer";
 export const NATIVE_BEARER_COOKIE_MAX_AGE_SEC = 120;
+/** Inline JSON on the consume HTML document — WKWebView keeps the body, not Set-Cookie. */
+export const NATIVE_HANDOFF_PAYLOAD_ID = "kaify-native-handoff";
 export const NATIVE_ENTRY_NAVIGATE_MS = 1_500;
 
 /** Home after OTP. Query lets middleware skip guest redirect without Set-Cookie. */
@@ -38,7 +40,7 @@ export const NATIVE_WELCOME_HANDOFF_PATH = `${NATIVE_ENTRY_SUCCESS_PATH}?${NATIV
 
 /** CSP hash of NATIVE_ENTRY_BOOT_SCRIPT so WKWebView can run it without a nonce race. */
 export const NATIVE_ENTRY_BOOT_CSP_HASH =
-  "sha256-8FHQQnrmGEZYMi8klN8ug8Y+0REq7qOXbi2JUhAm76Y=";
+  "sha256-U9543+twgsvXXHE2vUOaybKHhy/djWJ4yHFIUNNGFk4=";
 
 type NativeEntryTokens = { accessToken: string; refreshToken: string };
 
@@ -53,6 +55,14 @@ export function encodeNativeBearerCookieValue(
     }),
     "utf8",
   ).toString("base64url");
+}
+
+/** JSON for a hidden div — JWTs are base64url; still escape `<` for HTML. */
+export function encodeNativeHandoffPayload(tokens: NativeEntryTokens): string {
+  return JSON.stringify({
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+  }).replace(/</g, "\\u003c");
 }
 
 function decodeBase64UrlJson(raw: string): NativeEntryTokens | null {
@@ -344,6 +354,16 @@ export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
   var accessToken = params.get("access_token") || "";
   var refreshToken = params.get("refresh_token") || "";
   if (!accessToken || !refreshToken) {
+    var payloadEl = document.getElementById("${NATIVE_HANDOFF_PAYLOAD_ID}");
+    if (payloadEl && payloadEl.textContent) {
+      try {
+        var fromPage = JSON.parse(payloadEl.textContent);
+        accessToken = fromPage.accessToken || "";
+        refreshToken = fromPage.refreshToken || "";
+      } catch (e) {}
+    }
+  }
+  if (!accessToken || !refreshToken) {
     var fromCookie = decodeBearer(readCookie(BEARER));
     if (fromCookie) {
       accessToken = fromCookie.accessToken || "";
@@ -368,3 +388,29 @@ export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
   } catch (e) {}
   location.replace("${NATIVE_WELCOME_HANDOFF_PATH}");
 })();`.replace(/\r\n/g, "\n");
+
+/**
+ * First-party HTML after native OTP. iOS WKWebView stores this document body
+ * even when it drops Set-Cookie and Location fragments on a 303.
+ */
+export function nativeSessionHandoffHtml(tokens: NativeEntryTokens): string {
+  const payload = encodeNativeHandoffPayload(tokens);
+  return `<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex"/>
+<title>Kaify</title>
+</head>
+<body>
+<p id="${NATIVE_ENTRY_STATUS_ID}">Kaify açılıyor…</p>
+<div id="native-entry-actions" hidden>
+<button type="button" id="native-entry-retry">Tekrar dene</button>
+<button type="button" id="native-entry-back">Girişe dön</button>
+</div>
+<div id="${NATIVE_HANDOFF_PAYLOAD_ID}" hidden>${payload}</div>
+<script>${NATIVE_ENTRY_BOOT_SCRIPT}</script>
+</body>
+</html>`;
+}

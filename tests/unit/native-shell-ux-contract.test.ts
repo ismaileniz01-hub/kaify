@@ -258,6 +258,9 @@ describe("iOS native session after OTP", () => {
       "NATIVE_BEARER_COOKIE",
     );
     expect(source("lib/auth/native-session-redirect.ts")).toContain(
+      "nativeSessionHandoffHtml",
+    );
+    expect(source("lib/auth/native-session-redirect.ts")).toContain(
       "nativeWelcomeUrl",
     );
     expect(source("lib/native/native-entry-boot.ts")).toContain(

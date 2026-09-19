@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getDisposableRisk } from "./disposable-domains";
 import { logger } from "@/lib/logger";
 import { validateRecaptcha as verifyRecaptchaToken } from "@/lib/security/recaptcha";
-import { isNativeShellOrigin } from "@/lib/native/webview-request";
+import { isNativeShellOrigin, isNativeWebViewRequest } from "@/lib/native/webview-request";
 
 // ──────────────────────────────────────────────
 // 1. Zod Schemas — Tüm API route'ları için
@@ -173,6 +173,11 @@ export function isAllowedOrigin(request: NextRequest): boolean {
 
   // Capacitor Android WebView origin is often https://localhost.
   if (isNativeShellOrigin(origin)) {
+    return true;
+  }
+  // iOS WKWebView often omits Origin on public OTP POSTs; UA / X-Client-Version
+  // still mark the Capacitor shell. Never treat a present foreign origin as native.
+  if (!origin && isNativeWebViewRequest(request)) {
     return true;
   }
   if (referer) {

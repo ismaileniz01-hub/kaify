@@ -5,7 +5,9 @@ import {
   NATIVE_ENTRY_BOOT_CSP_HASH,
   NATIVE_ENTRY_BOOT_SCRIPT,
   NATIVE_ENTRY_TOKEN_KEY,
+  NATIVE_HANDOFF_PAYLOAD_ID,
   NATIVE_WELCOME_HANDOFF_PATH,
+  nativeSessionHandoffHtml,
   clearNativeEntryTokens,
   encodeNativeBearerCookieValue,
   hasNativeHandoffQuery,
@@ -47,6 +49,7 @@ describe("native-entry boot", () => {
     expect(NATIVE_ENTRY_BOOT_SCRIPT).not.toContain("fetch(");
     expect(NATIVE_ENTRY_BOOT_SCRIPT).not.toContain("form.submit()");
     expect(NATIVE_ENTRY_BOOT_SCRIPT).not.toContain("useEffect");
+    expect(NATIVE_ENTRY_BOOT_SCRIPT).toContain(NATIVE_HANDOFF_PAYLOAD_ID);
     expect(hasNativeHandoffQuery("?native_handoff=1")).toBe(true);
     expect(hasNativeHandoffQuery("?next=/welcome")).toBe(false);
   });
@@ -54,6 +57,16 @@ describe("native-entry boot", () => {
   it("pins a CSP hash that matches the boot script bytes", () => {
     const hash = `sha256-${createHash("sha256").update(NATIVE_ENTRY_BOOT_SCRIPT.replace(/\r\n/g, "\n")).digest("base64")}`;
     expect(NATIVE_ENTRY_BOOT_CSP_HASH).toBe(hash);
+  });
+
+  it("embeds tokens in consume HTML for WKWebView storage", () => {
+    const html = nativeSessionHandoffHtml({
+      accessToken: "tok-a",
+      refreshToken: "tok-r",
+    });
+    expect(html).toContain(`id="${NATIVE_HANDOFF_PAYLOAD_ID}"`);
+    expect(html).toContain('"accessToken":"tok-a"');
+    expect(html).toContain("location.replace(");
   });
 
   it("reads stored native-entry tokens without calling supabase", () => {

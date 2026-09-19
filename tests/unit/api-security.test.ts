@@ -96,6 +96,31 @@ describe("isAllowedOrigin", () => {
     const req = fakeRequest({ origin: "https://localhost" }, "POST");
     expect(isAllowedOrigin(req)).toBe(true);
   });
+
+  it("allows iOS WKWebView OTP POSTs that omit Origin", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const req = fakeRequest(
+      {
+        "user-agent":
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+        "x-client-version": "native-1.0.5",
+      },
+      "POST",
+    );
+    expect(isAllowedOrigin(req)).toBe(true);
+  });
+
+  it("still rejects a foreign origin even with a native client version", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const req = fakeRequest(
+      {
+        origin: "https://evil.example",
+        "x-client-version": "native-1.0.5",
+      },
+      "POST",
+    );
+    expect(isAllowedOrigin(req)).toBe(false);
+  });
 });
 
 describe("checkDisposableEmail", () => {

@@ -6,15 +6,16 @@ import {
   NATIVE_SESSION_HINT_COOKIE,
   encodeNativeBearerCookieValue,
   nativeEntryShellUrl,
+  nativeSessionHandoffHtml,
 } from "@/lib/native/native-entry-boot";
 
-/** Home after a successful native session establish. */
+/** Home after a successful native session establish (query-only fallback). */
 export function nativeWelcomeUrl(request: NextRequest): URL {
   return new URL("/welcome?native_handoff=1", request.url);
 }
 
 /**
- * Legacy hash handoff via native-entry. Prefer welcome + bearer cookie —
+ * Legacy hash handoff via native-entry. Prefer consume HTML —
  * WKWebView often drops Location fragments on 303 redirects.
  */
 export function nativeEntryHandoffUrl(
@@ -38,6 +39,31 @@ export function nativeLoginErrorUrl(request: NextRequest): URL {
   return new URL("/login?native_session=0", request.url);
 }
 
+function attachNativeSessionCookies(
+  response: NextResponse,
+  tokens: { accessToken: string; refreshToken: string },
+): void {
+  response.cookies.set(NATIVE_SESSION_HINT_COOKIE, "1", {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+    sameSite: "lax",
+    secure: true,
+    httpOnly: false,
+  });
+  const bearer = encodeNativeBearerCookieValue(tokens);
+  // Safari/WKWebView silently drops cookies over ~4KB; skip rather than lose the jar.
+  if (bearer.length < 3500) {
+    response.cookies.set(NATIVE_BEARER_COOKIE, bearer, {
+      path: "/",
+      maxAge: NATIVE_BEARER_COOKIE_MAX_AGE_SEC,
+      sameSite: "lax",
+      secure: true,
+      httpOnly: false,
+    });
+  }
+  response.headers.set("Cache-Control", "private, no-store");
+}
+
 export async function redirectNativeSession(
   request: NextRequest,
   tokens: { accessToken: string; refreshToken: string },
@@ -50,27 +76,15 @@ export async function redirectNativeSession(
   if (error) {
     return NextResponse.redirect(nativeLoginErrorUrl(request), 303);
   }
-  // Direct Home — bearer cookie carries JWTs when httpOnly sb-* cookies are dropped.
-  const redirect = NextResponse.redirect(nativeWelcomeUrl(request), 303);
-  withCookies(redirect);
-  redirect.cookies.set(NATIVE_SESSION_HINT_COOKIE, "1", {
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-    sameSite: "lax",
-    secure: true,
-    httpOnly: false,
-  });
-  redirect.cookies.set(
-    NATIVE_BEARER_COOKIE,
-    encodeNativeBearerCookieValue(tokens),
-    {
-      path: "/",
-      maxAge: NATIVE_BEARER_COOKIE_MAX_AGE_SEC,
-      sameSite: "lax",
-      secure: true,
-      httpOnly: false,
+  const html = nativeSessionHandoffHtml(tokens);
+  const document = new NextResponse(html, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "private, no-store",
     },
-  );
-  redirect.headers.set("Cache-Control", "private, no-store");
-  return redirect;
+  });
+  withCookies(document);
+  attachNativeSessionCookies(document, tokens);
+  return document;
 }
