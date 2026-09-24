@@ -7,7 +7,7 @@ async function text(relativePath) {
   return readFile(path.join(root, relativePath), "utf8");
 }
 
-const [aasa, assetLinks, privacy, infoPlist, androidManifest, nativeLogin, passwordRoute] =
+const [aasa, assetLinks, privacy, infoPlist, androidManifest, nativeLogin, nativeLoginCopy, nativeApp, passwordRoute] =
   await Promise.all([
     text("public/.well-known/apple-app-site-association"),
     text("public/.well-known/assetlinks.json"),
@@ -15,6 +15,8 @@ const [aasa, assetLinks, privacy, infoPlist, androidManifest, nativeLogin, passw
     text("ios/App/App/Info.plist"),
     text("android/app/src/main/AndroidManifest.xml"),
     text("native-app/src/login/NativeLoginScreen.tsx"),
+    text("native-app/src/login/native-login-copy.ts"),
+    text("native-app/src/App.tsx"),
     text("app/api/auth/password/route.ts"),
   ]);
 
@@ -98,9 +100,14 @@ requireMatch(
   "AndroidManifest.xml is missing the kaify URL scheme.",
 );
 requireMatch(
-  nativeLogin,
+  nativeLoginCopy,
   /Sign in with password/,
   "Native login must include password sign-in for Play reviewers.",
+);
+requireMatch(
+  nativeLogin,
+  /loginOnly/,
+  "Native login screen must support login-only store mode.",
 );
 requireMatch(
   passwordRoute,
@@ -111,6 +118,21 @@ forbid(
   androidManifest,
   /com\.android\.vending\.BILLING/,
   "AndroidManifest must not declare Play Billing for this consumption-only app.",
+);
+forbid(
+  androidManifest,
+  /READ_MEDIA_IMAGES/,
+  "AndroidManifest must not declare READ_MEDIA_IMAGES; use the system Photo Picker.",
+);
+forbid(
+  androidManifest,
+  /READ_EXTERNAL_STORAGE/,
+  "AndroidManifest must not declare READ_EXTERNAL_STORAGE for photo access.",
+);
+forbid(
+  nativeApp,
+  /Continue to Paddle|native-checkout|PRICING_PLANS|Browser\.open/,
+  "Native app package must not include checkout or plan commerce UI.",
 );
 
 if (errors.length > 0) {

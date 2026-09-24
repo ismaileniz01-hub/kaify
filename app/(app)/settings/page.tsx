@@ -37,6 +37,7 @@ import { MarketAuraPreview } from "@/components/market/MarketAuraPreview";
 import { MotionDialog } from "@/components/ui/MotionDialog";
 import { StepUpChallenge } from "@/components/auth/StepUpChallenge";
 import { useBillingPortal } from "@/components/billing/useBillingPortal";
+import { useNativeApp } from "@/lib/native/platform";
 
 type SettingItem = {
   icon: typeof Bell;
@@ -230,6 +231,7 @@ export default function SettingsPage() {
     setNeedsStepUp: setNeedsBillingStepUp,
     portalError,
   } = useBillingPortal();
+  const native = useNativeApp();
   const [toggles, setToggles] = useState<Record<string, boolean>>({
     "settings.workout": true,
     "settings.water": false,
@@ -698,6 +700,11 @@ export default function SettingsPage() {
                           {logoutLoading ? "…" : t(item.value || "")}
                         </button>
                       ) : item.label === "settings.billing" ? (
+                        native ? (
+                          <span className="max-w-[12rem] text-right text-[10px] leading-snug text-zinc-400">
+                            {t("myaccount.billing_on_website")}
+                          </span>
+                        ) : (
                         <button
                           type="button"
                           onClick={() => void openPortal()}
@@ -706,6 +713,7 @@ export default function SettingsPage() {
                         >
                           {portalLoading ? "…" : t(item.value || "")}
                         </button>
+                        )
                       ) : item.href ? (
                         <Link
                           href={item.href}

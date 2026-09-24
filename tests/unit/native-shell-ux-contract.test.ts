@@ -192,11 +192,28 @@ describe("signup legal gate (source contract)", () => {
     expect(wizard).toMatch(/legalAccepted/);
   });
 
-  it("blocks native signup until legal and AI consents are checked", () => {
+  it("blocks native signup consents when signup mode is shown", () => {
     const native = source("native-app/src/login/NativeLoginScreen.tsx");
     expect(native).toContain("acceptedLegal");
     expect(native).toContain("acceptedAi");
+    expect(native).toContain("loginOnly");
     expect(native).toContain("(!isSignup || (acceptedLegal && acceptedAi))");
+  });
+
+  it("keeps store shell free of payment CTAs", () => {
+    const app = source("native-app/src/App.tsx");
+    expect(app).toContain("loginOnly");
+    expect(app).not.toContain("Continue to Paddle");
+    expect(app).not.toContain("Browser.open");
+    expect(source("components/account/MyAccountPage.tsx")).toContain(
+      "myaccount.members_only",
+    );
+    expect(source("components/account/MyAccountPage.tsx")).not.toContain(
+      "openExternalUrl(WEB_PRICING_URL)",
+    );
+    expect(source("android/app/src/main/AndroidManifest.xml")).not.toContain(
+      "READ_MEDIA_IMAGES",
+    );
   });
 });
 

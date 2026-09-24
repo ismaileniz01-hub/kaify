@@ -7,15 +7,18 @@ import {
 } from "@/lib/auth/post-auth-redirect";
 
 describe("post-auth-redirect", () => {
-  it("sends users without a plan to pricing", () => {
+  it("sends users without a plan to pricing on web", () => {
     expect(resolvePostAuthRedirect({ tier: null })).toBe("/pricing");
     expect(resolvePostAuthRedirect({ tier: null }, "/welcome")).toBe("/pricing");
   });
 
-  it("sends unpaid native users to My account, not pricing", () => {
+  it("keeps unpaid native users off product routes (no pricing CTA)", () => {
     expect(
       resolvePostAuthRedirect({ tier: null }, "/welcome", { native: true }),
-    ).toBe("/myaccount");
+    ).toBe("/login");
+    expect(
+      resolvePostAuthRedirect({ tier: null }, "/myaccount", { native: true }),
+    ).toBe("/login");
   });
 
   it("lets unpaid users reach Settings to delete their account", () => {
@@ -45,6 +48,7 @@ describe("post-auth-redirect", () => {
   it("detects subscription-gated routes", () => {
     expect(requiresActiveSubscription("/welcome")).toBe(true);
     expect(requiresActiveSubscription("/messages/123")).toBe(true);
+    expect(requiresActiveSubscription("/myaccount")).toBe(true);
     expect(requiresActiveSubscription("/pricing")).toBe(false);
   });
 

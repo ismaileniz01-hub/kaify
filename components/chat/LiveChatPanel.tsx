@@ -563,6 +563,18 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     await sendTextMessage(text);
   };
 
+  const reportCoachMessage = async (messageId: string, text: string) => {
+    const excerpt = text.trim().slice(0, 280);
+    try {
+      await apiPost("/api/support", {
+        message: `[AI content report] coach=${coachId} messageId=${messageId}\n${excerpt}`,
+      }, { "Idempotency-Key": createIdempotencyKey() });
+      toast({ title: t("chat.message.report_sent"), tone: "success" });
+    } catch {
+      toast({ title: t("chat.message.report_failed"), tone: "error" });
+    }
+  };
+
   const handleRetry = (msg: LiveMessage) => {
     if (sending || msg.from !== "user" || msg.status !== "failed") return;
     if (msg.photoRetry) {
@@ -1151,6 +1163,15 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                             {msg.time}
                             {!isCoach ? <ChatDeliveryTicks status={msg.status} /> : null}
                           </p>
+                          {isCoach && !isStreamingText && msg.id && !String(msg.id).startsWith("local-") ? (
+                            <button
+                              type="button"
+                              className="mt-1 text-[10px] font-medium text-zinc-400 underline-offset-2 hover:text-zinc-200 hover:underline"
+                              onClick={() => void reportCoachMessage(msg.id, msg.text)}
+                            >
+                              {t("chat.message.report")}
+                            </button>
+                          ) : null}
                         </div>
                         {isFailed && (
                           <div

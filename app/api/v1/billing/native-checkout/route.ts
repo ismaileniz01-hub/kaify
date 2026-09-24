@@ -1,11 +1,6 @@
 import { z } from "zod";
 import { ApiError } from "@/lib/api/errors";
 import { defineRoute } from "@/lib/api/route-handler";
-import {
-  getPaddleServerClient,
-  isPaddleServerConfigured,
-} from "@/lib/billing/paddle-server";
-import { getPaddlePriceIdForPlan } from "@/lib/billing/paddle-config";
 import { parseJsonWithLimit } from "@/lib/security/body-limit";
 
 const requestSchema = z.object({
@@ -16,72 +11,21 @@ const requestSchema = z.object({
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/**
+ * Deprecated for store builds — digital subscriptions are website-only (ADR 019).
+ * Kept so old clients receive a clear error instead of a Paddle checkout URL.
+ */
 export const POST = defineRoute(
   {
     route: "POST /api/v1/billing/native-checkout",
     requireTermsConsent: true,
   },
-  async ({ user, request }) => {
+  async ({ request }) => {
     const body = await parseJsonWithLimit(request, 8 * 1024);
-    const parsed = requestSchema.safeParse(body);
-    if (!parsed.success) {
-      throw new ApiError(
-        "VALIDATION_ERROR",
-        "Geçersiz abonelik seçimi.",
-        parsed.error.issues,
-      );
-    }
-    if (!isPaddleServerConfigured()) {
-      throw new ApiError(
-        "SERVICE_UNAVAILABLE",
-        "Ödeme hizmeti şu anda kullanılamıyor.",
-      );
-    }
-
-    const priceId = getPaddlePriceIdForPlan(
-      parsed.data.planId,
-      parsed.data.interval,
+    requestSchema.safeParse(body);
+    throw new ApiError(
+      "FORBIDDEN",
+      "Checkout is only available on kaifyai.org. Sign in to the app after you subscribe on the website.",
     );
-    if (!priceId) {
-      throw new ApiError(
-        "SERVICE_UNAVAILABLE",
-        "Seçilen plan şu anda kullanılamıyor.",
-      );
-    }
-
-    const transaction = await getPaddleServerClient().transactions.create({
-      items: [{ priceId, quantity: 1 }],
-      customData: {
-        user_id: user.id,
-        source: "native_checkout",
-        plan_id: parsed.data.planId,
-        interval: parsed.data.interval,
-      },
-    });
-    const checkoutUrl = transaction.checkout?.url;
-    if (!checkoutUrl) {
-      throw new ApiError(
-        "SERVICE_UNAVAILABLE",
-        "Güvenli ödeme bağlantısı oluşturulamadı.",
-      );
-    }
-
-    const { emitProductEvent, productEventIdempotencyKey } = await import(
-      "@/lib/events/product"
-    );
-    emitProductEvent({
-      name: "billing.checkout_started",
-      userId: user.id,
-      properties: { plan: parsed.data.planId, interval: parsed.data.interval },
-      idempotencyKey: productEventIdempotencyKey([
-        "billing.checkout_started",
-        user.id,
-        parsed.data.planId,
-        parsed.data.interval,
-        transaction.id ?? "",
-      ]),
-    });
-
-    return { checkoutUrl };
   },
 );

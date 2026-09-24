@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
-import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
 import { SplashScreen } from "@capacitor/splash-screen";
-import { PRICING_PLANS } from "@/lib/marketing/pricing-plans";
 import { nativeScreenFromUrl } from "@/lib/native/deep-links";
 import {
   loadProfile,
-  nativeApi,
   profileHasPaidAccess,
-  recordNativeSignupConsents,
   sendKaiMessage,
   type NativeProfile,
 } from "./api";
@@ -24,13 +20,15 @@ import { hydrateSecureSession, supabase, clearNativeAuthStorage } from "./sessio
 import {
   NativeLoginBoot,
   NativeLoginScreen,
-  type NativeAuthMode,
   type NativeAuthStep,
 } from "./login/NativeLoginScreen";
 import { NativeFitnessWallpaper } from "./login/NativeFitnessWallpaper";
 import { useNativeKeyboardOffset } from "./login/useNativeKeyboardOffset";
 
-type Screen = "login" | "signup" | "verify" | "plan" | "welcome" | "chat";
+type Screen = "login" | "verify" | "welcome" | "chat";
+
+const MEMBERSHIP_REQUIRED =
+  "This app is for members. Create your account and subscribe at kaifyai.org, then sign in here.";
 
 function nativeOs(): string {
   try {
@@ -61,7 +59,6 @@ export function App() {
   useNativeKeyboardOffset();
 
   const [screen, setScreen] = useState<Screen>("login");
-  const [authMode, setAuthMode] = useState<NativeAuthMode>("login");
   const [authStep, setAuthStep] = useState<NativeAuthStep>("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -80,11 +77,43 @@ export function App() {
   const screenRef = useRef(screen);
   screenRef.current = screen;
 
+  const rejectNonMember = useCallback(async (detail?: string) => {
+    await clearNativeAuthStorage();
+    setProfile(null);
+    setPassword("");
+    setOtp("");
+    setAuthStep("email");
+    setScreen("login");
+    setError(detail?.trim() || MEMBERSHIP_REQUIRED);
+  }, []);
+
+  const enterAsMember = useCallback(
+    async (
+      accessToken: string,
+      refreshToken: string,
+      handoffTicket?: string,
+    ) => {
+      const nextProfile = await loadProfile();
+      if (!profileHasPaidAccess(nextProfile)) {
+        await rejectNonMember();
+        return { ok: false as const };
+      }
+      setProfile(nextProfile);
+      enterRealKaify(accessToken, refreshToken, handoffTicket);
+      return { ok: true as const };
+    },
+    [rejectNonMember],
+  );
+
   const resolveSignedInDestination = useCallback(async () => {
     const nextProfile = await loadProfile();
     setProfile(nextProfile);
-    setScreen(profileHasPaidAccess(nextProfile) ? "welcome" : "plan");
-  }, []);
+    if (!profileHasPaidAccess(nextProfile)) {
+      await rejectNonMember();
+      return;
+    }
+    setScreen("welcome");
+  }, [rejectNonMember]);
 
   useEffect(() => {
     document.documentElement.lang = detectLangFromNavigator();
@@ -148,12 +177,11 @@ export function App() {
       });
       const currentProfile = profileRef.current;
       if (next === "welcome" || next === "chat") {
-        setScreen(profileHasPaidAccess(currentProfile) ? next : currentProfile ? "plan" : "login");
+        setScreen(profileHasPaidAccess(currentProfile) ? next : "login");
         return;
       }
       setScreen(next);
-      if (next === "login" || next === "signup") {
-        setAuthMode(next === "signup" ? "signup" : "login");
+      if (next === "login") {
         setAuthStep("email");
       }
     }).then((handle) => {
@@ -223,7 +251,11 @@ export function App() {
         return result;
       }
       setPassword("");
-      enterRealKaify(result.accessToken, result.refreshToken, result.handoffTicket);
+      await enterAsMember(
+        result.accessToken,
+        result.refreshToken,
+        result.handoffTicket,
+      );
       return result;
     } catch (cause) {
       const raw =
@@ -249,14 +281,11 @@ export function App() {
         setError(result.message);
         return result;
       }
-      try {
-        if (acceptedLegal && acceptedAi) {
-          await recordNativeSignupConsents();
-        }
-      } catch {
-        // Consent can be recorded after the real app opens.
-      }
-      enterRealKaify(result.accessToken, result.refreshToken, result.handoffTicket);
+      await enterAsMember(
+        result.accessToken,
+        result.refreshToken,
+        result.handoffTicket,
+      );
       return result;
     } catch (cause) {
       const raw =
@@ -273,38 +302,9 @@ export function App() {
     }
   }
 
-  async function openCheckout(planId: string) {
-    setBusy(true);
-    setError("");
-    try {
-      const response = await nativeApi("/api/v1/billing/native-checkout", {
-        method: "POST",
-        body: JSON.stringify({ planId, interval: "monthly" }),
-      });
-      if (!response.ok) {
-        throw new Error("Secure checkout is unavailable. Please try again.");
-      }
-      const body = (await response.json()) as {
-        data?: { checkoutUrl?: string };
-      };
-      if (!body.data?.checkoutUrl) {
-        throw new Error("Secure checkout link was not returned.");
-      }
-      await Browser.open({
-        url: body.data.checkoutUrl,
-        presentationStyle: "popover",
-      });
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Checkout failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function openChat() {
     if (!profileHasPaidAccess(profile)) {
-      setScreen("plan");
-      setError("Complete payment before coaching is unlocked.");
+      await rejectNonMember();
       return;
     }
     setScreen("chat");
@@ -314,8 +314,7 @@ export function App() {
     event.preventDefault();
     if (!message.trim()) return;
     if (!profileHasPaidAccess(profile)) {
-      setScreen("plan");
-      setError("An active subscription is required before coaching.");
+      await rejectNonMember();
       return;
     }
     setBusy(true);
@@ -338,8 +337,7 @@ export function App() {
     setScreen("login");
   }
 
-  const showAuth =
-    screen === "login" || screen === "signup" || screen === "verify";
+  const showAuth = screen === "login" || screen === "verify";
 
   if (busy && showAuth) {
     return <NativeLoginBoot />;
@@ -348,7 +346,7 @@ export function App() {
   if (showAuth) {
     return (
       <NativeLoginScreen
-        mode={authMode}
+        mode="login"
         step={screen === "verify" || authStep === "code" ? "code" : "email"}
         email={email}
         password={password}
@@ -358,22 +356,18 @@ export function App() {
         error={error}
         acceptedLegal={acceptedLegal}
         acceptedAi={acceptedAi}
+        loginOnly
         onEmailChange={setEmail}
         onPasswordChange={setPassword}
         onOtpChange={setOtp}
         onAcceptedLegalChange={setAcceptedLegal}
         onAcceptedAiChange={setAcceptedAi}
-        onModeChange={(mode) => {
-          setError("");
-          setAuthMode(mode);
-          setAuthStep("email");
-          setScreen(mode === "signup" ? "signup" : "login");
+        onModeChange={() => {
+          // Native shell is sign-in only; account creation is website-only.
         }}
         onStepChange={(step) => {
           setAuthStep(step);
-          if (step === "email") {
-            setScreen(authMode === "signup" ? "signup" : "login");
-          }
+          if (step === "email") setScreen("login");
         }}
         onSendCode={sendCode}
         onPasswordSignIn={signInWithPassword}
@@ -411,27 +405,6 @@ export function App() {
         {profile && <button className="link" onClick={() => void signOut()}>Sign out</button>}
       </header>
       {error && <div className="error" role="alert">{error}</div>}
-
-      {screen === "plan" && (
-        <section>
-          <p className="eyebrow">CHOOSE YOUR PLAN</p>
-          <h1>Coaching unlocks after payment</h1>
-          <p>Compare plans here. Only secure Paddle checkout opens outside the app.</p>
-          <div className="plans">
-            {PRICING_PLANS.map((plan) => (
-              <article className={`card plan ${plan.popular ? "popular" : ""}`} key={plan.id}>
-                <h2>{plan.name}</h2><p>{plan.tagline}</p>
-                <div className="price">${plan.priceMonthly}<small>/month</small></div>
-                <ul>{plan.perks.slice(0, 4).map((perk) => <li key={perk}>{perk}</li>)}</ul>
-                <button disabled={!online} onClick={() => void openCheckout(plan.id)}>Continue to Paddle checkout</button>
-              </article>
-            ))}
-          </div>
-          <button className="secondary" disabled={!online || busy} onClick={() => void resolveSignedInDestination()}>
-            I completed payment — refresh access
-          </button>
-        </section>
-      )}
 
       {screen === "welcome" && (
         <section className="card hero">

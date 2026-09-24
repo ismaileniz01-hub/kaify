@@ -41,7 +41,6 @@ import { formatNumber, formatDate } from "@/lib/i18n/format";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import { useSession } from "@/lib/session-context";
 import { useNativeApp } from "@/lib/native/platform";
-import { WEB_PRICING_URL } from "@/lib/billing/native-web-checkout";
 import type { UserProfile } from "@/lib/user";
 import { apiGet, apiPatch } from "@/lib/api/client";
 import {
@@ -535,19 +534,8 @@ export function MyAccountPage() {
                   ) : native ? (
                     <div className="flex w-full flex-col gap-2">
                       <p className="text-center text-xs leading-relaxed text-zinc-400">
-                        {t("myaccount.pay_in_browser")}
+                        {t("myaccount.members_only")}
                       </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void import("@/lib/native/open-external").then(({ openExternalUrl }) =>
-                            openExternalUrl(WEB_PRICING_URL),
-                          );
-                        }}
-                        className="account-btn account-btn--primary w-full justify-center"
-                      >
-                        {t("myaccount.choose_plan")}
-                      </button>
                       <button
                         type="button"
                         onClick={() => void refreshSession()}
@@ -561,7 +549,7 @@ export function MyAccountPage() {
                       {t("myaccount.choose_plan")}
                     </Link>
                   )}
-                  {hasPlan ? (
+                  {hasPlan && !native ? (
                     <button
                       type="button"
                       onClick={() => void openPortal()}
@@ -571,6 +559,10 @@ export function MyAccountPage() {
                       <CreditCard className="h-4 w-4" />
                       {portalLoading ? t("profile.saving") : t("myaccount.manage_billing")}
                     </button>
+                  ) : hasPlan && native ? (
+                    <p className="w-full text-center text-xs leading-relaxed text-zinc-400">
+                      {t("myaccount.billing_on_website")}
+                    </p>
                   ) : null}
                   <Link
                     href="/settings"

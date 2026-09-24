@@ -51,6 +51,8 @@ export type NativeLoginScreenProps = {
   error: string;
   acceptedLegal: boolean;
   acceptedAi: boolean;
+  /** Store shell: sign-in only; hide signup toggle (account creation is on the website). */
+  loginOnly?: boolean;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onOtpChange: (value: string) => void;
@@ -79,6 +81,7 @@ export function NativeLoginScreen({
   error,
   acceptedLegal,
   acceptedAi,
+  loginOnly = false,
   onEmailChange,
   onPasswordChange,
   onOtpChange,
@@ -97,7 +100,7 @@ export function NativeLoginScreen({
   const passwordId = `${idPrefix}-password`;
   const errorId = `${idPrefix}-error`;
   const resendStatusId = `${idPrefix}-resend-status`;
-  const isSignup = mode === "signup";
+  const isSignup = !loginOnly && mode === "signup";
   const [resendAvailableAt, setResendAvailableAt] = useState<number | null>(
     null,
   );
@@ -516,7 +519,7 @@ export function NativeLoginScreen({
             </>
           ) : null}
 
-          {!isSignup ? (
+          {!isSignup && !loginOnly ? (
             <button
               type="button"
               className="link-purple login-create-toggle"

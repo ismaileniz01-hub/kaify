@@ -28,11 +28,16 @@ describe("native local packaging contract", () => {
     expect(capacitor).not.toContain("https://kaifyai.org/login");
   });
 
-  it("keeps required acquisition and coaching examples in the local UI", () => {
-    for (const screen of ["login", "signup", "plan", "welcome", "chat"]) {
+  it("keeps member sign-in and coaching examples in the local UI", () => {
+    for (const screen of ["login", "welcome", "chat"]) {
       expect(nativeApp).toContain(`"${screen}"`);
     }
-    expect(nativeApp).toContain('from "@/lib/marketing/pricing-plans"');
+    expect(nativeApp).not.toContain('"plan"');
+    expect(nativeApp).not.toContain("PRICING_PLANS");
+    expect(nativeApp).not.toContain("Continue to Paddle");
+    expect(nativeApp).not.toContain("Browser.open");
+    expect(nativeApp).not.toContain("native-checkout");
+    expect(nativeApp).toContain("loginOnly");
     expect(nativeApp).toContain("sendNativeEmailOtp");
     expect(nativeApp).toContain("signInNativeWithPassword");
     expect(nativeApp).toContain("verifyNativeEmailOtp");
@@ -86,10 +91,10 @@ describe("native local packaging contract", () => {
     expect(source("native-app/src/App.tsx")).toContain("signed_out");
   });
 
-  it("locks coaching before payment on both navigation and send", () => {
-    expect(nativeApp.match(/profileHasPaidAccess/g)?.length).toBeGreaterThanOrEqual(
-      3,
-    );
+  it("requires a paid membership before opening the real app", () => {
+    expect(nativeApp).toContain("profileHasPaidAccess");
+    expect(nativeApp).toContain("enterAsMember");
+    expect(nativeApp).toContain("This app is for members");
     expect(nativeApi).toContain("active subscription is required");
   });
 

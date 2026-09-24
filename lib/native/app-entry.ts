@@ -4,10 +4,10 @@ import { resolveAppUrl } from "../app-url";
 export const NATIVE_ENTRY_PATH = "/login";
 
 /**
- * Marketing landing is web-only. Signup and plan comparison are packaged in
- * the native client; only Paddle checkout/portal may leave the app.
+ * Website-only surfaces for store binaries. Signup and pricing stay on the
+ * public site; the installed app is members sign-in only.
  */
-export const WEB_ONLY_PATHS = ["/"] as const;
+export const WEB_ONLY_PATHS = ["/", "/signup", "/pricing"] as const;
 
 export function isWebOnlyPath(pathname: string): boolean {
   return WEB_ONLY_PATHS.some((path) =>

@@ -19,8 +19,8 @@ export function useBillingPortal() {
       const { url } = await apiPost<{ url: string }>("/api/billing/portal", {});
       const { isNativePlatform } = await import("@/lib/native/platform");
       if (await isNativePlatform()) {
-        const { openExternalUrl } = await import("@/lib/native/open-external");
-        await openExternalUrl(url);
+        // Store policy: do not open external billing CTAs from the installed app.
+        setPortalError(t("myaccount.billing_on_website"));
         return;
       }
       window.location.assign(url);

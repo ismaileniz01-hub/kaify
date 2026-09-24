@@ -35,7 +35,11 @@ type PostAuthOptions = {
   native?: boolean;
 };
 
-/** After auth, send users without a paid plan to pricing — except Settings, which must stay reachable for account deletion. Native shells go to My account instead of /pricing. */
+/**
+ * After auth, unpaid web users go to pricing.
+ * Native shells never open pricing CTAs — unpaid members stay off product
+ * routes (Settings still reachable for account deletion).
+ */
 export function resolvePostAuthRedirect(
   profile: ProfileLike | null | undefined,
   requested?: string | null,
@@ -46,7 +50,10 @@ export function resolvePostAuthRedirect(
     return safe;
   }
   if (!hasPaidPlan(profile)) {
-    return options?.native ? "/myaccount" : "/pricing";
+    if (options?.native) {
+      return "/login";
+    }
+    return "/pricing";
   }
   return safe;
 }
@@ -61,6 +68,7 @@ const SUBSCRIPTION_REQUIRED_PREFIXES = [
   "/leaderboard",
   "/library",
   "/admin",
+  "/myaccount",
 ] as const;
 
 export function requiresActiveSubscription(pathname: string): boolean {

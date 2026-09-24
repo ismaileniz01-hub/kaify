@@ -38,9 +38,8 @@ export function parseCheckoutPlanParam(
 export async function redirectToWebCheckoutAfterSignup(): Promise<void> {
   if (typeof window === "undefined") return;
   if (await isNativePlatform()) {
-    const { openExternalUrl } = await import("@/lib/native/open-external");
-    await openExternalUrl(POST_SIGNUP_CHECKOUT_URL);
-    window.location.assign("/myaccount");
+    // Store builds must not open website checkout from the installed app.
+    window.location.assign("/login");
     return;
   }
   window.location.assign(POST_SIGNUP_CHECKOUT_PATH);

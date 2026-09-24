@@ -7,8 +7,7 @@ import { isNativePlatform } from "@/lib/native/platform";
 
 /**
  * Development fallback for the shared Next.js UI. Store builds use the local
- * native bundle; signup and plan comparison remain in-app, while checkout may
- * open Paddle externally when store policy requires it.
+ * native bundle for sign-in; checkout and signup remain website-only.
  */
 export function NativeAppEntry() {
   const pathname = usePathname();

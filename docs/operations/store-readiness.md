@@ -33,14 +33,14 @@ npm run cap:verify-store
 
 ## Native account and billing flow
 
-1. The installed app opens at `/login`.
-2. Existing customers sign in with email OTP.
-3. Native UI contains no clickable signup, pricing, purchase, or external-payment link.
-4. Account creation and Paddle checkout exist only on the public website.
-5. Successful website checkout offers `kaify://login` to return to the installed app.
-6. Native navigations to `/signup` or `/pricing` are redirected to `/login`.
+1. The installed app opens at `/login` (sign-in only).
+2. Existing paying members sign in with email OTP or password.
+3. Users without an active paid entitlement are rejected and stay on login (plain text: create account / subscribe on kaifyai.org — no tappable checkout).
+4. Native UI contains no signup, pricing, purchase, upgrade, or external-payment button.
+5. Account creation and Paddle checkout exist only on the public website.
+6. Successful website checkout may offer `kaify://login` to return to the installed app.
 
-This is a consumption-only app policy. Kaify Ai is not submitted as an Apple
+This is a members-only consumption app. Kaify Ai is not submitted as an Apple
 reader app, and no reader-app external-link entitlement is claimed.
 
 ## Permissions
@@ -48,7 +48,7 @@ reader app, and no reader-app external-link entitlement is claimed.
 | Capability | Approach |
 |------------|----------|
 | Microphone / speech | Declared; Capacitor speech plugin |
-| Camera / photos | Info.plist usage strings; UI uses `<input type="file" capture>` (OS picker). **Permissions-Policy `camera=()`** denies `getUserMedia` — intentional; no in-page WebRTC camera. |
+| Camera / photos | Info.plist usage strings; UI uses OS Photo Picker / `<input type="file">`. **No `READ_MEDIA_IMAGES`.** Permissions-Policy `camera=()` denies `getUserMedia` — intentional. |
 | Push | `POST_NOTIFICATIONS` + `PushToggle` consent + runtime request |
 | HealthKit | **Not shipped** — no HealthKit entitlements/strings until a steps sync feature ships |
 
