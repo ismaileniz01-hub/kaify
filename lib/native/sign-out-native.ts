@@ -26,13 +26,13 @@ export function nativeShellLoginUrl(): string {
   if (typeof window === "undefined") return "/login";
   const platform = document.documentElement.dataset.platform;
   const ua = navigator.userAgent || "";
-  if (platform === "android" || (/Android/i.test(ua) && looksLikeNativeWebView())) {
+  const nativeShell =
+    platform === "android" ||
+    platform === "ios" ||
+    (/Android/i.test(ua) && looksLikeNativeWebView()) ||
+    (/iPhone|iPad|iPod/i.test(ua) && looksLikeNativeWebView());
+  if (nativeShell) {
     return `https://localhost/?${SIGNED_OUT_QUERY}`;
-  }
-  if (platform === "ios" || /iPhone|iPad|iPod/i.test(ua)) {
-    if (platform === "ios" || looksLikeNativeWebView()) {
-      return `capacitor://localhost/?${SIGNED_OUT_QUERY}`;
-    }
   }
   return `/login?${SIGNED_OUT_QUERY}`;
 }

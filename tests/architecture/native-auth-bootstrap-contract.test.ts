@@ -62,6 +62,6 @@ describe("native auth bootstrap packaging", () => {
     const boot = app.slice(app.indexOf("SplashScreen.hide"), app.indexOf("kaify_install_id"));
     expect(boot).toContain("hydrateSecureSession");
     expect(boot).not.toContain("enterRealKaify");
-    expect(capacitor).not.toContain('iosScheme: "https"');
+    expect(capacitor).toContain('iosScheme: "https"');
   });
 });

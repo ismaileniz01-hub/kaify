@@ -16,11 +16,10 @@ export function parseNativeEntryHash(
   return { accessToken, refreshToken };
 }
 
-/** Capacitor shells after a failed handoff — iOS must stay on capacitor://, not https. */
+/** Capacitor shells after a failed handoff — iOS and Android both use https://localhost. */
 export function nativeEntryShellUrl(userAgent: string): string {
-  if (/Android/i.test(userAgent)) return "https://localhost/?signed_out=1";
-  if (/iPhone|iPad|iPod/i.test(userAgent)) {
-    return "capacitor://localhost/?signed_out=1";
+  if (/Android/i.test(userAgent) || /iPhone|iPad|iPod/i.test(userAgent)) {
+    return "https://localhost/?signed_out=1";
   }
   return "/login";
 }
@@ -40,7 +39,7 @@ export const NATIVE_WELCOME_HANDOFF_PATH = `${NATIVE_ENTRY_SUCCESS_PATH}?${NATIV
 
 /** CSP hash of NATIVE_ENTRY_BOOT_SCRIPT so WKWebView can run it without a nonce race. */
 export const NATIVE_ENTRY_BOOT_CSP_HASH =
-  "sha256-U9543+twgsvXXHE2vUOaybKHhy/djWJ4yHFIUNNGFk4=";
+  "sha256-8jqdhdoSfw5jOMlc3uy7J04dwEz7F6cTTPOo/CXVb4g=";
 
 type NativeEntryTokens = { accessToken: string; refreshToken: string };
 
@@ -294,9 +293,9 @@ export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
   }
   function goShell() {
     var ua = navigator.userAgent || "";
-    if (/Android/i.test(ua)) location.replace("https://localhost/?signed_out=1");
-    else if (/iPhone|iPad|iPod/i.test(ua)) location.replace("capacitor://localhost/?signed_out=1");
-    else location.replace("/login");
+    if (/Android/i.test(ua) || /iPhone|iPad|iPod/i.test(ua)) {
+      location.replace("https://localhost/?signed_out=1");
+    } else location.replace("/login");
   }
   function readCookie(name) {
     var prefix = name + "=";

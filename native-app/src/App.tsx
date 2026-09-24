@@ -93,13 +93,22 @@ export function App() {
       refreshToken: string,
       handoffTicket?: string,
     ) => {
-      const nextProfile = await loadProfile();
+      // Pass bearer explicitly — never wait on WKWebView getSession locks.
+      const nextProfile = await loadProfile(accessToken);
       if (!profileHasPaidAccess(nextProfile)) {
         await rejectNonMember();
         return { ok: false as const };
       }
       setProfile(nextProfile);
-      enterRealKaify(accessToken, refreshToken, handoffTicket);
+      const handoff = await enterRealKaify(
+        accessToken,
+        refreshToken,
+        handoffTicket,
+      );
+      if (!handoff.ok) {
+        setError(handoff.message);
+        return { ok: false as const };
+      }
       return { ok: true as const };
     },
     [rejectNonMember],

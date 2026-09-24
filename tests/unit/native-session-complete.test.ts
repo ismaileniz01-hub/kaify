@@ -76,7 +76,7 @@ describe("native session complete (document POST)", () => {
     const response = await POST(request as never);
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(
-      "capacitor://localhost/?signed_out=1",
+      "https://localhost/?signed_out=1",
     );
   });
 });

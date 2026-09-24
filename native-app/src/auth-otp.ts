@@ -208,18 +208,17 @@ export async function signInNativeWithPassword(
     };
   }
 
-  const { error } = await supabase.auth.setSession({
-    access_token: session.accessToken,
-    refresh_token: session.refreshToken,
-  });
-  if (error) {
-    return {
-      ok: false,
-      message: friendlyNetworkMessage(
-        error.message,
-        error.message || "Oturum kaydedilemedi. Lütfen tekrar dene.",
-      ),
-    };
+  // Best-effort local persist — handoff uses the API tokens + ticket, not getSession.
+  try {
+    await Promise.race([
+      supabase.auth.setSession({
+        access_token: session.accessToken,
+        refresh_token: session.refreshToken,
+      }),
+      new Promise((resolve) => window.setTimeout(resolve, 2_000)),
+    ]);
+  } catch {
+    // WKWebView may hang on locks; continue with bearer tokens.
   }
   return nativeSessionSuccess(
     session.accessToken,
@@ -259,18 +258,17 @@ export async function verifyNativeEmailOtp(
     };
   }
 
-  const { error } = await supabase.auth.setSession({
-    access_token: session.accessToken,
-    refresh_token: session.refreshToken,
-  });
-  if (error) {
-    return {
-      ok: false,
-      message: friendlyNetworkMessage(
-        error.message,
-        error.message || "Oturum kaydedilemedi. Lütfen tekrar dene.",
-      ),
-    };
+  // Best-effort local persist — handoff uses the API tokens + ticket, not getSession.
+  try {
+    await Promise.race([
+      supabase.auth.setSession({
+        access_token: session.accessToken,
+        refresh_token: session.refreshToken,
+      }),
+      new Promise((resolve) => window.setTimeout(resolve, 2_000)),
+    ]);
+  } catch {
+    // WKWebView may hang on locks; continue with bearer tokens.
   }
   return nativeSessionSuccess(
     session.accessToken,

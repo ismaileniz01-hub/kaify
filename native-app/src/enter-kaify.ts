@@ -3,15 +3,6 @@ import { NATIVE_CLIENT_VERSION } from "./client-version";
 export const NATIVE_CONSUME_PATH = "/api/auth/session/native-consume";
 export const NATIVE_TICKET_PATH = "/api/auth/session/native-ticket";
 
-function hashHandoffUrl(accessToken: string, refreshToken: string): string {
-  const hash = new URLSearchParams({
-    access_token: accessToken,
-    refresh_token: refreshToken,
-    token_type: "bearer",
-  }).toString();
-  return `${__KAIFY_API_BASE__}/login/native-entry#${hash}`;
-}
-
 export function nativeConsumeUrl(ticket: string): string {
   return `${__KAIFY_API_BASE__}${NATIVE_CONSUME_PATH}?ticket=${encodeURIComponent(ticket)}`;
 }
@@ -41,24 +32,31 @@ async function mintHandoffTicket(
   }
 }
 
+export type EnterKaifyResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
 /**
- * After OTP, open Kaify with a first-party document GET.
- * The ticket is minted by verify (or here for returning users). Hash
- * native-entry remains only if ticket minting fails.
+ * After OTP/password, open Kaify with a first-party document GET.
+ * Ticket-only — never hash native-entry (WKWebView drops Location fragments).
+ * Same path on iOS and Android once both shells use https://localhost.
  */
-export function enterRealKaify(
+export async function enterRealKaify(
   accessToken: string,
   refreshToken: string,
   handoffTicket?: string,
-): void {
-  const ticket = handoffTicket?.trim() ?? "";
-  if (ticket) {
-    globalThis.location.assign(nativeConsumeUrl(ticket));
-    return;
+): Promise<EnterKaifyResult> {
+  let ticket = handoffTicket?.trim() ?? "";
+  if (!ticket) {
+    ticket = (await mintHandoffTicket(accessToken, refreshToken)) ?? "";
   }
-  void mintHandoffTicket(accessToken, refreshToken).then((minted) => {
-    globalThis.location.assign(
-      minted ? nativeConsumeUrl(minted) : hashHandoffUrl(accessToken, refreshToken),
-    );
-  });
+  if (!ticket) {
+    return {
+      ok: false,
+      message:
+        "Giriş tamamlandı ama oturum aktarılamadı. İnternetini kontrol edip tekrar dene.",
+    };
+  }
+  globalThis.location.assign(nativeConsumeUrl(ticket));
+  return { ok: true };
 }

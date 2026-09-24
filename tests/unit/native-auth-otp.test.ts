@@ -41,7 +41,7 @@ describe("native Kaify OTP client (resend contract)", () => {
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
-          "X-Client-Version": "native-1.0.5",
+          "X-Client-Version": "native-1.0.6",
         }),
       }),
     );
@@ -140,9 +140,41 @@ describe("native Kaify OTP client (resend contract)", () => {
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
-          "X-Client-Version": "native-1.0.5",
+          "X-Client-Version": "native-1.0.6",
         }),
       }),
     );
+  });
+
+  it("still returns tokens when setSession hangs or fails", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => ({
+        success: true,
+        data: {
+          verified: true,
+          session: {
+            accessToken: "access",
+            refreshToken: "refresh",
+            handoffTicket: "t1",
+          },
+          handoffTicket: "t1",
+        },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    setSession.mockImplementation(
+      () => new Promise(() => undefined),
+    );
+
+    const result = await verifyNativeEmailOtp("user@example.com", "123456");
+    expect(result).toEqual({
+      ok: true,
+      accessToken: "access",
+      refreshToken: "refresh",
+      handoffTicket: "t1",
+    });
   });
 });

@@ -29,12 +29,12 @@ describe("native-entry boot", () => {
     expect(parseNativeEntryHash("")).toBeNull();
   });
 
-  it("returns Capacitor shells without forcing iOS onto https", () => {
+  it("returns Capacitor shells to https://localhost on both platforms", () => {
     expect(nativeEntryShellUrl("Mozilla/5.0 (Linux; Android 14)")).toBe(
       "https://localhost/?signed_out=1",
     );
     expect(nativeEntryShellUrl("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0")).toBe(
-      "capacitor://localhost/?signed_out=1",
+      "https://localhost/?signed_out=1",
     );
     expect(nativeEntryShellUrl("Mozilla/5.0 (Macintosh; Intel Mac OS X)")).toBe(
       "/login",

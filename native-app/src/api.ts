@@ -14,20 +14,36 @@ export type NativeProfile = {
   onboardingStatus?: string;
 };
 
-async function accessToken(): Promise<string> {
-  const { data, error } = await supabase.auth.getSession();
-  if (error || !data.session?.access_token) {
+const SESSION_READ_MS = 1_500;
+
+async function accessToken(explicit?: string): Promise<string> {
+  const direct = explicit?.trim() ?? "";
+  if (direct) return direct;
+
+  // WKWebView navigator.locks can hang getSession forever — never block login.
+  const result = await Promise.race([
+    supabase.auth.getSession(),
+    new Promise<null>((resolve) => {
+      window.setTimeout(() => resolve(null), SESSION_READ_MS);
+    }),
+  ]);
+  const token =
+    result && "data" in result
+      ? result.data.session?.access_token?.trim() ?? ""
+      : "";
+  if (!token) {
     throw new Error("Your session expired. Please sign in again.");
   }
-  return data.session.access_token;
+  return token;
 }
 
 export async function nativeApi(
   path: string,
   init: RequestInit = {},
+  bearerToken?: string,
 ): Promise<Response> {
   const headers = new Headers(init.headers);
-  headers.set("Authorization", `Bearer ${await accessToken()}`);
+  headers.set("Authorization", `Bearer ${await accessToken(bearerToken)}`);
   headers.set("X-Client-Version", NATIVE_CLIENT_VERSION);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
@@ -36,7 +52,7 @@ export async function nativeApi(
     ...init,
     headers,
   });
-  if (response.status === 401) {
+  if (response.status === 401 && !bearerToken) {
     await supabase.auth.refreshSession();
   }
   return response;
@@ -52,8 +68,10 @@ export function profileHasPaidAccess(
   return Number.isFinite(expiresAt) && expiresAt > now;
 }
 
-export async function loadProfile(): Promise<NativeProfile | null> {
-  const response = await nativeApi("/api/v1/profile");
+export async function loadProfile(
+  bearerToken?: string,
+): Promise<NativeProfile | null> {
+  const response = await nativeApi("/api/v1/profile", {}, bearerToken);
   if (response.status === 404) return null;
   if (!response.ok) throw new Error("Could not load your account.");
   const body = (await response.json()) as {

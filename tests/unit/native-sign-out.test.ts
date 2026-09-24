@@ -10,14 +10,13 @@ describe("native sign-out handoff", () => {
     expect(urlHasSignedOutFlag("foo=1")).toBe(false);
   });
 
-  it("returns Android to https://localhost and iOS to capacitor://localhost", () => {
+  it("returns Android and iOS to https://localhost", () => {
     const source = readFileSync(
       join(process.cwd(), "lib/native/sign-out-native.ts"),
       "utf8",
     );
     expect(source).toContain("https://localhost/?${SIGNED_OUT_QUERY}");
-    expect(source).toContain("capacitor://localhost/?${SIGNED_OUT_QUERY}");
+    expect(source).not.toContain("capacitor://localhost");
     expect(source).toContain("export function looksLikeNativeWebView");
-    expect(source).not.toContain('iosScheme: "https"');
   });
 });

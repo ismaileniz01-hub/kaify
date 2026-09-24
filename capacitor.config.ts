@@ -25,11 +25,12 @@ const config: CapacitorConfig = {
   appName: "Kaify Ai",
   webDir: "native-dist",
   loggingBehavior: isLocal ? "debug" : "none",
-  // Android WebView origin is https://localhost (OTP CORS).
-  // iOS keeps the default capacitor:// scheme — iosScheme: https crushes
-  // WKWebView layout after the OTP keyboard. GoTrue is intercepted in-app.
+  // Both platforms use https://localhost so OTP CORS and handoff match.
+  // Keyboard inset is handled by Capacitor Keyboard + useNativeKeyboardOffset
+  // (KeyboardResize.None). GoTrue stays intercepted in-app.
   server: {
     androidScheme: "https",
+    iosScheme: "https",
     hostname: "localhost",
     allowNavigation: ["kaifyai.org", "www.kaifyai.org"],
     ...(devServerUrl

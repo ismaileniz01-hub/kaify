@@ -14,9 +14,9 @@ describe("native local packaging contract", () => {
   const serverAuth = source("lib/supabase/server.ts");
   const middleware = source("middleware.ts");
 
-  it("keeps Android on https://localhost and iOS on the default capacitor scheme", () => {
+  it("keeps Android and iOS on https://localhost for shared OTP CORS", () => {
     expect(capacitor).toContain('androidScheme: "https"');
-    expect(capacitor).not.toContain('iosScheme: "https"');
+    expect(capacitor).toContain('iosScheme: "https"');
     expect(capacitor).toContain('hostname: "localhost"');
     expect(capacitor).toContain("allowNavigation");
     expect(capacitor).toContain("kaifyai.org");
@@ -105,7 +105,12 @@ describe("native local packaging contract", () => {
     expect(nativeApp).toContain("useState(false)");
     expect(nativeApp).toContain("SplashScreen.hide");
     expect(nativeApi).toContain('"Authorization"');
-    expect(nativeApi).toContain("Bearer ${await accessToken()}");
+    expect(nativeApi).toContain("Bearer ${await accessToken(bearerToken)}");
+    expect(nativeApi).toContain("SESSION_READ_MS");
+    expect(nativeApp).toContain("loadProfile(accessToken)");
+    expect(source("native-app/src/enter-kaify.ts")).not.toContain(
+      "native-entry#",
+    );
     expect(serverAuth).toContain("supabase.auth.getUser(bearerToken");
     expect(middleware).toContain("Access-Control-Allow-Origin");
     expect(middleware).toContain("isNativeShellOrigin");
