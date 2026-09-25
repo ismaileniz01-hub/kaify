@@ -1,0 +1,4 @@
+{
+  "name": "Kaify",
+  "install": "npm ci && npx playwright install chromium"
+}
