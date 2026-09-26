@@ -38,6 +38,7 @@ import { MotionDialog } from "@/components/ui/MotionDialog";
 import { StepUpChallenge } from "@/components/auth/StepUpChallenge";
 import { useBillingPortal } from "@/components/billing/useBillingPortal";
 import { useNativeApp } from "@/lib/native/platform";
+import { nativeShellLoginUrl } from "@/lib/native/sign-out-native";
 
 type SettingItem = {
   icon: typeof Bell;
@@ -302,7 +303,7 @@ export default function SettingsPage() {
     try {
       await signOut();
       if (window.location.pathname.startsWith("/settings")) {
-        window.location.replace("/login");
+        window.location.replace(nativeShellLoginUrl());
       }
     } finally {
       setLogoutLoading(false);

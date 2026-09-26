@@ -36,6 +36,7 @@ export type DefineRouteOptions = {
     | "subscribe"
     | "otp_send"
     | "otp_verify"
+    | "auth_session"
     | "health_probe"
     | "csp_report"
     | "public_media"

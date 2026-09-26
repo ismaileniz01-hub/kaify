@@ -9,6 +9,10 @@ import {
   hasNativeHandoffClient,
   readNativeEntryAccessToken,
 } from "@/lib/native/native-entry-boot";
+import {
+  getFreshNativeAccessToken,
+  refreshNativeEntryTokens,
+} from "@/lib/native/native-token-refresh";
 
 export const IDEMPOTENCY_HEADER = "Idempotency-Key";
 
@@ -40,9 +44,11 @@ function withAuthHeaderTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> 
 
 /** Bearer from native-entry tokens; never wait on WKWebView navigator.locks. */
 export async function getApiAuthHeaders(): Promise<Record<string, string>> {
-  const nativeToken = readNativeEntryAccessToken();
-  if (nativeToken) {
-    return { Authorization: `Bearer ${nativeToken}` };
+  if (readNativeEntryAccessToken()) {
+    const nativeToken = await getFreshNativeAccessToken();
+    if (nativeToken) {
+      return { Authorization: `Bearer ${nativeToken}` };
+    }
   }
   // Cookie-only handoff: credentials:include carries sb-* cookies. Do not call
   // getSession() while the hint cookie is the only signal — it can hang locks.
@@ -151,47 +157,31 @@ export async function apiFetch<T>(
     baseHeaders[IDEMPOTENCY_HEADER] = idempotencyKey;
   }
   const signal = abortSignalWithTimeout(init?.signal ?? undefined);
+  const nativeBearer = nativeBearerFrom(baseHeaders);
 
   try {
-    return await withRetry(
-      async () => {
-        let response: Response;
-        try {
-          response = await fetch(resolveApiPath(path), {
-            ...init,
-            method,
-            credentials: "include",
-            signal,
-            headers: {
-              "Content-Type": "application/json",
-              ...baseHeaders,
-            },
-          });
-        } catch (error) {
-          throw error;
-        }
-
-        if (
-          idempotent &&
-          (response.status === 502 || response.status === 503 || response.status === 504)
-        ) {
-          throw new UpstreamHttpError(response.status, `API ${response.status}`);
-        }
-
-        const json = (await response.json()) as ApiResponseBody<T>;
-        return json;
-      },
-      {
-        retries: idempotent ? 2 : 1,
-        baseDelayMs: 200,
-        maxDelayMs: 1500,
-        signal,
-        isRetryable: (error) => {
-          if (error instanceof UpstreamHttpError) return idempotent;
-          if (isLikelyNetworkFailure(error)) return true;
-          return false;
-        },
-      },
+    const body = await sendApiRequest<T>(path, init, method, baseHeaders, signal, idempotent);
+    if (!nativeBearer || body.success || body.error.code !== "UNAUTHORIZED") {
+      return body;
+    }
+    // Server rejected the stored native JWT (expired early, clock skew): rotate once.
+    const latest = readNativeEntryAccessToken();
+    let retryToken = latest && latest !== nativeBearer ? latest : null;
+    if (!retryToken) {
+      const refreshed = await refreshNativeEntryTokens();
+      if (refreshed.status === "unavailable") {
+        throw new ApiClientError("NETWORK", "Bağlantı kurulamadı.");
+      }
+      if (refreshed.status === "rejected") return body;
+      retryToken = refreshed.accessToken;
+    }
+    return await sendApiRequest<T>(
+      path,
+      init,
+      method,
+      { ...baseHeaders, Authorization: `Bearer ${retryToken}` },
+      signal,
+      idempotent,
     );
   } catch (error) {
     if (isLikelyNetworkFailure(error)) {
@@ -199,6 +189,57 @@ export async function apiFetch<T>(
     }
     throw error;
   }
+}
+
+function nativeBearerFrom(headers: Record<string, string>): string | null {
+  const raw = headers.Authorization ?? headers.authorization ?? "";
+  const token = raw.replace(/^Bearer\s+/i, "").trim();
+  return token && token === readNativeEntryAccessToken() ? token : null;
+}
+
+async function sendApiRequest<T>(
+  path: string,
+  init: RequestInit | undefined,
+  method: string,
+  headers: Record<string, string>,
+  signal: AbortSignal,
+  idempotent: boolean,
+): Promise<ApiResponseBody<T>> {
+  return withRetry(
+    async () => {
+      const response = await fetch(resolveApiPath(path), {
+        ...init,
+        method,
+        credentials: "include",
+        signal,
+        headers: {
+          "Content-Type": "application/json",
+          ...headers,
+        },
+      });
+
+      if (
+        idempotent &&
+        (response.status === 502 || response.status === 503 || response.status === 504)
+      ) {
+        throw new UpstreamHttpError(response.status, `API ${response.status}`);
+      }
+
+      const json = (await response.json()) as ApiResponseBody<T>;
+      return json;
+    },
+    {
+      retries: idempotent ? 2 : 1,
+      baseDelayMs: 200,
+      maxDelayMs: 1500,
+      signal,
+      isRetryable: (error) => {
+        if (error instanceof UpstreamHttpError) return idempotent;
+        if (isLikelyNetworkFailure(error)) return true;
+        return false;
+      },
+    },
+  );
 }
 
 export async function apiGet<T>(path: string): Promise<T> {

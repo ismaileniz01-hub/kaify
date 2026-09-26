@@ -16,7 +16,7 @@ export const POST = defineRouteRaw(
   {
     route: "POST /api/auth/session/logout",
     auth: "none",
-    publicRateLimit: "otp_verify",
+    publicRateLimit: "auth_session",
   },
   async ({ request }) => {
     try {

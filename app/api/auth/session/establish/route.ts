@@ -13,7 +13,7 @@ export const POST = defineRouteRaw(
   {
     route: "POST /api/auth/session/establish",
     auth: "none",
-    publicRateLimit: "otp_verify",
+    publicRateLimit: "auth_session",
   },
   async ({ request }) => {
     const body = await request.json().catch(() => null);

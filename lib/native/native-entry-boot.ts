@@ -132,6 +132,28 @@ function writeNativeEntryTokens(tokens: NativeEntryTokens): void {
   }
 }
 
+/** Replace stored tokens after a refresh without re-arming the one-shot handoff flag. */
+export function storeNativeEntryTokens(tokens: NativeEntryTokens): void {
+  const payload = JSON.stringify({
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+  });
+  if (typeof sessionStorage !== "undefined") {
+    try {
+      sessionStorage.setItem(NATIVE_ENTRY_TOKEN_KEY, payload);
+    } catch {
+      // ignore
+    }
+  }
+  if (typeof localStorage !== "undefined") {
+    try {
+      localStorage.setItem(NATIVE_ENTRY_TOKEN_KEY, payload);
+    } catch {
+      // ignore
+    }
+  }
+}
+
 function readCookieValue(name: string): string | null {
   if (typeof document === "undefined") return null;
   const prefix = `${name}=`;

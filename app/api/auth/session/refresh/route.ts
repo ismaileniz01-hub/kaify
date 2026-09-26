@@ -13,7 +13,7 @@ export const POST = defineRouteRaw(
   {
     route: "POST /api/auth/session/refresh",
     auth: "none",
-    publicRateLimit: "otp_verify",
+    publicRateLimit: "auth_session",
   },
   async ({ request }) => {
     if (!isNativeWebViewRequest(request)) {

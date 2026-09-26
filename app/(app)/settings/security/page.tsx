@@ -5,6 +5,7 @@ import { ArrowLeft, Shield, ShieldCheck, ShieldOff, Download } from "lucide-reac
 import { useEffect, useState } from "react";
 import { useLang } from "@/lib/lang-context";
 import { signOutUser } from "@/lib/auth/logout";
+import { nativeShellLoginUrl } from "@/lib/native/sign-out-native";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
   enrollTotp,
@@ -174,7 +175,7 @@ export default function SecuritySettingsPage() {
         setError(t("login.error.failed"));
         return;
       }
-      window.location.href = "/login";
+      window.location.replace(nativeShellLoginUrl());
     } finally {
       setLoading(false);
     }
@@ -263,7 +264,8 @@ export default function SecuritySettingsPage() {
     setMessage(null);
     try {
       await apiDelete<{ deleted: boolean }>("/api/profile", { confirm: "DELETE" });
-      window.location.href = "/login";
+      await signOutUser();
+      window.location.replace(nativeShellLoginUrl());
     } catch (err) {
       if (isStepUpRequiredError(err) || (err instanceof ApiClientError && err.code === "STEP_UP_REQUIRED")) {
         setNeedsStepUp("delete");

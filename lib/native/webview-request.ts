@@ -38,6 +38,10 @@ export function isNativeShellOrigin(origin: string | null): boolean {
   }
 }
 
+/** Social/mail apps embed WebViews with the same UA shape as the Capacitor shell. */
+const IN_APP_BROWSER_UA =
+  /fban|fbav|instagram|line\/|gsa\/|twitter|linkedinapp|snapchat|musical_ly|bytedance|pinterest|micromessenger/;
+
 function isIosWebViewUserAgent(ua: string): boolean {
   const appleMobile =
     ua.includes("iphone") || ua.includes("ipad") || ua.includes("ipod");
@@ -57,7 +61,8 @@ export function isNativeWebViewRequest(request: Request): boolean {
   if (isNativeShellOrigin(origin)) return true;
 
   const ua = (request.headers.get("user-agent") ?? "").toLowerCase();
-  if (ua.includes("capacitor")) return true;
+  if (ua.includes("kaifynative") || ua.includes("capacitor")) return true;
+  if (IN_APP_BROWSER_UA.test(ua)) return false;
   if (ua.includes("; wv)") && ua.includes("android")) return true;
   return isIosWebViewUserAgent(ua);
 }

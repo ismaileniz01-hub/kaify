@@ -31,7 +31,7 @@ async function parseTokens(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await enforcePublicRateLimit(getClientIP(request), "otp_verify");
+    await enforcePublicRateLimit(getClientIP(request), "auth_session");
   } catch (error) {
     if (error instanceof ApiError && error.code === "RATE_LIMITED") {
       return NextResponse.redirect(nativeLoginErrorUrl(request), 303);

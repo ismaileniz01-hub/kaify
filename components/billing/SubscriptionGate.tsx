@@ -7,7 +7,10 @@ import {
   requiresActiveSubscription,
 } from "@/lib/auth/post-auth-redirect";
 import { isNativePlatform } from "@/lib/native/platform";
-import { returnToNativeLoginShell } from "@/lib/native/sign-out-native";
+import {
+  looksLikeNativeWebView,
+  returnToNativeLoginShell,
+} from "@/lib/native/sign-out-native";
 import { useSession } from "@/lib/session-context";
 
 /**
@@ -24,7 +27,7 @@ export function SubscriptionGate() {
     if (!requiresActiveSubscription(pathname)) return;
     if (hasPaidPlan(profile)) return;
     void (async () => {
-      const native = await isNativePlatform();
+      const native = (await isNativePlatform()) || looksLikeNativeWebView();
       if (native) {
         await signOut();
         await returnToNativeLoginShell();

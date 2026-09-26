@@ -12,7 +12,7 @@ export const POST = defineRouteRaw(
   {
     route: "POST /api/auth/session/native-ticket",
     auth: "none",
-    publicRateLimit: "otp_verify",
+    publicRateLimit: "auth_session",
   },
   async ({ request }) => {
     if (!isNativeWebViewRequest(request)) {

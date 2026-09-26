@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiDelete, ApiClientError } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
+import { looksLikeNativeWebView } from "@/lib/native/sign-out-native";
 import {
   StepUpChallenge,
   isStepUpRequiredError,
@@ -31,7 +32,7 @@ export function DeleteAccountSection() {
         reason: reason.trim(),
       });
       await signOut();
-      router.replace("/login");
+      if (!looksLikeNativeWebView()) router.replace("/login");
     } catch (err) {
       if (isStepUpRequiredError(err)) {
         setNeedsStepUp(true);

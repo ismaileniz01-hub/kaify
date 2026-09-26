@@ -25,6 +25,8 @@ const config: CapacitorConfig = {
   appName: "Kaify Ai",
   webDir: "native-dist",
   loggingBehavior: isLocal ? "debug" : "none",
+  // Lets kaifyai.org tell the store WebView apart from in-app browsers (Instagram, Gmail).
+  appendUserAgent: "KaifyNative",
   // Both platforms use https://localhost so OTP CORS and handoff match.
   // Keyboard inset is handled by Capacitor Keyboard + useNativeKeyboardOffset
   // (KeyboardResize.None). GoTrue stays intercepted in-app.

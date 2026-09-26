@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -97,6 +98,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [referralCode, setReferralCode] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [sessionError, setSessionError] = useState(false);
+  const hasHydratedRef = useRef(false);
+  const isAuthenticatedRef = useRef(false);
+  const nativeCookiesEstablishedRef = useRef(false);
+  hasHydratedRef.current = hasHydrated;
+  isAuthenticatedRef.current = isAuthenticated;
 
   const clearSessionError = useCallback(() => setSessionError(false), []);
 
@@ -117,6 +123,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const refreshSession = useCallback(async () => {
     hydrateNativeBearerCookie();
     const nativeShell = hasNativeHandoffClient();
+    const hasHydrated = hasHydratedRef.current;
+    const isAuthenticated = isAuthenticatedRef.current;
     const isBackgroundRefresh = nativeShell || (hasHydrated && isAuthenticated);
     if (!isBackgroundRefresh) {
       setIsLoading(true);
@@ -141,6 +149,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    let redirectingToShell = false;
     try {
       let bundle: SessionBundleDTO;
       try {
@@ -175,7 +184,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setKai(bundle.kai);
       if (!nativeShell) {
         clearNativeEntryTokens();
-      } else {
+      } else if (!nativeCookiesEstablishedRef.current) {
+        nativeCookiesEstablishedRef.current = true;
         void tryEstablishNativeCookies();
       }
 
@@ -205,17 +215,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       if (error instanceof ApiClientError && error.code === "UNAUTHORIZED") {
-        applyGuestState();
-        // No-ops in mobile Safari. Native WebView must not stay on guest "Joe" Home.
-        void returnToNativeLoginShell();
+        // Native WebView goes straight back to the login shell; never render guest "Joe" Home.
+        clearNativeEntryTokens();
+        nativeCookiesEstablishedRef.current = false;
+        redirectingToShell = await returnToNativeLoginShell();
+        if (!redirectingToShell) applyGuestState();
       } else {
         setSessionError(true);
       }
     } finally {
-      setIsLoading(false);
-      setHasHydrated(true);
+      if (!redirectingToShell) {
+        setIsLoading(false);
+        setHasHydrated(true);
+      }
     }
-  }, [hasHydrated, isAuthenticated, applyGuestState]);
+  }, [applyGuestState]);
 
   const signOut = useCallback(async () => {
     const result = await signOutUser();

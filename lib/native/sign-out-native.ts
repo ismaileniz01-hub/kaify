@@ -1,5 +1,22 @@
 const SIGNED_OUT_QUERY = "signed_out=1";
 
+/** Social/mail apps embed WKWebView without "Safari/" in the UA, like our shell does. */
+const IN_APP_BROWSER_UA =
+  /fban|fbav|instagram|line\/|gsa\/|twitter|linkedinapp|snapchat|musical_ly|bytedance|pinterest|micromessenger/;
+
+function hasCapacitorIosBridge(): boolean {
+  try {
+    const handlers = (
+      window as unknown as {
+        webkit?: { messageHandlers?: Record<string, unknown> };
+      }
+    ).webkit?.messageHandlers;
+    return Boolean(handlers && "bridge" in handlers && handlers.bridge);
+  } catch {
+    return false;
+  }
+}
+
 export function looksLikeNativeWebView(): boolean {
   if (typeof window === "undefined") return false;
   try {
@@ -10,12 +27,14 @@ export function looksLikeNativeWebView(): boolean {
     // ignore
   }
   const ua = (navigator.userAgent || "").toLowerCase();
-  if (ua.includes("capacitor")) return true;
+  if (ua.includes("kaifynative") || ua.includes("capacitor")) return true;
+  if (IN_APP_BROWSER_UA.test(ua)) return false;
   if (ua.includes("; wv)") && ua.includes("android")) return true;
   const apple =
     ua.includes("iphone") || ua.includes("ipad") || ua.includes("ipod");
+  if (!apple) return false;
+  if (hasCapacitorIosBridge()) return true;
   return (
-    apple &&
     ua.includes("applewebkit") &&
     ua.includes("mobile") &&
     !ua.includes("safari/")
@@ -93,9 +112,12 @@ async function clearNativeSecureSession(): Promise<void> {
   }
 }
 
-/** After website logout or a failed native session, reopen the local login shell. */
-export async function returnToNativeLoginShell(): Promise<void> {
-  if (typeof window === "undefined") return;
+/**
+ * After website logout or a failed native session, reopen the local login shell.
+ * Resolves true when a shell navigation was started (callers must not navigate again).
+ */
+export async function returnToNativeLoginShell(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
   let capacitorNative = false;
   try {
     const { Capacitor } = await import("@capacitor/core");
@@ -103,7 +125,8 @@ export async function returnToNativeLoginShell(): Promise<void> {
   } catch {
     capacitorNative = false;
   }
-  if (!capacitorNative && !looksLikeNativeWebView()) return;
+  if (!capacitorNative && !looksLikeNativeWebView()) return false;
   await clearNativeSecureSession();
   window.location.replace(nativeShellLoginUrl());
+  return true;
 }
