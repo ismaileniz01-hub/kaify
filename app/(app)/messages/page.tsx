@@ -23,6 +23,15 @@ import { AppHeader } from "@/components/navigation/AppHeader";
 
 const INBOX_LOAD_TIMEOUT_MS = 10_000;
 
+function todayLabel(lang: string): string {
+  const options = { weekday: "short", day: "numeric", month: "short" } as const;
+  try {
+    return new Intl.DateTimeFormat(lang, options).format(new Date());
+  } catch {
+    return new Intl.DateTimeFormat("en", options).format(new Date());
+  }
+}
+
 export default function MessagesPage() {
   const { lang, t } = useLang();
   const { avatar: kaiAvatar } = useKai();
@@ -123,7 +132,7 @@ export default function MessagesPage() {
         backHref="/welcome"
         backLabel={t("nav.back")}
         title={t("nav.messages")}
-        trailing={<span className="type-caption font-medium type-muted">{t("messages.date")}</span>}
+        trailing={<span className="type-caption font-medium type-muted" suppressHydrationWarning>{todayLabel(lang)}</span>}
         divider
       />
 
