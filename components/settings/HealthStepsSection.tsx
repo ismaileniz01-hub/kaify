@@ -94,7 +94,7 @@ export function HealthStepsSection() {
                     type="button"
                     disabled={busy}
                     onClick={() => void handleSync()}
-                    className="rounded-full bg-purple-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                    className="min-h-11 rounded-full bg-purple-500 px-4 text-xs font-semibold text-white disabled:opacity-50"
                   >
                     {t("analytics.refresh")}
                   </button>
@@ -102,7 +102,7 @@ export function HealthStepsSection() {
                     type="button"
                     disabled={busy}
                     onClick={handleDisconnect}
-                    className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-zinc-200"
+                    className="min-h-11 rounded-full border border-white/15 px-4 text-xs font-semibold text-zinc-200"
                   >
                     {t("health.steps.disconnect")}
                   </button>
@@ -112,7 +112,7 @@ export function HealthStepsSection() {
                   type="button"
                   disabled={busy}
                   onClick={() => void handleConnect()}
-                  className="rounded-full bg-purple-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                  className="min-h-11 rounded-full bg-purple-500 px-4 text-xs font-semibold text-white disabled:opacity-50"
                 >
                   {t("health.steps.connect")}
                 </button>

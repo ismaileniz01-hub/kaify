@@ -57,12 +57,60 @@
   background-clip: text;
 }
 
-/* Light tema — header text */
+/* Light tema — header text. Filled purple actions keep white labels. */
 [data-theme="light"] h1,
 [data-theme="light"] h2,
 [data-theme="light"] h3,
 [data-theme="light"] .text-white {
   color: #1a1a2e;
+}
+
+[data-theme="light"] :is(button, a, span).text-white:is(
+  .bg-purple-500,
+  .bg-purple-600,
+  .bg-violet-600,
+  .bg-emerald-500,
+  .bg-emerald-600
+),
+[data-theme="light"] :is(button, a)[class*="from-purple-"],
+[data-theme="light"] :is(button, a)[class*="from-violet-"],
+[data-theme="light"] .landing-btn--primary,
+[data-theme="light"] .account-btn--primary {
+  color: #ffffff;
+}
+
+[data-theme="light"] .app-header::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.75) 72%, transparent);
+}
+
+[data-theme="light"] .app-header__title {
+  color: #1a1a2e;
+}
+
+[data-theme="light"] .app-header__action {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.72);
+  color: #3f3f46;
+}
+
+[data-theme="light"] .app-header__action:hover {
+  border-color: rgba(0, 0, 0, 0.14);
+  background: #ffffff;
+  color: #1a1a2e;
+}
+
+[data-theme="light"] .bottom-nav {
+  border-top-color: rgba(0, 0, 0, 0.08);
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.97) 55%, rgba(255, 255, 255, 0.9));
+}
+
+[data-theme="light"] .bottom-nav__link {
+  color: #71717a;
+}
+
+[data-theme="light"] .bottom-nav__link--active {
+  color: #7c3aed;
+  background: rgba(147, 51, 234, 0.12);
 }
 
 /* Light tema — muted text */

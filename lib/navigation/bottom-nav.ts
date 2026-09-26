@@ -6,6 +6,7 @@ const HIDDEN_PREFIXES = [
   "/pricing",
   "/admin",
   "/onboarding",
+  "/myaccount",
 ] as const;
 
 export function shouldShowBottomNav(pathname: string): boolean {

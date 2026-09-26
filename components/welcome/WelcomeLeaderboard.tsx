@@ -148,27 +148,29 @@ export function WelcomeLeaderboard() {
         </div>
 
         {/* Top 3 — yanyana */}
-        <div className="flex items-center justify-around gap-1">
+        <div className="flex items-end justify-center gap-2">
           {top3.map((entry, i) => (
             <div
               key={entry.userId}
-              className="flex flex-col items-center gap-1"
+              className="flex min-w-0 flex-1 flex-col items-center gap-1"
             >
-              <div
-                className={`relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full ring-2 ${
-                  i === 0
-                    ? "ring-amber-400/50"
-                    : i === 1
-                      ? "ring-zinc-300/40"
-                      : "ring-amber-700/40"
-                }`}
-              >
-                <FlagImage flagCode={entry.flagCode} size={36} />
-                <div className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-zinc-900 text-[8px]">
+              <div className="relative h-11 w-11 shrink-0">
+                <div
+                  className={`flex h-full w-full items-center justify-center overflow-hidden rounded-full ring-2 ${
+                    i === 0
+                      ? "ring-amber-400/50"
+                      : i === 1
+                        ? "ring-zinc-300/40"
+                        : "ring-amber-700/40"
+                  }`}
+                >
+                  <FlagImage flagCode={entry.flagCode} size={44} />
+                </div>
+                <div className="absolute -bottom-1 -end-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 ring-2 ring-zinc-950">
                   <RankIcon rank={i + 1} />
                 </div>
               </div>
-              <span className="text-[10px] font-medium text-zinc-300">{entry.name}</span>
+              <span className="w-full truncate text-center text-[10px] font-medium text-zinc-300">{entry.name}</span>
               <span className="flex items-center gap-0.5 text-[9px] text-orange-400/80">
                 <Flame className="h-2.5 w-2.5" />
                 {entry.streak}

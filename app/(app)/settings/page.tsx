@@ -812,29 +812,32 @@ export default function SettingsPage() {
         open={logoutOpen}
         onClose={() => setLogoutOpen(false)}
         labelledBy="logout-confirm-title"
-      >
-        <div className="p-5">
-          <h2 id="logout-confirm-title" className="text-lg font-semibold text-white">
-            {t("settings.logout.confirm_title")}
-          </h2>
-          <p className="mt-2 text-sm text-zinc-400">{t("settings.logout.confirm_body")}</p>
-          <div className="mt-4 flex gap-2">
+        panelClassName="w-full max-w-sm rounded-3xl border border-white/10 bg-zinc-950 shadow-2xl"
+        footer={
+          <div className="flex gap-2 px-5 pb-5">
             <button
               type="button"
-              className="touch-44 flex-1 rounded-full border border-white/15 py-2 text-sm text-zinc-200"
+              className="touch-44 min-h-11 flex-1 rounded-full border border-white/15 text-sm text-zinc-200"
               onClick={() => setLogoutOpen(false)}
             >
               {t("common.cancel")}
             </button>
             <button
               type="button"
-              className="touch-44 flex-1 rounded-full bg-purple-600 py-2 text-sm font-semibold text-white"
+              className="touch-44 min-h-11 flex-1 rounded-full bg-purple-600 text-sm font-semibold text-white"
               disabled={logoutLoading}
               onClick={() => void handleLogout()}
             >
               {t("settings.logout")}
             </button>
           </div>
+        }
+      >
+        <div className="px-5 pb-2 pt-5">
+          <h2 id="logout-confirm-title" className="text-lg font-semibold text-white">
+            {t("settings.logout.confirm_title")}
+          </h2>
+          <p className="mt-2 text-sm text-zinc-400">{t("settings.logout.confirm_body")}</p>
         </div>
       </MotionDialog>
     </div>

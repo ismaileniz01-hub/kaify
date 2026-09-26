@@ -3,11 +3,11 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { BarChart3, Flame, Globe, MessageCircle, Settings, ShoppingCart, User } from "lucide-react";
+import { BalanceChip } from "@/components/navigation/BalanceChip";
+import { HeaderMenu } from "@/components/navigation/HeaderMenu";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { WelcomeCard } from "@/components/welcome/WelcomeCard";
 import { StreakAtRiskBanner } from "@/components/streak/StreakAtRiskBanner";
-import { GemBalance } from "@/components/GemBalance";
-import { FreezieBalance } from "@/components/FreezieBalance";
 import { DailyMotivationQuote } from "@/components/welcome/DailyMotivationQuote";
 import { useSession } from "@/lib/session-context";
 import { useState, useEffect } from "react";
@@ -127,50 +127,45 @@ function WelcomeContent() {
   }, [lang, isAuthenticated, refreshHome]);
 
   return (
-    <div className="phone-shell welcome-page relative flex flex-col overflow-hidden">
+    <div className="phone-shell welcome-page relative flex h-dvh max-h-dvh flex-col overflow-x-hidden">
       <FitnessWallpaper softVignette />
 
       <AppHeader
         leading={
-          <>
           <button
             type="button"
             onClick={() => {
               void hapticSelection();
               setProfileOpen(true);
             }}
-              className="app-header__action border-purple-400/25 bg-purple-500/15 text-purple-300"
+            className="app-header__action border-purple-400/25 bg-purple-500/15 text-purple-300"
             aria-label={t("profile.title")}
           >
             <User className="h-4 w-4" strokeWidth={2} />
           </button>
-            <Link
-              href="/leaderboard"
-              className="app-header__action border-amber-400/25 bg-amber-500/10 text-amber-400"
-              aria-label={t("nav.leaderboard")}
-              onClick={() => {
-                void hapticSelection();
-              }}
-            >
-              <Globe className="h-4 w-4" />
-            </Link>
-          </>
         }
         trailing={
           <>
-          <GemBalance balance={gemBalance.balance} size="sm" animate />
-          <FreezieBalance balance={streak.freezieBalance} size="sm" animate />
-          <NotificationCenter />
-          <Link
-            href="/settings"
-              className="app-header__action"
-            aria-label={t("nav.settings")}
-            onClick={() => {
-              void hapticSelection();
-            }}
-          >
-            <Settings className="h-4 w-4" strokeWidth={2} />
-          </Link>
+            <BalanceChip
+              gems={gemBalance.balance}
+              freezies={streak.freezieBalance}
+              animate
+            />
+            <NotificationCenter />
+            <HeaderMenu
+              items={[
+                {
+                  href: "/leaderboard",
+                  label: t("nav.leaderboard"),
+                  icon: <Globe className="h-4 w-4 text-amber-400" />,
+                },
+                {
+                  href: "/settings",
+                  label: t("nav.settings"),
+                  icon: <Settings className="h-4 w-4" />,
+                },
+              ]}
+            />
           </>
         }
       />

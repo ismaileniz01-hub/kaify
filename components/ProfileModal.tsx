@@ -69,6 +69,17 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
         labelledBy="profile-modal-title"
         className="z-50"
         panelClassName="relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-zinc-900 shadow-2xl"
+        footer={
+          <div className="px-5 pb-5">
+            <button
+              onClick={() => { setForm({ ...profile }); setEditing(true); }}
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-purple-500 text-sm font-medium text-white transition hover:bg-purple-400 active:scale-95"
+            >
+              <Pencil className="h-4 w-4" />
+              {t("profile.edit_button")}
+            </button>
+          </div>
+        }
       >
         <div>
           {/* Header */}
@@ -94,7 +105,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
                   alt={profile.name}
                   width={96}
                   height={96}
-                  className="h-full w-full object-cover"
+                  className="avatar-photo h-full w-full"
                   unoptimized={profile.avatar.startsWith("data:")}
                 />
               </div>
@@ -180,14 +191,6 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
               </div>
             </div>
 
-            {/* Düzenle butonu */}
-            <button
-              onClick={() => { setForm({ ...profile }); setEditing(true); }}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-500 py-3 text-sm font-medium text-white transition hover:bg-purple-400 active:scale-95"
-            >
-              <Pencil className="h-4 w-4" />
-              {t("profile.edit_button")}
-            </button>
           </div>
         </div>
       </MotionDialog>
@@ -202,6 +205,26 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
       labelledBy="profile-edit-title"
       className="z-50"
       panelClassName="relative mx-4 w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-zinc-900 shadow-2xl"
+      footer={
+        <div className="flex gap-3 px-5 pb-5">
+          <button
+            onClick={handleCancel}
+            disabled={saving}
+            className="flex min-h-11 flex-1 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-sm font-medium text-zinc-300 transition hover:bg-white/10 active:scale-95 disabled:opacity-50"
+          >
+            {t("profile.cancel_button")}
+          </button>
+          <button
+            data-keyboard-cta
+            onClick={() => void handleSave()}
+            disabled={saving}
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-purple-500 text-sm font-medium text-white transition hover:bg-purple-400 active:scale-95 disabled:opacity-50"
+          >
+            <Check className="h-4 w-4" />
+            {saving ? t("profile.saving") : t("profile.save_button")}
+          </button>
+        </div>
+      }
     >
       <div>
         {/* Header */}
@@ -249,7 +272,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
                   alt={form.name}
                   width={96}
                   height={96}
-                  className="h-full w-full object-cover"
+                  className="avatar-photo h-full w-full"
                   unoptimized={form.avatar.startsWith("data:")}
                 />
                 {/* Hover overlay */}
@@ -403,24 +426,6 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
               <InlineAlert message={saveError} dismissLabel={t("common.dismiss")} onDismiss={() => setSaveError(null)} />
             </div>
           )}
-          <div className="mt-2 flex gap-3">
-            <button
-              onClick={handleCancel}
-              disabled={saving}
-              className="flex flex-1 items-center justify-center rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-medium text-zinc-300 transition hover:bg-white/10 active:scale-95 disabled:opacity-50"
-            >
-              {t("profile.cancel_button")}
-            </button>
-            <button
-              data-keyboard-cta
-              onClick={() => void handleSave()}
-              disabled={saving}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-purple-500 py-3 text-sm font-medium text-white transition hover:bg-purple-400 active:scale-95 disabled:opacity-50"
-            >
-              <Check className="h-4 w-4" />
-              {saving ? t("profile.saving") : t("profile.save_button")}
-            </button>
-          </div>
         </div>
       </div>
     </MotionDialog>

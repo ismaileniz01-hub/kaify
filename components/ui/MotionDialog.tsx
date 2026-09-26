@@ -25,6 +25,8 @@ type MotionDialogProps = {
   fullBleed?: boolean;
   /** Sheet drag handle. Defaults to true for sheet variant. */
   showHandle?: boolean;
+  /** Stays visible under the scrolling body. */
+  footer?: ReactNode;
 };
 
 const DRAG_DISMISS_PX = 88;
@@ -40,6 +42,7 @@ export function MotionDialog({
   closeOnBackdrop = true,
   fullBleed = false,
   showHandle,
+  footer,
 }: MotionDialogProps) {
   const { mounted, state } = usePresence(open);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -209,7 +212,7 @@ export function MotionDialog({
       data-app-overlay="open"
       className={`motion-overlay fixed inset-0 flex justify-center bg-black/70 backdrop-blur-sm ${
         variant === "sheet" ? "items-end sm:items-center" : "items-center"
-      } ${fullBleed ? "" : "p-4"} ${className}`}
+      } ${fullBleed ? "motion-overlay--bleed" : ""} ${className}`}
       data-state={state}
       onMouseDown={handleBackdrop}
       onClick={handleBackdrop}
@@ -226,7 +229,7 @@ export function MotionDialog({
         style={panelStyle}
         className={`${
           variant === "sheet" ? "motion-sheet" : "motion-panel"
-        } outline-none ${panelClassName}`}
+        } ${fullBleed ? "motion-panel--fill" : ""} outline-none ${panelClassName}`}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -237,7 +240,13 @@ export function MotionDialog({
             <span />
           </div>
         ) : null}
-        {children}
+        <div
+          className={`motion-dialog__body${fullBleed ? " motion-dialog__body--fill" : ""}`}
+          data-sheet-scroll=""
+        >
+          {children}
+        </div>
+        {footer ? <div className="motion-dialog__footer">{footer}</div> : null}
       </div>
     </div>
   );

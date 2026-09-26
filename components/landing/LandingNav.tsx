@@ -21,6 +21,7 @@ const LINKS = [
 
 export function LandingNav({
   pricingPage = false,
+  accountPage = false,
 }: {
   pricingPage?: boolean;
   accountPage?: boolean;
@@ -64,7 +65,13 @@ export function LandingNav({
       ? t("landing.nav.go_to_app")
       : t("landing.nav.signup");
 
-  const navLinks = pricingPage
+  const navLinks = accountPage
+    ? [
+        { href: "/welcome", label: t("nav.home") },
+        { href: "/settings", label: t("nav.settings") },
+        { href: "/pricing", label: t("landing.nav.pricing") },
+      ]
+    : pricingPage
     ? [
         { href: "/#about", label: t("landing.nav.about") },
         { href: "/#coaches", label: t("landing.nav.coaches") },

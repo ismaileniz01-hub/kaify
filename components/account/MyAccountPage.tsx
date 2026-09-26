@@ -301,7 +301,7 @@ export function MyAccountPage() {
     <div className="landing-site">
       <LandingNav pricingPage accountPage />
       <main>
-        <section className="account-hero relative overflow-hidden pb-16 pt-28 sm:pt-36">
+        <section className="account-hero relative overflow-x-hidden pb-[max(4rem,calc(var(--safe-bottom)+2rem))] pt-[max(7rem,calc(var(--safe-top)+5.5rem))] sm:pt-36">
           <div className="absolute inset-0">
             <FitnessWallpaper softVignette />
           </div>

@@ -131,7 +131,7 @@ function PodiumStep({
 
   return (
     <div
-      className="group flex flex-col items-center gap-2"
+      className="group flex min-w-0 flex-1 flex-col items-center gap-2"
       style={
         prefersReducedMotion()
           ? undefined
@@ -157,7 +157,7 @@ function PodiumStep({
       </div>
 
       {/* Ülke adı */}
-      <span className="text-sm font-bold text-white drop-shadow-lg transition-all duration-300 group-hover:text-amber-200">
+      <span className="w-full truncate px-1 text-center text-xs font-bold text-white drop-shadow-lg transition-all duration-300 group-hover:text-amber-200 sm:text-sm">
         {entry.countryName}
       </span>
 
@@ -174,7 +174,7 @@ function PodiumStep({
 
       {/* Basamak */}
       <div
-        className={`mt-1 w-24 rounded-t-lg bg-gradient-to-t ${c.bg} ring-2 ring-white/15 flex items-center justify-center transition-all duration-500 group-hover:shadow-lg ${c.shadow}`}
+        className={`mt-1 w-full max-w-24 rounded-t-lg bg-gradient-to-t ${c.bg} ring-2 ring-white/15 flex items-center justify-center transition-all duration-500 group-hover:shadow-lg ${c.shadow}`}
         style={{ height: barHeight }}
       >
         <span className={`text-lg font-black ${c.text}`}>#{rank}</span>
@@ -327,7 +327,7 @@ export default function LeaderboardPage() {
                 </div>
 
                 {/* Podyum basamakları */}
-                <div className="flex items-end justify-center gap-4">
+                <div className="flex items-end justify-center gap-2 px-1">
                   {data.leaderboard[1] && (
                     <PodiumStep
                       entry={data.leaderboard[1]}

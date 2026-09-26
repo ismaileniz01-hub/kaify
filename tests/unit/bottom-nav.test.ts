@@ -18,5 +18,6 @@ describe("shouldShowBottomNav", () => {
     expect(shouldShowBottomNav("/signup")).toBe(false);
     expect(shouldShowBottomNav("/pricing")).toBe(false);
     expect(shouldShowBottomNav("/admin")).toBe(false);
+    expect(shouldShowBottomNav("/myaccount")).toBe(false);
   });
 });

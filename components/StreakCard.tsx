@@ -7,7 +7,6 @@ import { KAI_LEVEL_AVATARS, type KaiLevel } from "@/lib/kai-level";
 import { useLang } from "@/lib/lang-context";
 import { toPng } from "html-to-image";
 import { MotionDialog } from "@/components/ui/MotionDialog";
-import { particleCount } from "@/lib/motion/perf-guards";
 
 type StreakCardProps = {
   open: boolean;
@@ -163,127 +162,75 @@ export function StreakCard({ open, streak, kaiLevel, onClose }: StreakCardProps)
       onClose={onClose}
       labelledBy="streak-card-title"
       className="z-50 bg-black/80"
-      panelClassName="relative flex w-full max-w-sm flex-col items-center gap-4"
-    >
-      <>
-        <button onClick={onClose} className="touch-44 self-end flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-zinc-400 transition hover:bg-white/20 hover:text-white" aria-label={t("common.close")}>
-          <X className="h-4 w-4" />
-        </button>
-
-        {/* Kart - html-to-image ile yakalanacak */}
-        <div ref={cardRef} className="relative w-full aspect-[9/16] rounded-3xl overflow-hidden shadow-2xl" style={{ background: theme.gradient }}>
-          {/* Overlay renk geçişi */}
-          <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${theme.flameColor2}12 0%, transparent 30%, rgba(168,85,247,0.15) 50%, rgba(124,58,237,0.45) 85%, rgba(88,28,135,0.5) 100%)` }} />
-
-          {/* Glow efekti */}
-          <div className="absolute inset-0 opacity-70" style={{ background: `radial-gradient(circle at 30% 20%, ${theme.glowIntense}, transparent 60%), radial-gradient(circle at 70% 80%, ${theme.glow}, transparent 50%), radial-gradient(circle at 50% 50%, rgba(168,85,247,0.5), transparent 60%)` }} />
-
-          {/* Arka plan ikonları */}
-          {BG_ICONS.map((item, i) => (
-            <span key={i} className="absolute pointer-events-none select-none" style={{ left: item.x, top: item.y, fontSize: item.size, opacity: 0.35, filter: `drop-shadow(0 0 6px ${theme.flameColor2}50)` }}>
-              {item.icon}
-            </span>
-          ))}
-
-          {/* Işık halkaları */}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[120px] h-[120px] rounded-full border" style={{ borderColor: `${theme.flameColor2}40`, boxShadow: `inset 0 0 20px ${theme.flameColor2}20` }} />
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] rounded-full border" style={{ borderColor: `${theme.flameColor2}30`, boxShadow: `inset 0 0 20px ${theme.flameColor2}15` }} />
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] rounded-full border" style={{ borderColor: `${theme.flameColor2}20`, boxShadow: `inset 0 0 20px ${theme.flameColor2}10` }} />
-
-          {/* Üst kısım */}
-          <div className="absolute top-8 left-6 right-6 flex items-start justify-between z-10">
-            <div className="flex items-center gap-3">
-              <Image src="/kaify-logo.png" alt="Kaify Ai" width={36} height={36} className="rounded-xl" style={{ filter: `drop-shadow(0 0 12px ${theme.glow})` }} />
-              <span className="text-2xl font-black text-white tracking-wide" style={{ textShadow: `0 0 30px ${theme.glow}, 0 0 60px ${theme.glowIntense}` }}>Kaify Ai</span>
-            </div>
-            <div className="px-4 py-1.5 rounded-full text-sm font-bold bg-white/15 text-white ring-1" style={{ border: `1px solid ${theme.flameColor2}50`, boxShadow: `0 0 15px ${theme.flameColor2}30` }}>
-              Lv.{kaiLevel}
-            </div>
-          </div>
-
-          {/* Sayı - üst kısımda */}
-          <div className="absolute top-28 left-0 right-0 flex flex-col items-center z-10">
-            {/* Dönen ışık çemberi */}
-            <div className="streak-card-fx absolute w-64 h-64 rounded-full" style={{
-              background: `conic-gradient(from 0deg, ${theme.flameColor}, ${theme.flameColor2}, ${theme.glowIntense}, ${theme.flameColor})`,
-              animation: "spin 4s linear infinite",
-              maskImage: "radial-gradient(circle, transparent 45%, black 46%, black 54%, transparent 55%)",
-              WebkitMaskImage: "radial-gradient(circle, transparent 45%, black 46%, black 54%, transparent 55%)",
-              opacity: 0.7,
-            }} />
-            {/* İkinci ters dönen çember */}
-            <div className="streak-card-fx absolute w-80 h-80 rounded-full" style={{
-              background: `conic-gradient(from 180deg, ${theme.flameColor2}, transparent, ${theme.glowIntense}, transparent)`,
-              animation: "spin 6s linear infinite reverse",
-              maskImage: "radial-gradient(circle, transparent 40%, black 41%, black 59%, transparent 60%)",
-              WebkitMaskImage: "radial-gradient(circle, transparent 40%, black 41%, black 59%, transparent 60%)",
-              opacity: 0.5,
-            }} />
-            {/* Sayının arkasında parlama */}
-            <div className="absolute w-96 h-96 rounded-full blur-3xl opacity-60" style={{ background: `radial-gradient(circle, ${theme.glowIntense}, ${theme.flameColor}40, transparent 70%)` }} />
-
-            {/* Yükselen kıvılcımlar */}
-            {[...Array(particleCount(12))].map((_, i) => (
-                <div key={i} className="streak-card-fx absolute w-1.5 h-1.5 rounded-full" style={{
-                  background: i % 2 === 0 ? theme.flameColor : theme.flameColor2,
-                  boxShadow: `0 0 6px ${i % 2 === 0 ? theme.flameColor : theme.flameColor2}`,
-                  animation: `sparkFloat ${2 + (i % 3) * 0.5}s ${(i % 5) * 0.2}s ease-out infinite`,
-                  opacity: 0.8,
-                }} />
-            ))}
-
-            {/* Alev tabanı - sayının altında */}
-            <div className="streak-card-fx absolute bottom-0 w-32 h-16" style={{
-              background: `linear-gradient(to top, ${theme.flameColor}, ${theme.flameColor2}80, transparent)`,
-              filter: "blur(12px)",
-              animation: "flameFlicker 0.8s ease-in-out infinite alternate",
-              opacity: 0.6,
-            }} />
-
-            <div className="flex items-center gap-3 relative">
-              <Flame className="w-14 h-14" style={{ color: theme.flameColor, filter: `drop-shadow(0 0 30px ${theme.flameColor}) drop-shadow(0 0 60px ${theme.glow})` }} />
-              <span className="text-[120px] font-black leading-none tracking-tighter" style={{ color: "#ffffff", textShadow: `0 0 60px ${theme.glow}, 0 0 120px ${theme.glowIntense}, 0 0 180px ${theme.flameColor}` }}>{streak}</span>
-            </div>
-            <span id="streak-card-title" className="text-xl font-bold mt-3 tracking-[0.4em]" style={{ color: theme.flameColor2, textShadow: `0 0 30px ${theme.glow}, 0 0 60px ${theme.glowIntense}` }}>
-              {t("streak.daily").toLocaleUpperCase(lang)}
-            </span>
-          </div>
-
-          {/* Kai Avatar - ortaya yakın, biraz yukarıda */}
-          <div className="absolute left-0 right-0 top-[58%] -translate-y-1/2 flex items-center justify-center z-10">
-            <div className="absolute w-80 h-80 rounded-full blur-3xl opacity-40" style={{ background: `radial-gradient(circle, ${theme.glowIntense}, transparent 70%)` }} />
-            <div style={{ filter: `drop-shadow(0 0 30px ${theme.glow}) drop-shadow(0 0 60px ${theme.glowIntense})` }}>
-              <Image src={KAI_LEVEL_AVATARS[kaiLevel]} alt="Kai" width={180} height={180} className="object-contain" priority />
-            </div>
-          </div>
-
-          {/* Motivasyon mesajı - en alt */}
-          <div className="absolute bottom-24 left-6 right-6 text-center z-10">
-            <p className="text-sm italic font-semibold" style={{ color: theme.flameColor2, textShadow: `0 0 15px ${theme.glow}` }}>
-              &ldquo;{t("streak.daily")} — keep the fire burning! 🔥&rdquo;
-            </p>
-          </div>
-
-          {/* Kaify Ai logosu */}
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10">
-            <span className="text-3xl font-black tracking-wider" style={{ background: "linear-gradient(135deg, #c084fc, #a855f7, #7c3aed)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", filter: "drop-shadow(0 0 20px rgba(168,85,247,0.5))" }}>
-              Kaify Ai
-            </span>
-          </div>
-        </div>
-
-        {/* Butonlar */}
-        <div className="flex gap-3 w-full">
-          <button onClick={handleDownload} disabled={downloading} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white transition hover:from-purple-500 hover:to-violet-500 disabled:opacity-50">
+      panelClassName="relative flex w-full max-w-sm flex-col items-center gap-3"
+      footer={
+        <div className="flex w-full gap-3 px-1 pb-1">
+          <button onClick={handleDownload} disabled={downloading} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 px-4 text-sm font-semibold text-white transition hover:from-purple-500 hover:to-violet-500 disabled:opacity-50">
             <Download className="h-4 w-4" />
             {downloading ? "Generating..." : t("streak.download")}
           </button>
-          <button onClick={handleShare} disabled={downloading} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20 disabled:opacity-50">
+          <button onClick={handleShare} disabled={downloading} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/20 disabled:opacity-50">
             <Share2 className="h-4 w-4" />
             {copied ? t("common.copied") : t("streak.share")}
           </button>
         </div>
-      </>
+      }
+    >
+      <button onClick={onClose} className="touch-44 mb-2 flex h-11 w-11 items-center justify-center self-end rounded-full bg-white/10 text-zinc-400 transition hover:bg-white/20 hover:text-white" aria-label={t("common.close")}>
+        <X className="h-4 w-4" />
+      </button>
+
+      <div
+        ref={cardRef}
+        className="relative flex w-full flex-col overflow-hidden rounded-3xl shadow-2xl"
+        style={{ background: theme.gradient, aspectRatio: "9 / 16", maxHeight: "min(68dvh, 640px)" }}
+      >
+        <div className="pointer-events-none absolute inset-0" style={{ background: `linear-gradient(180deg, ${theme.flameColor2}12 0%, transparent 30%, rgba(168,85,247,0.15) 50%, rgba(124,58,237,0.45) 85%, rgba(88,28,135,0.5) 100%)` }} />
+        <div className="pointer-events-none absolute inset-0 opacity-70" style={{ background: `radial-gradient(circle at 30% 20%, ${theme.glowIntense}, transparent 60%), radial-gradient(circle at 70% 80%, ${theme.glow}, transparent 50%)` }} />
+        {BG_ICONS.map((item, i) => (
+          <span key={i} className="pointer-events-none absolute select-none" style={{ left: item.x, top: item.y, fontSize: item.size, opacity: 0.28, filter: `drop-shadow(0 0 6px ${theme.flameColor2}50)` }}>
+            {item.icon}
+          </span>
+        ))}
+
+        <div className="relative z-10 flex items-center justify-between gap-3 px-5 pt-5">
+          <div className="flex min-w-0 items-center gap-2">
+            <Image src="/kaify-logo.png" alt="Kaify Ai" width={32} height={32} className="avatar-art h-8 w-8 shrink-0" style={{ filter: `drop-shadow(0 0 12px ${theme.glow})` }} />
+            <span className="truncate text-lg font-black tracking-wide text-white" style={{ textShadow: `0 0 24px ${theme.glow}` }}>Kaify Ai</span>
+          </div>
+          <div className="shrink-0 rounded-full bg-white/15 px-3 py-1 text-sm font-bold text-white" style={{ border: `1px solid ${theme.flameColor2}50` }}>
+            Lv.{kaiLevel}
+          </div>
+        </div>
+
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden px-4">
+          <div className="streak-card-fx pointer-events-none absolute h-40 w-40 rounded-full" style={{
+            background: `conic-gradient(from 0deg, ${theme.flameColor}, ${theme.flameColor2}, ${theme.glowIntense}, ${theme.flameColor})`,
+            animation: "spin 4s linear infinite",
+            maskImage: "radial-gradient(circle, transparent 58%, black 60%, black 70%, transparent 72%)",
+            WebkitMaskImage: "radial-gradient(circle, transparent 58%, black 60%, black 70%, transparent 72%)",
+            opacity: 0.7,
+          }} />
+          <div className="relative z-10 flex items-center gap-2">
+            <Flame className="h-10 w-10 shrink-0" style={{ color: theme.flameColor, filter: `drop-shadow(0 0 18px ${theme.flameColor})` }} />
+            <span className="font-black leading-none tracking-tighter text-white" style={{ fontSize: "clamp(4.25rem, 18vw, 6.5rem)", textShadow: `0 0 40px ${theme.glow}` }}>{streak}</span>
+          </div>
+          <span id="streak-card-title" className="relative z-10 mt-2 text-sm font-bold tracking-[0.28em]" style={{ color: theme.flameColor2 }}>
+            {t("streak.daily").toLocaleUpperCase(lang)}
+          </span>
+        </div>
+
+        <div className="relative z-10 flex justify-center py-2">
+          <Image src={KAI_LEVEL_AVATARS[kaiLevel]} alt="Kai" width={132} height={132} className="avatar-art h-[132px] w-[132px]" priority />
+        </div>
+
+        <div className="relative z-10 px-5 pb-5 text-center">
+          <p className="text-sm font-semibold italic" style={{ color: theme.flameColor2 }}>
+            &ldquo;{t("streak.daily")} — keep the fire burning! 🔥&rdquo;
+          </p>
+          <p className="mt-2 text-xl font-black tracking-wider text-purple-200">Kaify Ai</p>
+        </div>
+      </div>
     </MotionDialog>
   );
 }

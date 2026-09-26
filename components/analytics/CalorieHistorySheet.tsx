@@ -28,7 +28,7 @@ export function CalorieHistorySheet({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-950 p-4 shadow-2xl"
+        className="flex max-h-[min(90dvh,calc(100dvh-var(--safe-top)-var(--safe-bottom)-2rem))] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 p-4 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between gap-2">
@@ -46,7 +46,7 @@ export function CalorieHistorySheet({
         {!hasAny ? (
           <p className="text-xs text-zinc-500">{t("analytics.history.empty")}</p>
         ) : (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex max-h-[min(50dvh,24rem)] flex-col gap-2 overflow-y-auto" data-sheet-scroll="">
             {[...days].reverse().map((day) => {
               const totalBurn = day.maintenanceCalories + day.caloriesBurned;
               const net = day.caloriesConsumed - totalBurn;

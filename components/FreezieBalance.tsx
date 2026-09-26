@@ -40,9 +40,19 @@ export function FreezieBalance({
     return () => clearInterval(interval);
   }, [balanceProp]);
 
-  if (!mounted) return null;
-
   const sizeClasses = size === "sm" ? "h-8 px-2 text-xs" : "h-10 px-3 text-sm";
+
+  if (!mounted) {
+    return (
+      <div
+        className={`flex items-center gap-1 rounded-full border border-transparent ${sizeClasses}`}
+        aria-hidden
+      >
+        <span className={size === "sm" ? "inline-block h-3.5 w-3.5" : "inline-block h-4 w-4"} />
+        <span className="font-bold opacity-0">0</span>
+      </div>
+    );
+  }
 
   return (
     <div

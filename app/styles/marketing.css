@@ -59,7 +59,7 @@ html[data-cookie-banner="open"] .phone-shell {
   left: 0;
   right: 0;
   z-index: 100;
-  padding: 0.85rem 0;
+  padding: max(0.85rem, var(--safe-top, env(safe-area-inset-top, 0px))) 0 0.85rem;
   transition: background 0.4s ease, backdrop-filter 0.4s ease, border-color 0.4s ease;
 }
 
@@ -68,7 +68,7 @@ html[data-cookie-banner="open"] .phone-shell {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(168, 85, 247, 0.12);
-  padding: 0.7rem 0;
+  padding: max(0.7rem, var(--safe-top, env(safe-area-inset-top, 0px))) 0 0.7rem;
 }
 
 .landing-menu-toggle {

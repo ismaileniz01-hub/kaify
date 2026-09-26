@@ -40,7 +40,7 @@ export function LoginPageContent({ mode, redirectTo }: LoginPageContentProps) {
     <div className="phone-shell login-page relative flex min-h-dvh flex-col">
       <FitnessWallpaper />
 
-      <main className="login-page-main relative z-10 flex min-h-0 flex-1 flex-col px-6 pt-12 sm:px-8 sm:pt-14">
+      <main className="login-page-main relative z-10 flex min-h-0 flex-1 flex-col px-6 sm:px-8">
         {step === "email" ? (
           <>
             <div className="flex flex-1 flex-col items-center justify-center gap-6">

@@ -81,7 +81,7 @@ export function ContactAvatar({
           sizes={sizesAttr}
           priority={size === "xs"}
           unoptimized={needsUnoptimized}
-          className="relative z-10 h-full w-full object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)]"
+          className="avatar-art relative z-10 h-full w-full drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)]"
         />
       </div>
     </div>

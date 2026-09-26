@@ -87,8 +87,9 @@ export function ExerciseDetailSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby="exercise-detail-title"
-        className="w-full max-w-sm rounded-3xl border border-white/10 bg-zinc-950 p-5 shadow-2xl"
+        className="flex max-h-[min(90dvh,calc(100dvh-var(--safe-top)-var(--safe-bottom)-2rem))] w-full max-w-sm flex-col overflow-hidden rounded-3xl border border-white/10 bg-zinc-950 shadow-2xl"
       >
+        <div className="min-h-0 flex-1 overflow-y-auto p-5" data-sheet-scroll="">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-300">
@@ -165,8 +166,9 @@ export function ExerciseDetailSheet({
         {error ? (
           <InlineAlert className="mt-3" variant="error" message={error} />
         ) : null}
+        </div>
 
-        <div className="mt-5 flex flex-col gap-2">
+        <div className="flex flex-col gap-2 border-t border-white/10 p-4">
           <button
             type="button"
             data-keyboard-cta

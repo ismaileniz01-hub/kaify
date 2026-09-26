@@ -383,10 +383,17 @@ p.type-caption {
 .phone-shell {
   position: relative;
   width: 100%;
-  min-height: 100dvh;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
   margin: 0 auto;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
   background: var(--kaify-black);
+}
+
+.phone-shell > main {
+  min-height: 0;
 }
 
 /* Capacitor iOS/Android — notch, home indicator, keyboard */
@@ -512,7 +519,7 @@ html.native-app [class*="fire-aura"] {
   top: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: minmax(44px, 1fr) minmax(0, auto) minmax(44px, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.5rem;
   min-height: calc(3.5rem + var(--safe-top));
@@ -547,6 +554,7 @@ html.native-app [class*="fire-aura"] {
 }
 
 .app-header__title {
+  min-width: 0;
   overflow: hidden;
   color: #fff;
   font-size: 0.875rem;
@@ -600,6 +608,16 @@ html:not([data-route-transition="true"]) .contact-avatar {
 
 .app-header__action:active {
   transform: scale(0.94);
+}
+
+.avatar-art {
+  object-fit: contain;
+  border-radius: 1rem;
+}
+
+.avatar-photo {
+  object-fit: cover;
+  border-radius: 9999px;
 }
 
 .app-header__divider {
@@ -715,13 +733,16 @@ html[data-keyboard-open] .chat-composer {
 
 /* Login page — allow scroll when OTP step is taller than viewport */
 .phone-shell.login-page {
+  height: auto;
+  max-height: none;
+  min-height: 100dvh;
   overflow-x: hidden;
   overflow-y: auto;
-  min-height: 100dvh;
 }
 
 .login-page-main {
   min-height: min(100dvh, 100%);
+  padding-top: max(3rem, calc(var(--safe-top) + 1.25rem));
   padding-bottom: calc(2rem + var(--safe-bottom, 0px));
   scroll-padding-bottom: calc(1.5rem + var(--keyboard-offset, 0px));
 }
@@ -1038,6 +1059,13 @@ html[data-keyboard-open] .chat-composer {
   }
 }
 
+.motion-overlay:not(.motion-overlay--bleed) {
+  padding-top: max(1rem, var(--safe-top));
+  padding-right: max(1rem, var(--safe-right));
+  padding-bottom: max(1rem, var(--safe-bottom));
+  padding-left: max(1rem, var(--safe-left));
+}
+
 .motion-overlay {
   opacity: 0;
   transition: opacity var(--motion-fast) var(--ease-premium-out);
@@ -1045,6 +1073,41 @@ html[data-keyboard-open] .chat-composer {
 
 .motion-overlay[data-state="entered"] {
   opacity: 1;
+}
+
+.motion-panel,
+.motion-sheet {
+  display: flex;
+  max-width: 100%;
+  max-height: min(90dvh, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 2rem));
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.motion-panel--fill {
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+}
+
+.motion-dialog__body {
+  width: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.motion-dialog__body--fill {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.motion-dialog__footer {
+  flex: none;
 }
 
 .motion-panel {

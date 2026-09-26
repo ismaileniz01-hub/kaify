@@ -68,7 +68,7 @@ export function MessageRow({
           width={48}
           height={48}
           priority
-          className="h-full w-full object-contain p-0.5"
+          className="avatar-art h-full w-full p-0.5"
         />
       </div>
 

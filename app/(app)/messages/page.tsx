@@ -136,7 +136,7 @@ export default function MessagesPage() {
         divider
       />
 
-      <main className="flex-1 space-y-2.5 overflow-y-auto px-4 pb-8">
+      <main className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-4 pb-8">
         {loadError && (
           <InlineAlert
             message={loadError}
@@ -205,23 +205,23 @@ export default function MessagesPage() {
                 : "border-zinc-700/50 bg-zinc-900/50 opacity-60"
             }`}
           >
-            <div className="flex -space-x-2" aria-hidden>
+            <div className="flex shrink-0 -space-x-1" aria-hidden>
               {(["alex", "maya", "leo", "kai"] as ContactId[]).map((id) => (
                 <div
                   key={id}
-                  className="relative h-11 w-11 overflow-hidden rounded-full border-2 border-zinc-900"
+                  className="relative h-10 w-10 overflow-hidden rounded-full border-2 border-zinc-900 bg-zinc-900"
                 >
                   <Image
                     src={id === "kai" ? publicAssetUrl(kaiAvatar) : publicAssetUrl(CONTACTS[id].avatar)}
                     alt=""
-                    width={44}
-                    height={44}
-                    className="h-full w-full object-cover"
+                    width={40}
+                    height={40}
+                    className="avatar-art h-full w-full p-0.5"
                   />
                 </div>
               ))}
             </div>
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-white">{t("messages.team_title")}</p>
               <p className="type-caption text-zinc-400">
                 {teamUnlocked ? t("messages.team_sub") : t("messages.team_locked")}

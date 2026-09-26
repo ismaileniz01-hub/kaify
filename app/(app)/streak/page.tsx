@@ -5,8 +5,7 @@ import { StreakRoad } from "@/components/StreakRoad";
 import { StreakAtRiskBanner } from "@/components/streak/StreakAtRiskBanner";
 import { StreakCard } from "@/components/StreakCard";
 import { InlineAlert } from "@/components/InlineAlert";
-import { GemBalance } from "@/components/GemBalance";
-import { FreezieBalance } from "@/components/FreezieBalance";
+import { BalanceChip } from "@/components/navigation/BalanceChip";
 import { useGem } from "@/lib/gem-context";
 import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
@@ -79,7 +78,7 @@ export default function StreakPage() {
   }
 
   return (
-    <div className="phone-shell streak-page relative flex flex-col">
+    <div className="phone-shell streak-page relative flex h-dvh max-h-dvh flex-col overflow-x-hidden">
       <AppHeader
         backHref="/welcome"
         backLabel={t("nav.back")}
@@ -96,10 +95,9 @@ export default function StreakPage() {
             >
               <ImageIcon className="h-4 w-4" />
             </button>
-            <GemBalance balance={gemState.balance} size="sm" />
-            <FreezieBalance
-              size="sm"
-              balance={isAuthenticated ? streak.freezieBalance : undefined}
+            <BalanceChip
+              gems={gemState.balance}
+              freezies={isAuthenticated ? streak.freezieBalance : null}
             />
           </>
         }
@@ -135,7 +133,7 @@ export default function StreakPage() {
         </div>
       )}
 
-      <main className="flex flex-1 flex-col overflow-y-auto pb-8">
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-8">
         <StreakRoad currentStreak={currentStreak} />
       </main>
 

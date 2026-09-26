@@ -5,8 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import { InlineAlert } from "@/components/InlineAlert";
 import { useSession } from "@/lib/session-context";
 import { apiGet, apiPost, apiPatch } from "@/lib/api/client";
-import { GemBalance } from "@/components/GemBalance";
-import { FreezieBalance } from "@/components/FreezieBalance";
+import { BalanceChip } from "@/components/navigation/BalanceChip";
 import { GemIcon } from "@/components/GemIcon";
 import { useGem } from "@/lib/gem-context";
 import { useKai } from "@/lib/kai-context";
@@ -237,22 +236,22 @@ export default function MarketPage() {
   };
 
   return (
-    <div className="phone-shell welcome-gradient relative flex flex-col">
+    <div className="phone-shell welcome-gradient relative flex h-dvh max-h-dvh flex-col overflow-x-hidden">
       <AppHeader
         backHref="/welcome"
         backLabel={t("nav.back")}
         title={t("market.title")}
         trailing={
           <>
-            <GemBalance balance={gemState.balance} size="sm" />
-            {isAuthenticated && (
-              <FreezieBalance size="sm" balance={streak.freezieBalance} />
-            )}
+            <BalanceChip
+              gems={gemState.balance}
+              freezies={isAuthenticated ? streak.freezieBalance : null}
+            />
           </>
         }
       />
 
-      <main className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-8 pt-4">
+      <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-8 pt-4">
         <DailyChestBanner
           onClaimed={() => {
             void refreshBalance?.();
