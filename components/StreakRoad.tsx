@@ -16,6 +16,7 @@ import {
   STATION_GEM_REWARD,
 } from "@/lib/streak-rewards.constants";
 import { getMotionBudget, particleCount } from "@/lib/motion/perf-guards";
+import { hapticSelection } from "@/lib/native/haptics";
 
 type StreakRoadProps = {
   currentStreak: number;
@@ -58,7 +59,7 @@ function getProgressInSegment(streak: number, segment: RoadSegment): number {
 
 export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
   const { t } = useLang();
-  const session = useSession();
+  const { isAuthenticated, applyGemBalance } = useSession();
   const { unlockLevel } = useKai();
   const { play } = useSound();
   const [claimedMilestones, setClaimedMilestones] = useState<Set<number>>(new Set());
@@ -114,7 +115,8 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
     e.preventDefault();
     e.stopPropagation();
     if (!pendingKaiLevel) return;
-    
+    void hapticSelection();
+
     setShowEvolution(true);
     setEvolutionPhase("burning");
     play("whoosh"); // Modern enerji patlaması — ilk ses
@@ -148,25 +150,27 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
 
   // Server-authoritative streak gem rewards (replaces client-only earn).
   useEffect(() => {
-    if (!hydrated || !session.isAuthenticated || serverRewardsSynced) return;
+    if (!hydrated || !isAuthenticated || serverRewardsSynced) return;
     if (currentStreak <= 0) {
       setServerRewardsSynced(true);
       return;
     }
 
-    void apiPost<{ totalAwarded: number }>("/api/streak/rewards", {})
+    void apiPost<{ totalAwarded: number; gemBalance: number }>("/api/streak/rewards", {})
       .then((result) => {
+        if (typeof result.gemBalance === "number") {
+          applyGemBalance(result.gemBalance);
+        }
         if (result.totalAwarded > 0) {
           setJustClaimed({ type: "milestone", value: currentStreak });
           setTimeout(() => setJustClaimed(null), 2000);
-          void session.refreshSession();
         }
       })
       .catch(() => {
         // Non-fatal — UI still renders; user can retry on next visit.
       })
       .finally(() => setServerRewardsSynced(true));
-  }, [hydrated, session.isAuthenticated, serverRewardsSynced, currentStreak, session]);
+  }, [hydrated, isAuthenticated, serverRewardsSynced, currentStreak, applyGemBalance]);
 
   // Milestone / station UI state from localStorage (display only).
   useEffect(() => {
@@ -466,7 +470,7 @@ export function StreakRoad({ currentStreak, onKaiLevelUp }: StreakRoadProps) {
                         {pendingKaiLevel === kaiLevel && (
                           <button
                             onClick={handleClaimEvolution}
-                            className="mt-2 flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-lg shadow-orange-500/30 transition-all hover:from-orange-400 hover:to-amber-400 active:scale-95"
+                            className="touch-44 mt-2 flex min-h-11 items-center gap-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-3 py-2 text-xs font-bold text-white shadow-lg shadow-orange-500/30 transition-all hover:from-orange-400 hover:to-amber-400 active:scale-95"
                           >
                             <Flame className="h-3.5 w-3.5" />
                             {t("streak.claim")}

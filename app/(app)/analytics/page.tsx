@@ -5,9 +5,11 @@ import { useCallback, useEffect, useState } from "react";
 import { MacroRing } from "@/components/analytics/MacroRing";
 import { StatCard } from "@/components/analytics/StatCard";
 import { WeeklyChart } from "@/components/analytics/WeeklyChart";
+import { WeeklyEnergyBar } from "@/components/analytics/WeeklyEnergyBar";
 import { WeeklyScoreCard } from "@/components/analytics/WeeklyScoreCard";
+import { CalorieHistorySheet } from "@/components/analytics/CalorieHistorySheet";
 import { GoalsEditor } from "@/components/goals/GoalsEditor";
-import { readAnalyticsCache, writeAnalyticsCache } from "@/lib/analytics-client-cache";
+import { readAnalyticsCache, writeAnalyticsCache, ANALYTICS_UPDATED_EVENT } from "@/lib/analytics-client-cache";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { InlineAlert } from "@/components/InlineAlert";
@@ -16,6 +18,8 @@ import { formatTime } from "@/lib/i18n/format";
 import { apiGet } from "@/lib/api/client";
 import type { AnalyticsBundleDTO } from "@/lib/services/analytics.service";
 import { AppHeader } from "@/components/navigation/AppHeader";
+import { useOfflineRetry } from "@/hooks/useOfflineRetry";
+import { syncNativeHealthSteps } from "@/lib/native/health-steps";
 
 export default function AnalyticsPage() {
   const { t, lang, unit } = useLang();
@@ -25,6 +29,7 @@ export default function AnalyticsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [goalsOpen, setGoalsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const loadAnalytics = useCallback(() => {
     if (!isAuthenticated) return;
@@ -37,14 +42,16 @@ export default function AnalyticsPage() {
         setLastUpdated(new Date());
       })
       .catch((err) => {
-        setData(null);
         setLoadError(errorToMessage(err, t) || t("analytics.error.load"));
       })
       .finally(() => setRefreshing(false));
   }, [isAuthenticated, t]);
 
+  useOfflineRetry(loadAnalytics);
+
   useEffect(() => {
     loadAnalytics();
+    void syncNativeHealthSteps().catch(() => undefined);
   }, [loadAnalytics]);
 
   useEffect(() => {
@@ -52,10 +59,19 @@ export default function AnalyticsPage() {
       if (document.visibilityState === "visible") loadAnalytics();
     };
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    window.addEventListener(ANALYTICS_UPDATED_EVENT, loadAnalytics);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener(ANALYTICS_UPDATED_EVENT, loadAnalytics);
+    };
   }, [loadAnalytics]);
 
   const today = data?.today;
+  const weekWorkouts =
+    data?.weekWorkoutsCompleted ??
+    data?.calorieHistory?.reduce((sum, day) => sum + day.workoutsCompleted, 0) ??
+    today?.workoutsCompleted ??
+    0;
   const weightVal =
     today?.weightKg != null
       ? unit === "metric"
@@ -64,17 +80,27 @@ export default function AnalyticsPage() {
       : "—";
 
   const weightTrend =
-    data?.weightTrendKg != null
-      ? data.weightTrendKg === 0
+    data?.weightTrendKg != null && data.weightTrendKg !== 0
+      ? t("analytics.weight_change", {
+          value:
+            unit === "metric"
+              ? `${data.weightTrendKg > 0 ? "+" : ""}${data.weightTrendKg.toFixed(1)} kg`
+              : `${data.weightTrendKg > 0 ? "+" : ""}${(data.weightTrendKg * 2.205).toFixed(1)} lb`,
+        })
+      : data?.weightTrendKg === 0
         ? t("analytics.weight_stable")
-        : `${data.weightTrendKg > 0 ? "▲" : "▼"} ${Math.abs(data.weightTrendKg).toFixed(1)} kg`
-      : t("analytics.no_trend");
+        : t("analytics.no_trend");
 
   const calPct = today
-    ? Math.min(100, Math.round((today.caloriesConsumed / today.calorieGoal) * 100))
+    ? Math.min(
+        100,
+        Math.round(
+          (today.caloriesConsumed / Math.max(1, today.calorieGoal)) * 100,
+        ),
+      )
     : 0;
   const workoutPct = today
-    ? Math.min(100, Math.round((today.workoutsCompleted / today.workoutsTarget) * 100))
+    ? Math.min(100, Math.round((weekWorkouts / Math.max(1, today.workoutsTarget)) * 100))
     : 0;
   const waterPct = today
     ? Math.min(100, Math.round((today.waterLiters / today.waterGoalLiters) * 100))
@@ -130,6 +156,7 @@ export default function AnalyticsPage() {
                     today?.workoutsTarget ?? home?.goals.workoutsTarget ?? 5,
                   waterGoalLiters:
                     today?.waterGoalLiters ?? home?.goals.waterGoalLiters ?? 2.5,
+                  maintenanceCalories: today?.maintenanceCalories ?? null,
                 }}
                 onCancel={() => setGoalsOpen(false)}
                 onSaved={async () => {
@@ -158,47 +185,65 @@ export default function AnalyticsPage() {
             value={weightVal}
             trend={weightTrend}
             barColor="#3b82f6"
-            barPercent={today?.weightKg ? 62 : 0}
+            barPercent={today?.weightKg != null ? 100 : 0}
             gradient="blue"
           />
           <StatCard
             icon={Flame}
             label={t("analytics.calories")}
-            value={today ? "" : "—"}
-            numericValue={today ? Math.round(today.caloriesConsumed) : undefined}
-            unitSuffix="kcal"
+            value={
+              today
+                ? `${Math.round(today.caloriesConsumed)} / ${Math.round(today.calorieGoal)}`
+                : "—"
+            }
             trend={
               today
-                ? `▲ ${calPct}% ${t("home.completed")}`
+                ? t("analytics.calories_io", {
+                    eaten: Math.round(today.caloriesConsumed),
+                    burned: Math.round(today.caloriesBurned),
+                  })
                 : t("analytics.no_trend")
             }
             barColor="#f97316"
             barPercent={calPct}
             gradient="orange"
+            onClick={today ? () => setHistoryOpen(true) : undefined}
           />
           <StatCard
             icon={Dumbbell}
-            label={t("analytics.workouts")}
+            label={t("analytics.workouts_week")}
             value={
               today
-                ? `${today.workoutsCompleted} / ${today.workoutsTarget}`
+                ? `${weekWorkouts} / ${today.workoutsTarget}`
                 : "—"
             }
             trend={today ? t("analytics.workouts_trend") : t("analytics.no_trend")}
             barColor="#22c55e"
             barPercent={workoutPct}
             gradient="green"
+            onClick={today ? () => setHistoryOpen(true) : undefined}
           />
           <StatCard
             icon={Droplets}
             label={t("analytics.hydration")}
             value={today ? `${today.waterLiters} L` : "—"}
-            trend={today ? `▲ ${waterPct}% of goal` : t("analytics.no_trend")}
+            trend={
+              today
+                ? t("analytics.hydration.trend", { percent: waterPct })
+                : t("analytics.no_trend")
+            }
             barColor="#06b6d4"
             barPercent={waterPct}
             gradient="water"
           />
         </div>
+
+        <WeeklyEnergyBar
+          days={data?.calorieHistory}
+          calorieGoal={today?.calorieGoal ?? 2100}
+          maintenanceCalories={today?.maintenanceCalories}
+          onOpenHistory={today ? () => setHistoryOpen(true) : undefined}
+        />
 
         <div className="mt-3">
           <WeeklyChart stepsData={data?.weeklySteps} />
@@ -240,6 +285,12 @@ export default function AnalyticsPage() {
           />
         </div>
       </main>
+      {historyOpen ? (
+        <CalorieHistorySheet
+          days={data?.calorieHistory ?? []}
+          onClose={() => setHistoryOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

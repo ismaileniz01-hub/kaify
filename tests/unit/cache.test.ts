@@ -28,8 +28,8 @@ describe("cache (fail-open, unconfigured)", () => {
     await expect(cacheGet("any:key")).resolves.toBeNull();
   });
 
-  it("cacheSet is a no-op that never throws", async () => {
-    await expect(cacheSet("any:key", { a: 1 }, 60)).resolves.toBeUndefined();
+  it("cacheSet returns false when unconfigured", async () => {
+    await expect(cacheSet("any:key", { a: 1 }, 60)).resolves.toBe(false);
   });
 
   it("cached() runs the producer and returns its value", async () => {

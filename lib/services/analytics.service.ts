@@ -1,7 +1,6 @@
-import { localDayQueryWindow, localTodayDate, isLocalDate } from "@/lib/date-utils";
+import { localTodayDate } from "@/lib/date-utils";
 import { cached } from "@/lib/cache";
 import { CacheKeys, CacheTTL } from "@/lib/cache/keys";
-import { logger } from "@/lib/logger";
 import type { Json } from "@/lib/types/database.types";
 import {
   createAnalyticsAdminReadClient,
@@ -9,8 +8,11 @@ import {
   readAnalyticsDailyRow,
   readHealthStepsRange,
   readLeoAnalysisMessages,
-  readMayaAnalysisMessages,
   readPreviousWeightKg,
+  readLatestWeightKg,
+  readLatestGoalRow,
+  readNutritionRecommendationProfile,
+  readProfileWeightKg,
   readUserTimezone,
   readWeeklyAnalyticsSummary,
   type AnalyticsDailyRow,
@@ -19,13 +21,33 @@ import {
   invalidateAnalyticsUserCache,
   writeAnalyticsDailyPatch,
   writeAnalyticsMealIncrement,
+  writeAnalyticsWorkoutIncrement,
   writeHealthStepsBatch,
 } from "@/lib/repositories/analytics-write.repository";
+import {
+  hydrateTodaySnapshot,
+  localCalendarWeekKeys,
+  localDateKeysEnding,
+  sumWeekWorkouts,
+} from "@/lib/analytics/hydrate-today";
+import { recommendOnboardingNutrition } from "@/lib/nutrition/onboarding-recommendation";
+import {
+  ACTIVITY_LEVELS,
+  GENDERS,
+  type ActivityLevel,
+  type Gender,
+} from "@/lib/validations/onboarding.schema";
+import {
+  PRIMARY_GOALS,
+  type PrimaryGoal,
+} from "@/lib/validations/goals.schema";
+import { emitFirstActivation } from "@/lib/events/product";
 export type AnalyticsDailyDTO = {
   entryDate: string;
   weightKg: number | null;
   caloriesConsumed: number;
   caloriesBurned: number;
+  maintenanceCalories: number | null;
   calorieGoal: number;
   workoutsCompleted: number;
   workoutsTarget: number;
@@ -45,6 +67,17 @@ export type WeeklyStepsDTO = {
   steps: number;
 }[];
 
+export type CalorieDayDTO = {
+  date: string;
+  caloriesConsumed: number;
+  /** Logged workout calories only. */
+  caloriesBurned: number;
+  calorieGoal: number;
+  maintenanceCalories: number;
+  foodLogged: boolean;
+  workoutsCompleted: number;
+};
+
 export type WeeklyFitnessScoreDTO = {
   foodScore: number;
   bodyScore: number;
@@ -57,8 +90,10 @@ export type WeeklyFitnessScoreDTO = {
 export type AnalyticsBundleDTO = {
   today: AnalyticsDailyDTO;
   weeklySteps: WeeklyStepsDTO;
+  calorieHistory: CalorieDayDTO[];
   weightTrendKg: number | null;
   weeklyScore: WeeklyFitnessScoreDTO;
+  weekWorkoutsCompleted: number;
 };
 
 type AnalyticsRow = AnalyticsDailyRow;
@@ -77,6 +112,7 @@ function mapRow(row: AnalyticsRow): AnalyticsDailyDTO {
     weightKg: row.weight_kg,
     caloriesConsumed: row.calories_consumed,
     caloriesBurned: row.calories_burned,
+    maintenanceCalories: row.maintenance_calorie_goal ?? null,
     calorieGoal: row.calorie_goal,
     workoutsCompleted: Number(row.workouts_completed),
     workoutsTarget: row.workouts_target,
@@ -99,6 +135,7 @@ function defaultToday(entryDate?: string): AnalyticsDailyDTO {
     weightKg: null,
     caloriesConsumed: 0,
     caloriesBurned: 0,
+    maintenanceCalories: null,
     calorieGoal: 2100,
     workoutsCompleted: 0,
     workoutsTarget: 5,
@@ -114,35 +151,34 @@ function defaultToday(entryDate?: string): AnalyticsDailyDTO {
   };
 }
 
-type MealTotals = {
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-};
-
-function extractFoodFromPayload(payload: Json | null): MealTotals | null {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
-  const analysis = (payload as Record<string, unknown>).analysis;
-  if (!analysis || typeof analysis !== "object" || Array.isArray(analysis)) return null;
-  const food = (analysis as Record<string, unknown>).food_analysis;
-  if (!food || typeof food !== "object" || Array.isArray(food)) return null;
-
-  const row = food as Record<string, unknown>;
-  const calories = Number(row.calories);
-  const protein = Number(row.protein);
-  const carbs = Number(row.carb ?? row.carbs);
-  const fat = Number(row.fat);
-  if (![calories, protein, carbs, fat].some((n) => Number.isFinite(n) && n > 0)) {
+function derivedMaintenanceCalories(
+  profile: Awaited<ReturnType<typeof readNutritionRecommendationProfile>>,
+  today: string,
+): number | null {
+  if (
+    !profile?.birthDate ||
+    profile.heightCm == null ||
+    profile.weightKg == null ||
+    !GENDERS.includes(profile.gender as Gender) ||
+    !ACTIVITY_LEVELS.includes(profile.activityLevel as ActivityLevel)
+  ) {
     return null;
   }
-
-  return {
-    calories: Number.isFinite(calories) ? Math.max(0, Math.round(calories)) : 0,
-    protein: Number.isFinite(protein) ? Math.max(0, Math.round(protein)) : 0,
-    carbs: Number.isFinite(carbs) ? Math.max(0, Math.round(carbs)) : 0,
-    fat: Number.isFinite(fat) ? Math.max(0, Math.round(fat)) : 0,
-  };
+  const primaryGoal = PRIMARY_GOALS.includes(profile.primaryGoal as PrimaryGoal)
+    ? (profile.primaryGoal as PrimaryGoal)
+    : "stay_fit";
+  return recommendOnboardingNutrition(
+    {
+      gender: profile.gender as Gender,
+      birthDate: profile.birthDate,
+      heightCm: Number(profile.heightCm),
+      weightKg: Number(profile.weightKg),
+      activityLevel: profile.activityLevel as ActivityLevel,
+      trainingDaysPerWeek: Number(profile.trainingDaysPerWeek) || 0,
+      primaryGoal,
+    },
+    new Date(`${today}T12:00:00.000Z`),
+  ).maintenanceCalories;
 }
 
 function extractBodyScoreFromPayload(payload: Json | null): number | null {
@@ -231,79 +267,6 @@ async function computeWeeklyScore(
   };
 }
 
-/** Sum Maya food-photo analyses for a local calendar day from chat messages. */
-async function sumMayaMealsForDay(
-  userId: string,
-  entryDate: string,
-  timezone: string,
-): Promise<MealTotals> {
-  const admin = createAnalyticsAdminReadClient();
-  const { start, end } = localDayQueryWindow(entryDate, timezone);
-
-  const messages = await readMayaAnalysisMessages(admin, userId, start, end);
-
-  const chatTotals: MealTotals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
-  for (const msg of messages) {
-    if (!isLocalDate(msg.created_at, entryDate, timezone)) continue;
-    const meal = extractFoodFromPayload(msg.payload ?? null);
-    if (!meal) continue;
-    chatTotals.calories += meal.calories;
-    chatTotals.protein += meal.protein;
-    chatTotals.carbs += meal.carbs;
-    chatTotals.fat += meal.fat;
-  }
-  return chatTotals;
-}
-
-function mergeMealTotals(stored: AnalyticsDailyDTO, chat: MealTotals): AnalyticsDailyDTO {
-  if (chat.calories === 0 && chat.protein === 0 && chat.carbs === 0 && chat.fat === 0) {
-    return stored;
-  }
-  return {
-    ...stored,
-    caloriesConsumed: Math.max(stored.caloriesConsumed, chat.calories),
-    proteinG: Math.max(stored.proteinG, chat.protein),
-    carbsG: Math.max(stored.carbsG, chat.carbs),
-    fatG: Math.max(stored.fatG, chat.fat),
-  };
-}
-
-/** Persist chat totals when they exceed stored DB values (fire-and-forget safe). */
-async function persistMayaMealsIfNeeded(
-  userId: string,
-  entryDate: string,
-  stored: AnalyticsDailyDTO,
-  chat: MealTotals,
-): Promise<void> {
-  if (
-    chat.calories <= stored.caloriesConsumed &&
-    chat.protein <= stored.proteinG &&
-    chat.carbs <= stored.carbsG &&
-    chat.fat <= stored.fatG
-  ) {
-    return;
-  }
-  if (chat.calories === 0 && chat.protein === 0) return;
-
-  try {
-    await patchAnalyticsDaily(
-      userId,
-      {
-        caloriesConsumed: chat.calories,
-        proteinG: chat.protein,
-        carbsG: chat.carbs,
-        fatG: chat.fat,
-      },
-      entryDate,
-    );
-    await invalidateAnalyticsCache(userId);
-  } catch (syncError) {
-    logger.warn("[analytics.service] maya meal persist failed", {
-      error: syncError instanceof Error ? syncError.message : String(syncError),
-    });
-  }
-}
-
 /** Lightweight today snapshot for the home screen (no weekly score). */
 export async function getTodayNutritionSnapshot(userId: string): Promise<AnalyticsDailyDTO> {
   return cached(
@@ -318,12 +281,35 @@ async function loadTodayNutritionSnapshot(userId: string): Promise<AnalyticsDail
   const timezone = await resolveUserTimezone(userId);
   const today = localTodayDate(timezone);
 
-  const todayRow = await readAnalyticsDailyRow(readClient, userId, today);
+  const [todayRow, lastWeightKg, lastGoalRow, profileWeightKg, todaySteps] =
+    await Promise.all([
+      readAnalyticsDailyRow(readClient, userId, today),
+      readLatestWeightKg(readClient, userId, today),
+      readLatestGoalRow(readClient, userId, today),
+      readProfileWeightKg(readClient, userId).catch(() => null),
+      readHealthStepsRange(readClient, userId, today, today),
+    ]);
 
-  let todayDto = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today);
-  const chatTotals = await sumMayaMealsForDay(userId, today, timezone);
-  todayDto = mergeMealTotals(todayDto, chatTotals);
-  void persistMayaMealsIfNeeded(userId, today, todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today), chatTotals);
+  const stored = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today);
+  let todayDto = hydrateTodaySnapshot(stored, {
+    hasTodayRow: Boolean(todayRow),
+    lastWeightKg: lastWeightKg ?? profileWeightKg,
+    lastGoals: lastGoalRow
+      ? {
+          maintenanceCalories: lastGoalRow.maintenance_calorie_goal,
+          calorieGoal: lastGoalRow.calorie_goal,
+          workoutsTarget: lastGoalRow.workouts_target,
+          waterGoalLiters: Number(lastGoalRow.water_goal_liters),
+          proteinGoalG: lastGoalRow.protein_goal_g,
+          carbsGoalG: lastGoalRow.carbs_goal_g,
+          fatGoalG: lastGoalRow.fat_goal_g,
+        }
+      : null,
+  });
+  const healthSteps = Number(todaySteps?.[0]?.steps) || 0;
+  if (healthSteps > 0) {
+    todayDto = { ...todayDto, steps: healthSteps };
+  }
   return todayDto;
 }
 
@@ -341,35 +327,58 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
   const timezone = await resolveUserTimezone(userId);
   const today = localTodayDate(timezone);
 
-  const weekAgo = new Date(`${today}T12:00:00.000Z`);
-  weekAgo.setUTCDate(weekAgo.getUTCDate() - 6);
-  const weekStart = weekAgo.toISOString().slice(0, 10);
+  const chartStepDates = localDateKeysEnding(today, 90);
+  const lastSevenDates = new Set(localDateKeysEnding(today, 7));
+  const calendarWeekDates = localCalendarWeekKeys(today);
+  const stepStart = chartStepDates[0];
+  const weekStart = calendarWeekDates[0];
 
-  const [todayRow, weekRows, prevWeightKg] = await Promise.all([
-    readAnalyticsDailyRow(readClient, userId, today),
-    readHealthStepsRange(readClient, userId, weekStart, today),
-    readPreviousWeightKg(readClient, userId, today),
-  ]);
+  const [todayRow, weekRows, prevWeightKg, weekNutrition, lastWeightKg, lastGoalRow, profileWeightKg, nutritionProfile] =
+    await Promise.all([
+      readAnalyticsDailyRow(readClient, userId, today),
+      readHealthStepsRange(readClient, userId, stepStart, today),
+      readPreviousWeightKg(readClient, userId, today),
+      readWeeklyAnalyticsSummary(readClient, userId, weekStart, today),
+      readLatestWeightKg(readClient, userId, today),
+      readLatestGoalRow(readClient, userId, today),
+      readProfileWeightKg(readClient, userId).catch(() => null),
+      readNutritionRecommendationProfile(readClient, userId).catch(() => null),
+    ]);
 
   const storedDto = todayRow ? mapRow(todayRow as AnalyticsRow) : defaultToday(today);
-  const chatTotals = await sumMayaMealsForDay(userId, today, timezone);
-  let todayDto = mergeMealTotals(storedDto, chatTotals);
-  void persistMayaMealsIfNeeded(userId, today, storedDto, chatTotals);
+  let todayDto = hydrateTodaySnapshot(storedDto, {
+    hasTodayRow: Boolean(todayRow),
+    lastWeightKg: lastWeightKg ?? profileWeightKg,
+    lastGoals: lastGoalRow
+      ? {
+          maintenanceCalories: lastGoalRow.maintenance_calorie_goal,
+          calorieGoal: lastGoalRow.calorie_goal,
+          workoutsTarget: lastGoalRow.workouts_target,
+          waterGoalLiters: Number(lastGoalRow.water_goal_liters),
+          proteinGoalG: lastGoalRow.protein_goal_g,
+          carbsGoalG: lastGoalRow.carbs_goal_g,
+          fatGoalG: lastGoalRow.fat_goal_g,
+        }
+      : null,
+  });
+  todayDto = {
+    ...todayDto,
+    maintenanceCalories:
+      todayDto.maintenanceCalories ??
+      derivedMaintenanceCalories(nutritionProfile, today),
+  };
 
-  if (weekRows && weekRows.length > 0) {
-    const stepSum = weekRows.reduce((sum, r) => sum + (r.steps ?? 0), 0);
-    const todaySteps =
-      weekRows.find((r) => r.entry_date === today)?.steps ?? stepSum;
-    todayDto = { ...todayDto, steps: todaySteps };
+  const stepsByDate = new Map(
+    (weekRows ?? []).map((row) => [row.entry_date, Number(row.steps) || 0]),
+  );
+  if (stepsByDate.has(today)) {
+    todayDto = { ...todayDto, steps: stepsByDate.get(today) ?? 0 };
   }
 
   const weeklySteps: WeeklyStepsDTO = [];
-  for (let i = 6; i >= 0; i -= 1) {
-    const d = new Date();
-    d.setUTCDate(d.getUTCDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    const found = weekRows?.find((r) => r.entry_date === key);
-    weeklySteps.push({ date: key, steps: found?.steps ?? 0 });
+  for (const key of chartStepDates) {
+    if (!lastSevenDates.has(key) && !stepsByDate.has(key)) continue;
+    weeklySteps.push({ date: key, steps: stepsByDate.get(key) ?? 0 });
   }
 
   let weightTrendKg: number | null = null;
@@ -378,9 +387,62 @@ export async function loadAnalyticsBundle(userId: string): Promise<AnalyticsBund
     weightTrendKg = Math.abs(delta) < 0.05 ? 0 : delta;
   }
 
-  const weeklyScore = await computeWeeklyScore(userId, weekStart, today);
+  const calorieHistory: CalorieDayDTO[] = [];
+  for (const key of calendarWeekDates) {
+    const found = weekNutrition.find((r) => r.entry_date === key) as
+      | {
+          calories_consumed?: number;
+          calories_burned?: number;
+          calorie_goal?: number;
+          maintenance_calorie_goal?: number | null;
+          protein_g?: number;
+          carbs_g?: number;
+          fat_g?: number;
+          workouts_completed?: number;
+        }
+      | undefined;
+    const caloriesConsumed =
+      key === today
+        ? Math.max(Number(found?.calories_consumed) || 0, todayDto.caloriesConsumed)
+        : Number(found?.calories_consumed) || 0;
+    const proteinG =
+      key === today
+        ? Math.max(Number(found?.protein_g) || 0, todayDto.proteinG)
+        : Number(found?.protein_g) || 0;
+    const carbsG =
+      key === today
+        ? Math.max(Number(found?.carbs_g) || 0, todayDto.carbsG)
+        : Number(found?.carbs_g) || 0;
+    const fatG =
+      key === today
+        ? Math.max(Number(found?.fat_g) || 0, todayDto.fatG)
+        : Number(found?.fat_g) || 0;
+    calorieHistory.push({
+      date: key,
+      caloriesConsumed,
+      caloriesBurned: Number(found?.calories_burned) || 0,
+      calorieGoal: Number(found?.calorie_goal) || todayDto.calorieGoal,
+      maintenanceCalories:
+        Number(found?.maintenance_calorie_goal) ||
+        todayDto.maintenanceCalories ||
+        todayDto.calorieGoal,
+      foodLogged:
+        caloriesConsumed > 0 || proteinG > 0 || carbsG > 0 || fatG > 0,
+      workoutsCompleted: Number(found?.workouts_completed) || 0,
+    });
+  }
 
-  return { today: todayDto, weeklySteps, weightTrendKg, weeklyScore };
+  const weeklyScore = await computeWeeklyScore(userId, weekStart, today);
+  const weekWorkoutsCompleted = sumWeekWorkouts(calorieHistory);
+
+  return {
+    today: todayDto,
+    weeklySteps,
+    calorieHistory,
+    weightTrendKg,
+    weeklyScore,
+    weekWorkoutsCompleted,
+  };
 }
 
 export async function patchAnalyticsDaily(
@@ -463,6 +525,35 @@ export async function addMealToAnalytics(
   await invalidateAnalyticsCache(userId);
 }
 
+/**
+ * Atomically logs one completed workout for the user's local today.
+ * Falls back to a snapshot + patch if the increment RPC is not deployed yet.
+ */
+export async function incrementTodayWorkout(userId: string): Promise<number> {
+  const timezone = await resolveUserTimezone(userId);
+  const date = localTodayDate(timezone);
+
+  try {
+    await writeAnalyticsWorkoutIncrement(userId, date);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!/does not exist|42883|PGRST202|schema cache|not find the function/i.test(message)) {
+      throw error;
+    }
+    const snapshot = await getTodayNutritionSnapshot(userId);
+    await patchAnalyticsDaily(
+      userId,
+      { workoutsCompleted: (snapshot.workoutsCompleted ?? 0) + 1 },
+      date,
+    );
+  }
+
+  await invalidateAnalyticsCache(userId);
+  const next = await getTodayNutritionSnapshot(userId);
+  emitFirstActivation("activation.first_workout_completed", userId, "workout");
+  return next.workoutsCompleted;
+}
+
 export async function syncHealthSteps(
   userId: string,
   entries: { date: string; steps: number; source: "healthkit" | "google_fit" | "manual" }[],
@@ -481,4 +572,5 @@ export async function syncHealthSteps(
       patchAnalyticsDaily(userId, { steps }, date),
     ),
   );
+  await invalidateAnalyticsCache(userId);
 }

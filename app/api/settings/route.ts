@@ -24,6 +24,11 @@ const patchSchema = z
     marketingEmails: z.boolean(),
     primaryGoal: z.enum(PRIMARY_GOALS).nullable(),
     goalsConfigured: z.boolean(),
+    notifyWeekly: z.boolean(),
+    notifyPraise: z.boolean(),
+    quietHoursStart: z.number().int().min(0).max(23).nullable(),
+    quietHoursEnd: z.number().int().min(0).max(23).nullable(),
+    dailyPushCap: z.number().int().min(0).max(48),
   })
   .partial()
   .strict();

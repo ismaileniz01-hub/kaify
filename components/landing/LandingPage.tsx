@@ -1,8 +1,10 @@
 import dynamic from "next/dynamic";
+import { headers } from "next/headers";
 import { LandingNav } from "./LandingNav";
 import { LandingHero } from "./LandingHero";
 import { LandingAbout } from "./LandingAbout";
 import { LandingFooter } from "./LandingFooter";
+import { ProductEventBeacon } from "@/components/analytics/ProductEventBeacon";
 
 const LandingCoaches = dynamic(
   () => import("./LandingCoaches").then((m) => m.LandingCoaches),
@@ -20,15 +22,21 @@ const LandingLeaderboard = dynamic(
   () => import("./LandingLeaderboard").then((m) => m.LandingLeaderboard),
   { ssr: true },
 );
+const LandingFAQ = dynamic(
+  () => import("./LandingFAQ").then((m) => m.LandingFAQ),
+  { ssr: true },
+);
 const LandingPricingCTA = dynamic(
   () => import("./LandingPricingCTA").then((m) => m.LandingPricingCTA),
   { ssr: true },
 );
 
 /** Server page: only above-the-fold islands hydrate with the initial JS. */
-export function LandingPage() {
+export async function LandingPage() {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <div className="landing-site">
+      <ProductEventBeacon name="acquisition.landing_viewed" page="landing" />
       <LandingNav />
       <main>
         <LandingHero />
@@ -37,6 +45,7 @@ export function LandingPage() {
         <LandingFeatures />
         <LandingStreak />
         <LandingLeaderboard />
+        <LandingFAQ nonce={nonce} />
         <LandingPricingCTA />
       </main>
       <LandingFooter />

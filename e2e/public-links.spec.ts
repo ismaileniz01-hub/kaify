@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const SEEDS = ["/", "/pricing", "/privacy", "/terms", "/cookies", "/kvkk"];
+const SEEDS = ["/", "/pricing", "/privacy", "/terms", "/cookies", "/kvkk", "/delete-account"];
 
 test("public indexable pages have no broken internal links or redirect chains", async ({
   page,

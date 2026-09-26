@@ -20,6 +20,7 @@ audit/remediation/_vitest-db-last.json
 # next.js
 /.next/
 /out/
+/native-dist/
 /.capacitor-build-stash/
 
 # production
@@ -49,5 +50,11 @@ next-env.d.ts
 android/app/google-services.json
 ios/App/GoogleService-Info.plist
 .env*
+
+# Android signing material must never be committed
+*.keystore
+*.jks
+**/key.properties
+
 
 .env.vercel.prod.tmp

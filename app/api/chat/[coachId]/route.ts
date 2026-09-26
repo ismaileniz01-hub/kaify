@@ -24,10 +24,12 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 type ChatReplayBody = {
   assistantText: string;
   messageId: string | null;
+  userMessageId?: string | null;
   messageType: string | null;
   payload: unknown;
   warning_trigger: string | null;
@@ -42,6 +44,7 @@ async function* replayChatSse(body: ChatReplayBody): AsyncGenerator<SseChunk> {
     event: "done",
     data: {
       messageId: body.messageId,
+      userMessageId: body.userMessageId ?? null,
       messageType: body.messageType,
       payload: body.payload,
       warning_trigger: body.warning_trigger,
@@ -71,6 +74,7 @@ async function* withChatIdempotency(
         replay = {
           assistantText,
           messageId: (data.messageId as string | null) ?? null,
+          userMessageId: (data.userMessageId as string | null) ?? null,
           messageType: (data.messageType as string | null) ?? null,
           payload: data.payload,
           warning_trigger: (data.warning_trigger as string | null) ?? null,
@@ -155,7 +159,11 @@ export const POST = defineDynamicRouteRaw<{ coachId: string }>(
       userId: user.id,
       endpoint,
       key,
-      requestBody: { message: parsed.data.message, coachId: coach.data },
+      requestBody: {
+        message: parsed.data.message,
+        coachId: coach.data,
+        locale: parsed.data.locale ?? null,
+      },
     });
 
     if (claim.kind === "replay") {
@@ -173,6 +181,10 @@ export const POST = defineDynamicRouteRaw<{ coachId: string }>(
       throw error;
     }
 
+    const abort = new AbortController();
+    const onAbort = () => abort.abort();
+    request.signal.addEventListener("abort", onAbort, { once: true });
+
     return createSseResponse(
       withChatIdempotency(
         user.id,
@@ -184,8 +196,12 @@ export const POST = defineDynamicRouteRaw<{ coachId: string }>(
           message: parsed.data.message,
           tokensReserved: CHAT_TOKEN_RESERVE,
           clientIdempotencyKey: key,
+          clientMessageId: parsed.data.clientMessageId ?? null,
+          explicitLocale: parsed.data.locale ?? null,
+          signal: abort.signal,
         }),
       ),
+      { onDisconnect: () => abort.abort() },
     );
   },
 );

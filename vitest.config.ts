@@ -16,6 +16,7 @@ export default defineConfig({
     exclude: [
       "tests/db/rls-authorization.test.ts",
       "tests/db/rpc-authorization.test.ts",
+      "tests/kaios/live/**",
     ],
     globals: true,
     coverage: {
@@ -45,6 +46,11 @@ export default defineConfig({
         lines: 22,
       },
     },
+  },
+  define: {
+    __KAIFY_API_BASE__: JSON.stringify("https://kaifyai.org"),
+    __SUPABASE_URL__: JSON.stringify("https://example.supabase.co"),
+    __SUPABASE_ANON_KEY__: JSON.stringify("test-anon-key-for-vitest"),
   },
   resolve: {
     alias: {

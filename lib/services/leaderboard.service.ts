@@ -67,8 +67,8 @@ async function loadCountryLeaderboardEntries(
   const snapshot = await readCountrySnapshotEntries(limit);
   if (snapshot) return snapshot;
 
-  const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.rpc("get_country_leaderboard", {
+  const admin = createAdminSupabaseClient();
+  const { data, error } = await admin.rpc("get_country_leaderboard", {
     p_limit: limit,
   });
   if (error) {

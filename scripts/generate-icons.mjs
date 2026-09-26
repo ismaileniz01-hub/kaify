@@ -7,6 +7,7 @@
  *  - maskable-192.png, maskable-512.png   (safe-zone padded on theme bg)
  *  - apple-touch-icon.png (180)           (opaque theme bg — iOS has no alpha)
  *  - badge-72.png                         (small monochrome-ish push badge)
+ * Also writes app/icon.png (Next.js favicon) and public/favicon-32.png.
  */
 import sharp from "sharp";
 import { mkdir } from "node:fs/promises";
@@ -80,8 +81,16 @@ async function main() {
     maskable(512, "maskable-512.png"),
     appleTouch(180, "apple-touch-icon.png"),
     badge(72, "badge-72.png"),
+    sharp(SRC)
+      .resize(192, 192, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toFile("app/icon.png"),
+    sharp(SRC)
+      .resize(32, 32, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toFile("public/favicon-32.png"),
   ]);
-  console.log("Icons generated in", OUT);
+  console.log("Icons generated in", OUT, "+ app/icon.png");
 }
 
 main().catch((err) => {

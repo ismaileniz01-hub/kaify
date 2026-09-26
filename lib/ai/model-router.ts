@@ -4,9 +4,10 @@ import {
   type CompletionOptions,
 } from "@/lib/ai/deepseek.client";
 import { generateGeminiJson } from "@/lib/ai/gemini.client";
-import { assessImageQuality, MIN_QUALITY_SCORE } from "@/lib/ai/image-quality";
+import { MIN_QUALITY_SCORE, formatLowQualityUserMessage } from "@/lib/ai/image-quality";
 import { computeScoreDrift, type ScoreDrift } from "@/lib/ai/consistency";
 import { AiError } from "@/lib/ai/errors";
+import { aiCopy } from "@/lib/ai/ai-copy";
 import { logger as aiLogger } from "@/lib/logger";
 import {
   ANALYSIS_PERSONAS,
@@ -14,10 +15,14 @@ import {
   buildVisionPrompt,
   type AnalysisPersona,
 } from "@/lib/ai/personas";
-import { scrubModelOutput } from "@/lib/ai/prompt-safety";
+import { scrubModelOutput, wrapUntrustedInput } from "@/lib/ai/prompt-safety";
+import { isUsableCoachReply, sanitizeCoachVisibleText } from "@/lib/kaios/coach-retry";
 import { TOKEN_BUDGET } from "@/lib/ai/budget";
+import { resolveLocale } from "@/lib/i18n/dictionary";
+import { buildReplyLanguageDirective } from "@/lib/i18n/reply-language-directive";
+import { isReplyLanguageMismatch } from "@/lib/i18n/reply-language-guard";
 import {
-  technicalAnalysisSchema,
+  interpretVisionEnvelope,
   type ImageQuality,
   type MuscleScores,
   type TechnicalAnalysis,
@@ -30,13 +35,10 @@ import type {
 } from "@/lib/ai/types";
 
 /**
- * ModelRouter — the hybrid engine entry point.
+ * ModelRouter — hybrid engine.
  *
  *  Text / logic / synthesis  -> DeepSeek
- *  Vision / measurement      -> Gemini
- *
- * `analyzeImagePipeline` chains both: Gemini produces strict JSON, then
- * DeepSeek turns it into a personalized (Maya/Leo) Markdown summary.
+ *  Vision observation        -> one Gemini structured call (quality + observations)
  */
 
 export type ImagePipelineParams = {
@@ -44,9 +46,9 @@ export type ImagePipelineParams = {
   persona: AnalysisPersona;
   locale: string;
   image: ImageInput;
-  /** Previous body scores for the consistency check (body persona only). */
   previousScores?: MuscleScores | null;
   userNote?: string;
+  userState?: string;
   signal?: AbortSignal;
 };
 
@@ -56,10 +58,20 @@ export type ImagePipelineResult = {
   drift: ScoreDrift[];
   summary: string;
   usage: TokenUsage | null;
+  geminiCalls: number;
+  deepseekCalls: number;
 };
 
+function isVisionRetryable(error: unknown): error is AiError {
+  return (
+    error instanceof AiError &&
+    (error.code === "AI_BAD_OUTPUT" ||
+      error.code === "AI_UPSTREAM" ||
+      error.code === "AI_TIMEOUT")
+  );
+}
+
 export const ModelRouter = {
-  /** DeepSeek streaming text (chat). */
   streamText(
     messages: ChatTurn[],
     options?: CompletionOptions,
@@ -67,7 +79,6 @@ export const ModelRouter = {
     return streamChatCompletion(messages, options);
   },
 
-  /** DeepSeek non-streaming text (synthesis/condensation). */
   completeText(
     messages: ChatTurn[],
     options?: CompletionOptions,
@@ -76,64 +87,93 @@ export const ModelRouter = {
   },
 
   /**
-   * Gemini (vision) -> JSON -> DeepSeek (synthesis) -> personalized summary.
-   * Throws AiError("AI_LOW_QUALITY") when the pre-analysis gate rejects the
-   * photo, BEFORE any vision/synthesis cost is incurred.
+   * One Gemini vision envelope → fail-closed quality → DeepSeek coach synthesis.
+   * Insufficient quality stops before DeepSeek.
    */
   async analyzeImagePipeline(
     params: ImagePipelineParams,
   ): Promise<ImagePipelineResult> {
     const profile = ANALYSIS_PERSONAS[params.persona];
 
-    // 1) Pre-analysis quality gate (cheap Gemini call).
-    const quality = await assessImageQuality(params.image, params.signal, {
-      userId: params.userId,
-    });
-    if (quality.score < MIN_QUALITY_SCORE) {
-      throw new AiError(
-        "AI_LOW_QUALITY",
-        "Fotoğraf analiz için yeterince net değil. Lütfen ipuçlarını uygulayıp tekrar dene.",
-        { score: quality.score, issues: quality.issues, tips: quality.tips },
-      );
-    }
-
-    // 2) Vision measurement -> strict JSON.
-    const raw = await generateGeminiJson({
-      prompt: buildVisionPrompt(profile.kind),
+    const visionRequest = {
+      prompt: buildVisionPrompt(profile.kind, params.userNote),
       image: params.image,
       temperature: 0.2,
       signal: params.signal,
       usageContext: params.userId
-        ? { userId: params.userId, operation: "vision" }
-        : { operation: "vision" },
-    });
+        ? { userId: params.userId, operation: "vision" as const }
+        : { operation: "vision" as const },
+    };
 
-    const parsed = technicalAnalysisSchema.safeParse(raw);
-    if (!parsed.success) {
-      aiLogger.error("[model-router] vision output failed schema", {
+    let geminiCalls = 1;
+    let raw: unknown;
+    try {
+      raw = await generateGeminiJson(visionRequest);
+    } catch (error) {
+      if (!isVisionRetryable(error)) {
+        throw error;
+      }
+      aiLogger.warn("[model-router] vision json retry after provider failure", {
+        code: error instanceof AiError ? error.code : "unknown",
+        kind: profile.kind,
+      });
+      raw = await generateGeminiJson({
+        ...visionRequest,
+        thinkingLevel: "LOW",
+      });
+      geminiCalls = 2;
+    }
+
+    let interpreted = interpretVisionEnvelope(raw, MIN_QUALITY_SCORE);
+    if (interpreted.status === "INVALID_PROVIDER_OUTPUT" && geminiCalls < 2) {
+      aiLogger.warn("[model-router] vision envelope invalid; retrying", {
         kind: profile.kind,
         raw: JSON.stringify(raw).slice(0, 600),
-        issues: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
       });
-      throw new AiError("AI_BAD_OUTPUT", "Analiz çıktısı doğrulanamadı.");
+      raw = await generateGeminiJson({
+        ...visionRequest,
+        thinkingLevel: "LOW",
+      });
+      geminiCalls = 2;
+      interpreted = interpretVisionEnvelope(raw, MIN_QUALITY_SCORE);
     }
-    const analysis = parsed.data;
 
-    // 3) Consistency check (body scoring only).
+    if (interpreted.status === "INVALID_PROVIDER_OUTPUT") {
+      aiLogger.error("[model-router] combined vision envelope invalid", {
+        kind: profile.kind,
+        raw: JSON.stringify(raw).slice(0, 600),
+      });
+      throw new AiError("AI_BAD_OUTPUT", aiCopy(params.locale, "bad_analysis_output"));
+    }
+    if (interpreted.status === "INSUFFICIENT_QUALITY") {
+      throw new AiError(
+        "AI_LOW_QUALITY",
+        formatLowQualityUserMessage(params.locale, interpreted.quality),
+        {
+          status: interpreted.status,
+          score: interpreted.quality.score,
+          issues: interpreted.quality.issues,
+          tips: interpreted.quality.tips,
+        },
+      );
+    }
+
+    const { quality, analysis } = interpreted;
+
     const drift =
       profile.kind === "body"
         ? computeScoreDrift(params.previousScores ?? null, analysis.scores)
         : [];
 
-    // 4) Synthesis -> personalized Markdown (DeepSeek).
     const synth = buildSynthesisMessages({
       persona: params.persona,
       locale: params.locale,
       analysis,
       drift,
       userNote: params.userNote,
+      userState: params.userState,
     });
-    const { content, usage } = await createChatCompletion(synth.messages, {
+    const first = await createChatCompletion(synth.messages, {
       temperature: 0.7,
       maxTokens: TOKEN_BUDGET.synthesis,
       signal: params.signal,
@@ -142,9 +182,75 @@ export const ModelRouter = {
         : { operation: "synthesis" },
     });
 
-    // Backstop: strip any leaked canary/scaffolding from the user-facing text.
-    const summary = scrubModelOutput(content, synth.canary);
+    let rawSummary = scrubModelOutput(first.content, synth.canary);
+    let usage = first.usage;
+    let deepseekCalls = 1;
+    if (isReplyLanguageMismatch(rawSummary, params.locale)) {
+      const originalSummary = rawSummary;
+      try {
+        const retry = await createChatCompletion(
+          [
+            {
+              role: "system",
+              content: [
+                buildReplyLanguageDirective(resolveLocale(params.locale)),
+                "Rewrite the supplied coach reply faithfully in the mandatory language. Preserve numbers and safety meaning. Return only the rewritten reply.",
+              ].join("\n\n"),
+            },
+            {
+              role: "user",
+              content: wrapUntrustedInput("COACH_REPLY_TO_REWRITE", rawSummary),
+            },
+          ],
+          {
+            temperature: 0.2,
+            maxTokens: TOKEN_BUDGET.synthesis,
+            signal: params.signal,
+            usageContext: params.userId
+              ? { userId: params.userId, operation: "synthesis" }
+              : { operation: "synthesis" },
+          },
+        );
+        deepseekCalls += 1;
+        rawSummary = retry.content;
+        if (usage && retry.usage) {
+          usage = {
+            prompt_tokens: usage.prompt_tokens + retry.usage.prompt_tokens,
+            completion_tokens:
+              usage.completion_tokens + retry.usage.completion_tokens,
+            total_tokens: usage.total_tokens + retry.usage.total_tokens,
+          };
+        } else {
+          usage = retry.usage ?? usage;
+        }
+      } catch (error) {
+        aiLogger.warn("[model-router] photo language rewrite failed; keeping original", {
+          error: error instanceof Error ? error.message : "unknown",
+        });
+        rawSummary = originalSummary;
+      }
+      if (
+        isReplyLanguageMismatch(rawSummary, params.locale) &&
+        isUsableCoachReply(originalSummary)
+      ) {
+        rawSummary = originalSummary;
+      }
+    }
 
-    return { quality, analysis, drift, summary, usage };
+    const summary = sanitizeCoachVisibleText(
+      rawSummary,
+      params.locale,
+      params.persona,
+    );
+
+    return {
+      quality,
+      analysis,
+      drift,
+      summary,
+      usage,
+      geminiCalls,
+      deepseekCalls,
+    };
   },
 };

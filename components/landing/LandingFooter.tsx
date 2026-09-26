@@ -33,6 +33,9 @@ export function LandingFooter() {
           <Link href="/#features" className="transition hover:text-white">
             {t("landing.nav.features")}
           </Link>
+          <Link href="/#faq" className="transition hover:text-white">
+            {t("landing.nav.faq")}
+          </Link>
           <Link href="/pricing" className="transition hover:text-white">
             {t("landing.nav.pricing")}
           </Link>
@@ -45,8 +48,14 @@ export function LandingFooter() {
           <Link href="/cookies" className="transition hover:text-white">
             {t("legal.cookies")}
           </Link>
+          <Link href="/disclaimer" className="transition hover:text-white">
+            {t("legal.disclaimer")}
+          </Link>
           <Link href="/kvkk" className="transition hover:text-white">
             {t("legal.kvkk")}
+          </Link>
+          <Link href="/delete-account" className="transition hover:text-white">
+            {t("legal.delete_account")}
           </Link>
         </nav>
 

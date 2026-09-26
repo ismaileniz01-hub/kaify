@@ -45,4 +45,13 @@ describe("profileUpdateSchema", () => {
   it("rejects an invalid timezone", () => {
     expect(profileUpdateSchema.safeParse({ timezone: "Mars/Base" }).success).toBe(false);
   });
+
+  it("accepts only supported equipment preferences", () => {
+    expect(profileUpdateSchema.safeParse({ equipmentAccess: "home" }).success).toBe(
+      true,
+    );
+    expect(
+      profileUpdateSchema.safeParse({ equipmentAccess: "hotel_gym" }).success,
+    ).toBe(false);
+  });
 });

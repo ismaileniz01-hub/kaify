@@ -13,7 +13,16 @@ import {
 import { COOKIES_PATH, TERMS_PATH } from "@/lib/legal/constants";
 import { MOTION_EXIT_MS, usePresence } from "@/lib/motion/use-presence";
 
-const LEGAL_ONLY_PREFIXES = ["/privacy", "/terms", "/terms&conditions", "/cookies"];
+const LEGAL_ONLY_PREFIXES = [
+  "/privacy",
+  "/terms",
+  "/terms&conditions",
+  "/cookies",
+  "/kvkk",
+  "/disclaimer",
+  "/delete-account",
+  "/admin",
+];
 
 /**
  * Site-wide cookie banner (accept / reject non-essential cookies).
@@ -81,7 +90,7 @@ export function CookieConsentBanner() {
       aria-labelledby="cookie-banner-title"
       aria-live="polite"
       data-state={presence.state}
-      className="motion-sheet fixed inset-x-0 bottom-0 z-[9999] border-t border-white/10 bg-zinc-950/98 p-4 shadow-[0_-8px_40px_rgba(0,0,0,0.45)] backdrop-blur-md sm:p-5"
+      className="motion-sheet fixed inset-x-0 bottom-0 z-[9999] border-t border-white/10 bg-zinc-950/98 p-4 pb-[calc(var(--safe-bottom)+1rem)] shadow-[0_-8px_40px_rgba(0,0,0,0.45)] backdrop-blur-md sm:p-5 sm:pb-[calc(var(--safe-bottom)+1.25rem)]"
     >
       <div className="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">
@@ -111,14 +120,20 @@ export function CookieConsentBanner() {
           <button
             type="button"
             onClick={() => choose("rejected")}
-            className="rounded-full border border-white/15 px-4 py-2.5 text-xs font-medium text-zinc-300 hover:bg-white/5"
+            className="min-h-11 flex-1 rounded-full border border-white/15 px-4 py-2.5 text-xs font-medium text-zinc-300 hover:bg-white/5 sm:flex-none"
           >
             {t("cookies.banner.reject")}
           </button>
+          <Link
+            href={COOKIES_PATH}
+            className="min-h-11 flex flex-1 items-center justify-center rounded-full border border-white/15 px-4 py-2.5 text-xs font-medium text-zinc-300 hover:bg-white/5 sm:flex-none"
+          >
+            {t("cookies.banner.manage")}
+          </Link>
           <button
             type="button"
             onClick={() => choose("accepted")}
-            className="rounded-full bg-emerald-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-emerald-500"
+            className="min-h-11 flex-1 rounded-full bg-emerald-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-emerald-500 sm:flex-none"
           >
             {t("cookies.banner.accept")}
           </button>

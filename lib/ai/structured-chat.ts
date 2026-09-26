@@ -1,5 +1,6 @@
 import { ModelRouter } from "@/lib/ai/model-router";
 import { TOKEN_BUDGET, AI_FEATURES } from "@/lib/ai/budget";
+import { extractJsonObject } from "@/lib/ai/extract-json";
 import { isAiPressureMode } from "@/lib/ai/daily-cost-cap";
 import { sanitizeUserText, wrapUntrustedInput } from "@/lib/ai/prompt-safety";
 import type { MessageType, Json } from "@/lib/types/database.types";
@@ -53,6 +54,8 @@ export async function maybeGenerateStructuredCard(params: {
   coachReply: string;
   locale: string;
 }): Promise<StructuredChatResult> {
+  // Hard stop: KAIOS path never uses a second card LLM.
+  if (AI_FEATURES.kaiosRuntime) return null;
   if (!AI_FEATURES.structuredCards) return null;
   if (await isAiPressureMode()) return null;
 
@@ -91,11 +94,11 @@ export async function maybeGenerateStructuredCard(params: {
         ? { userId: params.userId, operation: "structured_card" }
         : { operation: "structured_card" },
     });
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return null;
-
-    const payload = JSON.parse(jsonMatch[0]) as Json;
-    return { messageType, payload };
+    const extracted = extractJsonObject(content);
+    if (!extracted.ok) return null;
+    const payload = { ...extracted.value };
+    delete (payload as { __proto__?: unknown }).__proto__;
+    return { messageType, payload: payload as Json };
   } catch {
     return null;
   }

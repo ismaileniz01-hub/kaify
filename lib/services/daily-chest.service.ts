@@ -10,6 +10,8 @@ import {
   type ChestRewardDTO,
   type ChestReelSlot,
 } from "@/lib/chest-rewards";
+import { invalidateSessionSliceCaches } from "@/lib/cache/invalidate";
+import { getGemBalance } from "@/lib/services/gem-balance.service";
 
 export type { ChestRewardDTO, ChestReelSlot, ChestRarity } from "@/lib/chest-rewards";
 export type ChestRewardKind = ChestRewardDTO["kind"];
@@ -193,7 +195,7 @@ export async function claimDailyChest(userId: string): Promise<DailyChestClaimDT
       const reelState = await readReelState(userId, today);
       const fallback = buildLoopingReel(reward);
       const [gems, streak] = await Promise.all([
-        readGemBalance(userId),
+        getGemBalance(userId),
         readFreezieBalance(userId),
       ]);
       return {
@@ -203,7 +205,7 @@ export async function claimDailyChest(userId: string): Promise<DailyChestClaimDT
             ? reelState.reel
             : fallback.reel,
         winningIndex: reelState?.winningIndex ?? fallback.stopIndex,
-        gemBalance: gems,
+        gemBalance: gems.balance,
         freezieBalance: streak,
         alreadyClaimed: true,
       };
@@ -260,6 +262,8 @@ export async function claimDailyChest(userId: string): Promise<DailyChestClaimDT
 
   await saveReelState(userId, { date: today, reward, reel, winningIndex });
 
+  void invalidateSessionSliceCaches(userId).catch(() => undefined);
+
   return {
     reward,
     reel,
@@ -268,16 +272,6 @@ export async function claimDailyChest(userId: string): Promise<DailyChestClaimDT
     freezieBalance: Number(payload.freezie_balance ?? 0),
     alreadyClaimed: false,
   };
-}
-
-async function readGemBalance(userId: string): Promise<number> {
-  const supabase = await createServerSupabaseClient();
-  const { data } = await supabase
-    .from("user_gem_balances")
-    .select("balance")
-    .eq("user_id", userId)
-    .maybeSingle();
-  return Number(data?.balance ?? 0);
 }
 
 async function readFreezieBalance(userId: string): Promise<number> {

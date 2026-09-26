@@ -1,15 +1,22 @@
 "use client";
 
-import { Activity, Dumbbell, Target, TrendingUp } from "lucide-react";
+import { Activity, Target, TrendingUp } from "lucide-react";
 import type { ContactId } from "@/lib/contacts";
 import { CONTACTS } from "@/lib/contacts";
 import { useLang } from "@/lib/lang-context";
 import type { MessageType } from "@/lib/types/database.types";
+import { WorkoutPlanCard } from "@/components/chat/WorkoutPlanCard";
+import {
+  displayPlanLabel,
+  unwrapChatCardPayload,
+} from "@/lib/chat/rich-card-payload";
+import { resolveWorkoutPlanDays } from "@/lib/kaios/plan-speech";
 
 type ChatRichCardProps = {
   contactId: ContactId;
   messageType: MessageType;
   payload: unknown;
+  fallbackText?: string;
 };
 
 const SCORE_COLORS = ["#ef4444", "#f59e0b", "#3b82f6", "#22c55e", "#a855f7", "#ec4899"];
@@ -42,13 +49,37 @@ function scorePayloadToAnalysis(payload: Record<string, unknown>) {
   };
 }
 
-export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardProps) {
+function workoutSetsLabel(
+  sets: string | undefined,
+  reps: string | undefined,
+  translate: (key: string, params?: Record<string, string | number>) => string,
+): string | undefined {
+  if (sets && reps) return translate("workout.sets", { sets, reps });
+  if (sets) return sets;
+  if (reps) return String(reps);
+  return undefined;
+}
+
+export function ChatRichCard({
+  contactId,
+  messageType,
+  payload,
+  fallbackText,
+}: ChatRichCardProps) {
   const { t } = useLang();
   const contact = CONTACTS[contactId];
   const { primary, primaryLight, ring } = contact.color;
 
-  if (!payload || typeof payload !== "object") return null;
-  const p = payload as Record<string, unknown>;
+  if (
+    (!payload || typeof payload !== "object" || Array.isArray(payload)) &&
+    !fallbackText?.trim()
+  ) {
+    return null;
+  }
+  const p =
+    payload && typeof payload === "object" && !Array.isArray(payload)
+      ? (payload as Record<string, unknown>)
+      : {};
 
   // Food analysis (Maya) — macro/calorie card. Kept separate from the body
   // score card so a meal photo never renders an empty "Body Analysis Score".
@@ -70,7 +101,7 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
 
     return (
       <div
-        className="animate-message mt-2 overflow-hidden rounded-2xl"
+        className="chat-card-unfold mt-2 overflow-hidden rounded-2xl"
         style={{
           backgroundColor: `${primary}10`,
           border: `1px solid ${ring}`,
@@ -94,7 +125,15 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
           {macros.map((m) => (
             <div key={m.key} className="flex items-center gap-2">
               <span className="w-24 truncate text-[11px] text-zinc-400">{m.label}</span>
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800">
+              <div
+                className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800"
+                role="progressbar"
+                aria-label={m.label}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round((m.grams / Math.max(totalG, 1)) * 100)}
+                aria-valuetext={`${m.grams}g`}
+              >
                 <div
                   className="h-full rounded-full"
                   style={{ width: `${(m.grams / totalG) * 100}%`, backgroundColor: m.color }}
@@ -114,7 +153,7 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
     const a = scorePayloadToAnalysis(p);
     return (
       <div
-        className="animate-message mt-2 overflow-hidden rounded-2xl"
+        className="chat-card-unfold mt-2 overflow-hidden rounded-2xl"
         style={{
           backgroundColor: `${primary}10`,
           border: `1px solid ${ring}`,
@@ -159,18 +198,24 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
   }
 
   if (messageType === "meal_plan") {
-    const mp = p as {
+    const mp = unwrapChatCardPayload(p) as {
       totalCalories?: number;
       targetCalories?: number;
+      calorie_goal?: number;
       macros?: Record<string, { current: number; target: number }>;
-      meals?: { labelKey: string; items: { name: string; calories: number }[] }[];
+      meals?: { labelKey?: string; label?: string; items?: { name: string; calories: number }[] }[];
     };
-    const calPct = Math.round(
-      ((mp.totalCalories ?? 0) / (mp.targetCalories ?? 2100)) * 100,
-    );
+    const target =
+      mp.targetCalories && mp.targetCalories > 0
+        ? mp.targetCalories
+        : mp.calorie_goal && mp.calorie_goal > 0
+          ? mp.calorie_goal
+          : null;
+    const total = mp.totalCalories ?? 0;
+    const calPct = target ? Math.round((total / target) * 100) : 0;
     return (
       <div
-        className="animate-message mt-2 overflow-hidden rounded-2xl"
+        className="chat-card-unfold mt-2 overflow-hidden rounded-2xl"
         style={{ backgroundColor: `${primary}10`, border: `1px solid ${ring}` }}
       >
         <div className="flex items-center gap-3 p-3" style={{ borderBottom: `1px solid ${ring}` }}>
@@ -178,12 +223,12 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
             className="flex h-14 w-14 items-center justify-center rounded-full text-lg font-black text-white"
             style={{ background: `conic-gradient(${primary} ${calPct}%, #1a1a2e ${calPct}%)` }}
           >
-            {calPct}%
+            {target ? `${calPct}%` : total}
           </div>
           <div>
             <p className="text-sm font-bold text-white">{t("meal.calories")}</p>
             <p className="text-xs text-zinc-400">
-              {mp.totalCalories ?? 0} / {mp.targetCalories ?? 2100} kcal
+              {target ? `${total} / ${target} kcal` : `${total} kcal`}
             </p>
           </div>
         </div>
@@ -192,7 +237,15 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
             {Object.entries(mp.macros).map(([key, data]) => (
               <div key={key} className="flex items-center gap-2">
                 <span className="w-16 text-[11px] capitalize text-zinc-400">{key}</span>
-                <div className="h-1.5 flex-1 rounded-full bg-zinc-800">
+                <div
+                  className="h-1.5 flex-1 rounded-full bg-zinc-800"
+                  role="progressbar"
+                  aria-label={key}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(Math.min(100, (data.current / data.target) * 100))}
+                  aria-valuetext={`${data.current}g / ${data.target}g`}
+                >
                   <div
                     className="h-full rounded-full bg-emerald-500"
                     style={{ width: `${Math.min(100, (data.current / data.target) * 100)}%` }}
@@ -205,55 +258,68 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
             ))}
           </div>
         )}
+        {Array.isArray(mp.meals) && mp.meals.length > 0 && (
+          <div className="flex flex-col gap-2 p-3" style={{ borderTop: `1px solid ${ring}` }}>
+            {mp.meals.map((meal, i) => (
+              <div key={i}>
+                <p className="mb-1 text-[11px] font-bold text-zinc-300">
+                  {displayPlanLabel(meal.labelKey ?? meal.label, t)}
+                </p>
+                {(meal.items ?? []).map((item, j) => (
+                  <div key={j} className="flex items-center justify-between ps-3">
+                    <span className="text-[11px] text-zinc-400">{item.name}</span>
+                    <span className="text-[11px] text-zinc-500">{item.calories} kcal</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
 
-  if (messageType === "workout_plan") {
-    const wp = p as {
-      titleKey?: string;
-      durationKey?: string;
-      days?: {
-        dayKey: string;
-        focusKey: string;
-        exercises: { name: string; sets: number; reps: string; notes?: string }[];
-      }[];
-    };
-    return (
-      <div
-        className="animate-message mt-2 overflow-hidden rounded-2xl"
-        style={{ backgroundColor: `${primary}10`, border: `1px solid ${ring}` }}
-      >
-        <div className="flex items-center gap-3 p-3" style={{ borderBottom: `1px solid ${ring}` }}>
-          <div
-            className="flex h-12 w-12 items-center justify-center rounded-xl"
-            style={{ background: `linear-gradient(135deg, ${primary}, ${primaryLight})` }}
-          >
-            <Dumbbell className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-white">
-              {wp.titleKey ? t(wp.titleKey) : t("workout.weekly_title")}
-            </p>
-            <p className="text-xs text-zinc-400">
-              {wp.durationKey ? t(wp.durationKey) : ""}
-            </p>
-          </div>
-        </div>
-        {(wp.days ?? []).map((day, di) => (
-          <div key={di} className="px-3 py-2" style={{ borderBottom: `1px solid ${ring}` }}>
-            <p className="text-xs font-bold text-zinc-300">
-              {t(day.dayKey)} — {t(day.focusKey)}
-            </p>
-            {day.exercises.map((ex, ei) => (
-              <p key={ei} className="mt-1 text-[11px] text-zinc-400">
-                • {ex.name} ({ex.sets}x{ex.reps})
-              </p>
-            ))}
-          </div>
-        ))}
-      </div>
-    );
+  if (
+    messageType === "workout_plan" ||
+    (contactId === "alex" && messageType !== "daily_summary")
+  ) {
+    const days = resolveWorkoutPlanDays(p, fallbackText);
+    if (days.length > 0) {
+      const unwrapped = unwrapChatCardPayload(p);
+      const titleKey =
+        typeof unwrapped.titleKey === "string" ? unwrapped.titleKey : "workout.weekly_title";
+      const durationKey =
+        typeof unwrapped.durationKey === "string" ? unwrapped.durationKey : "";
+      const exerciseCount = days.reduce((sum, day) => sum + day.exercises.length, 0);
+      const subtitle = durationKey
+        ? t(durationKey)
+        : `${days.length} · ${exerciseCount} ${t("workout.exercises")}`;
+      const tips = Array.isArray(unwrapped.tips)
+        ? (unwrapped.tips as unknown[]).filter((tip): tip is string => typeof tip === "string")
+        : [];
+      return (
+        <WorkoutPlanCard
+          className="mt-2"
+          primary={primary}
+          primaryLight={primaryLight}
+          ring={ring}
+          title={t(titleKey)}
+          subtitle={subtitle}
+          days={days.map((day) => ({
+            day: displayPlanLabel(day.day, t),
+            focus: displayPlanLabel(day.focus, t),
+            exercises: day.exercises.map((ex) => ({
+              name: ex.name,
+              setsLabel: workoutSetsLabel(ex.sets, ex.reps, t),
+              notes: ex.notes,
+            })),
+          }))}
+          tipsLabel={tips.length > 0 ? t("workout.tips") : undefined}
+          tips={tips}
+        />
+      );
+    }
+    if (messageType === "workout_plan") return null;
   }
 
   if (messageType === "daily_summary") {
@@ -273,7 +339,7 @@ export function ChatRichCard({ contactId, messageType, payload }: ChatRichCardPr
       : 0;
     return (
       <div
-        className="animate-message mt-2 overflow-hidden rounded-2xl"
+        className="chat-card-unfold mt-2 overflow-hidden rounded-2xl"
         style={{ backgroundColor: `${primary}10`, border: `1px solid ${ring}` }}
       >
         <div className="flex items-center gap-3 p-3" style={{ borderBottom: `1px solid ${ring}` }}>

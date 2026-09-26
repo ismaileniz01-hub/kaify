@@ -58,19 +58,28 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
   }
 }
 
+/** Returns true only when Redis acknowledged the SET (result OK). */
 export async function cacheSet(
   key: string,
   value: unknown,
   ttlSeconds: number,
-): Promise<void> {
-  if (!isConfigured()) return;
+): Promise<boolean> {
+  if (!isConfigured()) return false;
   try {
-    await redisCommand(["SET", key, JSON.stringify(value), "EX", String(ttlSeconds)]);
+    const result = await redisCommand<string>([
+      "SET",
+      key,
+      JSON.stringify(value),
+      "EX",
+      String(ttlSeconds),
+    ]);
+    return result === "OK";
   } catch (error) {
     logger.warn("cache set failed", {
       key,
       error: error instanceof Error ? error.message : "unknown",
     });
+    return false;
   }
 }
 
@@ -126,6 +135,28 @@ export async function cacheDelete(key: string): Promise<void> {
     await redisCommand(["DEL", key]);
   } catch {
     // best-effort invalidation
+  }
+}
+
+/** GET + DEL. Returns null when Redis is unavailable or the key is missing. */
+export async function cacheTake<T>(key: string): Promise<T | null> {
+  if (!isConfigured()) return null;
+  try {
+    const taken = await redisCommand<string>(["GETDEL", key]);
+    if (taken) return JSON.parse(taken) as T;
+  } catch {
+    // GETDEL missing on older Redis — fall through to GET + DEL.
+  }
+  try {
+    const raw = await cacheGet<T>(key);
+    if (raw) await cacheDelete(key);
+    return raw;
+  } catch (error) {
+    logger.warn("cache take failed", {
+      key,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+    return null;
   }
 }
 

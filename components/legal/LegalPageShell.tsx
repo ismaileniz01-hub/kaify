@@ -38,7 +38,13 @@ export function LegalPageShell({
               {t("legal.cookies")}
             </Link>
             <Link href="/kvkk" className="hover:text-zinc-300">
-              KVKK
+              {t("legal.kvkk")}
+            </Link>
+            <Link href="/disclaimer" className="hover:text-zinc-300">
+              {t("legal.disclaimer")}
+            </Link>
+            <Link href="/delete-account" className="hover:text-zinc-300">
+              {t("legal.delete_account")}
             </Link>
           </div>
         </div>

@@ -14,6 +14,7 @@ import { shouldSkipOtpCaptchaForNativeOrigin } from "@/lib/native/otp-cors";
 import { SupabaseEnvError } from "@/lib/supabase/env";
 import { otpSendSchema } from "@/lib/validations/auth-otp.schema";
 import { logger } from "@/lib/logger";
+import { emitProductEvent, productEventIdempotencyKey } from "@/lib/events/product";
 
 export const runtime = "nodejs";
 
@@ -68,8 +69,26 @@ export const POST = defineRouteRaw(
           message: result.error.message,
           status: result.error.status,
         });
+        emitProductEvent({
+          name: "signup.failed",
+          properties: { flow: "otp", error: result.error.code || "send_failed" },
+          idempotencyKey: productEventIdempotencyKey([
+            "signup.failed",
+            emailHash,
+            result.error.code,
+          ]),
+        });
         return fail(mapGoTrueOtpSendError(result.error));
       }
+
+      emitProductEvent({
+        name: "signup.otp_requested",
+        properties: { flow: "otp", method: "email" },
+        idempotencyKey: productEventIdempotencyKey([
+          "signup.otp_requested",
+          emailHash,
+        ]),
+      });
 
       // New GoTrue OTP supersedes prior unused codes for the same email
       // (provider-owned). Kaify returns a stable success shape for native+web.

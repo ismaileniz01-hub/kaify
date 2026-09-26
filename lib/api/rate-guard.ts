@@ -33,6 +33,12 @@ export const AI_RATE_LIMITS = {
   otp_send: { requests: 12, windowMs: 15 * 60 * 1000 },
   /** Email OTP verify attempts (wrong codes, retries). */
   otp_verify: { requests: 24, windowMs: 15 * 60 * 1000 },
+  /**
+   * Token refresh / cookie establish / native handoff / logout. Needs a valid
+   * token or one-time ticket, so it is not a brute-force surface; kept apart
+   * from otp_verify so carrier-NAT users are not logged out by shared buckets.
+   */
+  auth_session: { requests: 120, windowMs: 15 * 60 * 1000 },
   health_probe: { requests: 30, windowMs: 60 * 1000 },
   /** Admin hub password unlock — brute-force guard. */
   admin_hub: { requests: 5, windowMs: 15 * 60 * 1000 },
@@ -76,6 +82,7 @@ export async function enforcePublicRateLimit(
     | "subscribe"
     | "otp_send"
     | "otp_verify"
+    | "auth_session"
     | "health_probe"
     | "csp_report"
     | "public_media"

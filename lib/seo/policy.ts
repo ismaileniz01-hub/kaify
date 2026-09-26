@@ -12,6 +12,8 @@ export const SEO_INDEXABLE_PATHS = [
   "/terms",
   "/cookies",
   "/kvkk",
+  "/disclaimer",
+  "/delete-account",
 ] as const;
 
 export type SeoIndexablePath = (typeof SEO_INDEXABLE_PATHS)[number];
@@ -64,12 +66,21 @@ export function isPublicAuthPath(pathname: string): boolean {
 
 export function isPublicAppPath(pathname: string): boolean {
   if (isPublicAuthPath(pathname)) return true;
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) return true;
   return pathname === "/pricing";
+}
+
+export function isAssociationPath(pathname: string): boolean {
+  return (
+    pathname === "/.well-known/assetlinks.json" ||
+    pathname === "/.well-known/apple-app-site-association"
+  );
 }
 
 export function isMarketingPath(pathname: string): boolean {
   if (pathname === "/") return true;
   if (pathname === "/pricing") return true;
+  if (pathname === "/sitemap.xml" || pathname === "/robots.txt") return true;
   return (
     pathname === "/privacy" ||
     pathname.startsWith("/privacy/") ||
@@ -79,13 +90,18 @@ export function isMarketingPath(pathname: string): boolean {
     pathname === "/cookies" ||
     pathname.startsWith("/cookies/") ||
     pathname === "/kvkk" ||
-    pathname.startsWith("/kvkk/")
+    pathname.startsWith("/kvkk/") ||
+    pathname === "/disclaimer" ||
+    pathname.startsWith("/disclaimer/") ||
+    pathname === "/delete-account" ||
+    pathname.startsWith("/delete-account/")
   );
 }
 
 /** Authenticated product UI — middleware may redirect guests. */
 export function isProtectedProductPath(pathname: string): boolean {
   if (pathname.startsWith("/api/")) return false;
+  if (isAssociationPath(pathname)) return false;
   if (isMarketingPath(pathname)) return false;
   if (isPublicAppPath(pathname)) return false;
   if (pathname.startsWith("/_next/")) return false;
@@ -106,9 +122,11 @@ export function isProtectedProductPath(pathname: string): boolean {
 
 export const SEO_CONTENT_DATES = {
   "/": "2026-08-14",
-  "/pricing": "2026-08-14",
-  "/privacy": "2026-07-05",
-  "/terms": "2026-07-05",
-  "/cookies": "2026-07-05",
-  "/kvkk": "2026-07-05",
+  "/pricing": "2026-08-21",
+  "/privacy": "2026-08-22",
+  "/terms": "2026-08-21",
+  "/cookies": "2026-08-21",
+  "/kvkk": "2026-08-21",
+  "/disclaimer": "2026-08-21",
+  "/delete-account": "2026-08-22",
 } as const;

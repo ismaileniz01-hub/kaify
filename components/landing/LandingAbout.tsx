@@ -3,6 +3,7 @@
 import { BarChart3, Flame, MessageCircle, ShoppingCart } from "lucide-react";
 import { ScrollReveal } from "./ScrollReveal";
 import { useLang } from "@/lib/lang-context";
+import { PRICING_PLANS, formatPrice } from "@/lib/marketing/pricing-plans";
 
 const PILLARS = [
   {
@@ -33,6 +34,7 @@ const PILLARS = [
 
 export function LandingAbout() {
   const { t } = useLang();
+  const startingPrice = formatPrice(PRICING_PLANS[0].priceMonthly);
 
   return (
     <section id="about" className="landing-section relative">
@@ -109,15 +111,14 @@ export function LandingAbout() {
               {/* Karşılaştırma satırları */}
               <div className="space-y-3">
                 {[
-                  { key: "trainer", price: "$50+", delay: 0, icon: "🏋️" },
-                  { key: "nutrition", price: "$40+", delay: 100, icon: "🥗" },
-                  { key: "calories", price: "$10+", delay: 150, icon: "📊" },
-                  { key: "posture", price: "$40+", delay: 200, icon: "🧍" },
+                  { key: "trainer", price: "$50+", icon: "🏋️" },
+                  { key: "nutrition", price: "$40+", icon: "🥗" },
+                  { key: "calories", price: "$10+", icon: "📊" },
+                  { key: "posture", price: "$40+", icon: "🧍" },
                 ].map((item) => (
                   <div
                     key={item.key}
-                    className="group flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4 transition-all duration-500 hover:border-purple-500/30 hover:bg-white/[0.06] hover:shadow-[0_0_20px_rgba(168,85,247,0.08)]"
-                    style={{ animation: `fade-in-up 0.5s ease-out ${item.delay}ms both` }}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 sm:px-5 sm:py-4"
                   >
                     <div className="flex items-center gap-3">
                       <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 text-sm text-red-400">
@@ -143,53 +144,51 @@ export function LandingAbout() {
               </div>
 
               {/* Kaify Ai fiyatı — Kazanan Kartı */}
-              <div className="group relative overflow-hidden rounded-2xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-green-600/5 to-transparent p-6 transition-all duration-500 hover:border-emerald-400/50 hover:shadow-[0_0_50px_rgba(16,185,129,0.2)]">
-                {/* Animasyonlu yeşil parıltı */}
-                <div className="pointer-events-none absolute -inset-20 opacity-0 transition-opacity duration-700 group-hover:opacity-100">
-                  <div className="absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400/20 blur-[60px]" />
-                </div>
-
-                {/* BEST VALUE rozeti */}
-                <div className="absolute -right-8 top-4 z-20 rotate-45 bg-gradient-to-r from-emerald-500 to-green-600 px-8 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-white shadow-lg">
+              <div className="relative overflow-hidden rounded-2xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-green-600/5 to-transparent p-4 sm:p-6">
+                <span className="landing-value-badge">
                   {t("landing.value.best_value")}
-                </div>
+                </span>
 
-                <div className="relative z-10 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-green-700 text-lg text-white shadow-[0_0_20px_rgba(16,185,129,0.35)]">
+                <div className="relative z-10 mt-3 flex flex-col gap-3 sm:mt-1 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-green-700 text-lg text-white shadow-[0_0_20px_rgba(16,185,129,0.35)]">
                       ✓
                     </span>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-lg font-bold text-white">Kaify Ai</p>
                       <p className="text-xs text-emerald-400/70">
                         {t("landing.value.all_in_one")}
                       </p>
                     </div>
                   </div>
-                  <div className="text-end">
+                  <div className="text-start sm:text-end">
                     <p className="text-3xl font-extrabold text-white">
-                      $14.99
+                      {startingPrice}
                     </p>
                     <p className="text-xs text-zinc-500">
                       {t("landing.value.starting_from")}
                     </p>
+                    <p className="mt-1 max-w-[14rem] text-[11px] leading-snug text-zinc-500">
+                      {t("pricing.depends_on_region")}
+                    </p>
                   </div>
                 </div>
 
-                {/* Tasarruf etiketi — belirgin */}
-                <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/15 px-4 py-3">
-                  <span className="text-lg text-emerald-400">💰</span>
+                <div className="mt-4 flex flex-col gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/15 px-4 py-3 sm:flex-row sm:items-center">
                   <span className="text-sm font-bold text-emerald-400">
                     {t("landing.value.save_up_to")}{" "}
                     <span className="text-base">
                       $125+/{t("pricing.unit.month")}
-                    </span>{" "}
-                    ·{" "}
-                    <span className="text-base">
-                      $1,500+/{t("pricing.unit.year")}
+                    </span>
+                    <span className="hidden sm:inline">
+                      {" "}
+                      ·{" "}
+                      <span className="text-base">
+                        $1,500+/{t("pricing.unit.year")}
+                      </span>
                     </span>
                   </span>
-                  <span className="ms-auto text-[10px] font-medium text-emerald-400/60">
+                  <span className="text-[10px] font-medium leading-snug text-emerald-400/70 sm:ms-auto">
                     {t("landing.value.comparison_note")}
                   </span>
                 </div>

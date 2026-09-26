@@ -52,6 +52,25 @@ export const foodAnalysisSchema = z.object({
 
 export type FoodAnalysis = z.infer<typeof foodAnalysisSchema>;
 
+/** Gemini often emits carbs/carbohydrates — normalize before strict parse. */
+function normalizeFoodAnalysisInput(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const raw = value as Record<string, unknown>;
+  if (raw.carb != null) return value;
+  const alias = raw.carbs ?? raw.carbohydrates ?? raw.carbs_g ?? raw.carb_g;
+  if (alias == null) return value;
+  return { ...raw, carb: alias };
+}
+
+function coerceScoreNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const n = Number.parseFloat(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
 export const technicalAnalysisSchema = z.object({
   // Tolerate LLM drift: models sometimes emit non-muscle keys (e.g. food
   // returns "protein_quality") or invalid muscle names. Drop unknown/invalid
@@ -67,15 +86,23 @@ export const technicalAnalysisSchema = z.object({
     .transform((obj) => {
       const filtered: MuscleScores = {};
       for (const [key, value] of Object.entries(obj)) {
-        if (muscleGroupSet.has(key) && typeof value === "number") {
-          const clamped = Math.min(100, Math.max(0, value));
-          filtered[key as MuscleGroup] = clamped;
-        }
+        if (!muscleGroupSet.has(key)) continue;
+        const n = coerceScoreNumber(value);
+        if (n == null) continue;
+        filtered[key as MuscleGroup] = Math.min(100, Math.max(0, n));
       }
       return filtered;
     }),
   overall_score: scoreSchema.default(0),
-  food_analysis: foodAnalysisSchema.nullable().default(null),
+  food_analysis: z.preprocess(
+    normalizeFoodAnalysisInput,
+    foodAnalysisSchema.nullable().default(null),
+  ),
+  ambiguity: z
+    .array(z.string())
+    .optional()
+    .default([])
+    .transform((arr) => arr.filter((s) => s.trim().length > 0).slice(0, 8)),
 });
 
 export type TechnicalAnalysis = z.infer<typeof technicalAnalysisSchema>;
@@ -98,15 +125,232 @@ const stringListSchema = z.preprocess(
 );
 
 export const imageQualitySchema = z.object({
-  // Default to a PASSING score (7) when the model returns a malformed score, so
-  // a formatting glitch never blocks a legitimate photo with a false "low
-  // quality" rejection. A genuinely low score still gates the analysis.
-  score: lenientNumber(1, 10, 7),
+  // Fail closed: missing / NaN / wrong type / out-of-range must NOT become a
+  // passing score. Only a finite 1–10 number is valid.
+  score: z.preprocess((value) => {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+      const n = Number.parseFloat(value);
+      if (Number.isFinite(n)) return n;
+    }
+    return undefined;
+  }, z.number().min(1).max(10)),
   issues: stringListSchema,
   tips: stringListSchema,
 });
 
 export type ImageQuality = z.infer<typeof imageQualitySchema>;
+
+export const visionEnvelopeSchema = z.object({
+  quality: imageQualitySchema,
+  observations: z.unknown().optional(),
+});
+
+const OBSERVATION_KEYS = [
+  "visible_muscles",
+  "scores",
+  "overall_score",
+  "food_analysis",
+  "ambiguity",
+] as const;
+
+function hasFoodMacroKeys(value: Record<string, unknown>): boolean {
+  return (
+    value.calories != null ||
+    value.protein != null ||
+    value.carb != null ||
+    value.carbs != null ||
+    value.carbohydrates != null ||
+    value.fat != null
+  );
+}
+
+function foodAnalysisFromLooseMacros(
+  value: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    calories: value.calories,
+    protein: value.protein,
+    carb: value.carb ?? value.carbs ?? value.carbohydrates,
+    fat: value.fat,
+  };
+}
+
+function parseJsonObjectString(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("{")) return value;
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    return value;
+  }
+}
+
+/**
+ * Gemini often drifts from `{ quality, observations }`: macros at the top
+ * level, observations as a JSON string, or a `{ data: envelope }` wrapper.
+ * Lift those shapes before the fail-closed parse so a usable plate read is
+ * not thrown away as INVALID_PROVIDER_OUTPUT.
+ */
+export function normalizeVisionEnvelopeRaw(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const obj = { ...(raw as Record<string, unknown>) };
+
+  if (obj.quality == null) {
+    for (const key of ["data", "result", "response", "json"] as const) {
+      const nested = obj[key];
+      if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+        return normalizeVisionEnvelopeRaw(nested);
+      }
+    }
+  }
+
+  let observations = parseJsonObjectString(obj.observations);
+  if (
+    observations == null ||
+    typeof observations !== "object" ||
+    Array.isArray(observations)
+  ) {
+    const lifted: Record<string, unknown> = {};
+    let hasLifted = false;
+    for (const key of OBSERVATION_KEYS) {
+      if (obj[key] != null) {
+        lifted[key] = obj[key];
+        hasLifted = true;
+      }
+    }
+    if (!lifted.food_analysis && hasFoodMacroKeys(obj)) {
+      lifted.food_analysis = foodAnalysisFromLooseMacros(obj);
+      hasLifted = true;
+    }
+    if (hasLifted) observations = lifted;
+  } else {
+    const obs = {
+      ...(observations as Record<string, unknown>),
+    };
+    if (obs.food_analysis == null && hasFoodMacroKeys(obs)) {
+      obs.food_analysis = foodAnalysisFromLooseMacros(obs);
+    }
+    observations = obs;
+  }
+
+  const next: Record<string, unknown> = { ...obj, observations };
+  if (
+    !qualityScoreIsInRange(next.quality) &&
+    envelopeHasUsableFoodMacros(next)
+  ) {
+    const prior =
+      next.quality && typeof next.quality === "object" && !Array.isArray(next.quality)
+        ? (next.quality as Record<string, unknown>)
+        : {};
+    next.quality = {
+      ...prior,
+      score: 7,
+      issues: Array.isArray(prior.issues) ? prior.issues : [],
+      tips: Array.isArray(prior.tips) ? prior.tips : [],
+    };
+  }
+  return next;
+}
+
+function qualityScoreIsInRange(quality: unknown): boolean {
+  if (!quality || typeof quality !== "object" || Array.isArray(quality)) {
+    return false;
+  }
+  const score = (quality as Record<string, unknown>).score;
+  const n =
+    typeof score === "number"
+      ? score
+      : typeof score === "string"
+        ? Number.parseFloat(score)
+        : Number.NaN;
+  return Number.isFinite(n) && n >= 1 && n <= 10;
+}
+
+function foodMacrosAreUsable(value: Record<string, unknown>): boolean {
+  const numbers = [
+    value.calories,
+    value.protein,
+    value.carb ?? value.carbs ?? value.carbohydrates,
+    value.fat,
+  ].map((item) => {
+    if (typeof item === "number") return item;
+    if (typeof item === "string") return Number.parseFloat(item);
+    return Number.NaN;
+  });
+  return numbers.some((n) => Number.isFinite(n) && n > 0);
+}
+
+function envelopeHasUsableFoodMacros(envelope: Record<string, unknown>): boolean {
+  if (hasFoodMacroKeys(envelope) && foodMacrosAreUsable(envelope)) return true;
+  const food = envelope.food_analysis;
+  if (food && typeof food === "object" && !Array.isArray(food)) {
+    if (foodMacrosAreUsable(food as Record<string, unknown>)) return true;
+  }
+  const observations = envelope.observations;
+  if (observations && typeof observations === "object" && !Array.isArray(observations)) {
+    const obs = observations as Record<string, unknown>;
+    if (hasFoodMacroKeys(obs) && foodMacrosAreUsable(obs)) return true;
+    const nested = obs.food_analysis;
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+      return foodMacrosAreUsable(nested as Record<string, unknown>);
+    }
+  }
+  return false;
+}
+
+export type VisionQualityStatus =
+  | "VALID"
+  | "INSUFFICIENT_QUALITY"
+  | "INVALID_PROVIDER_OUTPUT";
+
+export type InterpretedVisionEnvelope =
+  | { status: "INVALID_PROVIDER_OUTPUT" }
+  | {
+      status: "INSUFFICIENT_QUALITY";
+      quality: ImageQuality;
+    }
+  | {
+      status: "VALID";
+      quality: ImageQuality;
+      analysis: TechnicalAnalysis;
+    };
+
+/**
+ * Fail-closed interpreter for the combined Gemini quality+observation envelope.
+ * Missing/NaN/OOR quality → INVALID_PROVIDER_OUTPUT (never a default passing score).
+ * Finite low score → INSUFFICIENT_QUALITY.
+ * Valid quality without parseable observations → INVALID_PROVIDER_OUTPUT.
+ */
+export function interpretVisionEnvelope(
+  raw: unknown,
+  minQualityScore: number,
+): InterpretedVisionEnvelope {
+  const envelope = visionEnvelopeSchema.safeParse(
+    normalizeVisionEnvelopeRaw(raw),
+  );
+  if (!envelope.success) {
+    return { status: "INVALID_PROVIDER_OUTPUT" };
+  }
+  const quality = envelope.data.quality;
+  if (quality.score < minQualityScore) {
+    return { status: "INSUFFICIENT_QUALITY", quality };
+  }
+  const observations = envelope.data.observations;
+  if (
+    observations == null ||
+    typeof observations !== "object" ||
+    Array.isArray(observations)
+  ) {
+    return { status: "INVALID_PROVIDER_OUTPUT" };
+  }
+  const analysis = technicalAnalysisSchema.safeParse(observations);
+  if (!analysis.success) {
+    return { status: "INVALID_PROVIDER_OUTPUT" };
+  }
+  return { status: "VALID", quality, analysis: analysis.data };
+}
 
 // ---------------------------------------------------------------------------
 // Route input
@@ -128,6 +372,8 @@ export const analyzeImageInputSchema = z.object({
     .max(12_000_000, "Image is too large (max ~9MB)"),
   mimeType: z.enum(ANALYSIS_MIME_TYPES),
   note: z.string().trim().max(500, "Note too long").optional().default(""),
+  clientMessageId: z.string().uuid().optional(),
+  locale: z.string().trim().min(2).max(10).optional(),
 });
 
 export type AnalyzeImageInput = z.infer<typeof analyzeImageInputSchema>;

@@ -12,7 +12,7 @@ function AnimatedMacros() {
   const { t } = useLang();
 
   return (
-    <div ref={ref} className="grid grid-cols-3 gap-6">
+    <div ref={ref} className="grid grid-cols-3 gap-2 sm:gap-6">
       <MacroRing label={t("macro.protein")} value="142g" percent={visible ? 72 : 0} color="#3b82f6" gradient="blue" />
       <MacroRing label={t("macro.carbs")} value="210g" percent={visible ? 55 : 0} color="#22c55e" gradient="green" />
       <MacroRing label={t("macro.fat")} value="58g" percent={visible ? 80 : 0} color="#f97316" gradient="orange" />

@@ -7,6 +7,7 @@ import { cached } from "@/lib/cache";
 import { CacheKeys, CacheTTL } from "@/lib/cache/keys";
 import { createDomainEvent } from "@/lib/events/types";
 import { emitDomainEvent } from "@/lib/events/emit";
+import { invalidateSessionSliceCaches } from "@/lib/cache/invalidate";
 
 export type MarketItemDTO = {
   id: string;
@@ -106,6 +107,7 @@ export async function purchaseMarketItem(
   emitDomainEvent(
     createDomainEvent("market.purchased", userId, { itemId, balance: result.balance }, userId),
   );
+  void invalidateSessionSliceCaches(userId).catch(() => undefined);
 
   return {
     balance: result.balance ?? 0,

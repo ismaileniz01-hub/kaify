@@ -6,6 +6,7 @@ import { ChevronRight, Sparkles, BookOpen } from "lucide-react";
 import { useKai } from "@/lib/kai-context";
 import { getKaiLevelInfo } from "@/lib/kai-level";
 import { useLang } from "@/lib/lang-context";
+import { hapticSelection } from "@/lib/native/haptics";
 import { useSession } from "@/lib/session-context";
 import { useEffect } from "react";
 
@@ -82,6 +83,9 @@ export function WelcomeExtras() {
       <Link
         href="/chat/kai"
         className="analytics-card analytics-card--blue flex items-center gap-3 p-3.5 transition active:scale-[0.99]"
+        onClick={() => {
+          void hapticSelection();
+        }}
       >
         <div className="relative h-11 w-11 shrink-0">
           <Image
@@ -104,6 +108,9 @@ export function WelcomeExtras() {
       <Link
         href="/library"
         className="analytics-card analytics-card--emerald flex items-center gap-3 p-3.5 transition active:scale-[0.99]"
+        onClick={() => {
+          void hapticSelection();
+        }}
       >
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-emerald-500/25 text-emerald-300">
           <BookOpen className="h-5 w-5" />

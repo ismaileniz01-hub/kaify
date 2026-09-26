@@ -11,8 +11,19 @@ import {
   TERMS_VERSION,
 } from "@/lib/legal/constants";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
+import { hasNativeHandoffClient } from "@/lib/native/native-entry-boot";
 
-const SKIP_PREFIXES = ["/login", "/signup", "/privacy", "/terms", "/cookies", "/api/"];
+const SKIP_PREFIXES = [
+  "/login",
+  "/signup",
+  "/privacy",
+  "/terms",
+  "/cookies",
+  "/kvkk",
+  "/disclaimer",
+  "/delete-account",
+  "/api/",
+];
 
 /**
  * After login, persists clickwrap acceptance from localStorage into consent_records.
@@ -43,10 +54,12 @@ export function LegalConsentSync() {
         return;
       }
 
-      const supabase = tryCreateBrowserSupabaseClient();
-      if (!supabase) return;
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
+      if (!hasNativeHandoffClient()) {
+        const supabase = tryCreateBrowserSupabaseClient();
+        if (!supabase) return;
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) return;
+      }
 
       try {
         await apiPost("/api/consent", {

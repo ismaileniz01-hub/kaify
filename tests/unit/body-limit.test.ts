@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { parseJsonWithLimit } from "@/lib/security/body-limit";
+import {
+  PADDLE_WEBHOOK_MAX_BYTES,
+  readTextBodyWithLimit,
+  RequestBodyTooLargeError,
+} from "@/lib/api/request-body-limit";
 import { ApiError } from "@/lib/api/errors";
 
 function jsonRequest(body: string, contentLength?: number): Request {
@@ -36,5 +41,37 @@ describe("parseJsonWithLimit", () => {
     await expect(parseJsonWithLimit(req, 1024)).rejects.toMatchObject({
       code: "VALIDATION_ERROR",
     });
+  });
+});
+
+describe("readTextBodyWithLimit", () => {
+  it("returns the text when under the cap", async () => {
+    const body = '{"ok":true}';
+    const request = new Request("http://localhost/api/webhooks/paddle", {
+      method: "POST",
+      body,
+    });
+    await expect(readTextBodyWithLimit(request, 1024)).resolves.toBe(body);
+  });
+
+  it("rejects declared content-length before reading", async () => {
+    const request = new Request("http://localhost/api/webhooks/paddle", {
+      method: "POST",
+      headers: { "content-length": String(PADDLE_WEBHOOK_MAX_BYTES + 1) },
+      body: "x",
+    });
+    await expect(
+      readTextBodyWithLimit(request, PADDLE_WEBHOOK_MAX_BYTES),
+    ).rejects.toBeInstanceOf(RequestBodyTooLargeError);
+  });
+
+  it("rejects a streamed body that exceeds the cap", async () => {
+    const request = new Request("http://localhost/api/webhooks/paddle", {
+      method: "POST",
+      body: "x".repeat(64),
+    });
+    await expect(readTextBodyWithLimit(request, 16)).rejects.toBeInstanceOf(
+      RequestBodyTooLargeError,
+    );
   });
 });

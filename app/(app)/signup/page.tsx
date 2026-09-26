@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { SignupWizard } from "@/components/auth/SignupWizard";
+import { AuthLoadingFallback } from "@/components/auth/AuthLoadingFallback";
 import { captureReferralFromUrl } from "@/lib/referral";
 import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 
@@ -29,13 +30,7 @@ function SignupPageContent() {
 
 export default function SignupPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="landing-site flex min-h-dvh items-center justify-center bg-black">
-          <div className="h-9 w-9 animate-spin rounded-full border-2 border-white/15 border-t-purple-400" />
-        </div>
-      }
-    >
+    <Suspense fallback={<AuthLoadingFallback destination="signup" />}>
       <SignupPageContent />
     </Suspense>
   );

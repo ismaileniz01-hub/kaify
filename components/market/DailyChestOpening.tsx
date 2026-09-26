@@ -14,6 +14,7 @@ import {
   type ChestReelSlot,
 } from "@/lib/chest-rewards";
 import type { DailyChestClaimDTO } from "@/lib/services/daily-chest.service";
+import { useAndroidBackClose } from "@/hooks/useAndroidBackClose";
 
 type Phase = "video" | "spin" | "reveal" | "done";
 
@@ -77,6 +78,7 @@ type Props = {
 
 export function DailyChestOpening({ claim, onClose }: Props) {
   const { t } = useLang();
+  useAndroidBackClose(true, onClose);
   const { play } = useSound();
   const [phase, setPhase] = useState<Phase>("video");
   const [spinOffset, setSpinOffset] = useState(0);
@@ -165,7 +167,8 @@ export function DailyChestOpening({ claim, onClose }: Props) {
 
   return (
     <div
-      className={`reduced-motion-static fixed inset-0 z-[100] flex flex-col ${
+      data-app-overlay="open"
+      className={`reduced-motion-static fixed inset-0 z-[100] flex flex-col pt-[var(--safe-top)] pb-[var(--safe-bottom)] ${
         isRewardPhase ? "chest-reward-overlay" : "bg-gradient-to-b from-[#0f0720] via-[#1a0a2e] to-[#0a0514]"
       }`}
     >
@@ -178,7 +181,7 @@ export function DailyChestOpening({ claim, onClose }: Props) {
         </div>
       )}
 
-      <header className="relative z-10 px-6 pt-14 text-center">
+      <header className="relative z-10 px-6 pt-6 text-center">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-purple-300/70">
           {t("chest.opening_title")}
         </p>
@@ -260,7 +263,7 @@ export function DailyChestOpening({ claim, onClose }: Props) {
       </div>
 
       {phase === "done" && (
-        <footer className="relative z-10 px-6 pb-10">
+        <footer className="relative z-10 px-6 pb-6">
           <button
             type="button"
             onClick={handleCollect}

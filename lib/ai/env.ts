@@ -1,4 +1,15 @@
 import { z } from "zod";
+import {
+  DEEPSEEK_ALLOWED_MODELS,
+  DEEPSEEK_DEFAULT_MODEL,
+  GEMINI_ALLOWED_MODELS,
+  GEMINI_DEFAULT_MODEL,
+  GEMINI_DEFAULT_THINKING_LEVEL,
+  GEMINI_THINKING_LEVELS,
+  isAllowedDeepSeekModel,
+  isAllowedGeminiModel,
+  type GeminiThinkingLevel,
+} from "@/lib/ai/models";
 
 /**
  * AI provider configuration — SERVER ONLY.
@@ -54,7 +65,13 @@ export function assertServerRuntime(caller: string): void {
 const deepSeekConfigSchema = z.object({
   apiKey: keySchema("DEEPSEEK_API_KEY"),
   baseUrl: z.string().url("DEEPSEEK_BASE_URL must be a valid URL"),
-  model: z.string().min(1, "DEEPSEEK_MODEL is required"),
+  model: z
+    .string()
+    .min(1, "DEEPSEEK_MODEL is required")
+    .refine(
+      isAllowedDeepSeekModel,
+      `DEEPSEEK_MODEL must be one of: ${DEEPSEEK_ALLOWED_MODELS.join(", ")}`,
+    ),
 });
 
 export type DeepSeekConfig = z.infer<typeof deepSeekConfigSchema>;
@@ -65,7 +82,7 @@ export function getDeepSeekConfig(): DeepSeekConfig {
   const candidate = {
     apiKey: process.env.DEEPSEEK_API_KEY ?? "",
     baseUrl: (process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com").trim(),
-    model: (process.env.DEEPSEEK_MODEL ?? "deepseek-chat").trim(),
+    model: (process.env.DEEPSEEK_MODEL ?? DEEPSEEK_DEFAULT_MODEL).trim(),
   };
 
   const parsed = deepSeekConfigSchema.safeParse(candidate);
@@ -81,7 +98,14 @@ export function getDeepSeekConfig(): DeepSeekConfig {
 
 const geminiConfigSchema = z.object({
   apiKey: keySchema("GEMINI_API_KEY"),
-  model: z.string().min(1, "GEMINI_MODEL is required"),
+  model: z
+    .string()
+    .min(1, "GEMINI_MODEL is required")
+    .refine(
+      isAllowedGeminiModel,
+      `GEMINI_MODEL must be one of: ${GEMINI_ALLOWED_MODELS.join(", ")}`,
+    ),
+  thinkingLevel: z.enum(GEMINI_THINKING_LEVELS),
 });
 
 export type GeminiConfig = z.infer<typeof geminiConfigSchema>;
@@ -91,8 +115,10 @@ export function getGeminiConfig(): GeminiConfig {
 
   const candidate = {
     apiKey: process.env.GEMINI_API_KEY ?? "",
-    // "Gemini 3.1 Flash-Lite" — alias resolves to the latest flash-lite model.
-    model: (process.env.GEMINI_MODEL ?? "gemini-flash-lite-latest").trim(),
+    model: (process.env.GEMINI_MODEL ?? GEMINI_DEFAULT_MODEL).trim(),
+    thinkingLevel: (process.env.GEMINI_THINKING_LEVEL ?? GEMINI_DEFAULT_THINKING_LEVEL)
+      .trim()
+      .toUpperCase() as GeminiThinkingLevel,
   };
 
   const parsed = geminiConfigSchema.safeParse(candidate);

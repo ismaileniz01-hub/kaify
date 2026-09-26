@@ -4,7 +4,7 @@ Last updated: 2026-07-05 · **Faz 4 — implemented**
 
 ## Current state
 
-Stable public contract: **`/api/v1/**`** (28 endpoints)
+Stable public contract: **`/api/v1/**`** (`API_V1_ROUTES` in `lib/api/v1-manifest.ts`)
 
 Legacy **`/api/**`** remains active with deprecation headers until **2027-01-01**.
 
@@ -42,6 +42,9 @@ Manifest: `lib/api/v1-manifest.ts`
 | `/api/v1/leaderboard/country` | GET |
 | `/api/v1/push/subscribe` | POST, DELETE |
 | `/api/v1/push/native` | POST, DELETE |
+| `/api/v1/workout/plan` | GET, POST |
+| `/api/v1/workout/session` | POST |
+| `/api/v1/workout/swap` | POST |
 
 ## Client migration
 

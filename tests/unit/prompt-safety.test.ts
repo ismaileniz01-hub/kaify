@@ -8,6 +8,7 @@ import {
   redactPersonalIdentifiers,
   sanitizeUserText,
   scrubModelOutput,
+  visibleStreamDelta,
   wrapUntrustedInput,
   wrapUntrustedInputStable,
 } from "@/lib/ai/prompt-safety";
@@ -154,6 +155,21 @@ describe("scrubModelOutput", () => {
   it("removes leaked delimiter scaffolding", () => {
     const dirty = "<<<BEGIN_USER_MESSAGE_abc123def456>>>\nleak\n<<<END_USER_MESSAGE_abc123def456>>>";
     expect(scrubModelOutput(dirty)).toBe("leak");
+  });
+
+  it("strips ASSISTANT_HISTORY wrappers the model echoed from prompt history", () => {
+    const dirty =
+      "<<<BEGIN_ASSISTANT_HISTORY_7f2a3b6d9c41>>>\nGüzel iş başkan!";
+    expect(scrubModelOutput(dirty)).toBe("Güzel iş başkan!");
+    expect(sanitizeUserText(dirty)).toBe("Güzel iş başkan!");
+  });
+});
+
+describe("visibleStreamDelta", () => {
+  it("does not stream spotlight tags, only the coach text", () => {
+    const tag = "<<<BEGIN_ASSISTANT_HISTORY_7f2a3b6d9c41>>>";
+    expect(visibleStreamDelta("", tag)).toBe("");
+    expect(visibleStreamDelta(tag, `${tag}\nGüzel iş`)).toBe("Güzel iş");
   });
 });
 

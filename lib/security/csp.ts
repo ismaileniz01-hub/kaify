@@ -1,4 +1,5 @@
 import { CSP_REPORT_GROUP, CSP_REPORT_PATH } from "@/lib/security/csp-report";
+import { NATIVE_ENTRY_BOOT_CSP_HASH } from "@/lib/native/native-entry-boot";
 
 /** Builds a per-request Content-Security-Policy with a cryptographic nonce. */
 export function isLegalContentPath(pathname: string): boolean {
@@ -34,7 +35,7 @@ const PADDLE_CSP = {
 
 export function buildContentSecurityPolicy(
   nonce: string,
-  options?: { legalEmbed?: boolean; staticHtml?: boolean },
+  options?: { legalEmbed?: boolean },
 ): string {
   const styleSrc = options?.legalEmbed
     ? ["style-src", "'self'", "'unsafe-inline'", "https://app.termly.io", ...PADDLE_CSP.style].join(
@@ -42,26 +43,17 @@ export function buildContentSecurityPolicy(
       )
     : ["style-src", "'self'", "'unsafe-inline'", ...PADDLE_CSP.style].join(" ");
 
-  const scriptBase = options?.staticHtml
-    ? [
-        "script-src",
-        "'self'",
-        "'unsafe-inline'",
-        "https://www.google.com",
-        "https://www.gstatic.com",
-        "https://cdn.sender.net",
-        ...PADDLE_CSP.script,
-      ]
-    : [
-        "script-src",
-        "'self'",
-        `'nonce-${nonce}'`,
-        "'strict-dynamic'",
-        "https://www.google.com",
-        "https://www.gstatic.com",
-        "https://cdn.sender.net",
-        ...PADDLE_CSP.script,
-      ];
+  const scriptBase = [
+    "script-src",
+    "'self'",
+    `'nonce-${nonce}'`,
+    `'${NATIVE_ENTRY_BOOT_CSP_HASH}'`,
+    "'strict-dynamic'",
+    "https://www.google.com",
+    "https://www.gstatic.com",
+    "https://cdn.sender.net",
+    ...PADDLE_CSP.script,
+  ];
   const scriptSrc = options?.legalEmbed
     ? [...scriptBase, "https://app.termly.io"].join(" ")
     : scriptBase.join(" ");

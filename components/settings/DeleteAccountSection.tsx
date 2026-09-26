@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiDelete } from "@/lib/api/client";
+import { apiDelete, ApiClientError } from "@/lib/api/client";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
+import { looksLikeNativeWebView } from "@/lib/native/sign-out-native";
 import {
   StepUpChallenge,
   isStepUpRequiredError,
@@ -31,11 +32,16 @@ export function DeleteAccountSection() {
         reason: reason.trim(),
       });
       await signOut();
-      router.replace("/login");
+      if (!looksLikeNativeWebView()) router.replace("/login");
     } catch (err) {
       if (isStepUpRequiredError(err)) {
         setNeedsStepUp(true);
         setError(null);
+      } else if (
+        err instanceof ApiClientError &&
+        (err.code === "SERVICE_UNAVAILABLE" || err.code === "CONFLICT")
+      ) {
+        setError(t("settings.delete.billing_error"));
       } else {
         setError(t("settings.delete.error"));
       }

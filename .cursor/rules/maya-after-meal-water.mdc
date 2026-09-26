@@ -1,0 +1,22 @@
+---
+description: Maya reminds users to drink water after every meal in chat
+globs: lib/kaios/capsules/maya/**,lib/kaios/maya/**,lib/ai/personas.ts,lib/kaios/orchestrator/request.ts,lib/services/analysis.service.ts
+alwaysApply: true
+---
+
+# Maya after-meal water reminder
+
+After every Maya **food log** or **meal photo** reply, include one short water nudge in the chat.
+
+- Apply in `MAYA_FOOD_LOG`, `MAYA_FOOD_ANALYSIS`, photo synthesis, and the product fallback `ensureMayaMealWaterReminder`.
+- Keep it one line in Maya's voice. Do not invent liters they drank. If `water_today_l` is in USER_CONTEXT, use it; if they already logged water this turn, skip.
+- Never claim water was saved unless TOOL_RESULTS say so. Do not turn the whole reply into a hydration lecture.
+- Meal plans and generic nutrition Q&A are not "after a meal" unless the user also reported eating.
+
+```ts
+// ❌ BAD — food log with macros only
+"Kalori 650, protein 28g. Kaydetmemi ister misin?"
+
+// ✅ GOOD — same reply, plus one water line
+"Kalori 650, protein 28g. Kaydetmemi ister misin?\n\nÖğünden sonra bir bardak su içmeyi unutma."
+```

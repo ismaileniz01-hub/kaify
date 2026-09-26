@@ -409,6 +409,7 @@ html.native-app .phone-shell {
 html.native-app .phone-shell.chat-shell {
   height: calc(100dvh - var(--keyboard-offset, 0px));
   max-height: calc(100dvh - var(--keyboard-offset, 0px));
+  overscroll-behavior: none;
 }
 
 /* Web chat / app headers: clear status bar + notch safe area */
@@ -418,6 +419,50 @@ html.native-app .phone-shell.chat-shell {
 
 html.native-app .pt-app-header {
   padding-top: var(--app-header-top);
+}
+
+/* Native WebView: cheaper paints without locking pan/scroll. */
+html.native-app {
+  text-rendering: optimizeSpeed;
+  scroll-behavior: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.native-app .phone-shell {
+  animation: none;
+}
+
+html.native-app .phone-shell > main,
+html.native-app .overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+html.native-app .animate-in {
+  animation-duration: 0.16s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.native-app .app-header::before,
+html.native-app .motion-overlay,
+html.native-app .chat-composer,
+html.native-app .glass-input {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html.native-app .fitness-emboss {
+  filter: none;
+  color: rgba(216, 160, 255, 0.42);
+}
+
+html.native-app .fitness-layer-icon:nth-child(n + 16) {
+  display: none;
+}
+
+html.native-app .fire-spark,
+html.native-app [class*="fire-aura"] {
+  animation: none !important;
 }
 
 .app-navigation-root {
@@ -472,6 +517,16 @@ html.native-app .pt-app-header {
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+html:not([data-route-transition="true"]) .contact-avatar {
+  visibility: visible !important;
+}
+
+.app-header__title:has(.contact-avatar) {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: unset;
 }
 
 .app-header__action,
@@ -550,7 +605,7 @@ html.native-app .offline-banner {
 
 .bottom-nav__list {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.15rem;
   margin: 0;
   padding: 0;
@@ -614,6 +669,8 @@ html.native-app .chat-composer {
 
 .login-page-main {
   min-height: min(100dvh, 100%);
+  padding-bottom: calc(2rem + var(--safe-bottom, 0px) + var(--keyboard-offset, 0px));
+  scroll-padding-bottom: calc(1.5rem + var(--keyboard-offset, 0px));
 }
 
 .login-otp-code-block {
@@ -1125,6 +1182,250 @@ html.native-app .chat-composer {
 
 .animate-message {
   animation: message-in var(--motion-slow) var(--ease-premium-out) both;
+}
+
+@keyframes message-in-coach {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes message-in-user {
+  from {
+    opacity: 0;
+    transform: translateY(4.25rem) scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-message--coach {
+  animation: message-in-coach 280ms var(--ease-premium-out) both;
+}
+
+.animate-message--user {
+  transform-origin: 100% 100%;
+  animation: message-in-user 420ms 70ms var(--ease-premium-out) both;
+}
+
+@keyframes chat-send-launch {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(0.96);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-2.75rem) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-5.5rem) scale(0.98);
+  }
+}
+
+.chat-send-launch {
+  animation: chat-send-launch 420ms var(--ease-premium-out) both;
+}
+
+@keyframes chat-send-burst {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+.chat-send-burst {
+  animation: chat-send-burst 380ms var(--ease-premium-out);
+  box-shadow: 0 0 0 8px var(--chat-accent-ring, rgba(168, 85, 247, 0.35));
+}
+
+@keyframes chat-caret-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.chat-stream-caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.85em;
+  margin-left: 3px;
+  vertical-align: text-bottom;
+  background: currentColor;
+  border-radius: 1px;
+  animation: chat-caret-blink 1s steps(1) infinite;
+}
+
+@keyframes chat-card-unfold {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.chat-card-unfold {
+  animation: chat-card-unfold 420ms var(--ease-premium-out) both;
+}
+
+@keyframes chat-confirm-settle {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.chat-confirm-settle {
+  animation: chat-confirm-settle var(--motion-slow) var(--ease-premium-out) both;
+}
+
+@keyframes chat-photo-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.84);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.chat-photo-in {
+  animation: chat-photo-in var(--motion-slow) var(--ease-premium-out) both;
+}
+
+@keyframes chat-bubble-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+
+.chat-bubble-shake {
+  animation: chat-bubble-shake 380ms var(--ease-premium-out);
+}
+
+.chat-delivery {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  color: #bbf7d0;
+}
+
+.chat-delivery__tick {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.5;
+}
+
+.chat-delivery__tick--pending {
+  opacity: 0.4;
+}
+
+.chat-delivery__tick--second {
+  margin-left: -7px;
+  animation: chat-tick-in var(--motion-fast) var(--ease-premium-out) both;
+}
+
+@keyframes chat-tick-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.chat-presence-ring {
+  pointer-events: none;
+  position: absolute;
+  inset: -5px;
+  z-index: 0;
+  border-radius: 9999px;
+}
+
+@keyframes chat-aura-alex {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  70% { box-shadow: 0 0 0 11px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.chat-presence-typing--alex .chat-presence-ring {
+  animation: chat-aura-alex 1.15s ease-out infinite;
+}
+
+.chat-presence-typing--maya .chat-presence-ring {
+  animation: chat-aura-maya 2.2s ease-in-out infinite;
+}
+
+.chat-presence-typing--leo .chat-presence-ring {
+  box-shadow: 0 0 10px 2px rgba(59, 130, 246, 0.35);
+}
+
+.chat-presence-typing--leo .chat-presence-scan {
+  pointer-events: none;
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 12%;
+  z-index: 20;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, #93c5fd, transparent);
+  animation: chat-aura-leo-scan 1.55s linear infinite;
+}
+
+.chat-presence-typing--kai .chat-presence-ring {
+  animation: chat-aura-kai 1.8s ease-in-out infinite;
+}
+
+@keyframes chat-aura-maya {
+  0%, 100% {
+    box-shadow: 0 0 8px 2px rgba(34, 197, 94, 0.28);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 16px 6px rgba(34, 197, 94, 0.48);
+    transform: scale(1.05);
+  }
+}
+
+.chat-presence-typing--maya .chat-presence-ring {
+  animation: chat-aura-maya 2.2s ease-in-out infinite;
+}
+
+@keyframes chat-aura-leo-scan {
+  from {
+    top: 12%;
+    opacity: 0;
+  }
+  18% { opacity: 1; }
+  to {
+    top: 82%;
+    opacity: 0;
+  }
+}
+
+@keyframes chat-aura-kai {
+  0%, 100% { box-shadow: 0 0 8px 2px rgba(168, 85, 247, 0.28); }
+  50% { box-shadow: 0 0 18px 6px rgba(168, 85, 247, 0.5); }
 }
 
 /* Yazıyor animasyonu — üç nokta */
@@ -3091,6 +3392,18 @@ html:not([data-theme="light"]) .text-zinc-600 {
   .phone-shell,
   .animate-in,
   .animate-message,
+  .animate-message--coach,
+  .animate-message--user,
+  .chat-send-launch,
+  .chat-send-burst,
+  .chat-stream-caret,
+  .chat-card-unfold,
+  .chat-confirm-settle,
+  .chat-photo-in,
+  .chat-bubble-shake,
+  .chat-delivery__tick--second,
+  .chat-presence-ring,
+  .chat-presence-scan,
   .slide-in,
   .animate-ping,
   .animate-pulse,
@@ -3916,6 +4229,7 @@ html:not([data-theme="light"]) .text-zinc-600 {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(8, 4, 16, 0.8);
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 
 .pricing-table {

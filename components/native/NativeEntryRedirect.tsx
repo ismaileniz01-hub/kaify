@@ -2,13 +2,22 @@
 
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
+import { readNativeEntryAccessToken } from "@/lib/native/native-entry-boot";
+import {
+  currentNativeShellOrigin,
+  looksLikeNativeWebView,
+} from "@/lib/native/sign-out-native";
 
-/** Opens the bundled native app on its authenticated entry screen. */
+/** Store app must never show the marketing landing: go Home, or back to the local login shell. */
 export function NativeEntryRedirect() {
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
-      window.location.replace("/login/index.html");
+    if (!Capacitor.isNativePlatform() && !looksLikeNativeWebView()) return;
+    if (readNativeEntryAccessToken()) {
+      window.location.replace("/welcome");
+      return;
     }
+    const shell = currentNativeShellOrigin();
+    if (shell) window.location.replace(`${shell}/`);
   }, []);
 
   return null;

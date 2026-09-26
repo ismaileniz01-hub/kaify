@@ -1,0 +1,18 @@
+---
+description: Deploy to Vercel production after meaningful code changes without waiting for the user to ask
+alwaysApply: true
+---
+
+# Auto deploy to production
+
+After completing meaningful code changes in this repo (and after commit + push):
+
+1. Run `npx vercel deploy --yes --prod` from the repo root.
+2. Wait until the deployment is **Ready** (`vercel inspect <url> --wait` if needed).
+3. Report the production URL (`https://kaifyai.org`) and deployed git SHA.
+4. Do **not** modify production env vars, model/provider config, or remove `KAIOS_RUNTIME=false` rollback availability unless the user explicitly asks in that message.
+5. Skip deploy if nothing changed or if the user explicitly says not to deploy in that message.
+
+If deploy fails with auth errors, retry once; then tell the user the commit is pushed and deploy failed with the error.
+
+Exception: preview-only tasks that explicitly say "do not deploy production" — honor that instead.

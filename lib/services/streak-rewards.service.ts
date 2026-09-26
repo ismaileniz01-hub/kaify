@@ -1,6 +1,7 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
+import { invalidateSessionSliceCaches } from "@/lib/cache/invalidate";
 
 export {
   MILESTONE_GEM_REWARD,
@@ -67,9 +68,13 @@ export async function syncStreakRewards(
     duplicate: c.duplicate === true,
   }));
 
-  return {
+  const result = {
     claims,
     gemBalance: Number(row.gem_balance ?? 0),
     totalAwarded: Number(row.total_awarded ?? 0),
   };
+
+  void invalidateSessionSliceCaches(userId).catch(() => undefined);
+
+  return result;
 }

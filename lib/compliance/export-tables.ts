@@ -6,6 +6,10 @@ export type ExportTableSpec = {
   table: string;
   column: string;
   description: string;
+  ownerRelation?: {
+    table: string;
+    ownerColumn: string;
+  };
 };
 
 export const USER_EXPORT_TABLES: readonly ExportTableSpec[] = [
@@ -36,9 +40,25 @@ export const USER_EXPORT_TABLES: readonly ExportTableSpec[] = [
   { table: "paddle_customers", column: "user_id", description: "Linked Paddle customer billing identity" },
   { table: "paddle_subscriptions", column: "user_id", description: "Mirrored Paddle subscription status" },
   { table: "data_export_logs", column: "user_id", description: "History of your data export requests" },
+  { table: "pending_gifts", column: "user_id", description: "Unclaimed admin or referral gifts" },
+  { table: "support_tickets", column: "user_id", description: "Support tickets you opened" },
+  {
+    table: "support_messages",
+    column: "ticket_id",
+    ownerRelation: { table: "support_tickets", ownerColumn: "user_id" },
+    description: "Messages in support tickets you opened",
+  },
+  { table: "analytics_pending_confirmations", column: "user_id", description: "Pending fitness log confirmations" },
+  { table: "scan_corrections", column: "user_id", description: "Numeric meal or scan corrections you submitted" },
+  { table: "team_meeting_weeks", column: "user_id", description: "Weekly Coach Council lock records" },
+  { table: "referrals", column: "referrer_id", description: "Referral codes and edges you created" },
+  { table: "workout_plans", column: "user_id", description: "Applied versioned workout plans" },
+  { table: "workout_plan_items", column: "user_id", description: "Prescription rows for applied workout plans" },
+  { table: "workout_sessions", column: "user_id", description: "Completed, missed, rest, and deload session history" },
+  { table: "workout_set_logs", column: "user_id", description: "Per-set reps and load for completed sessions" },
 ] as const;
 
-export const EXPORT_SCHEMA_VERSION = "2026-08-14";
+export const EXPORT_SCHEMA_VERSION = "2026-08-26";
 
 export function exportSchemaReadme(): Record<string, string> {
   return Object.fromEntries(

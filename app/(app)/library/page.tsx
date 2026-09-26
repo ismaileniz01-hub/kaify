@@ -5,6 +5,7 @@ import { Dumbbell, Home, BookOpen } from "lucide-react";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { useLang } from "@/lib/lang-context";
 import { AppHeader } from "@/components/navigation/AppHeader";
+import { WorkoutPlanCard } from "@/components/library/WorkoutPlanCard";
 
 export default function LibraryPage() {
   const { t } = useLang();
@@ -91,6 +92,8 @@ export default function LibraryPage() {
             </Link>
           </div>
         </section>
+
+        <WorkoutPlanCard />
       </main>
     </div>
   );

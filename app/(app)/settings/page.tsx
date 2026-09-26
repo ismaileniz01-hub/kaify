@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Fingerprint,
   Bell,
@@ -11,6 +10,7 @@ import {
   Shield,
   LayoutDashboard,
   MessageCircle,
+  CreditCard,
   User,
   Volume2,
   Check,
@@ -20,14 +20,25 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { InlineAlert } from "@/components/InlineAlert";
 import { PushToggle } from "@/components/notifications/PushToggle";
 import { useTheme } from "@/lib/theme-context";
+import { hapticSelection } from "@/lib/native/haptics";
 import { useLang, LANG_OPTIONS, hasStoredLangPreference } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { apiGet, apiPatch } from "@/lib/api/client";
+import { postClientProductEvent } from "@/lib/events/client-beacon";
 import type { UserSettingsDTO } from "@/lib/services/settings.service";
 import { UsageQuotaSection } from "@/components/settings/UsageQuotaSection";
+import { HealthStepsSection } from "@/components/settings/HealthStepsSection";
+import { NotificationScheduleSection } from "@/components/settings/NotificationScheduleSection";
 import { AppHeader } from "@/components/navigation/AppHeader";
+import { useScrollFocusedInputIntoView } from "@/hooks/useScrollFocusedInputIntoView";
+import { useAndroidBackClose } from "@/hooks/useAndroidBackClose";
 import { DeleteAccountSection } from "@/components/settings/DeleteAccountSection";
+import { MarketAuraPreview } from "@/components/market/MarketAuraPreview";
 import { MotionDialog } from "@/components/ui/MotionDialog";
+import { StepUpChallenge } from "@/components/auth/StepUpChallenge";
+import { useBillingPortal } from "@/components/billing/useBillingPortal";
+import { useNativeApp } from "@/lib/native/platform";
+import { nativeShellLoginUrl } from "@/lib/native/sign-out-native";
 
 type SettingItem = {
   icon: typeof Bell;
@@ -87,6 +98,8 @@ const SETTINGS_GROUPS: { title: string; items: SettingItem[] }[] = [
     items: [
       { icon: Bell, label: "settings.workout", description: "settings.workout.desc", type: "toggle" },
       { icon: Bell, label: "settings.water", description: "settings.water.desc", type: "toggle" },
+      { icon: Bell, label: "settings.notify_weekly", description: "settings.notify_weekly.desc", type: "toggle" },
+      { icon: Bell, label: "settings.notify_praise", description: "settings.notify_praise.desc", type: "toggle" },
     ],
   },
   {
@@ -113,6 +126,13 @@ const SETTINGS_GROUPS: { title: string; items: SettingItem[] }[] = [
   {
     title: "settings.account",
     items: [
+      {
+        icon: CreditCard,
+        label: "settings.billing",
+        description: "settings.billing.desc",
+        type: "link",
+        value: "settings.billing.action",
+      },
       {
         icon: MessageCircle,
         label: "settings.contact",
@@ -162,10 +182,32 @@ function saveBoolean(key: string, value: boolean) {
   localStorage.setItem(key, value ? "true" : "false");
 }
 
+async function copyTextToClipboard(value: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    try {
+      const el = document.createElement("textarea");
+      el.value = value;
+      el.setAttribute("readonly", "");
+      el.style.position = "fixed";
+      el.style.left = "-9999px";
+      document.body.appendChild(el);
+      el.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(el);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
 export default function SettingsPage() {
-  const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const { lang, setLang, unit, setUnit, t } = useLang();
+  useScrollFocusedInputIntoView();
   const { referralCode: sessionReferralCode, isAuthenticated, profile, isAdmin, signOut } =
     useSession();
 
@@ -174,14 +216,28 @@ export default function SettingsPage() {
   const [userIdCopied, setUserIdCopied] = useState(false);
   const [langPickerOpen, setLangPickerOpen] = useState(false);
   const [langSearch, setLangSearch] = useState("");
+  useAndroidBackClose(langPickerOpen, () => {
+    setLangPickerOpen(false);
+    setLangSearch("");
+  });
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const {
+    openPortal,
+    portalLoading,
+    needsStepUp: needsBillingStepUp,
+    setNeedsStepUp: setNeedsBillingStepUp,
+    portalError,
+  } = useBillingPortal();
+  const native = useNativeApp();
   const [toggles, setToggles] = useState<Record<string, boolean>>({
     "settings.workout": true,
     "settings.water": false,
+    "settings.notify_weekly": true,
+    "settings.notify_praise": true,
     "settings.dark_mode": theme === "dark",
     "settings.sfx": loadBoolean(SFX_KEY, true),
     "settings.chat.sfx": loadBoolean(CHAT_SFX_KEY, true),
@@ -225,6 +281,8 @@ export default function SettingsPage() {
           ...prev,
           "settings.workout": s.workoutReminders,
           "settings.water": s.waterReminder,
+          "settings.notify_weekly": s.notifyWeekly,
+          "settings.notify_praise": s.notifyPraise,
           "settings.sfx": s.soundEffects,
           "settings.chat.sfx": s.chatSounds,
           "settings.leaderboard_opt_out": s.leaderboardOptOut,
@@ -242,10 +300,15 @@ export default function SettingsPage() {
   const handleLogout = useCallback(async () => {
     if (logoutLoading) return;
     setLogoutLoading(true);
-    await signOut();
-    router.replace("/login");
-    setLogoutLoading(false);
-  }, [logoutLoading, router, signOut]);
+    try {
+      await signOut();
+      if (window.location.pathname.startsWith("/settings")) {
+        window.location.replace(nativeShellLoginUrl());
+      }
+    } finally {
+      setLogoutLoading(false);
+    }
+  }, [logoutLoading, signOut]);
 
   useEffect(() => {
     reloadSettings();
@@ -261,46 +324,46 @@ export default function SettingsPage() {
   }, [isAuthenticated, profile?.locale, setLang]);
 
   const handleCopyReferral = async () => {
-    try {
-      await navigator.clipboard.writeText(referralCode);
+    if (!referralCode || referralCode === "......") return;
+    const ok = await copyTextToClipboard(referralCode);
+    if (ok) {
       setReferralCopied(true);
       setTimeout(() => setReferralCopied(false), 2000);
-    } catch {
-      if (!isAuthenticated) {
-        const { copyReferralCode } = await import("@/lib/referral");
-        const success = await copyReferralCode();
-        if (success) {
-          setReferralCopied(true);
-          setTimeout(() => setReferralCopied(false), 2000);
-        }
-      }
     }
   };
 
   const handleCopyUserId = async () => {
     if (!profile?.id) return;
-    try {
-      await navigator.clipboard.writeText(profile.id);
+    const ok = await copyTextToClipboard(profile.id);
+    if (ok) {
       setUserIdCopied(true);
       setTimeout(() => setUserIdCopied(false), 2000);
-    } catch {
-      // clipboard unavailable
     }
   };
 
   const handleShareReferral = async () => {
+    if (!referralCode || referralCode === "......") return;
     const text = t("settings.referral.share_text", { code: referralCode });
     try {
       if (navigator.share) {
         await navigator.share({ title: t("settings.referral.share_title"), text });
+        postClientProductEvent({
+          name: "referral.shared",
+          properties: { channel: "os" },
+        });
         return;
       }
     } catch {
-      // fall through
+      // fall through to copy
     }
-    if (!isAuthenticated) {
-      const { shareReferralCode } = await import("@/lib/referral");
-      await shareReferralCode();
+    const ok = await copyTextToClipboard(text);
+    if (ok) {
+      setReferralCopied(true);
+      setTimeout(() => setReferralCopied(false), 2000);
+      postClientProductEvent({
+        name: "referral.shared",
+        properties: { channel: "copy" },
+      });
     }
   };
 
@@ -330,6 +393,7 @@ export default function SettingsPage() {
   }, [theme]);
 
   const toggleSwitch = async (label: string) => {
+    void hapticSelection();
     if (label === "settings.dark_mode") {
       toggleTheme();
       return;
@@ -347,6 +411,8 @@ export default function SettingsPage() {
     const patch: Partial<UserSettingsDTO> = {};
     if (label === "settings.workout") patch.workoutReminders = newVal;
     if (label === "settings.water") patch.waterReminder = newVal;
+    if (label === "settings.notify_weekly") patch.notifyWeekly = newVal;
+    if (label === "settings.notify_praise") patch.notifyPraise = newVal;
     if (label === "settings.sfx") patch.soundEffects = newVal;
     if (label === "settings.chat.sfx") patch.chatSounds = newVal;
     if (label === "settings.leaderboard_opt_out") patch.leaderboardOptOut = newVal;
@@ -393,6 +459,25 @@ export default function SettingsPage() {
             dismissLabel={t("common.dismiss")}
           />
         )}
+        {portalError && (
+          <InlineAlert
+            className="mt-2"
+            variant="error"
+            message={portalError}
+            dismissLabel={t("common.dismiss")}
+          />
+        )}
+        {needsBillingStepUp && (
+          <div className="mt-3">
+            <StepUpChallenge
+              onCancel={() => setNeedsBillingStepUp(false)}
+              onVerified={() => {
+                setNeedsBillingStepUp(false);
+                void openPortal();
+              }}
+            />
+          </div>
+        )}
         {saveError && (
           <InlineAlert
             className="mt-2"
@@ -411,6 +496,8 @@ export default function SettingsPage() {
         )}
 
         {isAuthenticated && <UsageQuotaSection />}
+        {isAuthenticated && <HealthStepsSection />}
+        {isAuthenticated && <NotificationScheduleSection />}
 
         {isAuthenticated && <PushToggle />}
 
@@ -425,16 +512,22 @@ export default function SettingsPage() {
               {t(group.title)}
             </h2>
             <div className="overflow-hidden rounded-2xl border border-white/5 bg-white/[0.03]">
-              {group.items.map((item, ii) => (
-                <div
-                  key={item.label}
-                  className={`flex items-center gap-3 px-4 py-3.5 ${
-                    ii < group.items.length - 1 ||
-                    (group.title === "settings.profile" && isAuthenticated && profile?.id)
-                      ? "border-b border-white/5"
-                      : ""
-                  }`}
-                >
+              {group.items.map((item, ii) => {
+                const navigableHref =
+                  item.type === "link" &&
+                  item.href &&
+                  item.label !== "settings.logout" &&
+                  item.label !== "settings.billing"
+                    ? item.href
+                    : null;
+                const rowClass = `flex items-center gap-3 px-4 py-3.5 ${
+                  ii < group.items.length - 1 ||
+                  (group.title === "settings.profile" && isAuthenticated && profile?.id)
+                    ? "border-b border-white/5"
+                    : ""
+                }`;
+                const iconAndLabels = (
+                  <>
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5">
                     <item.icon className="h-4 w-4 text-zinc-400" strokeWidth={1.5} />
                   </div>
@@ -443,6 +536,31 @@ export default function SettingsPage() {
                     <span className="text-sm font-medium text-white">{t(item.label)}</span>
                     <span className="text-[11px] text-zinc-500">{t(item.description)}</span>
                   </div>
+                  </>
+                );
+                if (navigableHref) {
+                  return (
+                    <Link
+                      key={item.label}
+                      href={navigableHref}
+                      className={`${rowClass} transition hover:bg-white/[0.04]`}
+                      onClick={() => {
+                        void hapticSelection();
+                      }}
+                    >
+                      {iconAndLabels}
+                      <span className="shrink-0 text-xs font-medium text-purple-400">
+                        {t(item.value || "")}
+                      </span>
+                    </Link>
+                  );
+                }
+                return (
+                <div
+                  key={item.label}
+                  className={rowClass}
+                >
+                  {iconAndLabels}
 
                   <div className="shrink-0">
                     {item.type === "toggle" && (
@@ -450,19 +568,24 @@ export default function SettingsPage() {
                         type="button"
                         disabled={isAuthenticated && !settingsLoaded}
                         onClick={() => void toggleSwitch(item.label)}
-                        className={`touch-44 relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
-                          toggles[item.label] ? "bg-purple-500" : "bg-zinc-700"
-                        }`}
+                        className="flex min-h-11 min-w-11 items-center justify-end"
                         aria-pressed={toggles[item.label]}
                         aria-label={t(item.label)}
                       >
                         <span
-                          className={`absolute start-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
-                            toggles[item.label]
-                              ? "translate-x-5 rtl:-translate-x-5"
-                              : "translate-x-0"
-                          }`}
-                        />
+                          className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 transition-colors ${
+                            toggles[item.label] ? "bg-purple-500" : "bg-zinc-700"
+                          } ${isAuthenticated && !settingsLoaded ? "opacity-50" : ""}`}
+                          aria-hidden
+                        >
+                          <span
+                            className={`block h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                              toggles[item.label]
+                                ? "translate-x-5 rtl:-translate-x-5"
+                                : "translate-x-0"
+                            }`}
+                          />
+                        </span>
                       </button>
                     )}
                     {item.type === "select" && item.label === "settings.lang" && (
@@ -490,6 +613,7 @@ export default function SettingsPage() {
                         {langPickerOpen && (
                           <>
                             <div
+                              data-app-overlay="open"
                               className="fixed inset-0 z-40"
                               onClick={() => {
                                 setLangPickerOpen(false);
@@ -576,6 +700,21 @@ export default function SettingsPage() {
                         >
                           {logoutLoading ? "…" : t(item.value || "")}
                         </button>
+                      ) : item.label === "settings.billing" ? (
+                        native ? (
+                          <span className="max-w-[12rem] text-right text-[10px] leading-snug text-zinc-400">
+                            {t("myaccount.billing_on_website")}
+                          </span>
+                        ) : (
+                        <button
+                          type="button"
+                          onClick={() => void openPortal()}
+                          disabled={portalLoading}
+                          className="text-xs font-medium text-purple-400 transition hover:text-purple-300 disabled:opacity-50"
+                        >
+                          {portalLoading ? "…" : t(item.value || "")}
+                        </button>
+                        )
                       ) : item.href ? (
                         <Link
                           href={item.href}
@@ -588,7 +727,8 @@ export default function SettingsPage() {
                       ))}
                   </div>
                 </div>
-              ))}
+                );
+              })}
               {group.title === "settings.profile" && isAuthenticated && profile?.id && (
                 <div className="flex items-center gap-3 px-4 py-3.5">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5">
@@ -621,25 +761,33 @@ export default function SettingsPage() {
         </section>
 
         <section className="animate-in mt-5" style={{ animationDelay: "0.5s" }}>
-          <div className="rounded-2xl border border-white/5 bg-white/[0.03]">
-            <div className="flex items-center gap-3 px-4 py-3.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5">
-                <Gift className="h-4 w-4 text-zinc-400" strokeWidth={1.5} />
+          <div className="relative overflow-hidden rounded-2xl border border-sky-400/20 bg-gradient-to-br from-sky-950/40 via-white/[0.03] to-indigo-950/30">
+            <div className="pointer-events-none absolute -right-1 -top-1 z-10 scale-90 opacity-95 sm:scale-100">
+              <MarketAuraPreview auraId="thunder" />
+            </div>
+            <div className="flex items-start gap-3 px-4 py-3.5 pr-24 sm:pr-28">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-500/15">
+                <Gift className="h-4 w-4 text-sky-300" strokeWidth={1.5} />
               </div>
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="text-sm font-medium text-white">{t("settings.referral")}</span>
-                <span className="text-[11px] text-zinc-500">{t("settings.referral.desc")}</span>
+                <span className="text-[11px] leading-snug text-zinc-400">
+                  {t("settings.referral.desc")}
+                </span>
+                <span className="mt-1 text-[10px] font-medium uppercase tracking-wide text-sky-300/90">
+                  {t("settings.referral.reward_hint")}
+                </span>
               </div>
             </div>
             <div className="flex items-center justify-between border-t border-white/5 px-4 py-3">
-              <span className="font-mono text-base font-bold tracking-wider text-purple-400">
+              <span className="font-mono text-base font-bold tracking-wider text-sky-300">
                 {referralCode || "......"}
               </span>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => void handleCopyReferral()}
-                  className="text-xs text-purple-400 hover:text-purple-300"
+                  className="text-xs text-sky-300 hover:text-sky-200"
                 >
                   {referralCopied ? t("settings.referral.copied") : t("settings.referral.copy")}
                 </button>
@@ -647,7 +795,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => void handleShareReferral()}
-                  className="text-xs text-purple-400 hover:text-purple-300"
+                  className="text-xs text-sky-300 hover:text-sky-200"
                 >
                   {t("settings.referral.share")}
                 </button>

@@ -8,7 +8,11 @@ export const RETENTION = {
   aiUsageLedgerMonths: 24,
   notificationsMonths: 12,
   dataExportLogsMonths: 24,
-  adminAuditDays: 90,
+  /**
+   * Pending legal/privacy approval. Automated deletion stays disabled until
+   * KVKK/GDPR counsel approves and versions a concrete period.
+   */
+  adminAuditDays: null,
   /**
    * billing_events row retention. Matches docs/compliance/retention-policy.md
    * (7 years / tax-accounting). OWNER_REVIEW if legal counsel revises.

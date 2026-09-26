@@ -14,6 +14,7 @@ import {
   WATER_HOURS,
   WEEKLY_HOURS,
 } from "./constants";
+import { isQuietHour } from "@/lib/notifications/quiet-hours";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -97,19 +98,40 @@ export const GET = defineCronRoute("/api/cron/notifications", async () => {
 
       const ids = profiles.map((p) => p.id);
 
-      const [{ data: settings }, { data: streaks }] = await Promise.all([
+      const [{ data: settings }, { data: streaks }, { data: waterRows }] =
+        await Promise.all([
         admin
           .from("user_settings")
-          .select("user_id, water_reminder, workout_reminders")
+          .select(
+            "user_id, water_reminder, workout_reminders, notify_weekly, notify_praise, quiet_hours_start, quiet_hours_end, daily_push_cap",
+          )
           .in("user_id", ids),
         admin
           .from("user_streaks")
           .select("user_id, current_streak, last_check_in_date")
           .in("user_id", ids),
+        admin
+          .from("analytics_daily")
+          .select("user_id, entry_date, water_liters, water_goal_liters")
+          .in("user_id", ids)
+          .gte(
+            "entry_date",
+            new Date(now.getTime() - 36 * 60 * 60 * 1000).toISOString().slice(0, 10),
+          )
+          .lte(
+            "entry_date",
+            new Date(now.getTime() + 36 * 60 * 60 * 1000).toISOString().slice(0, 10),
+          ),
       ]);
 
       const settingsById = new Map((settings ?? []).map((s) => [s.user_id, s]));
       const streakById = new Map((streaks ?? []).map((s) => [s.user_id, s]));
+      const waterByUserDate = new Map(
+        (waterRows ?? []).map((row) => [
+          `${row.user_id}:${row.entry_date}`,
+          row,
+        ]),
+      );
 
       const jobs: CreateNotificationInput[] = [];
 
@@ -120,11 +142,26 @@ export const GET = defineCronRoute("/api/cron/notifications", async () => {
 
         const workoutOn = setting?.workout_reminders ?? true;
         const waterOn = setting?.water_reminder ?? false;
+        const weeklyOn = setting?.notify_weekly ?? true;
+        const praiseOn = setting?.notify_praise ?? true;
         const currentStreak = streak?.current_streak ?? 0;
         const checkedInToday = streak?.last_check_in_date === date;
+        const quiet = isQuietHour(
+          hour,
+          setting?.quiet_hours_start ?? null,
+          setting?.quiet_hours_end ?? null,
+        );
+        const cap = setting?.daily_push_cap ?? 8;
+        let sentToday = 0;
+
+        const canPush = () => !quiet && sentToday < cap;
+        const notePush = () => {
+          sentToday += 1;
+        };
 
         // 1. Streak risk — evening, streak alive, not yet checked in today.
         if (
+          canPush() &&
           workoutOn &&
           STREAK_RISK_HOURS.has(hour) &&
           currentStreak >= 1 &&
@@ -138,21 +175,28 @@ export const GET = defineCronRoute("/api/cron/notifications", async () => {
             params: { streak: currentStreak },
             dedupKey: `streak_risk:${date}`,
           });
+          notePush();
         }
 
         // 2. Water reminder — a few times a day when enabled.
-        if (waterOn && WATER_HOURS.has(hour)) {
-          jobs.push({
-            userId: profile.id,
-            type: "water_reminder",
-            titleKey: "notif.water_reminder.title",
-            bodyKey: "notif.water_reminder.body",
-            dedupKey: `water:${date}:${hour}`,
-          });
+        if (canPush() && waterOn && WATER_HOURS.has(hour)) {
+          const water = waterByUserDate.get(`${profile.id}:${date}`);
+          const drank = Number(water?.water_liters) || 0;
+          const goal = Number(water?.water_goal_liters) || 2.5;
+          if (drank < goal) {
+            jobs.push({
+              userId: profile.id,
+              type: "water_reminder",
+              titleKey: "notif.water_reminder.title",
+              bodyKey: "notif.water_reminder.body",
+              dedupKey: `water:${date}:${hour}`,
+            });
+            notePush();
+          }
         }
 
         // 3. Weekly summary — Sunday evening.
-        if (weekday === "Sun" && WEEKLY_HOURS.has(hour)) {
+        if (canPush() && weeklyOn && weekday === "Sun" && WEEKLY_HOURS.has(hour)) {
           jobs.push({
             userId: profile.id,
             type: "weekly_summary",
@@ -161,10 +205,17 @@ export const GET = defineCronRoute("/api/cron/notifications", async () => {
             params: { streak: currentStreak },
             dedupKey: `weekly:${week}`,
           });
+          notePush();
         }
 
         // 4. Praise — midday encouragement for engaged users.
-        if (hour === PRAISE_HOUR && currentStreak >= 3 && currentStreak % 3 === 0) {
+        if (
+          canPush() &&
+          praiseOn &&
+          hour === PRAISE_HOUR &&
+          currentStreak >= 3 &&
+          currentStreak % 3 === 0
+        ) {
           jobs.push({
             userId: profile.id,
             type: "praise",
@@ -173,6 +224,7 @@ export const GET = defineCronRoute("/api/cron/notifications", async () => {
             params: { streak: currentStreak },
             dedupKey: `praise:${date}`,
           });
+          notePush();
         }
       }
 

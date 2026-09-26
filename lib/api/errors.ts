@@ -8,6 +8,8 @@ export const API_ERROR_STATUS = {
   VALIDATION_ERROR: 400,
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
+  /** Plan/daily limit hit. Chat streams still use 403 so SSE clients see !ok. */
+  QUOTA_EXCEEDED: 403,
   STEP_UP_REQUIRED: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,

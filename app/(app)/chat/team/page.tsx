@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { ChatMessageText } from "@/components/chat/ChatMessageText";
 import { Send, Users } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { InlineAlert } from "@/components/InlineAlert";
 import { EmptyState } from "@/components/EmptyState";
 import { CONTACTS, type ContactId } from "@/lib/contacts";
@@ -17,6 +17,7 @@ import { errorToMessage } from "@/lib/i18n/api-error";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { ChatMessageDTO } from "@/lib/types/domain.types";
 import { AppHeader } from "@/components/navigation/AppHeader";
+import { useOfflineRetry } from "@/hooks/useOfflineRetry";
 import type { Database } from "@/lib/types/database.types";
 
 type TeamMessage = {
@@ -81,7 +82,7 @@ export default function TeamChatPage() {
       teamChatUnlocked: profile?.teamChatUnlocked,
     });
 
-  useEffect(() => {
+  const loadTeam = useCallback(() => {
     if (!isAuthenticated) {
       setLoading(false);
       return;
@@ -95,14 +96,21 @@ export default function TeamChatPage() {
       setLoading(false);
       return;
     }
+    setError(null);
     apiGet<{ messages: ChatMessageDTO[] }>("/api/chat/team")
       .then((res) => {
         setMeetingDone(isMeetingThisWeek(res.messages));
         setMessages(res.messages.map((message) => mapDtoToTeamMessage(message, lang)));
       })
-      .catch(() => setError(t("team.error.load")))
+      .catch((err) => setError(errorToMessage(err, t) || t("team.error.load")))
       .finally(() => setLoading(false));
   }, [isAuthenticated, lang, profile?.tier, profile?.teamChatUnlocked, t]);
+
+  useOfflineRetry(loadTeam);
+
+  useEffect(() => {
+    loadTeam();
+  }, [loadTeam]);
 
   // TD-005: Realtime INSERT fan-out for team thread (deduped vs POST response).
   useEffect(() => {

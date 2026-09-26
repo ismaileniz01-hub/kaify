@@ -12,12 +12,45 @@ const otpEmail = process.env.E2E_OTP_EMAIL?.trim();
 const otpCode = process.env.E2E_OTP_CODE?.trim();
 
 test.describe("auth critical path", () => {
-  test("login page exposes email OTP entry", async ({ page }) => {
+  test("login response nonces every Next script allowed by strict CSP", async ({
+    request,
+  }) => {
+    const response = await request.get("/login?audit=csp-contract");
+    expect(response.status()).toBe(200);
+
+    const csp = response.headers()["content-security-policy"];
+    const nonce = csp?.match(/'nonce-([^']+)'/)?.[1];
+    expect(nonce).toBeTruthy();
+    expect(csp).toContain("'strict-dynamic'");
+
+    const html = await response.text();
+    const scripts = [...html.matchAll(/<script\b([^>]*)>/gi)].map(
+      (match) => match[1],
+    );
+    expect(scripts.length).toBeGreaterThan(0);
+    expect(
+      scripts.every((attributes) =>
+        attributes.includes(`nonce="${nonce}"`),
+      ),
+    ).toBe(true);
+  });
+
+  test("login page exposes email OTP entry without CSP violations", async ({
+    page,
+  }) => {
+    const cspViolations: string[] = [];
+    page.on("console", (message) => {
+      if (message.text().toLowerCase().includes("content security policy")) {
+        cspViolations.push(message.text());
+      }
+    });
+
     await page.goto("/login");
     await expect(page.locator("body")).toBeVisible();
     // Email field is always present for OTP flow (copy may be i18n).
     const email = page.locator('input[type="email"], input[name="email"]').first();
-    await expect(email).toBeVisible({ timeout: 15_000 });
+    await expect(email).toBeVisible({ timeout: 8_000 });
+    expect(cspViolations).toEqual([]);
   });
 
   test("OTP → welcome when E2E_AUTH_ENABLED credentials provided", async ({

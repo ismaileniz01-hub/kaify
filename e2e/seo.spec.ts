@@ -43,6 +43,13 @@ const INDEXABLE = [
     canonical: "https://kaifyai.org/kvkk",
     jsonLd: false,
   },
+  {
+    path: "/delete-account",
+    title: /Delete your Kaify Ai account/i,
+    description: /deletion|account/i,
+    canonical: "https://kaifyai.org/delete-account",
+    jsonLd: false,
+  },
 ] as const;
 
 const PRIVATE = [
@@ -53,7 +60,6 @@ const PRIVATE = [
   "/leaderboard",
   "/market",
   "/myaccount",
-  "/admin",
 ] as const;
 
 test.describe("rendered public SEO", () => {
@@ -88,6 +94,10 @@ test.describe("rendered public SEO", () => {
         "content",
         "summary_large_image",
       );
+      await expect(page.locator('meta[name="twitter:image"]').first()).toHaveAttribute(
+        "content",
+        /https:\/\/kaifyai\.org\/opengraph-image/,
+      );
       await expect(page.locator("h1")).toHaveCount(1);
       await expect(page.locator("main").first()).toBeVisible();
       const html = await page.content();
@@ -96,7 +106,8 @@ test.describe("rendered public SEO", () => {
         const json = await page.locator('script[type="application/ld+json"]').first().textContent();
         const data = JSON.parse(json!) as { "@graph": Array<Record<string, unknown>> };
         expect(data["@graph"].some((n) => n["@type"] === "Organization")).toBe(true);
-        expect(json).not.toMatch(/aggregateRating|reviewCount/);
+        expect(json).toContain("Kaify Ai");
+        expect(json).not.toMatch(/aggregateRating|reviewCount|ratingValue|userCount/);
       }
     });
   }
@@ -132,6 +143,8 @@ test.describe("rendered public SEO", () => {
       "https://kaifyai.org/terms",
       "https://kaifyai.org/cookies",
       "https://kaifyai.org/kvkk",
+      "https://kaifyai.org/disclaimer",
+      "https://kaifyai.org/delete-account",
     ]);
     expect(xml.match(/<lastmod>/g)?.length).toBe(locs.length);
     expect(xml).not.toContain("http://kaifyai.org");
@@ -145,7 +158,7 @@ test.describe("rendered public SEO", () => {
     request,
   }) => {
     const xml = await (await request.get("/sitemap.xml")).text();
-    for (const path of [...PRIVATE, "/login", "/signup"]) {
+    for (const path of [...PRIVATE, "/admin", "/login", "/signup"]) {
       expect(xml).not.toContain(path);
     }
     for (const path of PRIVATE) {
@@ -153,6 +166,13 @@ test.describe("rendered public SEO", () => {
       expect(res?.status()).toBeLessThan(400);
       await expect(page).toHaveURL(/\/login/);
     }
+  });
+
+  test("/admin is a public decoy image", async ({ page }) => {
+    const res = await page.goto("/admin");
+    expect(res?.status()).toBe(200);
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.locator('img[src="/nice-try-diddy.png"]')).toBeVisible();
   });
 
   test("login and signup are noindex", async ({ page }) => {

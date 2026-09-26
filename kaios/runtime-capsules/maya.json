@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "generated": "2026-08-16",
+  "source": "12_maya.md",
+  "module": "lib/kaios/capsules/maya/index.ts",
+  "always_on": [
+    {
+      "key": "MAYA_IDENTITY",
+      "source_section": "Identity & Mission"
+    },
+    {
+      "key": "MAYA_VOICE",
+      "source_section": "Identity & Mission"
+    },
+    {
+      "key": "MAYA_BEHAVIOR",
+      "source_section": "Meal Tracking Contract"
+    },
+    {
+      "key": "MAYA_BOUNDARIES",
+      "source_section": "Safety & Cross-Coach"
+    },
+    {
+      "key": "MAYA_RESPONSE_STYLE",
+      "source_section": "Output & Runtime"
+    },
+    {
+      "key": "MAYA_SAFETY",
+      "source_section": "Safety & Cross-Coach"
+    }
+  ],
+  "conditional_modes": [
+    {
+      "key": "MAYA_FOOD_ANALYSIS",
+      "task": "food_analysis",
+      "source_section": "Meal Analysis Pipeline"
+    },
+    {
+      "key": "MAYA_MEAL_PLANNING",
+      "task": "meal_planning",
+      "source_section": "Goal Adaptation & Strategy"
+    },
+    {
+      "key": "MAYA_HYDRATION",
+      "task": "hydration",
+      "source_section": "Meal Tracking Contract"
+    }
+  ],
+  "selector": "selectMayaCapsules"
+}

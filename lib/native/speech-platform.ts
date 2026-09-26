@@ -16,21 +16,16 @@ export async function isNativeSpeechAvailable(): Promise<boolean> {
   }
 }
 
-/**
- * Request mic + speech permissions once at app launch so chat does not
- * trigger a separate browser-style permission flow.
- */
-export async function warmUpNativeSpeechPermissions(): Promise<void> {
-  if (!(await isNativePlatform())) return;
+export async function isNativeSpeechGranted(): Promise<boolean> {
+  if (!(await isNativePlatform())) return false;
   try {
     const { SpeechRecognition } = await import(
       "@capgo/capacitor-speech-recognition"
     );
     const current = await SpeechRecognition.checkPermissions();
-    if (current.speechRecognition === "granted") return;
-    await SpeechRecognition.requestPermissions();
+    return current.speechRecognition === "granted";
   } catch {
-    // Plugin missing in web CI builds — ignore.
+    return false;
   }
 }
 

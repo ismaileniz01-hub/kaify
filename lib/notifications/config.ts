@@ -15,7 +15,7 @@ export type NotificationVisual = {
   /** Accent color (hex) for the type badge and card ring. */
   color: string;
   /** Which teammate "sends" this notification (for the display name). */
-  from: "Kai" | "Alex" | "Dr. Maya" | "Leo";
+  from: "Kai" | "Alex" | "Maya" | "Leo";
 };
 
 const KAI = "/kai-mascot-v2.png";
@@ -29,7 +29,7 @@ export const NOTIFICATION_VISUAL: Record<NotificationType, NotificationVisual> =
   freezie_earned: { avatar: KAI, color: "#38bdf8", from: "Kai" },
   badge: { avatar: KAI, color: "#eab308", from: "Kai" },
   weekly_summary: { avatar: ALEX, color: "#3b82f6", from: "Alex" },
-  water_reminder: { avatar: MAYA, color: "#06b6d4", from: "Dr. Maya" },
+  water_reminder: { avatar: MAYA, color: "#06b6d4", from: "Maya" },
   praise: { avatar: KAI, color: "#a855f7", from: "Kai" },
   system: { avatar: KAI, color: "#a1a1aa", from: "Kai" },
 };

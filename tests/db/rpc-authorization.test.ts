@@ -73,18 +73,62 @@ describe.skipIf(!enabled)("rpc-authorization (live)", () => {
 
   describe("service_only RPCs", () => {
     for (const entry of rpcByMode("service_only")) {
-      it(`${entry.name}: authenticated EXECUTE fails`, async () => {
-        const { data, error } = await userA.client.rpc(entry.name as never);
-        const ok = !error;
-        assertDenied({
-          table: entry.name,
-          op: "rpc",
-          actor: "USER_A",
-          ok,
-          detail: data == null ? undefined : `data=${JSON.stringify(data).slice(0, 200)}`,
-          error: error?.message ?? null,
-        });
+      it(`${entry.name}: every exact signature denies authenticated EXECUTE`, () => {
+        const escapedName = entry.name.replaceAll("'", "''");
+        const signatures = runSqlJson<{
+          signature: string;
+          authenticated_can_execute: boolean;
+          anon_can_execute: boolean;
+        }>(`
+          select
+            p.oid::regprocedure::text as signature,
+            has_function_privilege('authenticated', p.oid, 'EXECUTE') as authenticated_can_execute,
+            has_function_privilege('anon', p.oid, 'EXECUTE') as anon_can_execute
+          from pg_proc p
+          join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public'
+            and p.proname = '${escapedName}'
+            and p.prosecdef
+          order by p.oid::regprocedure::text
+        `);
+        expect(signatures.length, `${entry.name} has no exact live signature`).toBeGreaterThan(0);
+        expect(
+          signatures.filter(
+            (signature) =>
+              signature.authenticated_can_execute ||
+              signature.anon_can_execute,
+          ),
+          `Unexpected EXECUTE grant on ${entry.name}`,
+        ).toEqual([]);
       });
+    }
+  });
+
+  it("critical SECURITY DEFINER signatures use an empty search_path", () => {
+    const functions = runSqlJson<{
+      signature: string;
+      empty_search_path: boolean;
+    }>(`
+      select
+        p.oid::regprocedure::text as signature,
+        coalesce(p.proconfig, array[]::text[]) @> array['search_path=""']::text[]
+          as empty_search_path
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.oid in (
+          'public.is_admin()'::regprocedure,
+          'public.upsert_analytics_daily(uuid,date,jsonb)'::regprocedure
+        )
+      order by signature
+    `);
+
+    expect(functions.map((fn) => fn.signature)).toEqual([
+      "is_admin()",
+      "upsert_analytics_daily(uuid,date,jsonb)",
+    ]);
+    for (const fn of functions) {
+      expect(fn.empty_search_path, fn.signature).toBe(true);
     }
   });
 

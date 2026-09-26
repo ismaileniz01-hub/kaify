@@ -32,6 +32,7 @@ export type MessageType =
 export type CoachId = "alex" | "maya" | "leo" | "kai";
 export type ThreadType = "direct" | "team";
 export type ProfileRole = "user" | "admin";
+export type EquipmentAccess = "home" | "gym" | "limited";
 export type NotificationType =
   | "streak_risk"
   | "streak_milestone"
@@ -69,6 +70,7 @@ type ProfileRow = {
   birth_date: string | null;
   activity_level: string | null;
   training_days_per_week: number | null;
+  equipment_access: EquipmentAccess | null;
   dietary_preference: string | null;
   allergies: string | null;
   disliked_foods: string | null;
@@ -88,6 +90,7 @@ type ProfileRow = {
   team_chat_unlocked: boolean;
   team_chat_unlocked_at: string | null;
   leaderboard_opt_out: boolean;
+  last_meaningful_activity_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -107,6 +110,7 @@ type ProfileInsert = {
   birth_date?: string | null;
   activity_level?: string | null;
   training_days_per_week?: number | null;
+  equipment_access?: EquipmentAccess | null;
   dietary_preference?: string | null;
   allergies?: string | null;
   disliked_foods?: string | null;
@@ -125,6 +129,7 @@ type ProfileInsert = {
   team_chat_unlocked?: boolean;
   team_chat_unlocked_at?: string | null;
   leaderboard_opt_out?: boolean;
+  last_meaningful_activity_at?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -142,6 +147,7 @@ type ProfileUpdate = {
   birth_date?: string | null;
   activity_level?: string | null;
   training_days_per_week?: number | null;
+  equipment_access?: EquipmentAccess | null;
   dietary_preference?: string | null;
   allergies?: string | null;
   disliked_foods?: string | null;
@@ -160,6 +166,7 @@ type ProfileUpdate = {
   team_chat_unlocked?: boolean;
   team_chat_unlocked_at?: string | null;
   leaderboard_opt_out?: boolean;
+  last_meaningful_activity_at?: string | null;
   updated_at?: string;
 };
 
@@ -224,6 +231,10 @@ type CompleteOnboardingArgs = {
   p_primary_goal?: string | null;
   p_activity_level?: string | null;
   p_training_days_per_week?: number | null;
+  p_equipment_access?: EquipmentAccess | null;
+  p_maintenance_calorie_goal?: number | null;
+  p_calorie_goal?: number | null;
+  p_workouts_target?: number | null;
   p_dietary_preference?: string | null;
   p_allergies?: string | null;
   p_disliked_foods?: string | null;
@@ -377,6 +388,7 @@ type ChatMessageRow = {
   id: string;
   user_id: string;
   coach_id: string | null;
+  reply_to_message_id: string | null;
   thread_type: ThreadType;
   sender: MessageSender;
   message_type: MessageType;
@@ -392,6 +404,7 @@ type ChatMessageInsert = {
   id?: string;
   user_id: string;
   coach_id?: string | null;
+  reply_to_message_id?: string | null;
   thread_type?: ThreadType;
   sender: MessageSender;
   message_type?: MessageType;
@@ -421,6 +434,8 @@ type CoachingMemoryRow = {
   id: string;
   user_id: string;
   coach_id: string | null;
+  source_message_id: string | null;
+  fact_key: string | null;
   summary: string;
   key_facts: Json;
   source_range: Json | null;
@@ -432,6 +447,8 @@ type CoachingMemoryInsert = {
   id?: string;
   user_id: string;
   coach_id?: string | null;
+  source_message_id?: string | null;
+  fact_key?: string | null;
   summary: string;
   key_facts?: Json;
   source_range?: Json | null;
@@ -471,7 +488,9 @@ export type ProcessReferralResult = {
   referrer_id: string;
   referral_id?: string;
   discount_applied?: boolean;
+  referrer_rewarded?: boolean;
   bonus?: number;
+  skin_reward?: string;
 };
 
 export type GlobalLeaderboardEntry = {
@@ -624,6 +643,7 @@ export type Database = {
           weight_kg: number | null;
           calories_consumed: number;
           calories_burned: number;
+          maintenance_calorie_goal: number | null;
           calorie_goal: number;
           workouts_completed: number;
           workouts_target: number;
@@ -692,6 +712,11 @@ export type Database = {
           marketing_emails?: boolean;
           primary_goal?: string | null;
           goals_configured?: boolean;
+          quiet_hours_start: number | null;
+          quiet_hours_end: number | null;
+          notify_weekly: boolean;
+          notify_praise: boolean;
+          daily_push_cap: number;
           updated_at: string;
         };
         Insert: { user_id: string } & Partial<
@@ -985,6 +1010,197 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["native_push_tokens"]["Row"]>;
         Relationships: [];
       };
+      product_events: {
+        Row: {
+          id: string;
+          event_id: string;
+          event_name: string;
+          occurred_at: string;
+          user_id: string | null;
+          install_id: string | null;
+          platform: string | null;
+          schema_version: number;
+          properties: Json;
+          idempotency_key: string;
+        };
+        Insert: {
+          id?: string;
+          event_id?: string;
+          event_name: string;
+          occurred_at?: string;
+          user_id?: string | null;
+          install_id?: string | null;
+          platform?: string | null;
+          schema_version?: number;
+          properties?: Json;
+          idempotency_key: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["product_events"]["Row"]>;
+        Relationships: [];
+      };
+      scan_corrections: {
+        Row: {
+          id: string;
+          user_id: string;
+          pending_id: string | null;
+          scan_type: string;
+          action: string;
+          confidence_bucket: string | null;
+          calories: number | null;
+          protein: number | null;
+          carbs: number | null;
+          fat: number | null;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          pending_id?: string | null;
+          scan_type?: string;
+          action: string;
+          confidence_bucket?: string | null;
+          calories?: number | null;
+          protein?: number | null;
+          carbs?: number | null;
+          fat?: number | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["scan_corrections"]["Row"]>;
+        Relationships: [];
+      };
+      workout_plans: {
+        Row: {
+          id: string;
+          user_id: string;
+          template_slug: string;
+          title_key: string;
+          place: "gym" | "home";
+          version: number;
+          status: "active" | "paused" | "deload" | "completed";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          template_slug: string;
+          title_key: string;
+          place: "gym" | "home";
+          version?: number;
+          status?: "active" | "paused" | "deload" | "completed";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["workout_plans"]["Row"]>;
+        Relationships: [];
+      };
+      workout_plan_items: {
+        Row: {
+          id: string;
+          user_id: string;
+          plan_id: string;
+          plan_version: number;
+          day_index: number;
+          sort_order: number;
+          exercise_key: string;
+          movement: "upper" | "lower" | "core";
+          target_sets: number;
+          target_reps: number;
+          load_kg: number;
+        };
+        Insert: {
+          user_id: string;
+          plan_id: string;
+          plan_version: number;
+          day_index: number;
+          sort_order?: number;
+          exercise_key: string;
+          movement: "upper" | "lower" | "core";
+          target_sets: number;
+          target_reps: number;
+          load_kg?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["workout_plan_items"]["Row"]>;
+        Relationships: [];
+      };
+      workout_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          plan_id: string | null;
+          plan_version: number | null;
+          session_date: string;
+          status: "completed" | "missed" | "rest" | "deload";
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          plan_id?: string | null;
+          plan_version?: number | null;
+          session_date: string;
+          status: "completed" | "missed" | "rest" | "deload";
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["workout_sessions"]["Row"]>;
+        Relationships: [];
+      };
+      workout_set_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          session_id: string;
+          exercise_key: string;
+          set_index: number;
+          reps: number;
+          load_kg: number;
+          rir: number | null;
+        };
+        Insert: {
+          user_id: string;
+          session_id: string;
+          exercise_key: string;
+          set_index: number;
+          reps: number;
+          load_kg?: number;
+          rir?: number | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["workout_set_logs"]["Row"]>;
+        Relationships: [];
+      };
+      support_tickets: {
+        Row: {
+          id: string;
+          user_id: string;
+          subject: string;
+          status: "open" | "closed";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          subject?: string;
+          status?: "open" | "closed";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["support_tickets"]["Row"]>;
+        Relationships: [];
+      };
+      support_messages: {
+        Row: {
+          id: string;
+          ticket_id: string;
+          sender: "user" | "admin";
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          ticket_id: string;
+          sender: "user" | "admin";
+          body: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["support_messages"]["Row"]>;
+        Relationships: [];
+      };
     };
     Views: {
       user_gem_balances: {
@@ -1073,6 +1289,13 @@ export type Database = {
           p_protein?: number;
           p_carbs?: number;
           p_fat?: number;
+        };
+        Returns: undefined;
+      };
+      increment_analytics_workouts: {
+        Args: {
+          p_user_id: string;
+          p_entry_date: string;
         };
         Returns: undefined;
       };
@@ -1190,6 +1413,18 @@ export type Database = {
           p_granted_by: string;
         };
         Returns: Json;
+      };
+      admin_list_support_inbox: {
+        Args: { p_limit?: number };
+        Returns: {
+          id: string;
+          user_id: string;
+          user_name: string;
+          subject: string;
+          status: string;
+          updated_at: string;
+          last_message: string;
+        }[];
       };
     };
     Enums: {

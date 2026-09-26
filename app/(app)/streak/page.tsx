@@ -13,13 +13,14 @@ import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/navigation/AppHeader";
-import { hapticNotification } from "@/lib/native/haptics";
+import { alreadyCheckedInOnLocalDay } from "@/lib/check-in-gate";
+import { hapticNotification, hapticSelection } from "@/lib/native/haptics";
 
 export default function StreakPage() {
   const { gemState } = useGem();
   const { unlockedLevel, unlockLevel } = useKai();
   const { t } = useLang();
-  const { streak, isAuthenticated, isLoading, checkIn } = useSession();
+  const { streak, isAuthenticated, isLoading, checkIn, profile } = useSession();
   const [showCard, setShowCard] = useState(false);
   const [checkingIn, setCheckingIn] = useState(false);
   const [checkInMsg, setCheckInMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -30,8 +31,14 @@ export default function StreakPage() {
     }
   }, [streak.kaiUnlockedLevel, unlockedLevel, unlockLevel]);
 
+  const alreadyToday = alreadyCheckedInOnLocalDay(
+    streak.lastCheckInDate,
+    profile?.timezone ?? "UTC",
+  );
+
   const handleCheckIn = async () => {
-    if (!isAuthenticated || checkingIn) return;
+    if (!isAuthenticated || checkingIn || alreadyToday) return;
+    void hapticSelection();
     setCheckingIn(true);
     setCheckInMsg(null);
     try {
@@ -80,7 +87,10 @@ export default function StreakPage() {
         trailing={
           <>
             <button
-              onClick={() => setShowCard(true)}
+              onClick={() => {
+                void hapticSelection();
+                setShowCard(true);
+              }}
               className="app-header__action border-orange-500/25 bg-orange-500/10 text-orange-300"
               aria-label={t("streak.get_card")}
             >
@@ -105,10 +115,14 @@ export default function StreakPage() {
           <button
             type="button"
             onClick={() => void handleCheckIn()}
-            disabled={checkingIn}
+            disabled={checkingIn || alreadyToday}
             className="touch-44 w-full rounded-2xl border border-orange-300/20 bg-gradient-to-r from-orange-500/20 to-amber-500/10 px-4 py-2.5 text-sm font-semibold text-orange-100 shadow-lg shadow-orange-950/20 hover:border-orange-300/30 hover:from-orange-500/28 hover:to-amber-500/16 active:scale-[0.985] disabled:opacity-50"
           >
-            {checkingIn ? t("common.loading") : t("streak.checkin_button")}
+            {checkingIn
+              ? t("common.loading")
+              : alreadyToday
+                ? t("streak.checkin_done")
+                : t("streak.checkin_button")}
           </button>
           {checkInMsg && (
             <InlineAlert

@@ -11,6 +11,7 @@ import { getContact, type ContactId } from "@/lib/contacts";
 import { resolveAvatarEffect } from "@/lib/aura-effects";
 import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
+import { formatTime } from "@/lib/i18n/format";
 import { useSession } from "@/lib/session-context";
 import { AppHeader } from "@/components/navigation/AppHeader";
 import { coachAvatarTransitionName } from "@/lib/motion/shared-element";
@@ -56,8 +57,20 @@ export default function ChatPage() {
   const { avatar: kaiAvatar, auraColor } = useKai();
 
   useEffect(() => {
+    const lockViewport = () => {
+      if (window.scrollY !== 0 || window.scrollX !== 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+    lockViewport();
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", lockViewport);
+    viewport?.addEventListener("scroll", lockViewport);
+    window.addEventListener("scroll", lockViewport, { passive: true });
     return () => {
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      viewport?.removeEventListener("resize", lockViewport);
+      viewport?.removeEventListener("scroll", lockViewport);
+      window.removeEventListener("scroll", lockViewport);
     };
   }, []);
 
@@ -68,8 +81,7 @@ export default function ChatPage() {
   const contactId = contact.id as ContactId;
   const patternClass = `chat-pattern chat-pattern--${contactId}`;
 
-  const formatGuestTime = () =>
-    new Date().toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit" });
+  const formatGuestTime = () => formatTime(new Date(), lang);
 
   const getAvatarSrc = () => {
     if (contactId === "alex") {
@@ -158,7 +170,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div className={`phone-shell chat-shell chat-gradient ${patternClass} relative flex h-[100dvh] flex-col`}>
+    <div className={`phone-shell chat-shell chat-gradient ${patternClass} relative flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden`}>
 
       <AppHeader
         backHref="/messages"
@@ -172,6 +184,8 @@ export default function ChatPage() {
               effect={getEffect()}
               auraColor={contactId === "kai" ? auraColor : "default"}
               transitionName={coachAvatarTransitionName(contactId)}
+              presence={avatarState}
+              coachId={contactId}
             />
             <span className="flex flex-col items-start">
               <span className="font-semibold" style={{ color: contact.color.primaryLight }}>
@@ -210,7 +224,7 @@ export default function ChatPage() {
           />
         ) : (
           <>
-            <div className="flex-1 overflow-y-auto pb-36">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <ChatBubbles
                 contactId={contactId}
                 onTypingChange={handleTypingChange}
@@ -223,20 +237,20 @@ export default function ChatPage() {
               input={inputValue}
               onInputChange={setInputValue}
               onSend={handleSend}
-              showCamera={contactId !== "kai" && contactId !== "alex"}
-              onCameraClick={() => {
-                if (!isAuthenticated) return;
-                setShowImagePicker(true);
-              }}
+              showCamera={
+                isAuthenticated && contactId !== "kai" && contactId !== "alex"
+              }
+              onCameraClick={() => setShowImagePicker(true)}
               compactSend
+              accentColor={contact.color.primary}
             />
           </>
         )}
       </div>
 
-      {/* Large coach presence — shown for both guest demo and signed-in live chat */}
+      {/* Large coach presence — sits above the composer on the bottom-left. */}
       {!sessionLoading && (
-      <div className="pointer-events-none absolute bottom-32 -left-8 z-10">
+      <div className="pointer-events-none absolute bottom-36 -left-8 z-[5]">
         <ContactAvatar
           src={getAvatarSrc()}
           alt={contact.name}
@@ -244,6 +258,8 @@ export default function ChatPage() {
           pulse={false}
           effect={getEffect()}
           auraColor={contactId === "kai" ? auraColor : "default"}
+          presence={avatarState}
+          coachId={contactId}
         />
       </div>
       )}

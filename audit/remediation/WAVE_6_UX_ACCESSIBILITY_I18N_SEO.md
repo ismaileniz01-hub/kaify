@@ -8,12 +8,13 @@
 
 Wave 6 is closed as **COMPLETE_WITH_EXTERNAL_BLOCKER**. Technical SEO on current HEAD is launch-grade under **Strategy B** (one canonical English crawl language; client/cookie product localization; no invented locale-prefixed routes). Authenticated Playwright/axe still cannot run without owner-provisioned synthetic OTP credentials.
 
-**Closure-pass facts (this HEAD):**
-- `/pricing` is a static marketing route (`○`, revalidate 1h) so title/description/canonical/OG sit in the **first** `<head>` (Lighthouse `meta-description` no longer 0).
-- Guest middleware no longer intercepts `/opengraph-image` (PNG `200`, `image/png`).
-- Pricing checkout no longer throws `useSession` outside `SessionProvider` (guest `useSessionOptional`).
-- Runtime Playwright covers indexable metadata, OG image, private sitemap absence, public link crawl, public named-control a11y, Arabic `dir=rtl`.
-- Lighthouse SEO (current commit, `http://127.0.0.1:3005`, mobile, `--headless=new`): **1.00** on `/`, `/pricing`, `/privacy`, `/terms`, `/cookies`, `/kvkk`.
+**Closure-pass facts (this HEAD, re-verified after Kaify Ai rebrand):**
+- Indexable public HTML still Strategy B (English crawl language; cookie/client product i18n; no locale-prefixed routes).
+- `/pricing` is a static marketing route (`○`, revalidate 1h) so SEO tags sit in the first `<head>`.
+- `/opengraph-image` is PNG `200`; not gated as a product path.
+- Runtime Playwright (port 3006, this commit): **33 passed**, **9 skipped** (`BLOCKED_EXTERNAL_E2E_CREDENTIALS` for authenticated OTP/axe).
+- Lighthouse SEO (this commit, `http://127.0.0.1:3006`, mobile, `--headless=new`): **1.00** on `/`, `/pricing`, `/privacy`, `/terms`, `/cookies`, `/kvkk`.
+- JSON-LD Organization/WebSite/SoftwareApplication name and legalName are **Kaify Ai**; Offer remains 14.99 USD; no ratings/review counts.
 
 No Wave 7 work was started.
 
@@ -51,7 +52,7 @@ Referral `?ref=` / UTM: metadata canonical is path-only; welcome is not indexabl
 
 | Page | title | description | OG | Twitter | image | JSON-LD |
 |------|-------|-------------|----|---------|-------|---------|
-| `/` | Kaify Ai — Your Personal Coach Team | Four expert coaches… $14.99/month | yes | summary_large_image | `/opengraph-image` 1200×630 | Organization, WebSite, SoftwareApplication + Offer 14.99 USD (no ratings) |
+| `/` | Kaify Ai — Your Personal Coach Team | Four expert coaches… $14.99/month | yes | summary_large_image | `/opengraph-image` 1200×630 | Organization, WebSite, SoftwareApplication named Kaify Ai + Offer 14.99 USD (no ratings) |
 | `/pricing` | Pricing — Kaify Ai | Choose Essential, Pro, or Premium… | yes | yes | same | inherit page metadata |
 | Legal | unique per document | meaningful | yes | yes | same | none extra |
 | `/login` | Sign in — Kaify Ai | noindex | yes | yes | same | none |
@@ -139,7 +140,7 @@ Gate raised 0.55 → **0.58**. New keys synced via `i18n:sync` (English fallback
 
 `lighthouserc.cjs` collects **performance, accessibility, best-practices, seo**. Thresholds were not reduced.
 
-| URL | Perf threshold | A11y | SEO (this HEAD, measured) |
+Measured this HEAD (`http://127.0.0.1:3006`, Lighthouse 12.6.0, mobile, `--headless=new`):
 |-----|----------------|------|---------------------------|
 | `/` | warn ≥ 0.65 | error ≥ 0.85 | **1.00** (all SEO audits pass) |
 | `/pricing` | warn ≥ 0.65 | error ≥ 0.85 | **1.00** |
@@ -257,8 +258,8 @@ LIGHTHOUSE_SEO: **PASS** (≥ 0.95 on every indexable public URL tested). `/logi
 - **STATUS:** VERIFIED (podium skips inline animation under reduced motion; central CSS reduce remains)
 
 ### A11Y-012
-- **STATUS:** VERIFIED (labels + nutrition progressbar)
-- **RESIDUAL_RISK:** Other score bars may still be visual-only.
+- **STATUS:** VERIFIED (labels + nutrition progressbar + weekly score + macro rings + usage quota bars + rich-card macro bars)
+- **RESIDUAL_RISK:** Decorative dots and chart animations remain visual; authenticated pages not axe-proven.
 
 ### A11Y-001 recheck
 - **STATUS:** VERIFIED_BY_WAVE_1_EVIDENCE (`role="log"`, `aria-live`, typing sr-only)

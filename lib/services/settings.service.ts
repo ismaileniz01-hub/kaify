@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api/errors";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PrimaryGoal } from "@/lib/validations/goals.schema";
 import { PRIMARY_GOALS } from "@/lib/validations/goals.schema";
+import { emitProductEvent, productEventIdempotencyKey } from "@/lib/events/product";
 
 export type UserSettingsDTO = {
   /** DB column workout_reminders — gates streak_risk push jobs. */
@@ -11,6 +12,11 @@ export type UserSettingsDTO = {
   /** Alias for workoutReminders (correct product name). */
   streakRiskReminders: boolean;
   waterReminder: boolean;
+  notifyWeekly: boolean;
+  notifyPraise: boolean;
+  quietHoursStart: number | null;
+  quietHoursEnd: number | null;
+  dailyPushCap: number;
   soundEffects: boolean;
   chatSounds: boolean;
   unitSystem: "metric" | "imperial";
@@ -36,12 +42,22 @@ function mapRow(row: {
   marketing_emails?: boolean;
   primary_goal?: string | null;
   goals_configured?: boolean;
+  notify_weekly?: boolean;
+  notify_praise?: boolean;
+  quiet_hours_start?: number | null;
+  quiet_hours_end?: number | null;
+  daily_push_cap?: number | null;
 }): Omit<UserSettingsDTO, "leaderboardOptOut"> {
   const workoutReminders = row.workout_reminders;
   return {
     workoutReminders,
     streakRiskReminders: workoutReminders,
     waterReminder: row.water_reminder,
+    notifyWeekly: row.notify_weekly ?? true,
+    notifyPraise: row.notify_praise ?? true,
+    quietHoursStart: row.quiet_hours_start ?? null,
+    quietHoursEnd: row.quiet_hours_end ?? null,
+    dailyPushCap: row.daily_push_cap ?? 8,
     soundEffects: row.sound_effects,
     chatSounds: row.chat_sounds,
     unitSystem: row.unit_system === "imperial" ? "imperial" : "metric",
@@ -55,6 +71,11 @@ const DEFAULTS: Omit<UserSettingsDTO, "leaderboardOptOut"> = {
   workoutReminders: true,
   streakRiskReminders: true,
   waterReminder: false,
+  notifyWeekly: true,
+  notifyPraise: true,
+  quietHoursStart: null,
+  quietHoursEnd: null,
+  dailyPushCap: 8,
   soundEffects: true,
   chatSounds: true,
   unitSystem: "metric",
@@ -150,6 +171,21 @@ export async function upsertUserSettings(
         ...(patch.goalsConfigured !== undefined
           ? { goals_configured: patch.goalsConfigured }
           : {}),
+        ...(settingsPatch.notifyWeekly !== undefined
+          ? { notify_weekly: settingsPatch.notifyWeekly }
+          : {}),
+        ...(settingsPatch.notifyPraise !== undefined
+          ? { notify_praise: settingsPatch.notifyPraise }
+          : {}),
+        ...(settingsPatch.quietHoursStart !== undefined
+          ? { quiet_hours_start: settingsPatch.quietHoursStart }
+          : {}),
+        ...(settingsPatch.quietHoursEnd !== undefined
+          ? { quiet_hours_end: settingsPatch.quietHoursEnd }
+          : {}),
+        ...(settingsPatch.dailyPushCap !== undefined
+          ? { daily_push_cap: settingsPatch.dailyPushCap }
+          : {}),
       },
       { onConflict: "user_id" },
     )
@@ -158,6 +194,43 @@ export async function upsertUserSettings(
 
   if (error || !data) {
     throw new ApiError("INTERNAL_ERROR", "Ayarlar kaydedilemedi.");
+  }
+
+  const preference =
+    patch.notifyWeekly !== undefined
+      ? "weekly"
+      : patch.notifyPraise !== undefined
+        ? "praise"
+        : patch.waterReminder !== undefined
+          ? "water"
+          : patch.workoutReminders !== undefined || patch.streakRiskReminders !== undefined
+            ? "streak_risk"
+            : patch.quietHoursStart !== undefined || patch.quietHoursEnd !== undefined
+              ? "quiet_hours"
+              : patch.dailyPushCap !== undefined
+                ? "daily_cap"
+                : null;
+  if (preference) {
+    emitProductEvent({
+      name: "notification.preference_changed",
+      userId,
+      properties: {
+        preference,
+        enabled:
+          patch.notifyWeekly ??
+          patch.notifyPraise ??
+          patch.waterReminder ??
+          patch.workoutReminders ??
+          patch.streakRiskReminders ??
+          true,
+      },
+      idempotencyKey: productEventIdempotencyKey([
+        "notification.preference_changed",
+        userId,
+        preference,
+        String(Date.now()).slice(0, 8),
+      ]),
+    });
   }
 
   const { data: profile } = await admin

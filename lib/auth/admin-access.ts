@@ -12,7 +12,14 @@ export async function resolveIsHubAdmin(userId: string): Promise<boolean> {
   if (profile?.role !== "admin") return false;
 
   const allowedEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  if (!allowedEmail) return true;
+  const isProd =
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL_ENV === "production" ||
+    process.env.VERCEL_ENV === "preview";
+  if (!allowedEmail) {
+    // Fail closed in production: an unset allowlist must not admit every admin role.
+    return !isProd;
+  }
 
   const { data: authUser } = await admin.auth.admin.getUserById(userId);
   return authUser.user?.email?.toLowerCase() === allowedEmail;

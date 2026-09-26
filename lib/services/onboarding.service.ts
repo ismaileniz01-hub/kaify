@@ -1,8 +1,12 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
 import { logger } from "@/lib/logger";
+import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
 import { mapProfileRow, type ProfileDTO } from "@/lib/types/domain.types";
 import type { OnboardingInput } from "@/lib/validations/onboarding.schema";
+import type { SignupBasicsInput } from "@/lib/validations/signup-basics.schema";
+import { recommendOnboardingNutrition } from "@/lib/nutrition/onboarding-recommendation";
+import { emitProductEvent, productEventIdempotencyKey } from "@/lib/events/product";
 
 /**
  * Maps a Postgres RPC error (raised via RAISE ... USING ERRCODE) to an ApiError.
@@ -32,8 +36,9 @@ export async function completeOnboarding(
   input: OnboardingInput,
 ): Promise<ProfileDTO> {
   const supabase = await createServerSupabaseClient();
+  const recommendation = recommendOnboardingNutrition(input, new Date());
 
-  const { data, error } = await supabase.rpc("complete_onboarding", {
+  const legacyArgs = {
     p_display_name: input.displayName,
     p_gender: input.gender,
     p_height_cm: input.heightCm,
@@ -51,7 +56,51 @@ export async function completeOnboarding(
     p_disliked_foods: input.dislikedFoods,
     p_health_conditions: input.healthConditions,
     p_country_code: input.countryCode,
+  };
+  const persistedTargetArgs = {
+    ...legacyArgs,
+    p_equipment_access: input.equipmentAccess,
+    p_calorie_goal: recommendation.calorieTarget,
+    p_workouts_target: recommendation.workoutsTarget,
+  };
+  let { data, error } = await supabase.rpc("complete_onboarding", {
+    ...persistedTargetArgs,
+    p_maintenance_calorie_goal: recommendation.maintenanceCalories,
   });
+
+  // Rolling deploy stage one: maintenance migration is not visible yet, but
+  // the calorie/equipment persistence migration is.
+  if (
+    error &&
+    (error.code === "PGRST202" ||
+      /p_maintenance_calorie_goal|schema cache/i.test(error.message))
+  ) {
+    logger.warn(
+      "[onboarding.service:complete] using pre-maintenance RPC signature",
+    );
+    const previous = await supabase.rpc(
+      "complete_onboarding",
+      persistedTargetArgs,
+    );
+    data = previous.data;
+    error = previous.error;
+  }
+
+  // Rolling deploy stage two: neither persistence migration is visible yet.
+  if (
+    error &&
+    (error.code === "PGRST202" ||
+      /p_equipment_access|p_calorie_goal|p_workouts_target|schema cache/i.test(
+        error.message,
+      ))
+  ) {
+    logger.warn(
+      "[onboarding.service:complete] using pre-persistence RPC signature",
+    );
+    const oldest = await supabase.rpc("complete_onboarding", legacyArgs);
+    data = oldest.data;
+    error = oldest.error;
+  }
 
   if (error) {
     throw mapRpcError("onboarding.service:complete", error);
@@ -62,14 +111,62 @@ export async function completeOnboarding(
 
   const profile = mapProfileRow(data);
 
+  emitProductEvent({
+    name: "onboarding.completed",
+    userId: profile.id,
+    platform: "web",
+    properties: { flow: "full", version: "v2" },
+    idempotencyKey: productEventIdempotencyKey(["onboarding.completed", profile.id]),
+  });
+
   // Paid users who finish forms after checkout would otherwise stay
   // FORMS_COMPLETED forever (apply_subscription only promotes when already
-  // past PAID). Promote immediately when a plan is already on the profile.
-  if (profile.tier) {
+  // past PAID). Never treat a default/unpaid tier as a real plan.
+  if (hasPaidPlan(profile)) {
     return (await tryActivateUser(profile)) ?? profile;
   }
 
   return profile;
+}
+
+export async function saveSignupBasics(
+  input: SignupBasicsInput,
+): Promise<ProfileDTO> {
+  const supabase = await createServerSupabaseClient();
+  const { data: sessionData } = await supabase.auth.getUser();
+  const userId = sessionData.user?.id;
+  if (!userId) {
+    throw new ApiError("UNAUTHORIZED", "Oturum gerekli.");
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({
+      display_name: input.displayName,
+      birth_date: input.birthDate,
+      country_code: input.countryCode,
+      locale: input.locale,
+    })
+    .eq("id", userId)
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    logger.error("[onboarding.service:basics] error", {
+      error: error?.message ?? "no row",
+    });
+    throw new ApiError("INTERNAL_ERROR", "Profil kaydedilemedi.");
+  }
+
+  emitProductEvent({
+    name: "signup.completed",
+    userId,
+    platform: "web",
+    properties: { flow: "progressive", method: "otp" },
+    idempotencyKey: productEventIdempotencyKey(["signup.completed", userId]),
+  });
+
+  return mapProfileRow(data);
 }
 
 /**

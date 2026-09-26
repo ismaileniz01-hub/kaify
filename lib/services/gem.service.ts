@@ -1,6 +1,7 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api/errors";
 import { mapRpcError } from "@/lib/supabase/rpc-errors";
+import { invalidateSessionSliceCaches } from "@/lib/cache/invalidate";
 import type {
   Database,
   GemMutationResult,
@@ -48,6 +49,7 @@ export async function earnGems(
     throw new ApiError("INTERNAL_ERROR", "Gem kazanç işlemi başarısız.");
   }
 
+  void invalidateSessionSliceCaches(params.userId).catch(() => undefined);
   return data;
 }
 
@@ -79,5 +81,6 @@ export async function spendGems(
     throw new ApiError("INTERNAL_ERROR", "Gem harcama işlemi başarısız.");
   }
 
+  void invalidateSessionSliceCaches(params.userId).catch(() => undefined);
   return data;
 }

@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { AuraColor } from "@/lib/kai-context";
+import type { ContactId } from "@/lib/contacts";
 import { AuraEffectLayer } from "@/components/AuraEffectLayer";
 import { getAuraVisual, resolveAvatarEffect, type AvatarEffect } from "@/lib/aura-effects";
 import { publicAssetUrl } from "@/lib/public-asset-url";
@@ -17,6 +18,8 @@ type ContactAvatarProps = {
   className?: string;
   /** Shared-element View Transition name (messages → chat). */
   transitionName?: string;
+  presence?: "idle" | "typing" | "sent";
+  coachId?: ContactId;
 };
 
 const sizes = {
@@ -36,26 +39,39 @@ export function ContactAvatar({
   auraColor = "default",
   className = "",
   transitionName,
+  presence = "idle",
+  coachId,
 }: ContactAvatarProps) {
   const { box, img, scale, sizesAttr } = sizes[size];
   const visual = getAuraVisual(auraColor);
   const resolvedEffect = effect ?? resolveAvatarEffect(auraColor);
-  // Data URLs / blob previews cannot go through the optimizer.
   const needsUnoptimized =
     src.startsWith("data:") || src.startsWith("blob:");
+  const typing = presence === "typing" && Boolean(coachId);
   const transitionStyle = transitionName
-    ? ({ viewTransitionName: transitionName } as CSSProperties)
+    ? ({ viewTransitionName: transitionName, visibility: "visible" } as CSSProperties)
     : undefined;
 
   return (
-    <div className={`relative ${className}`} style={transitionStyle}>
+    <div
+      className={`contact-avatar relative shrink-0 ${className}${
+        typing ? ` chat-presence-typing chat-presence-typing--${coachId}` : ""
+      }`}
+    >
       {pulse && (
         <span
           className="absolute -inset-2 animate-ping rounded-full bg-purple-500/20"
           aria-hidden
         />
       )}
-      <div className={`relative ${box} flex items-center justify-center`}>
+      {typing ? <span className="chat-presence-ring" aria-hidden /> : null}
+      {typing && coachId === "leo" ? (
+        <span className="chat-presence-scan" aria-hidden />
+      ) : null}
+      <div
+        className={`relative ${box} flex items-center justify-center`}
+        style={transitionStyle}
+      >
         <AuraEffectLayer effect={resolvedEffect} config={visual} scale={scale} />
         <PremiumImage
           src={publicAssetUrl(src)}
@@ -63,6 +79,7 @@ export function ContactAvatar({
           width={img}
           height={img}
           sizes={sizesAttr}
+          priority={size === "xs"}
           unoptimized={needsUnoptimized}
           className="relative z-10 h-full w-full object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)]"
         />

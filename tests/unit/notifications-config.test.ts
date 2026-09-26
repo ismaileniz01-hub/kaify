@@ -32,8 +32,8 @@ describe("notification visual config", () => {
     }
   });
 
-  it("maps water_reminder to Dr. Maya and weekly_summary to Alex", () => {
-    expect(visualFor("water_reminder").from).toBe("Dr. Maya");
+  it("maps water_reminder to Maya and weekly_summary to Alex", () => {
+    expect(visualFor("water_reminder").from).toBe("Maya");
     expect(visualFor("weekly_summary").from).toBe("Alex");
   });
 

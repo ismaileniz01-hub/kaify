@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>K.AIFY</string>
+        <string>Kaify Ai</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -51,7 +51,7 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>org.kaify.app</string>
+			<string>org.kaifyai.app</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>kaify</string>
@@ -59,14 +59,16 @@
 		</dict>
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>K.AIFY needs microphone access so you can talk to your coaches.</string>
+	<string>Kaify Ai needs microphone access so you can talk to your coaches.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>K.AIFY converts your speech to text when you use voice input in coach chat.</string>
+	<string>Kaify Ai converts your speech to text when you use voice input in coach chat.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>K.AIFY uses the camera so you can photograph meals and form for coach vision analysis, and to update your profile photo.</string>
+	<string>Kaify Ai uses the camera so you can photograph meals and form for coach vision analysis, and to update your profile photo.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>K.AIFY accesses your photo library so you can choose meal or form photos for coach analysis and set a profile avatar.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>K.AIFY may save images you choose to share with your coaching team when you export or download them.</string>
+	<string>Kaify Ai accesses your photo library so you can choose meal or form photos for coach analysis and set a profile avatar.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Kaify Ai reads your step count from Apple Health so your weekly activity chart stays accurate.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Kaify Ai does not write workouts or body metrics to Apple Health; this permission is required by HealthKit when step access is requested.</string>
 </dict>
 </plist>

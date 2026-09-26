@@ -8,8 +8,9 @@ Last updated: 2026-07-05
 2. MFA step-up if enrolled (via `defineRoute` sensitiveAction)
 3. CSRF token required
 4. `DELETE /api/profile` → `deleteUserAccount(userId)`
-5. Avatar storage cleanup (best-effort)
-6. `auth.admin.deleteUser(userId)` → CASCADE via `profiles.id → auth.users.id`
+5. Cancel live Paddle subscriptions immediately (`cancelUserSubscriptionsImmediately`)
+6. Avatar storage cleanup (best-effort)
+7. `auth.admin.deleteUser(userId)` → CASCADE via `profiles.id → auth.users.id`
 
 ## Table behavior on delete
 

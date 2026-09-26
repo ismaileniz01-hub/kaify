@@ -7,7 +7,9 @@ type ManifestTable =
   | "user_streaks"
   | "gem_ledger"
   | "chat_messages"
-  | "analytics_daily";
+  | "analytics_daily"
+  | "workout_plans"
+  | "workout_sessions";
 
 /** Critical tables included in daily DR manifest snapshots. */
 export const BACKUP_MANIFEST_TABLES: readonly ManifestTable[] = [
@@ -16,6 +18,8 @@ export const BACKUP_MANIFEST_TABLES: readonly ManifestTable[] = [
   "gem_ledger",
   "chat_messages",
   "analytics_daily",
+  "workout_plans",
+  "workout_sessions",
 ] as const;
 
 export type BackupManifest = {

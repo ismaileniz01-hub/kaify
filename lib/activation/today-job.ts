@@ -1,7 +1,9 @@
 export type TodayJobKind =
   | "check_in"
   | "set_goals"
-  | "chat_kai"
+  | "log_meal"
+  | "log_workout"
+  | "log_water"
   | "continue";
 
 export type TodayJob = {
@@ -10,6 +12,7 @@ export type TodayJob = {
   titleKey: string;
   bodyKey: string;
   ctaKey: string;
+  recovery?: boolean;
 };
 
 export type FirstTaskProgress = {
@@ -22,8 +25,21 @@ export type FirstTaskProgress = {
 export function resolveTodayJob(input: {
   checkedInToday: boolean;
   goalsConfigured: boolean;
-  streakAtRisk: boolean;
+  mealLogged?: boolean;
+  workoutLogged?: boolean;
+  waterLogged?: boolean;
+  inactivityDays?: number | null;
 }): TodayJob {
+  if ((input.inactivityDays ?? 0) >= 7 && !input.checkedInToday) {
+    return {
+      kind: "check_in",
+      href: "/streak",
+      titleKey: "home.today_job.recovery.title",
+      bodyKey: "home.today_job.recovery.body",
+      ctaKey: "home.today_job.recovery.cta",
+      recovery: true,
+    };
+  }
   if (!input.checkedInToday) {
     return {
       kind: "check_in",
@@ -42,20 +58,38 @@ export function resolveTodayJob(input: {
       ctaKey: "home.today_job.goals.cta",
     };
   }
-  if (input.streakAtRisk) {
+  if (!input.mealLogged) {
     return {
-      kind: "check_in",
-      href: "/streak",
-      titleKey: "home.today_job.check_in.title",
-      bodyKey: "home.today_job.check_in.body",
-      ctaKey: "home.today_job.check_in.cta",
+      kind: "log_meal",
+      href: "/chat/maya",
+      titleKey: "home.today_job.meal.title",
+      bodyKey: "home.today_job.meal.body",
+      ctaKey: "home.today_job.meal.cta",
+    };
+  }
+  if (!input.workoutLogged) {
+    return {
+      kind: "log_workout",
+      href: "/library",
+      titleKey: "home.today_job.workout.title",
+      bodyKey: "home.today_job.workout.body",
+      ctaKey: "home.today_job.workout.cta",
+    };
+  }
+  if (!input.waterLogged) {
+    return {
+      kind: "log_water",
+      href: "/chat/maya",
+      titleKey: "home.today_job.water.title",
+      bodyKey: "home.today_job.water.body",
+      ctaKey: "home.today_job.water.cta",
     };
   }
   return {
-    kind: "chat_kai",
+    kind: "continue",
     href: "/chat/kai",
-    titleKey: "home.today_job.chat.title",
-    bodyKey: "home.today_job.chat.body",
-    ctaKey: "home.today_job.chat.cta",
+    titleKey: "home.today_job.continue.title",
+    bodyKey: "home.today_job.continue.body",
+    ctaKey: "home.today_job.continue.cta",
   };
 }

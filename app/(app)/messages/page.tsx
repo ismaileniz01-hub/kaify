@@ -12,7 +12,8 @@ import { publicAssetUrl } from "@/lib/public-asset-url";
 import { useKai } from "@/lib/kai-context";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
-import { apiGet } from "@/lib/api/client";
+import { apiGet, ApiClientError } from "@/lib/api/client";
+import { useOfflineRetry } from "@/hooks/useOfflineRetry";
 import { canUseTeamChat, isTeamChatPlan } from "@/lib/billing/team-chat-access";
 import { errorToMessage } from "@/lib/i18n/api-error";
 import { formatInboxTime } from "@/lib/i18n/format";
@@ -20,10 +21,21 @@ import type { InboxCoachDTO } from "@/lib/services/messages.service";
 import { CONTACTS, CONTACT_LIST } from "@/lib/contacts";
 import { AppHeader } from "@/components/navigation/AppHeader";
 
+const INBOX_LOAD_TIMEOUT_MS = 10_000;
+
+function todayLabel(lang: string): string {
+  const options = { weekday: "short", day: "numeric", month: "short" } as const;
+  try {
+    return new Intl.DateTimeFormat(lang, options).format(new Date());
+  } catch {
+    return new Intl.DateTimeFormat("en", options).format(new Date());
+  }
+}
+
 export default function MessagesPage() {
   const { lang, t } = useLang();
   const { avatar: kaiAvatar } = useKai();
-  const { isAuthenticated, profile } = useSession();
+  const { isAuthenticated, isLoading: sessionLoading, profile } = useSession();
   const [inbox, setInbox] = useState<InboxCoachDTO[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -32,23 +44,58 @@ export default function MessagesPage() {
     if (!isAuthenticated) return;
     setLoading(true);
     setLoadError(null);
+    let settled = false;
+    const timer = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      setInbox(null);
+      setLoadError(t("messages.error.load"));
+      setLoading(false);
+    }, INBOX_LOAD_TIMEOUT_MS);
+
     void apiGet<{ inbox: InboxCoachDTO[] }>("/api/messages")
-      .then((res) => setInbox(res.inbox))
-      .catch((err) => {
-        setInbox(null);
-        setLoadError(errorToMessage(err, t) || t("messages.error.load"));
+      .then((res) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        setInbox(res.inbox);
       })
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        setInbox(null);
+        const message =
+          err instanceof ApiClientError && err.code === "UNAUTHORIZED"
+            ? t("messages.error.load")
+            : errorToMessage(err, t) || t("messages.error.load");
+        setLoadError(message);
+      })
+      .finally(() => {
+        if (!settled) {
+          settled = true;
+          window.clearTimeout(timer);
+        }
+        setLoading(false);
+      });
   }, [isAuthenticated, t]);
 
+  useOfflineRetry(loadInbox);
+
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (sessionLoading) return;
+    if (!isAuthenticated) {
+      setInbox(null);
+      setLoading(false);
+      setLoadError(null);
+      return;
+    }
     loadInbox();
-  }, [isAuthenticated, loadInbox]);
+  }, [isAuthenticated, sessionLoading, loadInbox]);
 
   const rows =
     inbox ??
-    (!isAuthenticated
+    (!isAuthenticated && !sessionLoading
       ? CONTACT_LIST.map((id) => {
           const c = CONTACTS[id];
           return {
@@ -75,13 +122,17 @@ export default function MessagesPage() {
       teamChatUnlocked: profile?.teamChatUnlocked,
     });
 
+  const showInboxSkeleton =
+    (sessionLoading || (isAuthenticated && inbox === null && !loadError)) &&
+    !(!isAuthenticated && !sessionLoading);
+
   return (
     <div className="phone-shell messages-gradient messages-pattern relative flex flex-col">
       <AppHeader
         backHref="/welcome"
         backLabel={t("nav.back")}
         title={t("nav.messages")}
-        trailing={<span className="type-caption font-medium type-muted">{t("messages.date")}</span>}
+        trailing={<span className="type-caption font-medium type-muted" suppressHydrationWarning>{todayLabel(lang)}</span>}
         divider
       />
 
@@ -96,7 +147,7 @@ export default function MessagesPage() {
           />
         )}
 
-        {isAuthenticated && inbox === null && !loadError && (
+        {showInboxSkeleton && (
           <div className="space-y-2.5">
             {[0, 1, 2, 3].map((i) => (
               <div
@@ -119,6 +170,7 @@ export default function MessagesPage() {
         )}
 
         {(!isAuthenticated || inbox !== null) &&
+          !sessionLoading &&
           !loading &&
           rows.map((row, i) => {
             const id = row.coachId as ContactId;
@@ -144,9 +196,9 @@ export default function MessagesPage() {
             );
           })}
 
-        {planAllowsTeam && (
+        {planAllowsTeam && !sessionLoading && (
           <Link
-            href={teamUnlocked ? "/chat/team" : "/streak"}
+            href={teamUnlocked ? "/chat/team" : "/myaccount"}
             className={`animate-in mt-4 flex min-h-[76px] items-center gap-3 rounded-2xl border px-4 py-3.5 shadow-lg shadow-black/15 ${
               teamUnlocked
                 ? "border-purple-400/20 bg-gradient-to-r from-purple-500/10 to-violet-950/10 hover:border-purple-400/30 hover:from-purple-500/15"

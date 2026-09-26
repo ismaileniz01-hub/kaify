@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/session-context";
+import { isOnboardingExemptPath } from "@/lib/onboarding/exempt-path";
 import { useLang } from "@/lib/lang-context";
 import { MotionDialog } from "@/components/ui/MotionDialog";
 
@@ -27,8 +28,7 @@ export function OnboardingGate() {
     isAuthenticated && !isLoading && profile?.onboardingStatus === "PAID";
 
   const open =
-    !pathname.startsWith("/signup") &&
-    !pathname.startsWith("/myaccount") &&
+    !isOnboardingExemptPath(pathname ?? "") &&
     needsOnboarding;
 
   return (

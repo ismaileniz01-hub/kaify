@@ -18,11 +18,12 @@ export type MutationMatrixRow = {
  * C = explicitly non-retried (webhooks use provider event id, OTP, etc.)
  */
 export const MUTATION_IDEMPOTENCY_MATRIX: readonly MutationMatrixRow[] = [
-  { endpoint: "POST /api/chat/[coachId]", method: "POST", retryable: true, clientKey: true, serverDedupe: true, dbUniqueness: true, class: "A", safeIfRepeated: true, note: "claim/complete + unique client_idempotency_key; replay SSE" },
+  { endpoint: "POST /api/chat/messages/delete", method: "POST", retryable: true, clientKey: true, serverDedupe: false, dbUniqueness: false, class: "B", safeIfRepeated: true, note: "deleting already-gone ids is a no-op after first success" },
+  { endpoint: "DELETE /api/chat/messages/[messageId]", method: "DELETE", retryable: true, clientKey: true, serverDedupe: false, dbUniqueness: false, class: "B", safeIfRepeated: true, note: "owned-row delete; repeat returns NOT_FOUND" },
   { endpoint: "POST /api/chat/[coachId]/analyze", method: "POST", retryable: true, clientKey: true, serverDedupe: true, dbUniqueness: false, class: "A", safeIfRepeated: true, note: "withIdempotency; body hash excludes raw base64, uses length+note" },
   { endpoint: "POST /api/chat/team", method: "POST", retryable: true, clientKey: true, serverDedupe: true, dbUniqueness: false, class: "A", safeIfRepeated: true, note: "withIdempotency" },
   { endpoint: "POST /api/analytics/confirm", method: "POST", retryable: true, clientKey: true, serverDedupe: true, dbUniqueness: true, class: "A", safeIfRepeated: true, note: "pending row claim in confirm_analytics_pending" },
-  { endpoint: "POST /api/analytics/goals", method: "POST", retryable: true, clientKey: true, serverDedupe: false, dbUniqueness: true, class: "B", safeIfRepeated: true, note: "upsert daily row PK" },
+  { endpoint: "POST /api/analytics/workout-log", method: "POST", retryable: true, clientKey: true, serverDedupe: true, dbUniqueness: false, class: "A", safeIfRepeated: true, note: "withIdempotency; increment_analytics_workouts" },
   { endpoint: "PATCH /api/settings", method: "PATCH", retryable: true, clientKey: true, serverDedupe: true, dbUniqueness: true, class: "A", safeIfRepeated: true, note: "LWW settings row + idempotency store" },
   { endpoint: "POST /api/consent", method: "POST", retryable: true, clientKey: true, serverDedupe: true, dbUniqueness: false, class: "A", safeIfRepeated: true, note: "append-only consent; key prevents double row on retry" },
   { endpoint: "DELETE /api/consent", method: "DELETE", retryable: true, clientKey: true, serverDedupe: true, dbUniqueness: false, class: "A", safeIfRepeated: true, note: "" },
@@ -37,6 +38,8 @@ export const MUTATION_IDEMPOTENCY_MATRIX: readonly MutationMatrixRow[] = [
   { endpoint: "POST /api/onboarding", method: "POST", retryable: true, clientKey: true, serverDedupe: false, dbUniqueness: true, class: "B", safeIfRepeated: true, note: "complete_onboarding once" },
   { endpoint: "POST /api/support", method: "POST", retryable: true, clientKey: true, serverDedupe: true, dbUniqueness: false, class: "A", safeIfRepeated: true, note: "withIdempotency prevents double ticket messages" },
   { endpoint: "POST /api/auth/otp/send", method: "POST", retryable: false, clientKey: false, serverDedupe: false, dbUniqueness: false, class: "C", safeIfRepeated: false, note: "Rate-limited OTP; not mutation of canonical fitness state" },
+  { endpoint: "POST /api/auth/password", method: "POST", retryable: false, clientKey: false, serverDedupe: false, dbUniqueness: false, class: "C", safeIfRepeated: false, note: "Password session for store reviewers; rate-limited" },
+  { endpoint: "POST /api/auth/session/logout", method: "POST", retryable: true, clientKey: false, serverDedupe: false, dbUniqueness: false, class: "B", safeIfRepeated: true, note: "Expires cookies; repeating sign-out is a no-op" },
 ];
 
 export function unsafeRetryMutations(): MutationMatrixRow[] {

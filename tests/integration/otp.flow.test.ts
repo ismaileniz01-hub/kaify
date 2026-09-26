@@ -267,7 +267,7 @@ describe("POST /api/auth/otp/verify", () => {
     expect(body.data.verified).toBe(true);
   });
 
-  it("returns native session tokens for exact Capacitor origins", async () => {
+  it("returns native session tokens for Capacitor WebView origins", async () => {
     verifyOtp.mockResolvedValueOnce({
       data: {
         session: {
@@ -277,12 +277,48 @@ describe("POST /api/auth/otp/verify", () => {
       },
       error: null,
     });
-    const res = await otpVerifyPost(
-      jsonRequest(
-        { email: "ok@example.com", token: "123456" },
-        { origin: "https://localhost" },
-      ),
-    );
+    const res = await otpVerifyPost({
+      method: "POST",
+      headers: new Headers({
+        "content-type": "application/json",
+        origin: "https://localhost",
+      }),
+      json: async () => ({ email: "ok@example.com", token: "123456" }),
+    } as unknown as NextRequest);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      success: true;
+      data: {
+        verified: true;
+        session?: { accessToken: string; refreshToken: string };
+      };
+    };
+    expect(body.data.session).toEqual({
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+    });
+  });
+
+  it("returns native session tokens for X-Client-Version even without Origin", async () => {
+    verifyOtp.mockResolvedValueOnce({
+      data: {
+        session: {
+          access_token: "access-token",
+          refresh_token: "refresh-token",
+        },
+      },
+      error: null,
+    });
+    const res = await otpVerifyPost({
+      method: "POST",
+      headers: new Headers({
+        "content-type": "application/json",
+        "x-client-version": "native-1.0.5",
+        "user-agent":
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+      }),
+      json: async () => ({ email: "ok@example.com", token: "123456" }),
+    } as unknown as NextRequest);
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       success: true;

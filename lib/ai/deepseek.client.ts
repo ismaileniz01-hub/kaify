@@ -11,9 +11,9 @@ import { recordAiUsage } from "@/lib/ai/usage-ledger";
  * Role in the hybrid engine: ALL logic, reasoning, economic analysis and
  * persona-based text synthesis (Markdown, human-friendly, motivating).
  *
- * Context caching: DeepSeek performs automatic server-side prefix caching, so
- * we keep the system prompt + memory as a stable leading message to maximize
- * cache hits and reduce token cost. No client-side cache key is required.
+ * Context caching: DeepSeek automatic prefix cache (64-token chunks). The
+ * KAIOS compiler keeps a coach+locale-stable system prefix so warm hits cover
+ * ≥80% of input tokens. No client-side cache key is required.
  */
 
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -67,6 +67,13 @@ function withTimeout(
 function toAiError(error: unknown, externalSignal?: AbortSignal): AiError {
   if (error instanceof AiError) return error;
   if (error instanceof UpstreamHttpError) {
+    if (error.status === 401 || error.status === 403) {
+      return new AiError(
+        "AI_CONFIG",
+        "DeepSeek API key is missing or invalid",
+        { status: error.status },
+      );
+    }
     return new AiError("AI_UPSTREAM", error.message);
   }
   if (error instanceof DOMException && error.name === "AbortError") {
@@ -207,6 +214,7 @@ export async function* streamChatCompletion(
   const decoder = new TextDecoder();
   let buffer = "";
   let usage: TokenUsage | null = null;
+  let finishReason: string | null = null;
 
   try {
     while (true) {
@@ -231,16 +239,20 @@ export async function* streamChatCompletion(
           continue; // skip malformed/partial SSE frames
         }
 
-        const delta = chunk.choices?.[0]?.delta?.content;
+        const choice = chunk.choices?.[0];
+        const delta = choice?.delta?.content;
         if (delta) {
           yield { type: "delta", content: delta };
+        }
+        if (choice?.finish_reason) {
+          finishReason = choice.finish_reason;
         }
         if (chunk.usage) {
           usage = chunk.usage;
         }
       }
     }
-    yield { type: "done", usage };
+    yield { type: "done", usage, finishReason };
     if (options.usageContext && usage) {
       recordAiUsage({
         provider: "deepseek",

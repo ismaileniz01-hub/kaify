@@ -7,8 +7,9 @@ describe("detectMessageLocale", () => {
     expect(detectMessageLocale("was ist das", "tr")).toBe("de");
   });
 
-  it("detects Turkish from common words when franc mislabels", () => {
-    expect(detectMessageLocale("bugun ne yedin", "en")).toBe("tr");
+  it("detects ASCII Turkish food logs that franc-min tags as Croatian", () => {
+    expect(detectMessageLocale("Bi kase sutlac yedim", "en")).toBe("tr");
+    expect(detectMessageLocale("bi kase sutlac yedim", "hr")).toBe("tr");
   });
 
   it("detects English from common words when franc mislabels", () => {
@@ -43,6 +44,53 @@ describe("detectMessageLocale", () => {
   it("detects Japanese from script", () => {
     expect(detectMessageLocale("今日は何を食べましたか", "en")).toBe("ja");
   });
+
+  it("keeps Turkish when the user pastes a TR food-macro list", () => {
+    expect(
+      detectMessageLocale(
+        "Tavuk tava (1 porsiyon): ~350-400 kcal, 30-35g protein - Çiğköfte (1 porsiyon): ~250-300 kcal",
+        "en",
+        ["bugun tavuk tava cigkofte sufle ve 2 simit yedim"],
+      ),
+    ).toBe("tr");
+  });
+
+  it("keeps Turkish when gym English words appear in a TR sentence", () => {
+    expect(detectMessageLocale("bugun gym workout yaptim", "en")).toBe("tr");
+  });
+});
+
+describe("resolveActiveLocale conversation stickiness", () => {
+  it("keeps Settings language even on short acks and mixed messages", async () => {
+    const { resolveActiveLocale } = await import(
+      "@/lib/kaios/localization/resolve"
+    );
+    expect(
+      resolveActiveLocale({
+        message: "sagol",
+        messageLocale: "en",
+        conversationLocale: "tr",
+        savedLocale: "en",
+        fallbackLocale: "en",
+      }),
+    ).toBe("en");
+    expect(
+      resolveActiveLocale({
+        message: "1 litre de su ictim",
+        messageLocale: "fr",
+        savedLocale: "tr",
+        fallbackLocale: "en",
+      }),
+    ).toBe("tr");
+  });
+});
+
+describe("foldDiacritics", () => {
+  it("folds Turkish special letters", async () => {
+    const { foldDiacritics } = await import("@/lib/i18n/fold-diacritics");
+    expect(foldDiacritics("Türkçe nasıl")).toBe("turkce nasil");
+    expect(foldDiacritics("sağol")).toBe("sagol");
+  });
 });
 
 describe("buildReplyLanguageDirective", () => {
@@ -51,5 +99,7 @@ describe("buildReplyLanguageDirective", () => {
     expect(directive).toContain("German");
     expect(directive).toContain("(de)");
     expect(directive).toContain("mandatory");
+    expect(directive).toContain("USER_CONTEXT");
+    expect(directive).toMatch(/omit accents|special letters/i);
   });
 });

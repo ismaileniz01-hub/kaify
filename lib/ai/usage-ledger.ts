@@ -11,13 +11,17 @@ import type { TokenUsage } from "@/lib/ai/types";
 export type AiOperation =
   | "chat"
   | "chat_stream"
+  | "kaios_chat_stream"
+  | "kaios_chat_structured"
   | "synthesis"
   | "vision"
+  /** Historical photo-quality-only Gemini op. Production photo path no longer emits this. */
   | "quality_gate"
   | "structured_card"
   | "analytics"
   | "memory"
   | "team_chat"
+  | "council_turn"
   | "home_copy"
   | "self_heal_report";
 

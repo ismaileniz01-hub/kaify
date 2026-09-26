@@ -9,6 +9,8 @@ describe("hot-path query shape", () => {
       "utf8",
     );
     expect(src).toContain("gem_balance");
+    expect(src).toContain("user_gem_balances");
+    expect(src).toContain("pickAuthoritativeGemBalance");
     expect(src).not.toMatch(/from\("gem_ledger"\)/);
     expect(src).not.toMatch(/\bsum\(/i);
   });
@@ -61,5 +63,14 @@ describe("hot-path query shape", () => {
       return /from\(["']gem_ledger["']\)/.test(src);
     });
     expect(offenders).toEqual([]);
+  });
+
+  it("daily chest already-claimed path reads materialized gem_balance", () => {
+    const src = readFileSync(
+      join(process.cwd(), "lib/services/daily-chest.service.ts"),
+      "utf8",
+    );
+    expect(src).toContain("getGemBalance");
+    expect(src).not.toMatch(/from\("user_gem_balances"\)/);
   });
 });

@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -40,6 +41,34 @@ import { syncFreezieBalanceFromServer } from "@/lib/freezie";
 import { clearAuthLocalState, signOutUser } from "@/lib/auth/logout";
 import { hasBrowserAuthCookie } from "@/lib/auth/browser-auth-hint";
 import { alreadyCheckedInOnLocalDay } from "@/lib/check-in-gate";
+import { returnToNativeLoginShell } from "@/lib/native/sign-out-native";
+import {
+  clearNativeEntryTokens,
+  consumeNativeEntryHandoff,
+  hasNativeHandoffClient,
+  hasNativeSessionHintCookie,
+  hydrateNativeBearerCookie,
+  NATIVE_ENTRY_ESTABLISH_PATH,
+  readNativeEntryAccessToken,
+  readNativeEntrySession,
+} from "@/lib/native/native-entry-boot";
+
+const SESSION_GET_TIMEOUT_MS = 4_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = window.setTimeout(() => resolve(fallback), ms);
+    promise
+      .then((value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      })
+      .catch(() => {
+        window.clearTimeout(timer);
+        resolve(fallback);
+      });
+  });
+}
 
 const DEFAULT_GEMS: GemBalanceDTO = {
   balance: 0,
@@ -69,6 +98,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [referralCode, setReferralCode] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [sessionError, setSessionError] = useState(false);
+  const hasHydratedRef = useRef(false);
+  const isAuthenticatedRef = useRef(false);
+  const nativeCookiesEstablishedRef = useRef(false);
+  hasHydratedRef.current = hasHydrated;
+  isAuthenticatedRef.current = isAuthenticated;
 
   const clearSessionError = useCallback(() => setSessionError(false), []);
 
@@ -87,13 +121,56 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshSession = useCallback(async () => {
-    const isBackgroundRefresh = hasHydrated && isAuthenticated;
+    hydrateNativeBearerCookie();
+    const nativeShell = hasNativeHandoffClient();
+    const hasHydrated = hasHydratedRef.current;
+    const isAuthenticated = isAuthenticatedRef.current;
+    const isBackgroundRefresh = nativeShell || (hasHydrated && isAuthenticated);
     if (!isBackgroundRefresh) {
       setIsLoading(true);
     }
     setSessionError(false);
+
+    const loadBundle = async () => apiGet<SessionBundleDTO>("/api/session");
+
+    const tryEstablishNativeCookies = async (): Promise<boolean> => {
+      const tokens = readNativeEntrySession();
+      if (!tokens) return false;
+      try {
+        const response = await fetch(NATIVE_ENTRY_ESTABLISH_PATH, {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(tokens),
+        });
+        return response.ok;
+      } catch {
+        return false;
+      }
+    };
+
+    let redirectingToShell = false;
     try {
-      const bundle = await apiGet<SessionBundleDTO>("/api/session");
+      let bundle: SessionBundleDTO;
+      try {
+        bundle = await loadBundle();
+      } catch (firstError) {
+        // Cookie jar empty but storage has tokens — establish once, then retry.
+        if (
+          firstError instanceof ApiClientError &&
+          firstError.code === "UNAUTHORIZED" &&
+          (nativeShell || Boolean(readNativeEntryAccessToken()))
+        ) {
+          const established = await tryEstablishNativeCookies();
+          if (established) {
+            bundle = await loadBundle();
+          } else {
+            throw firstError;
+          }
+        } else {
+          throw firstError;
+        }
+      }
       setIsAuthenticated(true);
       setIsPreviewMode(false);
       setProfile(bundle.profile);
@@ -105,6 +182,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setReferralCode(bundle.referral.referralCode);
       setHome(bundle.home);
       setKai(bundle.kai);
+      if (!nativeShell) {
+        clearNativeEntryTokens();
+      } else if (!nativeCookiesEstablishedRef.current) {
+        nativeCookiesEstablishedRef.current = true;
+        void tryEstablishNativeCookies();
+      }
 
       if (
         !alreadyCheckedInOnLocalDay(
@@ -124,20 +207,29 @@ export function SessionProvider({ children }: { children: ReactNode }) {
               kaiUnlockedLevel: result.kaiUnlockedLevel,
             }));
             syncFreezieBalanceFromServer(result.freezieBalance);
+            void apiGet<HomeDTO>("/api/home")
+              .then((homeData) => setHome(homeData))
+              .catch(() => undefined);
           })
           .catch(() => undefined);
       }
     } catch (error) {
       if (error instanceof ApiClientError && error.code === "UNAUTHORIZED") {
-        applyGuestState();
+        // Native WebView goes straight back to the login shell; never render guest "Joe" Home.
+        clearNativeEntryTokens();
+        nativeCookiesEstablishedRef.current = false;
+        redirectingToShell = await returnToNativeLoginShell();
+        if (!redirectingToShell) applyGuestState();
       } else {
         setSessionError(true);
       }
     } finally {
-      setIsLoading(false);
-      setHasHydrated(true);
+      if (!redirectingToShell) {
+        setIsLoading(false);
+        setHasHydrated(true);
+      }
     }
-  }, [hasHydrated, isAuthenticated, applyGuestState]);
+  }, [applyGuestState]);
 
   const signOut = useCallback(async () => {
     const result = await signOutUser();
@@ -148,17 +240,49 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [applyGuestState]);
 
   useEffect(() => {
-    const supabase = tryCreateBrowserSupabaseClient();
+    let cancelled = false;
 
-    if (!supabase) {
-      if (hasBrowserAuthCookie()) {
+    const finishGuest = () => {
+      if (cancelled) return;
+      applyGuestState();
+      setIsLoading(false);
+      setHasHydrated(true);
+    };
+
+    const probeCookieOrHandoff = () => {
+      const nativeHandoff = consumeNativeEntryHandoff();
+      const nativeToken = Boolean(readNativeEntryAccessToken());
+      if (nativeHandoff || nativeToken || hasBrowserAuthCookie() || hasNativeSessionHintCookie()) {
         void refreshSession();
-      } else {
-        applyGuestState();
-        setIsLoading(false);
-        setHasHydrated(true);
+        return;
       }
-      return;
+      finishGuest();
+    };
+
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname.startsWith("/login/native-entry")
+    ) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    hydrateNativeBearerCookie();
+
+    if (hasNativeHandoffClient()) {
+      void refreshSession();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const supabase = tryCreateBrowserSupabaseClient();
+    if (!supabase) {
+      probeCookieOrHandoff();
+      return () => {
+        cancelled = true;
+      };
     }
 
     const {
@@ -169,23 +293,34 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         applyGuestState();
         return;
       }
-      // TOKEN_REFRESHED already updates the client JWT — skip full /api/session + check-in cascade.
       if (event === "SIGNED_IN") {
         void refreshSession();
       }
     });
 
-    void supabase.auth.getSession().then(({ data }) => {
-      if (data.session || hasBrowserAuthCookie()) {
+    void (async () => {
+      const { data } = await withTimeout(
+        supabase.auth.getSession(),
+        SESSION_GET_TIMEOUT_MS,
+        { data: { session: null }, error: null },
+      );
+      if (cancelled) return;
+      if (
+        data.session ||
+        hasBrowserAuthCookie() ||
+        consumeNativeEntryHandoff() ||
+        readNativeEntryAccessToken()
+      ) {
         void refreshSession();
-      } else {
-        applyGuestState();
-        setIsLoading(false);
-        setHasHydrated(true);
+        return;
       }
-    });
+      finishGuest();
+    })();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [applyGuestState, refreshSession]);
 
   const updateProfile = useCallback(
@@ -219,13 +354,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [profile, isAuthenticated],
   );
 
+  const applyGemBalance = useCallback((balance: number) => {
+    setGemBalance((prev) => ({ ...prev, balance }));
+  }, []);
+
   const applyChestClaim = useCallback(
     (balances: { gemBalance: number; freezieBalance: number }) => {
-      setGemBalance((prev) => ({ ...prev, balance: balances.gemBalance }));
+      applyGemBalance(balances.gemBalance);
       setStreak((prev) => ({ ...prev, freezieBalance: balances.freezieBalance }));
       syncFreezieBalanceFromServer(balances.freezieBalance);
     },
-    [],
+    [applyGemBalance],
   );
 
   const refreshHome = useCallback(async (locale?: string) => {
@@ -299,6 +438,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       kai,
       referralCode,
       refreshHome,
+      applyGemBalance,
       applyChestClaim,
       updateProfile,
       checkIn,
@@ -313,6 +453,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       kai,
       referralCode,
       refreshHome,
+      applyGemBalance,
       applyChestClaim,
       updateProfile,
       checkIn,

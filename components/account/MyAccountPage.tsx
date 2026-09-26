@@ -9,6 +9,7 @@ import {
   Check,
   CreditCard,
   Crown,
+  Dumbbell,
   Flame,
   Gem,
   Leaf,
@@ -30,18 +31,22 @@ import { FloatingOrbs } from "@/components/landing/FloatingOrbs";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { InlineAlert } from "@/components/InlineAlert";
-import { apiPost } from "@/lib/api/client";
-import {
-  StepUpChallenge,
-  isStepUpRequiredError,
-} from "@/components/auth/StepUpChallenge";
+import { StepUpChallenge } from "@/components/auth/StepUpChallenge";
+import { useBillingPortal } from "@/components/billing/useBillingPortal";
 import { formatTierLabel } from "@/lib/billing/tier-labels";
-import { hasActiveSubscription } from "@/lib/auth/post-auth-redirect";
+import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
 import { parseGenderInput } from "@/lib/profile-mapper";
 import { useLang } from "@/lib/lang-context";
-import { formatNumber } from "@/lib/i18n/format";
+import { formatNumber, formatDate } from "@/lib/i18n/format";
+import { errorToMessage } from "@/lib/i18n/api-error";
 import { useSession } from "@/lib/session-context";
+import { useNativeApp } from "@/lib/native/platform";
 import type { UserProfile } from "@/lib/user";
+import { apiGet, apiPatch } from "@/lib/api/client";
+import {
+  EQUIPMENT_ACCESS_OPTIONS,
+  type EquipmentAccess,
+} from "@/lib/validations/onboarding.schema";
 
 function experienceLabel(
   level: string | null | undefined,
@@ -70,13 +75,13 @@ function formatGender(
   }
 }
 
-function formatMemberSince(iso: string | undefined, locale: string): string {
+function formatMemberSince(iso: string | undefined, lang: Parameters<typeof formatDate>[1]): string {
   if (!iso) return "—";
   try {
-    return new Intl.DateTimeFormat(locale, {
+    return formatDate(iso, lang, {
       month: "long",
       year: "numeric",
-    }).format(new Date(iso));
+    });
   } catch {
     return iso.slice(0, 10);
   }
@@ -98,20 +103,32 @@ export function MyAccountPage() {
     profile,
     userProfile,
     updateProfile,
+    refreshSession,
     signOut,
     gemBalance,
     streak,
     referralCode,
   } = useSession();
 
+  const native = useNativeApp();
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
-  const [needsBillingStepUp, setNeedsBillingStepUp] = useState(false);
+  const [equipmentDraft, setEquipmentDraft] =
+    useState<EquipmentAccess>("gym");
+  const [loadStuck, setLoadStuck] = useState(false);
+  const [billingStatus, setBillingStatus] = useState<string | null>(null);
+  const [billingEndsAt, setBillingEndsAt] = useState<string | null>(null);
+  const {
+    openPortal,
+    portalLoading,
+    needsStepUp: needsBillingStepUp,
+    setNeedsStepUp: setNeedsBillingStepUp,
+    portalError,
+  } = useBillingPortal();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -122,20 +139,65 @@ export function MyAccountPage() {
   }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
+    if (!isLoading) {
+      setLoadStuck(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setLoadStuck(true), 12_000);
+    return () => window.clearTimeout(timer);
+  }, [isLoading]);
+
+  useEffect(() => {
     if (userProfile?.name) setNameDraft(userProfile.name);
   }, [userProfile?.name]);
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    void apiGet<{ status: string; endsAt: string | null }>("/api/billing/status")
+      .then((row) => {
+        setBillingStatus(row.status);
+        setBillingEndsAt(row.endsAt);
+      })
+      .catch(() => undefined);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (
+      profile?.equipmentAccess === "home" ||
+      profile?.equipmentAccess === "gym" ||
+      profile?.equipmentAccess === "limited"
+    ) {
+      setEquipmentDraft(profile.equipmentAccess);
+    }
+  }, [profile?.equipmentAccess]);
+
   if (isLoading || !isAuthenticated || !profile || !userProfile) {
     return (
-      <div className="landing-site flex min-h-screen items-center justify-center">
+      <div className="landing-site flex min-h-screen flex-col items-center justify-center gap-4 px-6">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-purple-500/30 border-t-purple-400" />
+        {loadStuck ? (
+          <>
+            <p className="text-center text-sm text-zinc-400">{t("errors.NETWORK")}</p>
+            <button
+              type="button"
+              className="touch-44 rounded-full bg-purple-600 px-5 py-2 text-sm font-semibold text-white"
+              onClick={() => {
+                setLoadStuck(false);
+                void refreshSession();
+              }}
+            >
+              {t("offline.retry")}
+            </button>
+          </>
+        ) : (
+          <p className="sr-only">{t("common.loading")}</p>
+        )}
       </div>
     );
   }
 
   const avatarSrc = avatarPreview ?? userProfile.avatar;
-  const hasPlan = hasActiveSubscription(profile.tier);
-  const appHref = hasPlan ? "/welcome" : "/pricing";
+  const hasPlan = hasPaidPlan(profile);
 
   const persistProfile = async (next: UserProfile) => {
     setSaving(true);
@@ -146,8 +208,8 @@ export function MyAccountPage() {
       setAvatarPreview(null);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
-    } catch {
-      setSaveError(t("profile.save_error"));
+    } catch (err) {
+      setSaveError(errorToMessage(err, t) || t("profile.save_error"));
     } finally {
       setSaving(false);
     }
@@ -181,27 +243,22 @@ export function MyAccountPage() {
     setSaveError(null);
   };
 
-  const openBillingPortal = async () => {
-    if (portalLoading) return;
-    setPortalLoading(true);
+  const handleEquipmentChange = async (next: EquipmentAccess) => {
+    if (saving || next === equipmentDraft) return;
+    const previous = equipmentDraft;
+    setEquipmentDraft(next);
+    setSaving(true);
     setSaveError(null);
     try {
-      const { url } = await apiPost<{ url: string }>("/api/billing/portal", {});
-      const { isNativePlatform } = await import("@/lib/native/platform");
-      if (await isNativePlatform()) {
-        const { openExternalUrl } = await import("@/lib/native/open-external");
-        await openExternalUrl(url);
-        setPortalLoading(false);
-        return;
-      }
-      window.location.assign(url);
-    } catch (err) {
-      if (isStepUpRequiredError(err)) {
-        setNeedsBillingStepUp(true);
-      } else {
-        setSaveError(t("myaccount.portal_error"));
-      }
-      setPortalLoading(false);
+      await apiPatch("/api/profile", { equipmentAccess: next });
+      await refreshSession();
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch {
+      setEquipmentDraft(previous);
+      setSaveError(t("profile.save_error"));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -346,7 +403,7 @@ export function MyAccountPage() {
                           setEditingName(true);
                           setSaveError(null);
                         }}
-                        className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-400 transition hover:border-purple-400/40 hover:text-white"
+                        className="touch-44 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-400 transition hover:border-purple-400/40 hover:text-white"
                         aria-label={t("myaccount.edit_name")}
                       >
                         <Pencil className="h-4 w-4" />
@@ -360,10 +417,13 @@ export function MyAccountPage() {
                     })}
                   </p>
 
-                  {(saveError || saveSuccess) && (
+                  {(saveError || portalError || saveSuccess) && (
                     <div className="mt-4 w-full max-w-md">
                       {saveError && (
                         <InlineAlert variant="error" message={saveError} />
+                      )}
+                      {portalError && !saveError && (
+                        <InlineAlert variant="error" message={portalError} />
                       )}
                       {saveSuccess && (
                         <InlineAlert variant="success" message={t("myaccount.saved")} />
@@ -392,6 +452,14 @@ export function MyAccountPage() {
                     <div>
                       <p className="account-stat__label">{t("myaccount.plan")}</p>
                       <p className="account-stat__value">{formatTierLabel(profile.tier)}</p>
+                      {billingStatus ? (
+                        <p className="text-[11px] text-zinc-500">
+                          {t("myaccount.billing_status", { status: billingStatus })}
+                          {billingEndsAt
+                            ? ` · ${t("myaccount.billing_ends", { date: billingEndsAt.slice(0, 10) })}`
+                            : ""}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -406,6 +474,36 @@ export function MyAccountPage() {
                 ) : null}
 
                 <div className="grid gap-3 border-t border-white/8 px-6 py-6 sm:grid-cols-2 sm:px-10 sm:py-8">
+                  <div className="account-info-row sm:col-span-2">
+                    <Dumbbell className="h-4 w-4 shrink-0 text-purple-300/80" />
+                    <div className="min-w-0 flex-1">
+                      <label
+                        htmlFor="account-equipment-access"
+                        className="text-xs text-zinc-500"
+                      >
+                        {t("onboarding.equipment")}
+                      </label>
+                      <select
+                        id="account-equipment-access"
+                        value={equipmentDraft}
+                        disabled={saving}
+                        onChange={(event) =>
+                          void handleEquipmentChange(
+                            event.target.value as EquipmentAccess,
+                          )
+                        }
+                        className="mt-1 w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-100 disabled:opacity-60"
+                      >
+                        {EQUIPMENT_ACCESS_OPTIONS.map((value) => (
+                          <option key={value} value={value}>
+                            {t(
+                              `onboarding.equipment.${value}` as "onboarding.equipment.home",
+                            )}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                   {infoRows.map((row) => (
                     <div key={row.label} className="account-info-row">
                       <row.icon className="h-4 w-4 shrink-0 text-purple-300/80" />
@@ -429,19 +527,42 @@ export function MyAccountPage() {
                 ) : null}
 
                 <div className="flex flex-col gap-3 border-t border-white/8 px-6 py-6 sm:flex-row sm:flex-wrap sm:px-10">
-                  <Link href={appHref} className="account-btn account-btn--primary flex-1 justify-center">
-                    {hasPlan ? t("myaccount.open_app") : t("myaccount.choose_plan")}
-                  </Link>
                   {hasPlan ? (
+                    <Link href="/welcome" className="account-btn account-btn--primary flex-1 justify-center">
+                      {t("myaccount.open_app")}
+                    </Link>
+                  ) : native ? (
+                    <div className="flex w-full flex-col gap-2">
+                      <p className="text-center text-xs leading-relaxed text-zinc-400">
+                        {t("myaccount.members_only")}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void refreshSession()}
+                        className="account-btn account-btn--ghost w-full justify-center"
+                      >
+                        {t("myaccount.refresh_subscription")}
+                      </button>
+                    </div>
+                  ) : (
+                    <Link href="/pricing" className="account-btn account-btn--primary flex-1 justify-center">
+                      {t("myaccount.choose_plan")}
+                    </Link>
+                  )}
+                  {hasPlan && !native ? (
                     <button
                       type="button"
-                      onClick={() => void openBillingPortal()}
+                      onClick={() => void openPortal()}
                       disabled={portalLoading}
                       className="account-btn account-btn--ghost flex-1 justify-center"
                     >
                       <CreditCard className="h-4 w-4" />
                       {portalLoading ? t("profile.saving") : t("myaccount.manage_billing")}
                     </button>
+                  ) : hasPlan && native ? (
+                    <p className="w-full text-center text-xs leading-relaxed text-zinc-400">
+                      {t("myaccount.billing_on_website")}
+                    </p>
                   ) : null}
                   <Link
                     href="/settings"
@@ -465,7 +586,7 @@ export function MyAccountPage() {
                       onCancel={() => setNeedsBillingStepUp(false)}
                       onVerified={() => {
                         setNeedsBillingStepUp(false);
-                        void openBillingPortal();
+                        void openPortal();
                       }}
                     />
                   </div>

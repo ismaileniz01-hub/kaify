@@ -6,6 +6,9 @@ describe("analytics repository split", () => {
   it("exports read-side query functions", () => {
     expect(typeof readRepo.readAnalyticsDailyRow).toBe("function");
     expect(typeof readRepo.readHealthStepsRange).toBe("function");
+    expect(typeof readRepo.readLatestWeightKg).toBe("function");
+    expect(typeof readRepo.readLatestGoalRow).toBe("function");
+    expect(typeof readRepo.readProfileWeightKg).toBe("function");
     expect(typeof readRepo.createAnalyticsReadClient).toBe("function");
   });
 

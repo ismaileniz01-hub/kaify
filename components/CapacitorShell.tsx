@@ -12,14 +12,19 @@ import {
   getNativePlatform,
   markNativeAppRoot,
 } from "@/lib/native/platform";
-import { warmUpNativeSpeechPermissions } from "@/lib/native/speech-platform";
 import { bindInAppNavigation } from "@/lib/native/in-app-navigation";
+import { consumeAppBack } from "@/lib/native/app-back-stack";
+import { useAppBackStack } from "@/hooks/useAppBackStack";
+import {
+  applyKeyboardOffset,
+  coveredByKeyboard,
+} from "@/lib/native/keyboard-covered";
 
-function setKeyboardOffset(px: number): void {
-  document.documentElement.style.setProperty(
-    "--keyboard-offset",
-    `${Math.max(0, px)}px`,
-  );
+function statusBarStyleForTheme(): "DARK" | "LIGHT" {
+  if (typeof document === "undefined") return "DARK";
+  return document.documentElement.getAttribute("data-theme") === "light"
+    ? "LIGHT"
+    : "DARK";
 }
 
 /**
@@ -27,6 +32,8 @@ function setKeyboardOffset(px: number): void {
  * No-op in the browser — web development is unchanged.
  */
 export function CapacitorShell() {
+  useAppBackStack();
+
   useEffect(() => {
     let removeListeners: (() => void) | undefined;
 
@@ -53,17 +60,20 @@ export function CapacitorShell() {
           import("@capacitor/keyboard"),
         ]);
 
-        await StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
-        if (platform === "android") {
-          await StatusBar.setBackgroundColor({ color: "#0a0a0a" }).catch(
-            () => {},
-          );
-        }
-        if (platform === "ios") {
-          await StatusBar.setOverlaysWebView({ overlay: true }).catch(
-            () => {},
-          );
-        }
+        const applyStatusBar = async () => {
+          const light = statusBarStyleForTheme() === "LIGHT";
+          await StatusBar.setStyle({
+            style: light ? Style.Light : Style.Dark,
+          }).catch(() => {});
+          if (platform === "android") {
+            await StatusBar.setBackgroundColor({
+              color: light ? "#f5f5f5" : "#0a0a0a",
+            }).catch(() => {});
+          }
+        };
+
+        await applyStatusBar();
+        await StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
 
         await SplashScreen.hide().catch(() => {});
 
@@ -71,7 +81,24 @@ export function CapacitorShell() {
           mode: (await import("@capacitor/keyboard")).KeyboardResize.None,
         }).catch(() => {});
 
-        void warmUpNativeSpeechPermissions();
+        let pluginHeight = 0;
+        const syncKeyboard = (nextPlugin?: number) => {
+          if (typeof nextPlugin === "number") pluginHeight = nextPlugin;
+          applyKeyboardOffset(coveredByKeyboard(pluginHeight));
+        };
+
+        const keyboardShow = await Keyboard.addListener(
+          "keyboardWillShow",
+          (info) => syncKeyboard(Math.max(0, info.keyboardHeight)),
+        );
+        const keyboardDidShow = await Keyboard.addListener(
+          "keyboardDidShow",
+          (info) => syncKeyboard(Math.max(0, info.keyboardHeight)),
+        );
+        const keyboardHide = await Keyboard.addListener("keyboardWillHide", () => {
+          pluginHeight = 0;
+          applyKeyboardOffset(0);
+        });
 
         void checkDeviceIntegrity().then((integrity) => {
           if (integrity.compromised) {
@@ -82,13 +109,13 @@ export function CapacitorShell() {
           }
         });
 
-        const keyboardShow = await Keyboard.addListener(
-          "keyboardWillShow",
-          (info) => setKeyboardOffset(info.keyboardHeight),
-        );
-        const keyboardHide = await Keyboard.addListener("keyboardWillHide", () =>
-          setKeyboardOffset(0),
-        );
+        const themeObserver = new MutationObserver(() => {
+          void applyStatusBar();
+        });
+        themeObserver.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ["data-theme"],
+        });
 
         const regHandle = await PushNotifications.addListener(
           "registration",
@@ -121,7 +148,9 @@ export function CapacitorShell() {
         const backHandle =
           platform === "android"
             ? await App.addListener("backButton", () => {
-                if (window.history.length > 1) {
+                const action = consumeAppBack();
+                if (action === "overlay") return;
+                if (action === "back") {
                   window.history.back();
                   return;
                 }
@@ -129,16 +158,29 @@ export function CapacitorShell() {
               })
             : undefined;
 
+        const appStateHandle = await App.addListener(
+          "appStateChange",
+          (state) => {
+            if (!state.isActive) return;
+            void import("@/lib/native/health-steps").then((mod) =>
+              mod.syncNativeHealthSteps().catch(() => undefined),
+            );
+          },
+        );
+
         removeListeners = () => {
           unbindNavigation();
+          themeObserver.disconnect();
           void keyboardShow.remove();
+          void keyboardDidShow.remove();
           void keyboardHide.remove();
           void regHandle.remove();
           void regErrHandle.remove();
           void actionHandle.remove();
           void appUrlHandle.remove();
+          void appStateHandle.remove();
           void backHandle?.remove();
-          setKeyboardOffset(0);
+          applyKeyboardOffset(0);
           clearNativeAppRoot();
         };
       } catch {

@@ -8,18 +8,21 @@ import { WelcomeCard } from "@/components/welcome/WelcomeCard";
 import { StreakAtRiskBanner } from "@/components/streak/StreakAtRiskBanner";
 import { GemBalance } from "@/components/GemBalance";
 import { FreezieBalance } from "@/components/FreezieBalance";
-import { WelcomeSkeleton } from "@/components/welcome/WelcomeSkeleton";
 import { DailyMotivationQuote } from "@/components/welcome/DailyMotivationQuote";
 import { useSession } from "@/lib/session-context";
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import { useLang, LANG_OPTIONS, hasStoredLangPreference } from "@/lib/lang-context";
 import { captureReferralFromUrl, getPendingReferral } from "@/lib/referral";
 import { InlineAlert } from "@/components/InlineAlert";
 import { AppHeader } from "@/components/navigation/AppHeader";
-import { TodaysJobCard } from "@/components/welcome/TodaysJobCard";
+import { hapticSelection } from "@/lib/native/haptics";
 import { FirstTaskChecklist } from "@/components/welcome/FirstTaskChecklist";
 import { GoalsEditor } from "@/components/goals/GoalsEditor";
+import { hasNativeHandoffClient } from "@/lib/native/native-entry-boot";
+import {
+  looksLikeNativeWebView,
+  returnToNativeLoginShell,
+} from "@/lib/native/sign-out-native";
 
 const ProfileModal = dynamic(
   () =>
@@ -52,7 +55,7 @@ function WelcomeContent() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [pendingReferral, setPendingReferral] = useState<string | null>(null);
-  const searchParams = useSearchParams();
+  const [nativeHandoff, setNativeHandoff] = useState(false);
   const { t, setLang, lang } = useLang();
   const {
     displayName,
@@ -61,27 +64,42 @@ function WelcomeContent() {
     gemBalance,
     streak,
     isPreviewMode,
-    isLoading,
     updateProfile,
     profile,
     isAuthenticated,
+    isLoading,
+    sessionError,
+    clearSessionError,
+    refreshSession,
     refreshHome,
   } = useSession();
 
-  // ?profile=1 query param'ı ile gelindiyse profil modal'ını otomatik aç
   useEffect(() => {
-    if (searchParams?.get("profile") === "1") {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("native_handoff") === "1") {
+      setNativeHandoff(true);
+      // Keep ?native_handoff=1 until session authenticates — SessionProvider
+      // and middleware both need it; stripping early races child effects.
+    }
+    if (params.get("profile") === "1") {
       setProfileOpen(true);
     }
-    if (searchParams?.get("goals") === "1") {
+    if (params.get("goals") === "1") {
       setGoalsOpen(true);
     }
-  }, [searchParams]);
+    const code = captureReferralFromUrl(params);
+    setPendingReferral(code ?? getPendingReferral());
+  }, []);
 
   useEffect(() => {
-    const code = captureReferralFromUrl(searchParams);
-    setPendingReferral(code ?? getPendingReferral());
-  }, [searchParams]);
+    if (!isAuthenticated || !nativeHandoff) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("native_handoff") !== "1") return;
+    params.delete("native_handoff");
+    const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`;
+    window.history.replaceState(null, "", next);
+    setNativeHandoff(false);
+  }, [isAuthenticated, nativeHandoff]);
 
   useEffect(() => {
     // Kullanıcı cihazda açıkça bir dil seçtiyse, bayat profil locale'i
@@ -94,12 +112,19 @@ function WelcomeContent() {
   }, [isAuthenticated, profile?.locale, setLang]);
 
   useEffect(() => {
+    if (isLoading) return;
+    if (isAuthenticated) return;
+    // Transient /api/session failures must not kick a fresh OTP handoff to login.
+    if (sessionError) return;
+    if (nativeHandoff || hasNativeHandoffClient()) return;
+    if (looksLikeNativeWebView()) {
+      void returnToNativeLoginShell();
+    }
+  }, [isLoading, isAuthenticated, nativeHandoff, sessionError]);
+
+  useEffect(() => {
     if (isAuthenticated) void refreshHome(lang);
   }, [lang, isAuthenticated, refreshHome]);
-
-  if (isLoading && isAuthenticated) {
-    return <WelcomeSkeleton />;
-  }
 
   return (
     <div className="phone-shell welcome-page relative flex flex-col overflow-hidden">
@@ -110,7 +135,10 @@ function WelcomeContent() {
           <>
           <button
             type="button"
-            onClick={() => setProfileOpen(true)}
+            onClick={() => {
+              void hapticSelection();
+              setProfileOpen(true);
+            }}
               className="app-header__action border-purple-400/25 bg-purple-500/15 text-purple-300"
             aria-label={t("profile.title")}
           >
@@ -120,6 +148,9 @@ function WelcomeContent() {
               href="/leaderboard"
               className="app-header__action border-amber-400/25 bg-amber-500/10 text-amber-400"
               aria-label={t("nav.leaderboard")}
+              onClick={() => {
+                void hapticSelection();
+              }}
             >
               <Globe className="h-4 w-4" />
             </Link>
@@ -134,6 +165,9 @@ function WelcomeContent() {
             href="/settings"
               className="app-header__action"
             aria-label={t("nav.settings")}
+            onClick={() => {
+              void hapticSelection();
+            }}
           >
             <Settings className="h-4 w-4" strokeWidth={2} />
           </Link>
@@ -149,7 +183,12 @@ function WelcomeContent() {
               fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
             }}
           >
-            {t("welcome.title", { name: displayName })}
+            {t("welcome.title", {
+              name:
+                isAuthenticated || (!isLoading && !nativeHandoff)
+                  ? displayName
+                  : "…",
+            })}
           </h1>
           <p className="mt-4 max-w-[280px] text-sm font-medium leading-relaxed text-purple-100/80">
             <DailyMotivationQuote
@@ -157,7 +196,10 @@ function WelcomeContent() {
               fallback={t("welcome.subtitle")}
             />
           </p>
-          {isPreviewMode && (
+          {isPreviewMode &&
+            !isLoading &&
+            !nativeHandoff &&
+            !hasNativeHandoffClient() && (
             <div className="mt-3 space-y-2">
               <p className="text-[10px] text-amber-400/80">{t("welcome.preview_mode")}</p>
               <Link
@@ -167,6 +209,17 @@ function WelcomeContent() {
                 {t("welcome.sign_in_cta")}
               </Link>
             </div>
+          )}
+          {sessionError && !isAuthenticated && (
+            <InlineAlert
+              variant="error"
+              className="mt-3 max-w-xs"
+              message="Bağlantı kurulamadı. Oturumun açık kalması için tekrar dene."
+              onRetry={() => {
+                clearSessionError();
+                void refreshSession();
+              }}
+            />
           )}
           {!isAuthenticated && pendingReferral && (
             <InlineAlert
@@ -179,7 +232,14 @@ function WelcomeContent() {
 
         {isAuthenticated && <PendingGiftCard />}
 
-        {isAuthenticated && home && (
+        {isAuthenticated &&
+          home &&
+          (goalsOpen ||
+            !(
+              home.firstTask.checkInDone &&
+              home.firstTask.goalsDone &&
+              home.firstTask.chatDone
+            )) && (
           <section className="animate-in animate-in--3 mt-6 space-y-3 px-4">
             {goalsOpen ? (
               <GoalsEditor
@@ -195,12 +255,7 @@ function WelcomeContent() {
                   await refreshHome(lang);
                 }}
               />
-            ) : (
-              <TodaysJobCard
-                job={home.todayJob}
-                onGoalsClick={() => setGoalsOpen(true)}
-              />
-            )}
+            ) : null}
             <FirstTaskChecklist
               progress={{
                 checkInDone: home.firstTask.checkInDone,
@@ -277,19 +332,6 @@ function WelcomeContent() {
   );
 }
 
-function WelcomeSuspenseFallback() {
-  const { t } = useLang();
-  return (
-    <div className="phone-shell flex items-center justify-center">
-      <p className="text-zinc-400">{t("welcome.loading")}</p>
-    </div>
-  );
-}
-
 export default function WelcomePage() {
-  return (
-    <Suspense fallback={<WelcomeSuspenseFallback />}>
-      <WelcomeContent />
-    </Suspense>
-  );
+  return <WelcomeContent />;
 }

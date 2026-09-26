@@ -196,12 +196,6 @@ export async function runRetentionPurge(): Promise<RetentionPurgeResult> {
       idColumn: "id",
     },
     {
-      table: "admin_audit_log",
-      column: "created_at",
-      cutoff: daysAgoIso(RETENTION.adminAuditDays),
-      idColumn: "id",
-    },
-    {
       table: "billing_events",
       column: "created_at",
       cutoff: monthsAgoIso(RETENTION.billingEventsMonths),

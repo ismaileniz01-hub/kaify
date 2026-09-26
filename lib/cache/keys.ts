@@ -32,10 +32,10 @@ function utcDayKey(): string {
 
 export const CacheKeys = {
   marketItems: () => "market:items:v2",
-  analyticsBundle: (userId: string) => `analytics:bundle:v1:${userId}`,
-  analyticsToday: (userId: string) => `analytics:today:v1:${userId}`,
+  analyticsBundle: (userId: string) => `analytics:bundle:v2:${userId}`,
+  analyticsToday: (userId: string) => `analytics:today:v2:${userId}`,
   /** @deprecated use analyticsBundle — kept for invalidation compat */
-  analyticsUser: (userId: string) => `analytics:bundle:v1:${userId}`,
+  analyticsUser: (userId: string) => `analytics:bundle:v2:${userId}`,
   /**
    * Home screen core bundle — locale-free (v3).
    * Localized strings (motivation / tip / insight) are applied after cache read.
@@ -43,7 +43,7 @@ export const CacheKeys = {
    */
   homeBundle: (userId: string, day = utcDayKey()) =>
     `home:bundle:v3:${userId}:${day}`,
-  sessionGems: (userId: string) => `session:gems:v1:${userId}`,
+  sessionGems: (userId: string) => `session:gems:v2:${userId}`,
   sessionStreak: (userId: string) => `session:streak:v1:${userId}`,
   sessionKai: (userId: string) => `session:kai:v1:${userId}`,
   coachesCatalog: () => "coaches:catalog:v1",

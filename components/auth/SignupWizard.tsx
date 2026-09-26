@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import {
   ArrowLeft,
@@ -23,14 +22,18 @@ import {
   InvisibleRecaptcha,
   useInvisibleRecaptchaRef,
 } from "@/components/security/InvisibleRecaptcha";
-import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
-import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
+import { hasPaidPlan } from "@/lib/auth/post-auth-redirect";
+import { hapticSelection } from "@/lib/native/haptics";
+import { useScrollFocusedInputIntoView } from "@/hooks/useScrollFocusedInputIntoView";
+import { useKeyboardOffset } from "@/hooks/useKeyboardOffset";
+import { redirectToWebCheckoutAfterSignup } from "@/lib/billing/native-web-checkout";
 import {
   PENDING_LEGAL_CONSENT_KEY,
   PRIVACY_VERSION,
   TERMS_VERSION,
 } from "@/lib/legal/constants";
 import { apiPost } from "@/lib/api/client";
+import { postClientProductEvent } from "@/lib/events/client-beacon";
 import { COUNTRY_OPTIONS } from "@/lib/country-names";
 import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
@@ -41,9 +44,12 @@ import {
 import {
   ACTIVITY_LEVELS,
   DIETARY_PREFERENCES,
+  EQUIPMENT_ACCESS_OPTIONS,
   EXPERIENCE_LEVELS,
+  GENDERS,
   type ActivityLevel,
   type DietaryPreference,
+  type EquipmentAccess,
   type ExperienceLevel,
   type Gender,
   type OnboardingInput,
@@ -53,6 +59,13 @@ import {
   type PrimaryGoal,
 } from "@/lib/validations/goals.schema";
 import { otpSendSchema } from "@/lib/validations/auth-otp.schema";
+import {
+  clearPendingReferral,
+  getPendingReferral,
+  setPendingReferral,
+  REFERRAL_APPLIED_EVENT,
+} from "@/lib/referral";
+import { referralCodeSchema } from "@/lib/validations/referral.schema";
 import type { ProfileDTO } from "@/lib/types/domain.types";
 
 type WizardStepId =
@@ -68,21 +81,15 @@ type WizardStepId =
   | "lifestyle"
   | "country"
   | "bio"
+  | "referral"
   | "verify";
 
 const FULL_FLOW: WizardStepId[] = [
   "email",
   "name",
-  "gender",
   "birth",
-  "body",
-  "goal",
-  "activity",
-  "experience",
-  "status",
-  "lifestyle",
   "country",
-  "bio",
+  "referral",
   "verify",
 ];
 
@@ -98,9 +105,9 @@ const AUTHED_FLOW: WizardStepId[] = [
   "lifestyle",
   "country",
   "bio",
+  "referral",
 ];
 
-const SIGNUP_GENDERS = ["male", "female"] as const satisfies readonly Gender[];
 const TRAINING_DAY_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7] as const;
 
 type UnitSystem = "metric" | "imperial";
@@ -132,10 +139,11 @@ function storePendingLegalConsent(): void {
 }
 
 export function SignupWizard({ redirectTo = "/pricing" }: Props) {
+  void redirectTo;
   const { lang, t } = useLang();
-  const router = useRouter();
+  useScrollFocusedInputIntoView();
+  useKeyboardOffset();
   const { isAuthenticated, isLoading, profile, refreshSession } = useSession();
-  const safeRedirect = sanitizeAuthRedirect(redirectTo, "/pricing");
   const idPrefix = useId();
   const errorId = `${idPrefix}-error`;
   const fid = (name: string) => `${idPrefix}-${name}`;
@@ -143,10 +151,45 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
   const alreadyAuthedNeedsProfile =
     isAuthenticated && !isLoading && profile?.onboardingStatus === "PAID";
 
-  const flow = alreadyAuthedNeedsProfile ? AUTHED_FLOW : FULL_FLOW;
+  const [flowKind, setFlowKind] = useState<"pending" | "full" | "authed">("pending");
+  useEffect(() => {
+    if (isLoading || flowKind !== "pending") return;
+    setFlowKind(alreadyAuthedNeedsProfile ? "authed" : "full");
+  }, [alreadyAuthedNeedsProfile, flowKind, isLoading]);
+
+  useEffect(() => {
+    if (flowKind === "pending") return;
+    if (flowKind === "full") {
+      postClientProductEvent({
+        name: "signup.started",
+        properties: { flow: "email", method: "otp" },
+      });
+      postClientProductEvent({
+        name: "onboarding.started",
+        properties: { flow: "signup", version: "v2" },
+      });
+      return;
+    }
+    postClientProductEvent({
+      name: "onboarding.started",
+      properties: { flow: "lifestyle", version: "v2" },
+    });
+  }, [flowKind]);
+
+  const flow = flowKind === "authed" ? AUTHED_FLOW : FULL_FLOW;
 
   const [stepIndex, setStepIndex] = useState(0);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
+
+  useEffect(() => {
+    if (flowKind === "pending") return;
+    const step = flow[stepIndex];
+    if (!step) return;
+    postClientProductEvent({
+      name: "onboarding.step_viewed",
+      properties: { flow: flowKind === "authed" ? "lifestyle" : "signup", step },
+    });
+  }, [flow, flowKind, stepIndex]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -165,6 +208,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
   const [activityLevel, setActivityLevel] =
     useState<ActivityLevel>("moderately_active");
   const [trainingDaysPerWeek, setTrainingDaysPerWeek] = useState(3);
+  const [equipmentAccess, setEquipmentAccess] = useState<EquipmentAccess>("gym");
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>("beginner");
   const [isNatural, setIsNatural] = useState(true);
   const [dietaryPreference, setDietaryPreference] =
@@ -174,7 +218,13 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
   const [healthConditions, setHealthConditions] = useState("");
   const [countryCode, setCountryCode] = useState(lang === "tr" ? "TR" : "");
   const [bio, setBio] = useState("");
+  const [referralCodeInput, setReferralCodeInput] = useState("");
   const captchaRef = useInvisibleRecaptchaRef();
+
+  useEffect(() => {
+    const pending = getPendingReferral();
+    if (pending) setReferralCodeInput(pending);
+  }, []);
 
   const currentStep = flow[stepIndex] ?? "email";
   const progressPct = Math.round(((stepIndex + 1) / flow.length) * 100);
@@ -204,15 +254,16 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
       setDisplayName(profile.displayName);
     }
     if (isAuthenticated && profile && profile.onboardingStatus !== "PAID") {
-      router.replace(resolvePostAuthRedirect(profile, safeRedirect));
+      if (hasPaidPlan(profile)) {
+        return;
+      }
+      void redirectToWebCheckoutAfterSignup();
     }
   }, [
     alreadyAuthedNeedsProfile,
     isAuthenticated,
     isLoading,
     profile,
-    router,
-    safeRedirect,
   ]);
 
   const buildPayload = useCallback((): OnboardingInput => {
@@ -229,6 +280,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
       primaryGoal,
       activityLevel,
       trainingDaysPerWeek,
+      equipmentAccess,
       dietaryPreference,
       allergies: allergies.trim(),
       dislikedFoods: dislikedFoods.trim(),
@@ -244,6 +296,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     dietaryPreference,
     dislikedFoods,
     displayName,
+    equipmentAccess,
     experienceLevel,
     gender,
     healthConditions,
@@ -259,10 +312,22 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     async (data: OnboardingInput) => {
       await apiPost<ProfileDTO>("/api/onboarding", data);
       await refreshSession();
-      router.replace(safeRedirect);
+      // Always collect payment on the website. Do not open /welcome unpaid.
+      await redirectToWebCheckoutAfterSignup();
     },
-    [refreshSession, router, safeRedirect],
+    [refreshSession],
   );
+
+  const saveSignupBasicsAndCheckout = useCallback(async () => {
+    await apiPost("/api/onboarding/basics", {
+      displayName: displayName.trim(),
+      birthDate,
+      countryCode,
+      locale: lang,
+    });
+    await refreshSession();
+    await redirectToWebCheckoutAfterSignup();
+  }, [birthDate, countryCode, displayName, lang, refreshSession]);
 
   const canContinue = useMemo(() => {
     switch (currentStep) {
@@ -278,6 +343,11 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
       case "bio":
       case "verify":
         return true;
+      case "referral": {
+        const raw = referralCodeInput.trim();
+        if (!raw) return true;
+        return referralCodeSchema.safeParse(raw).success;
+      }
       case "birth":
         return birthDate.length > 0 && meetsMinimumAge(birthDate);
       case "body":
@@ -304,26 +374,26 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     email,
     heightNum,
     legalAccepted,
+    referralCodeInput,
     trainingDaysPerWeek,
     weightNum,
   ]);
 
   const goBack = useCallback(() => {
     if (stepIndex <= 0) return;
+    void hapticSelection();
     setDirection("back");
     setError(null);
     setStepIndex((i) => i - 1);
   }, [stepIndex]);
 
-  const goNext = useCallback(async () => {
-    setError(null);
-
-    if (currentStep === "bio") {
-      const payload = buildPayload();
+  const finishReferralStep = useCallback(
+    async (code: string | null) => {
+      setPendingReferral(code);
       if (alreadyAuthedNeedsProfile) {
         setBusy(true);
         try {
-          await completeOnboarding(payload);
+          await completeOnboarding(buildPayload());
         } catch {
           setError(t("onboarding.error"));
           setBusy(false);
@@ -351,6 +421,34 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
       } finally {
         setBusy(false);
       }
+    },
+    [
+      alreadyAuthedNeedsProfile,
+      buildPayload,
+      captchaRef,
+      completeOnboarding,
+      email,
+      lang,
+      t,
+    ],
+  );
+
+  const goNext = useCallback(async () => {
+    void hapticSelection();
+    setError(null);
+
+    if (currentStep === "referral") {
+      const raw = referralCodeInput.trim();
+      if (raw) {
+        const parsed = referralCodeSchema.safeParse(raw);
+        if (!parsed.success) {
+          setError(t("signup.wizard.referral.invalid"));
+          return;
+        }
+        await finishReferralStep(parsed.data);
+      } else {
+        await finishReferralStep(null);
+      }
       return;
     }
 
@@ -365,14 +463,10 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     }
   }, [
     birthDate,
-    alreadyAuthedNeedsProfile,
-    buildPayload,
-    captchaRef,
-    completeOnboarding,
     currentStep,
-    email,
+    finishReferralStep,
     flow.length,
-    lang,
+    referralCodeInput,
     stepIndex,
     t,
   ]);
@@ -382,12 +476,33 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     setError(null);
     try {
       await refreshSession();
-      await completeOnboarding(buildPayload());
+      const code = getPendingReferral();
+      if (code) {
+        try {
+          await apiPost("/api/referral", { code });
+          window.dispatchEvent(new Event(REFERRAL_APPLIED_EVENT));
+        } catch {
+          // Invalid / unknown codes must not skip checkout.
+        }
+        clearPendingReferral();
+      }
+      if (alreadyAuthedNeedsProfile) {
+        await completeOnboarding(buildPayload());
+      } else {
+        await saveSignupBasicsAndCheckout();
+      }
     } catch {
       setError(t("onboarding.error"));
       setBusy(false);
     }
-  }, [buildPayload, completeOnboarding, refreshSession, t]);
+  }, [
+    alreadyAuthedNeedsProfile,
+    buildPayload,
+    completeOnboarding,
+    refreshSession,
+    saveSignupBasicsAndCheckout,
+    t,
+  ]);
 
   const genderLabel = (g: Gender) => t(`onboarding.gender.${g}` as "onboarding.gender.male");
   const experienceLabel = (level: ExperienceLevel) =>
@@ -398,6 +513,8 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     t(`onboarding.activity.${level}` as "onboarding.activity.sedentary");
   const dietLabel = (pref: DietaryPreference) =>
     t(`onboarding.diet.${pref}` as "onboarding.diet.omnivore");
+  const equipmentLabel = (value: EquipmentAccess) =>
+    t(`onboarding.equipment.${value}` as "onboarding.equipment.home");
 
   const stepTitle = t(`signup.wizard.${currentStep}.title` as "signup.wizard.email.title");
   const stepSubtitle = t(`signup.wizard.${currentStep}.subtitle` as "signup.wizard.email.subtitle");
@@ -455,7 +572,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
               <button
                 type="button"
                 onClick={goBack}
-                className="signup-wizard-back mb-4 flex items-center gap-1.5 text-xs font-medium text-zinc-400 transition hover:text-white"
+                className="signup-wizard-back mb-4 flex min-h-11 items-center gap-1.5 text-xs font-medium text-zinc-400 transition hover:text-white"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 {t("signup.wizard.back")}
@@ -532,7 +649,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
 
                 {currentStep === "gender" && (
                   <div className="signup-wizard-options">
-                    {SIGNUP_GENDERS.map((g) => (
+                    {GENDERS.map((g) => (
                       <button
                         key={g}
                         type="button"
@@ -757,6 +874,32 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                         {t("signup.wizard.training_days_hint")}
                       </p>
                     </div>
+                    <div className="flex flex-col gap-2">
+                      <label id={fid("equipment-label")} className="signup-field-label text-center">
+                        {t("onboarding.equipment")}
+                      </label>
+                      <div
+                        className="grid grid-cols-3 gap-2"
+                        role="group"
+                        aria-labelledby={fid("equipment-label")}
+                      >
+                        {EQUIPMENT_ACCESS_OPTIONS.map((value) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setEquipmentAccess(value)}
+                            aria-pressed={equipmentAccess === value}
+                            className={`signup-wizard-option ${
+                              equipmentAccess === value
+                                ? "signup-wizard-option--active"
+                                : ""
+                            }`}
+                          >
+                            {equipmentLabel(value)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -918,6 +1061,37 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                   </>
                 )}
 
+                {currentStep === "referral" && (
+                  <div className="flex flex-col gap-3">
+                    <label htmlFor={fid("referral")} className="sr-only">
+                      {t("signup.wizard.referral.title")}
+                    </label>
+                    <input
+                      id={fid("referral")}
+                      type="text"
+                      inputMode="text"
+                      autoCapitalize="characters"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      maxLength={20}
+                      value={referralCodeInput}
+                      onChange={(e) =>
+                        setReferralCodeInput(e.target.value.toUpperCase())
+                      }
+                      placeholder={t("signup.wizard.referral.placeholder")}
+                      autoFocus
+                      className="signup-wizard-field font-mono text-base tracking-wider uppercase"
+                      aria-invalid={error ? true : undefined}
+                      aria-describedby={
+                        error ? errorId : fid("referral-hint")
+                      }
+                    />
+                    <p id={fid("referral-hint")} className="text-center text-[11px] text-zinc-500">
+                      {t("signup.wizard.referral.hint")}
+                    </p>
+                  </div>
+                )}
+
                 {currentStep === "verify" && (
                   <div>
                     <div className="signup-wizard-header !mb-5 !px-0 !pt-0">
@@ -951,10 +1125,11 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                   onClick={() => void goNext()}
                   disabled={!canContinue || busy}
                   className="landing-btn landing-btn--primary flex w-full items-center justify-center gap-2 disabled:opacity-40"
+                  data-keyboard-cta
                 >
                   {busy
                     ? t("login.otp.loading")
-                    : currentStep === "bio"
+                    : currentStep === "referral"
                       ? alreadyAuthedNeedsProfile
                         ? t("signup.profile.submit")
                         : t("signup.wizard.send_code")
@@ -972,7 +1147,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                       void goNext();
                     }}
                     disabled={busy}
-                    className="text-center text-sm text-zinc-500 transition hover:text-zinc-300"
+                    className="min-h-11 text-center text-sm text-zinc-500 transition hover:text-zinc-300"
                   >
                     {t("signup.wizard.skip_lifestyle")}
                   </button>
@@ -989,6 +1164,21 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                     className="text-center text-sm text-zinc-500 transition hover:text-zinc-300"
                   >
                     {t("signup.wizard.skip_bio")}
+                  </button>
+                )}
+
+                {currentStep === "referral" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReferralCodeInput("");
+                      setError(null);
+                      void finishReferralStep(null);
+                    }}
+                    disabled={busy}
+                    className="text-center text-sm text-zinc-500 transition hover:text-zinc-300"
+                  >
+                    {t("signup.wizard.referral.skip")}
                   </button>
                 )}
               </div>

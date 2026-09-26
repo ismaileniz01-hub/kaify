@@ -1,8 +1,17 @@
 import { getGeminiConfig } from "@/lib/ai/env";
 import { AiError } from "@/lib/ai/errors";
+import { TOKEN_BUDGET } from "@/lib/ai/budget";
+import { extractFirstJsonObjectLenient } from "@/lib/ai/extract-json";
 import { logger as geminiLogger } from "@/lib/logger";
+import {
+  gemini25ThinkingBudget,
+  isGemini25FlashModel,
+  isGemini3Model,
+  type GeminiThinkingLevel,
+} from "@/lib/ai/models";
 import { resilient, classifyStatus, UpstreamHttpError } from "@/lib/resilience";
 import type { ImageInput } from "@/lib/ai/types";
+import type { TokenUsage } from "@/lib/ai/types";
 import type { UsageContext } from "@/lib/ai/usage-ledger";
 import { geminiEstimatedUsage, recordAiUsage } from "@/lib/ai/usage-ledger";
 
@@ -15,15 +24,137 @@ import { geminiEstimatedUsage, recordAiUsage } from "@/lib/ai/usage-ledger";
  * parsed object with a Zod schema before use.
  */
 
-const DEFAULT_TIMEOUT_MS = 45_000;
+const DEFAULT_TIMEOUT_MS = 60_000;
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
-type GeminiPart = { text?: string };
-type GeminiCandidate = { content?: { parts?: GeminiPart[] } };
+type GeminiPart = { text?: string; thought?: boolean };
+type GeminiCandidate = {
+  content?: { parts?: GeminiPart[] };
+  finishReason?: string;
+};
+type GeminiUsageMetadata = {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  totalTokenCount?: number;
+  thoughtsTokenCount?: number;
+};
+
 type GeminiResponse = {
   candidates?: GeminiCandidate[];
   promptFeedback?: { blockReason?: string };
+  usageMetadata?: GeminiUsageMetadata;
 };
+
+/**
+ * Visible answer text only — never concatenate thought/summary parts into the
+ * JSON payload (thinking models return mixed parts; joining them breaks
+ * Maya/Leo photo analysis with AI_BAD_OUTPUT).
+ */
+export function extractGeminiAnswerText(
+  parts: GeminiPart[] | undefined,
+): string {
+  if (!parts?.length) return "";
+  const hasThoughtFlag = parts.some((part) => part.thought === true);
+  if (hasThoughtFlag) {
+    return parts
+      .filter((part) => !part.thought)
+      .map((part) => part.text ?? "")
+      .join("")
+      .trim();
+  }
+  if (parts.length === 1) return (parts[0]?.text ?? "").trim();
+  for (const part of parts) {
+    const text = (part.text ?? "").trim();
+    if (text.startsWith("{") || text.startsWith("```")) return text;
+  }
+  return parts
+    .map((part) => part.text ?? "")
+    .join("")
+    .trim();
+}
+
+/** REST generateContent config: Gemini 3 uses thinkingLevel; 2.5 Flash uses thinkingBudget. */
+export function buildGeminiGenerationConfig(
+  model: string,
+  options?: {
+    temperature?: number;
+    thinkingLevel?: GeminiThinkingLevel;
+    maxOutputTokens?: number;
+  },
+): Record<string, unknown> {
+  const generationConfig: Record<string, unknown> = {
+    responseMimeType: "application/json",
+    // Thinking tokens count against this budget. Without headroom, Gemini
+    // returns empty candidates (finishReason MAX_TOKENS) and photo analysis fails.
+    maxOutputTokens: options?.maxOutputTokens ?? TOKEN_BUDGET.visionJson,
+  };
+  const thinkingLevel = options?.thinkingLevel ?? "MEDIUM";
+  if (isGemini3Model(model)) {
+    generationConfig.thinkingConfig = {
+      thinkingLevel: thinkingLevel.toLowerCase(),
+    };
+    return generationConfig;
+  }
+  generationConfig.temperature = options?.temperature ?? 0.2;
+  if (isGemini25FlashModel(model)) {
+    generationConfig.thinkingConfig = {
+      thinkingBudget: gemini25ThinkingBudget(thinkingLevel),
+    };
+  }
+  return generationConfig;
+}
+
+export type GeminiImagePartCasing = "camel" | "proto";
+
+export function isGeminiUnknownImageFieldError(status: number, body: string): boolean {
+  if (status !== 400) return false;
+  return /unknown name ["']?(inline_data|inlineData|mime_type|mimeType)/i.test(body);
+}
+
+/**
+ * REST Part JSON is proto3 camelCase (`inlineData` / `mimeType`).
+ * Snake_case (`inline_data`) is the protobuf field name — some Gemini
+ * backends reject one or the other with HTTP 400.
+ */
+export function buildGeminiUserParts(
+  prompt: string,
+  image?: ImageInput,
+  casing: GeminiImagePartCasing = "camel",
+): Array<Record<string, unknown>> {
+  const parts: Array<Record<string, unknown>> = [{ text: prompt }];
+  if (image) {
+    parts.push(
+      casing === "proto"
+        ? {
+            inline_data: {
+              mime_type: image.mimeType,
+              data: image.base64,
+            },
+          }
+        : {
+            inlineData: {
+              mimeType: image.mimeType,
+              data: image.base64,
+            },
+          },
+    );
+  }
+  return parts;
+}
+
+function usageFromGemini(meta: GeminiUsageMetadata | undefined): TokenUsage | null {
+  if (!meta) return null;
+  const prompt = meta.promptTokenCount ?? 0;
+  const completion =
+    (meta.candidatesTokenCount ?? 0) + (meta.thoughtsTokenCount ?? 0);
+  const total = meta.totalTokenCount ?? prompt + completion;
+  if (total <= 0) return null;
+  return {
+    prompt_tokens: prompt,
+    completion_tokens: completion,
+    total_tokens: total,
+  };
+}
 
 export type GenerateJsonParams = {
   /** Instruction describing the task and the exact JSON shape to return. */
@@ -33,9 +164,23 @@ export type GenerateJsonParams = {
   /** Optional image for vision tasks. */
   image?: ImageInput;
   temperature?: number;
+  /** Override thinking depth; defaults to env/config (MEDIUM). */
+  thinkingLevel?: GeminiThinkingLevel;
   signal?: AbortSignal;
   usageContext?: UsageContext;
 };
+
+/** Parse Gemini JSON text, salvaging fenced / prose-wrapped objects. */
+export function parseGeminiJsonText(text: string): unknown {
+  const stripped = stripCodeFences(text);
+  try {
+    return JSON.parse(stripped) as unknown;
+  } catch {
+    const salvaged = extractFirstJsonObjectLenient(stripped);
+    if (salvaged.ok) return salvaged.value;
+    throw new AiError("AI_BAD_OUTPUT", "Gemini did not return valid JSON");
+  }
+}
 
 function withTimeout(
   external: AbortSignal | undefined,
@@ -79,33 +224,31 @@ export async function generateGeminiJson(
   const config = getGeminiConfig();
   const { signal, cancel } = withTimeout(params.signal, DEFAULT_TIMEOUT_MS);
 
-  const parts: Array<Record<string, unknown>> = [{ text: params.prompt }];
-  if (params.image) {
-    parts.push({
-      inline_data: {
-        mime_type: params.image.mimeType,
-        data: params.image.base64,
-      },
-    });
-  }
-
-  const body: Record<string, unknown> = {
-    contents: [{ role: "user", parts }],
-    generationConfig: {
-      temperature: params.temperature ?? 0.2,
-      responseMimeType: "application/json",
-    },
-  };
-  if (params.systemInstruction) {
-    body.systemInstruction = { parts: [{ text: params.systemInstruction }] };
-  }
-
+  const generationConfig = buildGeminiGenerationConfig(config.model, {
+    temperature: params.temperature,
+    thinkingLevel: params.thinkingLevel ?? config.thinkingLevel,
+  });
   const url =
     `${GEMINI_BASE_URL}/models/${encodeURIComponent(config.model)}:generateContent`;
 
-  let response: Response;
-  try {
-    response = await resilient(
+  const buildBody = (casing: GeminiImagePartCasing): Record<string, unknown> => {
+    const payload: Record<string, unknown> = {
+      contents: [
+        {
+          role: "user",
+          parts: buildGeminiUserParts(params.prompt, params.image, casing),
+        },
+      ],
+      generationConfig,
+    };
+    if (params.systemInstruction) {
+      payload.systemInstruction = { parts: [{ text: params.systemInstruction }] };
+    }
+    return payload;
+  };
+
+  const postOnce = async (casing: GeminiImagePartCasing): Promise<Response> =>
+    resilient(
       "gemini",
       async () => {
         const res = await fetch(url, {
@@ -114,7 +257,7 @@ export async function generateGeminiJson(
             "Content-Type": "application/json",
             "x-goog-api-key": config.apiKey,
           },
-          body: JSON.stringify(body),
+          body: JSON.stringify(buildBody(casing)),
           signal,
         });
         if (!res.ok && classifyStatus(res.status).retryable) {
@@ -124,6 +267,10 @@ export async function generateGeminiJson(
       },
       { retries: 2, signal: params.signal },
     );
+
+  let response: Response;
+  try {
+    response = await postOnce("camel");
   } catch (error) {
     cancel();
     throw error instanceof AiError
@@ -137,6 +284,42 @@ export async function generateGeminiJson(
 
   try {
     if (!response.ok) {
+      const errBody = await response.text().catch(() => "");
+      if (params.image && isGeminiUnknownImageFieldError(response.status, errBody)) {
+        geminiLogger.warn("[gemini] retrying vision parts with protobuf field names", {
+          status: response.status,
+          model: config.model,
+          body: errBody.slice(0, 200),
+        });
+        try {
+          response = await postOnce("proto");
+        } catch (error) {
+          throw error instanceof AiError
+            ? error
+            : error instanceof UpstreamHttpError
+              ? new AiError("AI_UPSTREAM", error.message)
+              : new AiError("AI_UPSTREAM", "Gemini request failed");
+        }
+      } else {
+        geminiLogger.error("[gemini] http error", {
+          status: response.status,
+          model: config.model,
+          body: errBody.slice(0, 400),
+        });
+        throw new AiError(
+          "AI_UPSTREAM",
+          `Gemini request failed with status ${response.status}`,
+        );
+      }
+    }
+
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => "");
+      geminiLogger.error("[gemini] http error", {
+        status: response.status,
+        model: config.model,
+        body: errBody.slice(0, 400),
+      });
       throw new AiError(
         "AI_UPSTREAM",
         `Gemini request failed with status ${response.status}`,
@@ -155,33 +338,51 @@ export async function generateGeminiJson(
       );
     }
 
-    const text = json.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text ?? "")
-      .join("")
-      .trim();
+    const candidate = json.candidates?.[0];
+    const text = extractGeminiAnswerText(candidate?.content?.parts);
 
     if (!text) {
       geminiLogger.error("[gemini] empty content", {
+        finishReason: candidate?.finishReason ?? null,
+        thoughtsTokenCount: json.usageMetadata?.thoughtsTokenCount ?? null,
         response: JSON.stringify(json).slice(0, 600),
       });
+      if (candidate?.finishReason === "MAX_TOKENS") {
+        throw new AiError(
+          "AI_UPSTREAM",
+          "Gemini exhausted the output budget before returning vision JSON",
+        );
+      }
       throw new AiError("AI_BAD_OUTPUT", "Gemini returned empty content");
     }
 
     try {
-      return JSON.parse(stripCodeFences(text)) as unknown;
-    } catch {
-      geminiLogger.error("[gemini] invalid JSON", { text: text.slice(0, 600) });
-      throw new AiError("AI_BAD_OUTPUT", "Gemini did not return valid JSON");
+      return parseGeminiJsonText(text);
+    } catch (error) {
+      geminiLogger.error("[gemini] invalid JSON", {
+        finishReason: candidate?.finishReason ?? null,
+        text: text.slice(0, 600),
+      });
+      throw error instanceof AiError
+        ? error
+        : new AiError("AI_BAD_OUTPUT", "Gemini did not return valid JSON");
     } finally {
       if (params.usageContext) {
+        const usage = usageFromGemini(json.usageMetadata);
         recordAiUsage({
           provider: "gemini",
           context: params.usageContext,
-          usage: null,
-          estimatedTotalTokens: geminiEstimatedUsage(
-            params.prompt.length + (params.systemInstruction?.length ?? 0),
-            Boolean(params.image),
-          ).total_tokens,
+          usage,
+          estimatedTotalTokens: usage
+            ? undefined
+            : geminiEstimatedUsage(
+                params.prompt.length + (params.systemInstruction?.length ?? 0),
+                Boolean(params.image),
+              ).total_tokens,
+          metadata:
+            json.usageMetadata?.thoughtsTokenCount != null
+              ? { thoughtsTokenCount: json.usageMetadata.thoughtsTokenCount }
+              : undefined,
         });
       }
     }

@@ -3,6 +3,9 @@
  * Completeness is enforced at runtime against pg_proc when DB tests run.
  *
  * Original audit counted 43 names; Wave 5 clean schema has 41 SECURITY DEFINER functions.
+ * Gem ledger → kai_state sync trigger adds trg_sync_kai_gems_from_ledger (42).
+ * Library workout increment adds increment_analytics_workouts (43).
+ * Admin support inbox RPC adds admin_list_support_inbox (44).
  * The 4 removed names are NOT prosecdef on live schema:
  *   build_usage_node, is_valid_timezone, set_updated_at, protect_profile_columns.
  */
@@ -19,7 +22,7 @@ export type RpcRegistryEntry = {
 };
 
 /** Live clean-schema SECURITY DEFINER count (pg_proc.prosecdef). */
-export const AUDIT_SECURITY_DEFINER_COUNT = 41;
+export const AUDIT_SECURITY_DEFINER_COUNT = 44;
 
 export const RPC_REGISTRY: readonly RpcRegistryEntry[] = [
   // ---- client_callable (EXECUTE granted to authenticated and/or anon) ----
@@ -48,6 +51,7 @@ export const RPC_REGISTRY: readonly RpcRegistryEntry[] = [
     note: "SEC-009: returns raw user_id; HTTP API only (service_role). Not PostgREST for anon/authenticated",
   },
   { name: "admin_create_pending_gift", mode: "service_only" },
+  { name: "admin_list_support_inbox", mode: "service_only" },
   { name: "admin_get_ai_cost_by_user", mode: "service_only" },
   { name: "admin_get_ai_cost_summary", mode: "service_only" },
   { name: "admin_get_overview_stats", mode: "service_only" },
@@ -61,6 +65,7 @@ export const RPC_REGISTRY: readonly RpcRegistryEntry[] = [
   { name: "earn_gems", mode: "service_only" },
   { name: "grant_freezie", mode: "service_only" },
   { name: "increment_analytics_meals", mode: "service_only" },
+  { name: "increment_analytics_workouts", mode: "service_only" },
   { name: "perform_daily_check_in", mode: "service_only", note: "faz0 locked to service_role" },
   { name: "process_referral", mode: "service_only" },
   { name: "purchase_market_item", mode: "service_only" },
@@ -79,6 +84,7 @@ export const RPC_REGISTRY: readonly RpcRegistryEntry[] = [
   { name: "handle_new_user", mode: "trigger_only" },
   { name: "trg_unlock_team_chat_on_streak", mode: "trigger_only" },
   { name: "trg_ai_usage_ledger_daily_agg", mode: "trigger_only" },
+  { name: "trg_sync_kai_gems_from_ledger", mode: "trigger_only" },
 
   // ---- internal helpers that ARE SECURITY DEFINER ----
   {

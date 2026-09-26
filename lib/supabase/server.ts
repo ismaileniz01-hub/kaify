@@ -6,6 +6,7 @@ import {
   assertServerRuntime,
   getSupabasePublicEnv,
 } from "@/lib/supabase/env";
+import { isSessionPastMaxAge } from "@/lib/auth/session-max-age";
 
 export type ServerSupabaseClient = SupabaseClient<Database>;
 
@@ -54,19 +55,39 @@ export async function createServerSupabaseClient(): Promise<ServerSupabaseClient
  * Resolves the authenticated user from the server session.
  * Returns null when unauthenticated or when the session is invalid.
  */
-export async function getServerAuthUser(): Promise<{
+export async function getServerAuthUser(request?: Request): Promise<{
   id: string;
   email: string | undefined;
 } | null> {
-  const authorization = (await headers()).get("authorization");
-  const bearerToken = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
-  const supabase = await createServerSupabaseClient();
+  const authorization =
+    request?.headers.get("authorization")?.trim() ||
+    (await headers()).get("authorization") ||
+    "";
+  const bearerToken = authorization.match(/^Bearer\s+(.+)$/i)?.[1]?.trim() ?? "";
+  const { url, anonKey } = getSupabasePublicEnv();
+  const supabase = bearerToken
+    ? createClient<Database>(url, anonKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+          detectSessionInUrl: false,
+        },
+      })
+    : await createServerSupabaseClient();
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser(bearerToken);
+  } = await supabase.auth.getUser(bearerToken || undefined);
 
   if (error || !user) {
+    return null;
+  }
+
+  const accessToken =
+    bearerToken ||
+    (await supabase.auth.getSession()).data.session?.access_token ||
+    "";
+  if (accessToken && isSessionPastMaxAge(accessToken)) {
     return null;
   }
 

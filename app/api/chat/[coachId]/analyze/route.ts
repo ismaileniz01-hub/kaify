@@ -2,6 +2,11 @@ import { ApiError } from "@/lib/api/errors";
 import { defineDynamicRoute } from "@/lib/api/route-handler";
 import { analyzePhoto } from "@/lib/domains/ai";
 import {
+  isQuotaExhaustedError,
+  visionQuotaResourceFromError,
+  type AnalyzeQuotaDenied,
+} from "@/lib/i18n/api-error";
+import {
   MAX_JSON_BODY_ANALYZE,
   parseJsonWithLimit,
 } from "@/lib/security/body-limit";
@@ -12,12 +17,13 @@ import { visionCoachIdSchema } from "@/lib/validations/chat.schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 120;
 
 /**
  * POST /api/chat/[coachId]/analyze — image analysis pipeline (Maya/Leo only).
- * Runs quota guard -> Gemini quality gate -> Gemini measurement -> DeepSeek
- * synthesis, then returns the personalized summary + structured analysis with
- * a `warning_trigger` surfaced through the standard response envelope.
+ * Same-image reuse (no provider calls) or: quota → one Gemini vision envelope
+ * (quality + observations) → DeepSeek synthesis. `warning_trigger` is surfaced
+ * through the standard response envelope.
  */
 export const POST = defineDynamicRoute<{ coachId: string }>(
   {
@@ -55,16 +61,35 @@ export const POST = defineDynamicRoute<{ coachId: string }>(
       requestBody: {
         mimeType: parsed.data.mimeType,
         note: parsed.data.note ?? null,
+        locale: parsed.data.locale ?? null,
         imageLen: parsed.data.imageBase64.length,
       },
-      handler: () =>
-        analyzePhoto({
-          userId: user.id,
-          coachId: coach.data,
-          imageBase64: parsed.data.imageBase64,
-          mimeType: parsed.data.mimeType,
-          note: parsed.data.note,
-        }),
+      handler: async () => {
+        try {
+          return await analyzePhoto({
+            userId: user.id,
+            coachId: coach.data,
+            imageBase64: parsed.data.imageBase64,
+            mimeType: parsed.data.mimeType,
+            note: parsed.data.note,
+            explicitLocale: parsed.data.locale,
+            clientMessageId: parsed.data.clientMessageId,
+            signal: request.signal,
+          });
+        } catch (error) {
+          // HTTP 200 + flag: quota is a product state, not a failed resource.
+          if (isQuotaExhaustedError(error)) {
+            const denied: AnalyzeQuotaDenied = {
+              quotaExceeded: true,
+              resource:
+                visionQuotaResourceFromError(coach.data, error) ??
+                (coach.data === "leo" ? "leo_photo" : "maya_photo"),
+            };
+            return denied;
+          }
+          throw error;
+        }
+      },
     });
   },
 );

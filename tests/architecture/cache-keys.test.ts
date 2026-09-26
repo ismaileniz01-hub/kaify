@@ -7,9 +7,9 @@ describe("cache keys registry", () => {
   });
 
   it("scopes analytics per user", () => {
-    expect(CacheKeys.analyticsBundle("abc")).toBe("analytics:bundle:v1:abc");
-    expect(CacheKeys.analyticsToday("abc")).toBe("analytics:today:v1:abc");
-    expect(CacheKeys.analyticsUser("abc")).toBe("analytics:bundle:v1:abc");
+    expect(CacheKeys.analyticsBundle("abc")).toBe("analytics:bundle:v2:abc");
+    expect(CacheKeys.analyticsToday("abc")).toBe("analytics:today:v2:abc");
+    expect(CacheKeys.analyticsUser("abc")).toBe("analytics:bundle:v2:abc");
   });
 
   it("parameterizes leaderboard keys", () => {
@@ -26,6 +26,10 @@ describe("cache keys registry", () => {
     expect(CacheTTL.leaderboardRank).toBeGreaterThan(0);
     expect(CacheTTL.sessionSlice).toBeGreaterThan(0);
     expect(CacheTTL.coachesCatalog).toBeGreaterThan(CacheTTL.homeBundle);
+  });
+
+  it("scopes session gem cache per user (v2 materialized balance)", () => {
+    expect(CacheKeys.sessionGems("u1")).toBe("session:gems:v2:u1");
   });
 
   it("scopes home bundle per user and day (locale-free v3)", () => {

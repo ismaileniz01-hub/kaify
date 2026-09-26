@@ -11,6 +11,7 @@ export const ACTIVITY_LEVELS = [
   "very_active",
   "athlete",
 ] as const;
+export const EQUIPMENT_ACCESS_OPTIONS = ["home", "gym", "limited"] as const;
 export const DIETARY_PREFERENCES = [
   "omnivore",
   "vegetarian",
@@ -23,6 +24,7 @@ export const DIETARY_PREFERENCES = [
 export type Gender = (typeof GENDERS)[number];
 export type ExperienceLevel = (typeof EXPERIENCE_LEVELS)[number];
 export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
+export type EquipmentAccess = (typeof EQUIPMENT_ACCESS_OPTIONS)[number];
 export type DietaryPreference = (typeof DIETARY_PREFERENCES)[number];
 
 /** BCP-47-ish locale tag: language with optional region (e.g. "tr", "en-US"). */
@@ -66,6 +68,7 @@ export const onboardingSchema = z.object({
   primaryGoal: z.enum(PRIMARY_GOALS),
   activityLevel: z.enum(ACTIVITY_LEVELS),
   trainingDaysPerWeek: z.number().int().min(0).max(7),
+  equipmentAccess: z.enum(EQUIPMENT_ACCESS_OPTIONS),
   dietaryPreference: z.enum(DIETARY_PREFERENCES),
   allergies: optionalNotes,
   dislikedFoods: optionalNotes,

@@ -212,8 +212,8 @@ describe("EN/TR localization quality", () => {
   });
 
   it("ships complete Turkish legal documents", () => {
-    expect(TERMS_DOCUMENT_TR.sections).toHaveLength(13);
-    expect(COOKIES_DOCUMENT_TR.sections).toHaveLength(5);
+    expect(TERMS_DOCUMENT_TR.sections).toHaveLength(22);
+    expect(COOKIES_DOCUMENT_TR.sections).toHaveLength(7);
     expect(
       TERMS_DOCUMENT_TR.sections.every((section) => section.blocks.length > 0),
     ).toBe(true);

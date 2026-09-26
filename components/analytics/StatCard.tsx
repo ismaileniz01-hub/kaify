@@ -19,6 +19,7 @@ type StatCardProps = {
   barColor: string;
   barPercent: number;
   gradient: GradientVariant;
+  onClick?: () => void;
   /** When false, counters stay at zero until triggered */
   animate?: boolean;
 };
@@ -42,6 +43,7 @@ export function StatCard({
   barColor,
   barPercent,
   gradient,
+  onClick,
   animate = true,
 }: StatCardProps) {
   const { lang } = useLang();
@@ -81,8 +83,8 @@ export function StatCard({
       ? formatNumber(Math.round(displayNum), lang)
       : displayNum.toFixed(1);
 
-  return (
-    <div className={`analytics-card analytics-card--${gradient} relative z-0 flex flex-col gap-2 p-3.5`}>
+  const body = (
+    <>
       <div className="flex items-center gap-1.5 text-zinc-400">
         <Icon className="h-3.5 w-3.5" strokeWidth={2} />
         <span className="text-[11px] font-medium">{label}</span>
@@ -112,6 +114,20 @@ export function StatCard({
           }}
         />
       </div>
-    </div>
+    </>
   );
+
+  const className = `analytics-card analytics-card--${gradient} relative z-0 flex flex-col gap-2 p-3.5${
+    onClick ? " cursor-pointer text-left" : ""
+  }`;
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {body}
+      </button>
+    );
+  }
+
+  return <div className={className}>{body}</div>;
 }

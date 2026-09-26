@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatDate,
   formatDateTime,
   formatInboxTime,
   formatNumber,
@@ -32,6 +33,14 @@ describe("locale-aware formatting", () => {
     const stamp = new Date("2026-08-05T15:30:00.000Z");
     expect(formatTime(stamp, "tr")).toMatch(/\d/);
     expect(formatDateTime(stamp, "en")).toMatch(/2026|8|5/);
+  });
+
+  it("formats calendar dates with the active locale", () => {
+    const day = new Date("2026-03-15T12:00:00.000Z");
+    const tr = formatDate(day, "tr", { month: "long" });
+    const en = formatDate(day, "en", { month: "long" });
+    expect(tr.toLowerCase()).toContain("mart");
+    expect(en.toLowerCase()).toContain("march");
   });
 
   it("formats short relative timestamps", () => {

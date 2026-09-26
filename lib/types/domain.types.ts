@@ -37,6 +37,7 @@ export type ProfileDTO = {
   heightCm: number | null;
   weightKg: number | null;
   experienceLevel: string | null;
+  equipmentAccess: Database["public"]["Tables"]["profiles"]["Row"]["equipment_access"];
   isNatural: boolean;
   bio: string | null;
   countryCode: string;
@@ -46,6 +47,7 @@ export type ProfileDTO = {
   role: ProfileRole;
   onboardingStatus: Database["public"]["Enums"]["onboarding_status"];
   tier: Database["public"]["Enums"]["subscription_tier"] | null;
+  tierStartedAt: string | null;
   billingCycle: BillingCycle;
   referralCode: string;
   referredByCode: string | null;
@@ -63,6 +65,7 @@ export function mapProfileRow(row: ProfileRow): ProfileDTO {
     heightCm: resolveHeightCm(row),
     weightKg: resolveWeightKg(row),
     experienceLevel: resolveExperience(row),
+    equipmentAccess: row.equipment_access,
     isNatural: row.is_natural,
     bio: row.bio,
     countryCode: resolveCountryCode(row),
@@ -72,6 +75,7 @@ export function mapProfileRow(row: ProfileRow): ProfileDTO {
     role: row.role,
     onboardingStatus: row.onboarding_status,
     tier: resolveTier(row),
+    tierStartedAt: row.tier_started_at ?? null,
     billingCycle: row.billing_cycle,
     referralCode: row.referral_code,
     referredByCode: row.referred_by_code ?? null,

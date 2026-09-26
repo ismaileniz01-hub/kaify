@@ -16,7 +16,7 @@ const COACHES = [
   },
   {
     id: "maya",
-    name: "Dr. Maya",
+    name: "Maya",
     color: "#22c55e",
     glow: "rgba(34, 197, 94, 0.4)",
     avatar: "/avatars/dr maya 1.webp",
@@ -35,8 +35,8 @@ const COACHES = [
     name: "Kai",
     color: "#a855f7",
     glow: "rgba(168, 85, 247, 0.45)",
-    avatar: "/avatars/kai-level-1.webp",
-    hero: "/avatars/kai-level-1.webp",
+    avatar: "/avatars/kai-level-2.webp",
+    hero: "/avatars/kai-level-2.webp",
   },
 ] as const;
 
@@ -59,7 +59,7 @@ export function LandingCoaches() {
           <p className="mt-6 text-lg text-zinc-400">{t("landing.coaches.intro")}</p>
         </ScrollReveal>
 
-        <div className="mt-12 space-y-20 sm:mt-20 sm:space-y-32">
+        <div className="mt-12 space-y-12 sm:mt-20 sm:space-y-32">
           {COACHES.map((coach, i) => {
             const reversed = i % 2 === 1;
             const heroSrc = publicAssetUrl(coach.hero);
@@ -115,7 +115,7 @@ export function LandingCoaches() {
                       </div>
                     </div>
 
-                    <h3 className="mt-8 text-3xl font-bold text-white lg:text-4xl">
+                    <h3 className="mt-8 text-2xl font-bold text-white lg:text-4xl">
                       {t(`landing.coaches.${coach.id}.heading` as "landing.coaches.alex.heading")}
                     </h3>
 

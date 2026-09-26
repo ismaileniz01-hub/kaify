@@ -21,6 +21,14 @@ import {
   isNativeOtpPath,
   isNativeOtpRequest,
 } from "@/lib/native/otp-cors";
+import {
+  isNativeShellOrigin,
+  NATIVE_CORS_ALLOW_HEADERS,
+} from "@/lib/native/webview-request";
+import {
+  NATIVE_HANDOFF_QUERY,
+  NATIVE_SESSION_HINT_COOKIE,
+} from "@/lib/native/native-entry-boot";
 
 const RATE_LIMIT_CONFIG = {
   api: { requests: 400, windowMs: 60 * 1000 },
@@ -50,7 +58,7 @@ function attachCorsHeaders(request: NextRequest, response: NextResponse) {
     response.headers.set("Access-Control-Allow-Credentials", "true");
     response.headers.set(
       "Access-Control-Allow-Headers",
-      "Authorization, Content-Type, Idempotency-Key, X-CSRF-Token",
+      NATIVE_CORS_ALLOW_HEADERS,
     );
     response.headers.set(
       "Access-Control-Allow-Methods",
@@ -71,7 +79,27 @@ function hasSupabaseAuthCookie(request: NextRequest): boolean {
     );
 }
 
+function hasNativeSessionHint(request: NextRequest): boolean {
+  return request.cookies.get(NATIVE_SESSION_HINT_COOKIE)?.value === "1";
+}
+
+function hasNativeHandoffQuery(request: NextRequest): boolean {
+  return request.nextUrl.searchParams.get(NATIVE_HANDOFF_QUERY) === "1";
+}
+
+function attachNativeSessionHint(response: NextResponse): void {
+  response.cookies.set(NATIVE_SESSION_HINT_COOKIE, "1", {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+    sameSite: "lax",
+    secure: true,
+    httpOnly: false,
+  });
+  response.headers.set("Cache-Control", "private, no-store");
+}
+
 function getRateLimitBucket(pathname: string): keyof typeof RATE_LIMIT_CONFIG {
+  if (pathname === "/api/health") return "health";
   if (pathname.startsWith("/api/")) return "api";
   if (isMarketingPath(pathname)) return "marketing";
   return "page";
@@ -90,29 +118,38 @@ const RATE_LIMIT_SOFT =
 
 async function finalizeResponse(
   forwardedRequest: NextRequest,
-  nonce: string,
+  _nonce: string,
   requestId: string,
   pathname: string,
+  contentSecurityPolicy: string,
   rateLimit?: { limit: number; remaining: number },
-  options?: { skipSessionRefresh?: boolean },
+  options?: { skipSessionRefresh?: boolean; response?: NextResponse },
 ) {
-  const { response } = options?.skipSessionRefresh
-    ? {
-        response: NextResponse.next({
+  const response =
+    options?.response ??
+    (options?.skipSessionRefresh
+      ? NextResponse.next({
           request: { headers: forwardedRequest.headers },
-        }),
-      }
-    : await updateSupabaseSession(forwardedRequest);
+        })
+      : (await updateSupabaseSession(forwardedRequest)).response);
 
-  response.headers.set(
-    "Content-Security-Policy",
-    buildContentSecurityPolicy(nonce, {
-      legalEmbed: isLegalContentPath(pathname),
-      staticHtml: isMarketingPath(pathname),
-    }),
-  );
+  response.headers.set("Content-Security-Policy", contentSecurityPolicy);
   response.headers.set("Reporting-Endpoints", buildCspReportingEndpoints());
   response.headers.set("X-Request-ID", requestId);
+  const origin = forwardedRequest.headers.get("origin");
+  if (pathname.startsWith("/api/") && isNativeShellOrigin(origin)) {
+    response.headers.set("Access-Control-Allow-Origin", origin!);
+    response.headers.set(
+      "Access-Control-Allow-Methods",
+      "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    );
+    response.headers.set(
+      "Access-Control-Allow-Headers",
+      NATIVE_CORS_ALLOW_HEADERS,
+    );
+    response.headers.set("Access-Control-Max-Age", "600");
+    response.headers.append("Vary", "Origin");
+  }
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-XSS-Protection", "1; mode=block");
@@ -134,6 +171,12 @@ async function finalizeResponse(
   }
 
   const finalized = await attachCsrfCookie(forwardedRequest, response);
+  if (
+    hasNativeSessionHint(forwardedRequest) ||
+    hasNativeHandoffQuery(forwardedRequest)
+  ) {
+    attachNativeSessionHint(finalized);
+  }
   const withCors = attachCorsHeaders(forwardedRequest, finalized);
   if (isNativeOtpPath(pathname)) {
     return applyNativeOtpCorsHeaders(forwardedRequest, withCors);
@@ -184,12 +227,36 @@ export async function middleware(request: NextRequest) {
   const nonce = generateCspNonce();
   const requestId = crypto.randomUUID();
   const requestHeaders = new Headers(request.headers);
+  const contentSecurityPolicy = buildContentSecurityPolicy(nonce, {
+    legalEmbed: isLegalContentPath(pathname),
+  });
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("x-request-id", requestId);
+  // Next.js extracts the nonce for framework/page scripts from the request CSP.
+  // The identical policy is added to the browser response in finalizeResponse.
+  requestHeaders.set("Content-Security-Policy", contentSecurityPolicy);
   const forwardedRequest = new NextRequest(request.url, {
     headers: requestHeaders,
     method: request.method,
   });
+  if (
+    request.method === "OPTIONS" &&
+    pathname.startsWith("/api/") &&
+    isNativeShellOrigin(request.headers.get("origin"))
+  ) {
+    return finalizeResponse(
+      forwardedRequest,
+      nonce,
+      requestId,
+      pathname,
+      contentSecurityPolicy,
+      undefined,
+      {
+        skipSessionRefresh: true,
+        response: new NextResponse(null, { status: 204 }),
+      },
+    );
+  }
   if (SUSPICIOUS_PATHS.some((p) => pathname.toLowerCase().includes(p))) {
     logger.warn("middleware blocked suspicious path", { requestId, pathname, ip });
     return new NextResponse(null, { status: 404 });
@@ -226,32 +293,69 @@ export async function middleware(request: NextRequest) {
     return jsonDenied(request, pathname, { error: "Access denied" }, 403);
   }
 
-  if (pathname === "/api/health") {
-    return finalizeResponse(forwardedRequest, nonce, requestId, pathname);
+  if (
+    pathname === "/api/auth/session/native-complete" ||
+    pathname === "/api/auth/session/native-consume"
+  ) {
+    return finalizeResponse(
+      forwardedRequest,
+      nonce,
+      requestId,
+      pathname,
+      contentSecurityPolicy,
+      undefined,
+      { skipSessionRefresh: true },
+    );
   }
 
   if (pathname === CSP_REPORT_PATH) {
-    return finalizeResponse(forwardedRequest, nonce, requestId, pathname, undefined, {
-      skipSessionRefresh: true,
-    });
+    return finalizeResponse(
+      forwardedRequest,
+      nonce,
+      requestId,
+      pathname,
+      contentSecurityPolicy,
+      undefined,
+      {
+        skipSessionRefresh: true,
+      },
+    );
   }
 
   if (pathname.startsWith("/api/cron/") || pathname.startsWith("/api/webhooks/")) {
-    return finalizeResponse(forwardedRequest, nonce, requestId, pathname);
+    return finalizeResponse(
+      forwardedRequest,
+      nonce,
+      requestId,
+      pathname,
+      contentSecurityPolicy,
+    );
   }
 
   // Anonymous marketing/legal: skip Redis rate limit + skip getUser() when no auth cookies.
   if (isMarketingPath(pathname) && !hasSupabaseAuthCookie(request)) {
-    return finalizeResponse(forwardedRequest, nonce, requestId, pathname, undefined, {
-      skipSessionRefresh: true,
-    });
+    return finalizeResponse(
+      forwardedRequest,
+      nonce,
+      requestId,
+      pathname,
+      contentSecurityPolicy,
+      undefined,
+      {
+        skipSessionRefresh: true,
+      },
+    );
   }
 
   // Guest product routes: send to login (cookie presence only — not a security check).
+  // Native WebView often cannot attach httpOnly auth cookies after OTP; the
+  // first-party hint cookie lets /welcome render while Bearer hydrates session.
   if (
     isProtectedProductPath(pathname) &&
     !pathname.startsWith("/api/") &&
-    !hasSupabaseAuthCookie(request)
+    !hasSupabaseAuthCookie(request) &&
+    !hasNativeSessionHint(request) &&
+    !hasNativeHandoffQuery(request)
   ) {
     const login = request.nextUrl.clone();
     login.pathname = "/login";
@@ -288,7 +392,13 @@ export async function middleware(request: NextRequest) {
     nonce,
     requestId,
     pathname,
+    contentSecurityPolicy,
     { limit: rateLimit.limit, remaining: rateLimit.remaining },
+    pathname === "/api/health" ||
+    hasNativeSessionHint(request) ||
+    hasNativeHandoffQuery(request)
+      ? { skipSessionRefresh: true }
+      : undefined,
   );
 }
 

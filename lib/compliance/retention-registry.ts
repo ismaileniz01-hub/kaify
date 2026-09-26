@@ -54,7 +54,7 @@ export const RETENTION_REGISTRY: readonly RetentionRegistryEntry[] = [
   { table: "tier_limits", classification: "INDEFINITE_BY_DESIGN", purged: false, rationale: "Catalog." },
   { table: "coaches", classification: "INDEFINITE_BY_DESIGN", purged: false, rationale: "Catalog." },
   { table: "market_items", classification: "INDEFINITE_BY_DESIGN", purged: false, rationale: "Catalog." },
-  { table: "admin_audit_log", classification: "LEGAL_AUDIT", retainDays: RETENTION.adminAuditDays, purged: true, rationale: "Admin actions." },
+  { table: "admin_audit_log", classification: "NEEDS_POLICY", purged: false, rationale: "Automated TTL disabled pending versioned KVKK/GDPR legal/privacy approval." },
   { table: "ai_usage_ledger", classification: "OPERATIONAL_SHORT_LIVED", retainMonths: RETENTION.aiUsageLedgerMonths, purged: true, rationale: "Cost/usage telemetry." },
   { table: "ai_daily_usage", classification: "OPERATIONAL_SHORT_LIVED", retainDays: 90, purged: false, rationale: "UTC-day AI token counters; rebuilt from ledger." },
   { table: "ai_platform_daily_usage", classification: "OPERATIONAL_SHORT_LIVED", retainDays: 90, purged: false, rationale: "Platform AI spend counter; overwritten per day." },
@@ -63,11 +63,17 @@ export const RETENTION_REGISTRY: readonly RetentionRegistryEntry[] = [
   { table: "cost_alerts", classification: "OPERATIONAL_SHORT_LIVED", retainDays: 90, purged: false, rationale: "Ops alerts; low volume." },
   { table: "cron_job_runs", classification: "OPERATIONAL_SHORT_LIVED", retainDays: 90, purged: false, rationale: "Cron metrics; low volume." },
   { table: "domain_events", classification: "OPERATIONAL_SHORT_LIVED", retainDays: RETENTION.domainEventsDays, purged: true, rationale: "Processed outbox only." },
+  { table: "product_events", classification: "NEEDS_POLICY", purged: false, rationale: "Product analytics TTL pending legal/privacy approval (ADR 008). Production collection off by default." },
+  { table: "scan_corrections", classification: "PRODUCT_HISTORY", retainMonths: RETENTION.analyticsMonths, purged: false, rationale: "Numeric scan corrections; no image or free-text." },
   { table: "idempotency_keys", classification: "OPERATIONAL_SHORT_LIVED", purged: true, rationale: "TTL via expires_at." },
   { table: "influencer_codes", classification: "INDEFINITE_BY_DESIGN", purged: false, rationale: "Admin catalog." },
   { table: "leaderboard_snapshots", classification: "OPERATIONAL_SHORT_LIVED", purged: false, rationale: "Overwritten in place." },
   { table: "retention_purge_runs", classification: "OPERATIONAL_SHORT_LIVED", retainDays: 365, purged: false, rationale: "Purge audit." },
   { table: "support_messages", classification: "PRODUCT_HISTORY", purged: false, rationale: "Tied to tickets; account deletion cascades." },
+  { table: "workout_plans", classification: "PRODUCT_HISTORY", retainMonths: RETENTION.analyticsMonths, purged: false, rationale: "Applied training plans; account deletion cascades." },
+  { table: "workout_plan_items", classification: "PRODUCT_HISTORY", retainMonths: RETENTION.analyticsMonths, purged: false, rationale: "Prescription rows; cascade with plans." },
+  { table: "workout_sessions", classification: "PRODUCT_HISTORY", retainMonths: RETENTION.analyticsMonths, purged: false, rationale: "Structured session history; no free-text notes." },
+  { table: "workout_set_logs", classification: "PRODUCT_HISTORY", retainMonths: RETENTION.analyticsMonths, purged: false, rationale: "Numeric set logs tied to sessions." },
 ];
 
 export function retentionTableNames(): string[] {

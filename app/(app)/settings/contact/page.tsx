@@ -8,9 +8,13 @@ import type { SupportTicketDTO } from "@/lib/services/support.service";
 import { EmptyState } from "@/components/EmptyState";
 import { InlineAlert } from "@/components/InlineAlert";
 import { AppHeader } from "@/components/navigation/AppHeader";
+import { useOfflineRetry } from "@/hooks/useOfflineRetry";
+import { errorToMessage } from "@/lib/i18n/api-error";
+import { useScrollFocusedInputIntoView } from "@/hooks/useScrollFocusedInputIntoView";
 
 export default function ContactSupportPage() {
   const { t } = useLang();
+  useScrollFocusedInputIntoView();
   const [ticket, setTicket] = useState<SupportTicketDTO | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -19,8 +23,10 @@ export default function ContactSupportPage() {
   const load = useCallback(() => {
     void apiGet<SupportTicketDTO>("/api/support")
       .then(setTicket)
-      .catch(() => setError(t("support.error.load")));
+      .catch((err) => setError(errorToMessage(err, t) || t("support.error.load")));
   }, [t]);
+
+  useOfflineRetry(load);
 
   useEffect(() => {
     load();
@@ -36,11 +42,20 @@ export default function ContactSupportPage() {
       });
       setTicket(updated);
       setMessage("");
-    } catch {
-      setError(t("support.error.send"));
+    } catch (err) {
+      setError(errorToMessage(err, t) || t("support.error.send"));
     } finally {
       setBusy(false);
     }
+  };
+
+  const retry = () => {
+    setError(null);
+    if (message.trim()) {
+      void send();
+      return;
+    }
+    load();
   };
 
   return (
@@ -67,7 +82,7 @@ export default function ContactSupportPage() {
               {m.body}
             </div>
           ))}
-          {!ticket?.messages.length && (
+          {!ticket?.messages.length && !error && (
             <EmptyState title={t("support.empty")} className="py-6" />
           )}
         </div>
@@ -76,10 +91,7 @@ export default function ContactSupportPage() {
           <InlineAlert
             variant="error"
             message={error}
-            onRetry={() => {
-              setError(null);
-              load();
-            }}
+            onRetry={retry}
             onDismiss={() => setError(null)}
           />
         )}
@@ -98,7 +110,8 @@ export default function ContactSupportPage() {
             type="button"
             disabled={busy || !message.trim()}
             onClick={() => void send()}
-            className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-600 text-white disabled:opacity-40"
+            aria-label={t("support.send")}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-600 text-white disabled:opacity-40"
           >
             <Send className="h-4 w-4" />
           </button>

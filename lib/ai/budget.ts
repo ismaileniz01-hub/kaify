@@ -29,6 +29,12 @@ export const TOKEN_BUDGET = {
   chatReply: envInt("AI_MAX_CHAT_TOKENS", 800),
   /** Image analysis → personalized summary (DeepSeek synthesis). */
   synthesis: envInt("AI_MAX_SYNTHESIS_TOKENS", 700),
+  /**
+   * Gemini vision JSON (quality + observations). Must leave headroom above
+   * thinking tokens — Gemini counts thoughts against maxOutputTokens and
+   * otherwise returns empty candidates (Maya/Leo photo hard-fail).
+   */
+  visionJson: envInt("AI_MAX_VISION_TOKENS", 8192),
   /** Structured card JSON (workout / meal / daily summary). */
   structuredCard: envInt("AI_MAX_CARD_TOKENS", 900),
   /** Analytics extraction JSON (small). */
@@ -72,4 +78,10 @@ export const AI_FEATURES = {
    * Set AI_CHAT_ANALYTICS=false to skip.
    */
   chatAnalytics: envBool("AI_CHAT_ANALYTICS", true),
+  /**
+   * Production KAIOS orchestrator (capsules + compiler + one conversational call).
+   * Set KAIOS_RUNTIME=false only as an explicit soak/canary rollback.
+   * Failures on the KAIOS path must NOT automatically fall back to legacy.
+   */
+  kaiosRuntime: envBool("KAIOS_RUNTIME", true),
 } as const;

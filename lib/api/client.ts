@@ -5,6 +5,14 @@ import { resolveApiPath } from "@/lib/api/resolve-api-path";
 import { withRetry } from "@/lib/resilience/retry";
 import { UpstreamHttpError } from "@/lib/resilience/error-taxonomy";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
+import {
+  hasNativeHandoffClient,
+  readNativeEntryAccessToken,
+} from "@/lib/native/native-entry-boot";
+import {
+  getFreshNativeAccessToken,
+  refreshNativeEntryTokens,
+} from "@/lib/native/native-token-refresh";
 
 export const IDEMPOTENCY_HEADER = "Idempotency-Key";
 
@@ -17,13 +25,44 @@ function mergeHeaders(init?: HeadersInit): HeadersInit {
   return { ...csrfHeaders(), ...(init ?? {}) };
 }
 
-/** Bearer auth is required when the UI is bundled under a Capacitor origin. */
+const GET_SESSION_HEADER_TIMEOUT_MS = 800;
+
+function withAuthHeaderTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = globalThis.setTimeout(() => resolve(fallback), GET_SESSION_HEADER_TIMEOUT_MS);
+    promise
+      .then((value) => {
+        globalThis.clearTimeout(timer);
+        resolve(value);
+      })
+      .catch(() => {
+        globalThis.clearTimeout(timer);
+        resolve(fallback);
+      });
+  });
+}
+
+/** Bearer from native-entry tokens; never wait on WKWebView navigator.locks. */
 export async function getApiAuthHeaders(): Promise<Record<string, string>> {
+  if (readNativeEntryAccessToken()) {
+    const nativeToken = await getFreshNativeAccessToken();
+    if (nativeToken) {
+      return { Authorization: `Bearer ${nativeToken}` };
+    }
+  }
+  // Cookie-only handoff: credentials:include carries sb-* cookies. Do not call
+  // getSession() while the hint cookie is the only signal — it can hang locks.
+  if (hasNativeHandoffClient()) {
+    return {};
+  }
   const supabase = tryCreateBrowserSupabaseClient();
   if (!supabase) return {};
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await withAuthHeaderTimeout(supabase.auth.getSession(), {
+    data: { session: null },
+    error: null,
+  });
   return session?.access_token
     ? { Authorization: `Bearer ${session.access_token}` }
     : {};
@@ -69,6 +108,39 @@ function resolveMutationIdempotencyKey(
   return createIdempotencyKey();
 }
 
+const FETCH_TIMEOUT_MS = 12_000;
+
+function isAbortLike(error: unknown): boolean {
+  if (typeof DOMException !== "undefined" && error instanceof DOMException) {
+    return error.name === "AbortError" || error.name === "TimeoutError";
+  }
+  return error instanceof Error && /abort|timeout/i.test(error.name + error.message);
+}
+
+function isLikelyNetworkFailure(error: unknown): boolean {
+  if (error instanceof TypeError) return true;
+  if (isAbortLike(error)) return true;
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    return (
+      msg.includes("fetch failed") ||
+      msg.includes("network") ||
+      msg.includes("failed to fetch")
+    );
+  }
+  return false;
+}
+
+function abortSignalWithTimeout(user?: AbortSignal): AbortSignal {
+  const controller = new AbortController();
+  globalThis.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  if (!user) return controller.signal;
+  if (typeof AbortSignal.any === "function") {
+    return AbortSignal.any([controller.signal, user]);
+  }
+  return controller.signal;
+}
+
 /** Typed fetch wrapper for Kaify Ai API routes (cookie session). Soft-retries GETs. */
 export async function apiFetch<T>(
   path: string,
@@ -84,24 +156,67 @@ export async function apiFetch<T>(
   if (idempotencyKey) {
     baseHeaders[IDEMPOTENCY_HEADER] = idempotencyKey;
   }
+  const signal = abortSignalWithTimeout(init?.signal ?? undefined);
+  const nativeBearer = nativeBearerFrom(baseHeaders);
 
+  try {
+    const body = await sendApiRequest<T>(path, init, method, baseHeaders, signal, idempotent);
+    if (!nativeBearer || body.success || body.error.code !== "UNAUTHORIZED") {
+      return body;
+    }
+    // Server rejected the stored native JWT (expired early, clock skew): rotate once.
+    const latest = readNativeEntryAccessToken();
+    let retryToken = latest && latest !== nativeBearer ? latest : null;
+    if (!retryToken) {
+      const refreshed = await refreshNativeEntryTokens();
+      if (refreshed.status === "unavailable") {
+        throw new ApiClientError("NETWORK", "Bağlantı kurulamadı.");
+      }
+      if (refreshed.status === "rejected") return body;
+      retryToken = refreshed.accessToken;
+    }
+    return await sendApiRequest<T>(
+      path,
+      init,
+      method,
+      { ...baseHeaders, Authorization: `Bearer ${retryToken}` },
+      signal,
+      idempotent,
+    );
+  } catch (error) {
+    if (isLikelyNetworkFailure(error)) {
+      throw new ApiClientError("NETWORK", "Bağlantı kurulamadı.");
+    }
+    throw error;
+  }
+}
+
+function nativeBearerFrom(headers: Record<string, string>): string | null {
+  const raw = headers.Authorization ?? headers.authorization ?? "";
+  const token = raw.replace(/^Bearer\s+/i, "").trim();
+  return token && token === readNativeEntryAccessToken() ? token : null;
+}
+
+async function sendApiRequest<T>(
+  path: string,
+  init: RequestInit | undefined,
+  method: string,
+  headers: Record<string, string>,
+  signal: AbortSignal,
+  idempotent: boolean,
+): Promise<ApiResponseBody<T>> {
   return withRetry(
     async () => {
-      let response: Response;
-      try {
-        response = await fetch(resolveApiPath(path), {
-          ...init,
-          method,
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            ...baseHeaders,
-          },
-        });
-      } catch (error) {
-        // Network / DNS — taxonomy marks retryable.
-        throw error;
-      }
+      const response = await fetch(resolveApiPath(path), {
+        ...init,
+        method,
+        credentials: "include",
+        signal,
+        headers: {
+          "Content-Type": "application/json",
+          ...headers,
+        },
+      });
 
       if (
         idempotent &&
@@ -117,19 +232,10 @@ export async function apiFetch<T>(
       retries: idempotent ? 2 : 1,
       baseDelayMs: 200,
       maxDelayMs: 1500,
-      signal: init?.signal ?? undefined,
-      // Mutating calls: only retry pure network failures (no HTTP 5xx retry).
+      signal,
       isRetryable: (error) => {
         if (error instanceof UpstreamHttpError) return idempotent;
-        if (error instanceof TypeError) return true;
-        if (error instanceof Error) {
-          const msg = error.message.toLowerCase();
-          return (
-            msg.includes("fetch failed") ||
-            msg.includes("network") ||
-            msg.includes("failed to fetch")
-          );
-        }
+        if (isLikelyNetworkFailure(error)) return true;
         return false;
       },
     },
@@ -198,9 +304,12 @@ export type ChatStreamHandlers = {
   onDelta: (content: string) => void;
   onDone: (data: {
     messageId: string | null;
+    userMessageId?: string | null;
     messageType?: string | null;
     payload?: unknown;
     warning_trigger?: string | null;
+    /** Full assistant text; used if rAF-coalesced deltas have not flushed yet. */
+    content?: string | null;
   }) => void;
   /** Optional rich-card patch after `done` (meal plan / score cards). */
   onCard?: (data: {
@@ -209,7 +318,7 @@ export type ChatStreamHandlers = {
     payload?: unknown;
   }) => void;
   /** Receives a stable API error CODE (translate on the UI via apiErrorMessage). */
-  onError: (code: string) => void;
+  onError: (code: string, details?: unknown) => void;
 };
 
 /** POST /api/chat/[coachId] — consumes SSE stream. */
@@ -219,6 +328,8 @@ export async function streamChatMessage(
   handlers: ChatStreamHandlers,
   signal?: AbortSignal,
   idempotencyKey?: string,
+  clientMessageId?: string,
+  locale?: string,
 ): Promise<void> {
   const key = idempotencyKey ?? createIdempotencyKey();
   const authHeaders = await getApiAuthHeaders();
@@ -231,7 +342,11 @@ export async function streamChatMessage(
       ...csrfHeaders(),
       ...authHeaders,
     },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({
+      message,
+      ...(clientMessageId ? { clientMessageId } : {}),
+      ...(locale ? { locale } : {}),
+    }),
     signal,
   });
 
@@ -239,7 +354,7 @@ export async function streamChatMessage(
     try {
       const json = (await response.json()) as ApiResponseBody<never>;
       if (!json.success) {
-        handlers.onError(json.error.code ?? "INTERNAL_ERROR");
+        handlers.onError(json.error.code ?? "INTERNAL_ERROR", json.error.details);
         return;
       }
     } catch {
@@ -256,6 +371,52 @@ export async function streamChatMessage(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let receivedDone = false;
+  let receivedError = false;
+
+  const dispatchBlock = (block: string) => {
+    const lines = block.split("\n");
+    let event = "message";
+    let data = "";
+
+    for (const line of lines) {
+      if (line.startsWith("event:")) event = line.slice(6).trim();
+      if (line.startsWith("data:")) data = line.slice(5).trim();
+    }
+
+    if (!data) return;
+
+    try {
+      const parsed = JSON.parse(data) as Record<string, unknown>;
+      if (event === "delta" && typeof parsed.content === "string") {
+        handlers.onDelta(parsed.content);
+      } else if (event === "done") {
+        receivedDone = true;
+        handlers.onDone({
+          messageId: (parsed.messageId as string | null) ?? null,
+          userMessageId: (parsed.userMessageId as string | null) ?? null,
+          messageType: (parsed.messageType as string | null) ?? null,
+          payload: parsed.payload,
+          warning_trigger: (parsed.warning_trigger as string | null) ?? null,
+          content:
+            typeof parsed.content === "string" ? parsed.content : null,
+        });
+      } else if (event === "card") {
+        handlers.onCard?.({
+          messageId: (parsed.messageId as string | null) ?? null,
+          messageType: (parsed.messageType as string | null) ?? null,
+          payload: parsed.payload,
+        });
+      } else if (event === "error") {
+        receivedError = true;
+        const code =
+          typeof parsed.code === "string" ? parsed.code : "INTERNAL_ERROR";
+        handlers.onError(code);
+      }
+    } catch {
+      // skip malformed SSE block
+    }
+  };
 
   while (true) {
     const { done, value } = await reader.read();
@@ -265,43 +426,12 @@ export async function streamChatMessage(
     const blocks = buffer.split("\n\n");
     buffer = blocks.pop() ?? "";
 
-    for (const block of blocks) {
-      const lines = block.split("\n");
-      let event = "message";
-      let data = "";
+    for (const block of blocks) dispatchBlock(block);
+  }
 
-      for (const line of lines) {
-        if (line.startsWith("event:")) event = line.slice(6).trim();
-        if (line.startsWith("data:")) data = line.slice(5).trim();
-      }
-
-      if (!data) continue;
-
-      try {
-        const parsed = JSON.parse(data) as Record<string, unknown>;
-        if (event === "delta" && typeof parsed.content === "string") {
-          handlers.onDelta(parsed.content);
-        } else if (event === "done") {
-          handlers.onDone({
-            messageId: (parsed.messageId as string | null) ?? null,
-            messageType: (parsed.messageType as string | null) ?? null,
-            payload: parsed.payload,
-            warning_trigger: (parsed.warning_trigger as string | null) ?? null,
-          });
-        } else if (event === "card") {
-          handlers.onCard?.({
-            messageId: (parsed.messageId as string | null) ?? null,
-            messageType: (parsed.messageType as string | null) ?? null,
-            payload: parsed.payload,
-          });
-        } else if (event === "error") {
-          const code =
-            typeof parsed.code === "string" ? parsed.code : "INTERNAL_ERROR";
-          handlers.onError(code);
-        }
-      } catch {
-        // skip malformed SSE block
-      }
-    }
+  buffer += decoder.decode();
+  if (buffer.trim()) dispatchBlock(buffer);
+  if (!receivedDone && !receivedError && !signal?.aborted) {
+    handlers.onError("STREAM_INCOMPLETE");
   }
 }

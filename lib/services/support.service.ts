@@ -1,6 +1,6 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/api/errors";
+import { logger } from "@/lib/logger";
 import { mapProfileRow, type ProfileDTO } from "@/lib/types/domain.types";
 import { createNotification } from "@/lib/services/notifications.service";
 
@@ -20,62 +20,93 @@ export type SupportMessageDTO = {
 };
 
 function supportDb() {
-  return createAdminSupabaseClient() as SupabaseClient;
+  return createAdminSupabaseClient();
 }
 
 async function listTicketMessages(ticketId: string): Promise<SupportMessageDTO[]> {
   const admin = supportDb();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("support_messages")
     .select("id, sender, body, created_at")
     .eq("ticket_id", ticketId)
     .order("created_at", { ascending: true });
 
+  if (error) {
+    logger.error("[support] load messages failed", { error: error.message });
+    throw new ApiError("INTERNAL_ERROR", "Destek mesajları yüklenemedi.");
+  }
+
   return (data ?? []).map((m) => ({
     id: m.id,
-    sender: m.sender as "user" | "admin",
+    sender: m.sender,
     body: m.body,
     createdAt: m.created_at,
   }));
 }
 
-export async function getOrCreateUserTicket(userId: string): Promise<SupportTicketDTO> {
+function toTicketDto(
+  row: {
+    id: string;
+    subject: string;
+    status: string;
+    updated_at: string;
+  },
+  messages: SupportMessageDTO[],
+): SupportTicketDTO {
+  return {
+    id: row.id,
+    subject: row.subject,
+    status: row.status === "closed" ? "closed" : "open",
+    updatedAt: row.updated_at,
+    messages,
+  };
+}
+
+/** Read-only: opening Settings → Contact must not create an empty hub ticket. */
+export async function getUserSupportTicket(userId: string): Promise<SupportTicketDTO> {
   const admin = supportDb();
-  const { data: existing } = await admin
+  const { data: rows, error: listError } = await admin
     .from("support_tickets")
     .select("id, subject, status, updated_at")
     .eq("user_id", userId)
     .eq("status", "open")
     .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
 
+  if (listError) {
+    logger.error("[support] load user ticket failed", { error: listError.message });
+    throw new ApiError("INTERNAL_ERROR", "Destek talebi yüklenemedi.");
+  }
+
+  const existing = rows?.[0];
   if (!existing) {
-    const { data: created, error } = await admin
-      .from("support_tickets")
-      .insert({ user_id: userId, subject: "Support request" })
-      .select("id, subject, status, updated_at")
-      .single();
-    if (error || !created) {
-      throw new ApiError("INTERNAL_ERROR", "Destek talebi oluşturulamadı.");
-    }
     return {
-      id: created.id,
-      subject: created.subject,
-      status: created.status as "open" | "closed",
-      updatedAt: created.updated_at,
+      id: "",
+      subject: "Support request",
+      status: "open",
+      updatedAt: new Date(0).toISOString(),
       messages: [],
     };
   }
 
-  const messages = await listTicketMessages(existing.id);
-  return {
-    id: existing.id,
-    subject: existing.subject,
-    status: existing.status as "open" | "closed",
-    updatedAt: existing.updated_at,
-    messages,
-  };
+  return toTicketDto(existing, await listTicketMessages(existing.id));
+}
+
+export async function getOrCreateUserTicket(userId: string): Promise<SupportTicketDTO> {
+  const existing = await getUserSupportTicket(userId);
+  if (existing.id) return existing;
+
+  const admin = supportDb();
+  const { data: created, error } = await admin
+    .from("support_tickets")
+    .insert({ user_id: userId, subject: "Support request" })
+    .select("id, subject, status, updated_at")
+    .single();
+  if (error || !created) {
+    logger.error("[support] create ticket failed", { error: error?.message });
+    throw new ApiError("INTERNAL_ERROR", "Destek talebi oluşturulamadı.");
+  }
+  return toTicketDto(created, []);
 }
 
 export async function sendUserSupportMessage(
@@ -93,7 +124,10 @@ export async function sendUserSupportMessage(
     sender: "user",
     body: trimmed,
   });
-  if (error) throw new ApiError("INTERNAL_ERROR", "Mesaj gönderilemedi.");
+  if (error) {
+    logger.error("[support] send user message failed", { error: error.message });
+    throw new ApiError("INTERNAL_ERROR", "Mesaj gönderilemedi.");
+  }
 
   await admin
     .from("support_tickets")
@@ -114,13 +148,71 @@ export type AdminSupportTicketSummary = {
   lastMessage: string;
 };
 
-export async function listAdminSupportTickets(): Promise<AdminSupportTicketSummary[]> {
+type PostgrestLikeError = {
+  message?: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+};
+
+function logSupportQueryError(scope: string, error: PostgrestLikeError): void {
+  logger.error(`[support] ${scope}`, {
+    code: error.code,
+    message: error.message,
+    details: error.details,
+    hint: error.hint,
+  });
+}
+
+const LAST_MESSAGE_CHUNK = 20;
+
+async function loadLastMessageBodies(
+  ticketIds: string[],
+): Promise<Map<string, string>> {
   const admin = supportDb();
-  const { data: tickets } = await admin
+  const lastBodyByTicket = new Map<string, string>();
+
+  for (let i = 0; i < ticketIds.length; i += LAST_MESSAGE_CHUNK) {
+    const chunk = ticketIds.slice(i, i + LAST_MESSAGE_CHUNK);
+    const rows = await Promise.all(
+      chunk.map(async (ticketId) => {
+        const { data, error } = await admin
+          .from("support_messages")
+          .select("ticket_id, body")
+          .eq("ticket_id", ticketId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (error) {
+          logSupportQueryError("list last message failed", error);
+          return null;
+        }
+        return data;
+      }),
+    );
+
+    for (const row of rows) {
+      if (row?.ticket_id && typeof row.body === "string") {
+        lastBodyByTicket.set(row.ticket_id, row.body);
+      }
+    }
+  }
+
+  return lastBodyByTicket;
+}
+
+async function listAdminSupportTicketsViaTables(): Promise<AdminSupportTicketSummary[]> {
+  const admin = supportDb();
+  const { data: tickets, error: ticketsError } = await admin
     .from("support_tickets")
     .select("id, user_id, subject, status, updated_at")
     .order("updated_at", { ascending: false })
     .limit(100);
+
+  if (ticketsError) {
+    logSupportQueryError("list tickets failed", ticketsError);
+    throw new ApiError("INTERNAL_ERROR", "Destek kutusu yüklenemedi.");
+  }
 
   const list = tickets ?? [];
   if (list.length === 0) return [];
@@ -128,49 +220,64 @@ export async function listAdminSupportTickets(): Promise<AdminSupportTicketSumma
   const userIds = [...new Set(list.map((t) => t.user_id))];
   const ticketIds = list.map((t) => t.id);
 
-  const [{ data: profiles }, { data: messages }] = await Promise.all([
+  const [{ data: profiles, error: profilesError }, lastBodyByTicket] = await Promise.all([
     admin.from("profiles").select("id, display_name").in("id", userIds),
-    admin
-      .from("support_messages")
-      .select("ticket_id, body, created_at")
-      .in("ticket_id", ticketIds)
-      .order("created_at", { ascending: false }),
+    loadLastMessageBodies(ticketIds),
   ]);
+
+  if (profilesError) {
+    logger.warn("[support] list profiles failed", {
+      code: profilesError.code,
+      message: profilesError.message,
+      details: profilesError.details,
+      hint: profilesError.hint,
+    });
+  }
 
   const nameByUser = new Map<string, string>();
   for (const p of profiles ?? []) {
     nameByUser.set(p.id, p.display_name?.trim() || "User");
   }
 
-  const lastBodyByTicket = new Map<string, string>();
-  for (const m of messages ?? []) {
-    if (!lastBodyByTicket.has(m.ticket_id)) {
-      lastBodyByTicket.set(m.ticket_id, m.body ?? "");
-    }
-  }
+  const withMessages = list.filter((t) => lastBodyByTicket.has(t.id));
+  const source = withMessages.length > 0 ? withMessages : list;
 
-  const emailByUser = new Map<string, string | null>();
-  await Promise.all(
-    userIds.map(async (userId) => {
-      try {
-        const { data } = await admin.auth.admin.getUserById(userId);
-        emailByUser.set(userId, data.user?.email ?? null);
-      } catch {
-        emailByUser.set(userId, null);
-      }
-    }),
-  );
-
-  return list.map((t) => ({
+  return source.map((t) => ({
     id: t.id,
     userId: t.user_id,
     userName: nameByUser.get(t.user_id) ?? "User",
-    userEmail: emailByUser.get(t.user_id) ?? null,
+    userEmail: null,
     subject: t.subject,
     status: t.status,
     updatedAt: t.updated_at,
-    lastMessage: lastBodyByTicket.get(t.id) ?? "",
+    lastMessage: lastBodyByTicket.get(t.id) ?? t.subject,
   }));
+}
+
+export async function listAdminSupportTickets(): Promise<AdminSupportTicketSummary[]> {
+  const admin = supportDb();
+  const { data, error } = await admin.rpc("admin_list_support_inbox", {
+    p_limit: 100,
+  });
+
+  if (!error && Array.isArray(data)) {
+    return data.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      userName: row.user_name?.trim() || "User",
+      userEmail: null,
+      subject: row.subject,
+      status: row.status,
+      updatedAt: row.updated_at,
+      lastMessage: row.last_message || row.subject,
+    }));
+  }
+
+  if (error) {
+    logSupportQueryError("admin_list_support_inbox rpc failed", error);
+  }
+
+  return listAdminSupportTicketsViaTables();
 }
 
 export async function getAdminSupportTicket(ticketId: string): Promise<{
@@ -187,9 +294,12 @@ export async function getAdminSupportTicket(ticketId: string): Promise<{
 
   if (!t) throw new ApiError("NOT_FOUND", "Talep bulunamadı.");
 
-  const [{ data: profile }, { data: authUser }] = await Promise.all([
+  const [{ data: profile }, email] = await Promise.all([
     admin.from("profiles").select("*").eq("id", t.user_id).maybeSingle(),
-    admin.auth.admin.getUserById(t.user_id),
+    admin.auth.admin
+      .getUserById(t.user_id)
+      .then((res) => res.data.user?.email ?? null)
+      .catch(() => null),
   ]);
 
   const dto = profile ? mapProfileRow(profile) : null;
@@ -200,7 +310,7 @@ export async function getAdminSupportTicket(ticketId: string): Promise<{
       id: t.id,
       userId: t.user_id,
       userName: dto?.displayName ?? "User",
-      userEmail: authUser.user?.email ?? null,
+      userEmail: email,
       subject: t.subject,
       status: t.status,
       updatedAt: t.updated_at,

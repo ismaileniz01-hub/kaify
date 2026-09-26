@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 
 const SECRET = "test-paddle-webhook-secret";
 
@@ -38,10 +38,30 @@ vi.mock("@/lib/supabase/admin", () => ({
       if (table === "paddle_subscriptions") {
         return {
           select: () => ({
-            eq: () => ({ maybeSingle: paddleSubSelect }),
+            eq: () => ({
+              maybeSingle: paddleSubSelect,
+              in: () => ({
+                limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
           }),
           upsert: vi.fn().mockResolvedValue({ error: null }),
           update: () => ({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+        };
+      }
+      if (table === "profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { id: "u1" },
+                error: null,
+              }),
+            }),
+          }),
+          update: () => ({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+          }),
         };
       }
       return {
@@ -70,7 +90,10 @@ import {
   handleNormalizedPaddleEvent,
   verifyAndParsePaddleWebhook,
 } from "@/lib/services/billing.service";
-import { POST as paddleWebhookPost } from "@/app/api/webhooks/paddle/route";
+import {
+  POST as paddleWebhookPost,
+} from "@/app/api/webhooks/paddle/route";
+import { PADDLE_WEBHOOK_MAX_BYTES } from "@/lib/api/request-body-limit";
 
 function sign(rawBody: string, ts = Math.floor(Date.now() / 1000)): string {
   const h1 = createHmac("sha256", SECRET).update(`${ts}:${rawBody}`).digest("hex");
@@ -78,14 +101,14 @@ function sign(rawBody: string, ts = Math.floor(Date.now() / 1000)): string {
 }
 
 function webhookRequest(rawBody: string, signature: string | null): NextRequest {
-  return {
+  return new NextRequest("http://localhost/api/webhooks/paddle", {
     method: "POST",
-    text: async () => rawBody,
     headers: {
-      get: (name: string) =>
-        name.toLowerCase() === "paddle-signature" ? signature : null,
+      ...(signature ? { "paddle-signature": signature } : {}),
+      "content-type": "application/json",
     },
-  } as unknown as NextRequest;
+    body: rawBody,
+  });
 }
 
 beforeEach(() => {
@@ -189,6 +212,16 @@ describe("handleNormalizedPaddleEvent claims", () => {
 });
 
 describe("POST /api/webhooks/paddle", () => {
+  it("rejects an oversized body before signature verification", async () => {
+    const raw = "x".repeat(PADDLE_WEBHOOK_MAX_BYTES + 1);
+    const res = await paddleWebhookPost(webhookRequest(raw, sign(raw)));
+
+    expect(res.status).toBe(413);
+    await expect(res.json()).resolves.toEqual({
+      error: "payload_too_large",
+    });
+  });
+
   it("returns 401 for invalid signature", async () => {
     const res = await paddleWebhookPost(
       webhookRequest('{"event_id":"e","data":{}}', "ts=1;h1=00"),
@@ -273,5 +306,66 @@ describe("stale Paddle subscription events", () => {
 
     expect(result).toEqual({ ok: true, skipped: true });
     expect(rpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("Paddle refund and dispute entitlement", () => {
+  it("revokes access for an approved full refund", async () => {
+    insert.mockResolvedValue({ error: null });
+    updateEq.mockResolvedValue({ error: null });
+
+    const result = await handleNormalizedPaddleEvent({
+      eventId: "evt_refund_full",
+      eventType: "adjustment.updated",
+      data: {
+        id: "adj_1",
+        action: "refund",
+        type: "full",
+        status: "approved",
+        custom_data: { user_id: "u1" },
+      },
+      rawPayload: {},
+    });
+
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("does not revoke access for an approved partial refund", async () => {
+    insert.mockResolvedValue({ error: null });
+    updateEq.mockResolvedValue({ error: null });
+
+    const result = await handleNormalizedPaddleEvent({
+      eventId: "evt_refund_partial",
+      eventType: "adjustment.updated",
+      data: {
+        id: "adj_2",
+        action: "refund",
+        type: "partial",
+        status: "approved",
+        custom_data: { user_id: "u1" },
+      },
+      rawPayload: {},
+    });
+
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("revokes access when a dispute is lost", async () => {
+    insert.mockResolvedValue({ error: null });
+    updateEq.mockResolvedValue({ error: null });
+
+    const result = await handleNormalizedPaddleEvent({
+      eventId: "evt_dispute_lost",
+      eventType: "dispute.updated",
+      data: {
+        id: "dsp_1",
+        status: "closed",
+        outcome: "lost",
+        custom_data: { user_id: "u1" },
+      },
+      rawPayload: {},
+    });
+
+    expect(result).toEqual({ ok: true });
   });
 });

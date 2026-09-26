@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "generated": "2026-08-16",
+  "source": "11_alex.md",
+  "module": "lib/kaios/capsules/alex/index.ts",
+  "always_on": [
+    {
+      "key": "ALEX_IDENTITY",
+      "source_section": "Identity & Mission"
+    },
+    {
+      "key": "ALEX_VOICE",
+      "source_section": "Identity & Mission"
+    },
+    {
+      "key": "ALEX_BEHAVIOR",
+      "source_section": "Programming & Progression"
+    },
+    {
+      "key": "ALEX_BOUNDARIES",
+      "source_section": "Output & Runtime"
+    },
+    {
+      "key": "ALEX_RESPONSE_STYLE",
+      "source_section": "Output & Runtime"
+    },
+    {
+      "key": "ALEX_SAFETY",
+      "source_section": "Technique & Safety"
+    }
+  ],
+  "conditional_modes": [
+    {
+      "key": "ALEX_FORM",
+      "task": "form",
+      "source_section": "Technique & Safety"
+    },
+    {
+      "key": "ALEX_PROGRAMMING",
+      "task": "programming",
+      "source_section": "Programming & Progression"
+    },
+    {
+      "key": "ALEX_MOTIVATION",
+      "task": "motivation",
+      "source_section": "Motivation & Cross-Coach"
+    }
+  ],
+  "selector": "selectAlexCapsules"
+}

@@ -16,6 +16,7 @@ import { AiConsentGate } from "@/components/consent/AiConsentGate";
 import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
 import { SubscriptionGate } from "@/components/billing/SubscriptionGate";
 import { ReferralApplySync } from "@/components/referral/ReferralApplySync";
+import { ReferralRewardRedeem } from "@/components/referral/ReferralRewardRedeem";
 
 /** Authenticated app shell — heavy providers + gates (not used on marketing). */
 export function AppShellProviders({ children }: { children: ReactNode }) {
@@ -29,6 +30,7 @@ export function AppShellProviders({ children }: { children: ReactNode }) {
             <MfaGate />
             <LegalConsentSync />
             <ReferralApplySync />
+            <ReferralRewardRedeem />
             <AiConsentGate />
             <OnboardingGate />
             <SubscriptionGate />

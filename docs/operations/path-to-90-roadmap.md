@@ -135,7 +135,7 @@ Score lift (indicative):
 
 ### Android
 
-- [x] Align `applicationId` with listing (`org.kaify.app`)
+- [x] Align `applicationId` with listing (`org.kaifyai.app`)
 - [x] `google-services.json` in release pipeline (example + `verify-google-services.mjs`)
 - [x] Notification permission UX (`PushToggle` native copy + consent)
 

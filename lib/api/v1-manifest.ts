@@ -11,6 +11,8 @@ export const API_LEGACY_EXCLUDED_PREFIXES = [
   "/api/health", // liveness probe (exact + /steps handled via v1)
   "/api/waitlist",
   "/api/subscribe",
+  "/api/events",
+  "/api/public/",
 ] as const;
 
 /** Canonical v1 routes — keep in sync with tests/architecture/v1-routes.test.ts */
@@ -20,8 +22,11 @@ export const API_V1_ROUTES = [
   "/api/v1/profile",
   "/api/v1/profile/export",
   "/api/v1/profile/avatar",
+  "/api/v1/billing/native-checkout",
   "/api/v1/chat/[coachId]",
   "/api/v1/chat/[coachId]/analyze",
+  "/api/v1/chat/messages/[messageId]",
+  "/api/v1/chat/messages/delete",
   "/api/v1/chat/team",
   "/api/v1/streak",
   "/api/v1/streak/rewards",
@@ -31,20 +36,29 @@ export const API_V1_ROUTES = [
   "/api/v1/market/chest",
   "/api/v1/analytics",
   "/api/v1/analytics/confirm",
+  "/api/v1/analytics/goals",
   "/api/v1/settings",
   "/api/v1/onboarding",
+  "/api/v1/onboarding/basics",
+  "/api/v1/events",
+  "/api/v1/billing/status",
   "/api/v1/usage",
   "/api/v1/kai",
   "/api/v1/home",
   "/api/v1/notifications",
   "/api/v1/messages",
   "/api/v1/referral",
+  "/api/v1/referral/claim",
+  "/api/v1/support",
   "/api/v1/health/steps",
   "/api/v1/consent",
   "/api/v1/leaderboard/global",
   "/api/v1/leaderboard/country",
   "/api/v1/push/subscribe",
   "/api/v1/push/native",
+  "/api/v1/workout/plan",
+  "/api/v1/workout/session",
+  "/api/v1/workout/swap",
 ] as const;
 
 export function isLegacyPublicApi(pathname: string): boolean {

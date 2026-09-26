@@ -7,6 +7,7 @@ import { useLang } from "@/lib/lang-context";
 import { MotionDialog } from "@/components/ui/MotionDialog";
 import { useToast } from "@/components/ui/ToastProvider";
 import { MOTION_EXIT_MS } from "@/lib/motion/use-presence";
+import { CHAT_PHOTO_ACCEPT } from "@/lib/chat/prepare-chat-photo";
 
 type ImagePickerModalProps = {
   isOpen: boolean;
@@ -89,7 +90,7 @@ export function ImagePickerModal({ isOpen, onClose, onImageSelect }: ImagePicker
     // Uses OS camera picker via <input capture> — does not need getUserMedia.
     // Permissions-Policy camera=() remains deny (see docs/operations/store-readiness.md).
     if (fileInputRef.current) {
-      fileInputRef.current.accept = "image/*";
+      fileInputRef.current.accept = CHAT_PHOTO_ACCEPT;
       fileInputRef.current.capture = "environment";
       fileInputRef.current.click();
     }
@@ -97,7 +98,7 @@ export function ImagePickerModal({ isOpen, onClose, onImageSelect }: ImagePicker
 
   const handleOpenGallery = () => {
     if (fileInputRef.current) {
-      fileInputRef.current.accept = "image/*";
+      fileInputRef.current.accept = CHAT_PHOTO_ACCEPT;
       fileInputRef.current.removeAttribute("capture");
       fileInputRef.current.click();
     }
@@ -114,7 +115,7 @@ export function ImagePickerModal({ isOpen, onClose, onImageSelect }: ImagePicker
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept={CHAT_PHOTO_ACCEPT}
         className="hidden"
         onChange={handleFileSelect}
       />

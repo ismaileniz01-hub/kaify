@@ -11,6 +11,25 @@ import {
   requestPhotoAnalyticsConfirmation,
   type PhotoAnalyticsConfirmation,
 } from "@/lib/ai/coach-analytics";
+import {
+  extractAnalysisFromPayload,
+  fingerprintVisionImage,
+  selectReusableVisionRow,
+  type StoredVisionRow,
+} from "@/lib/kaios/vision/fingerprint";
+import { resolveLocale } from "@/lib/i18n/dictionary";
+import { resolveActiveLocale } from "@/lib/kaios/localization/resolve";
+import { emitKaiosEventBestEffort } from "@/lib/kaios/events";
+import { summarizePhysiqueScores } from "@/lib/kaios/context/physique-summary";
+import { loadCrossCoachSnapshot } from "@/lib/kaios/context/coach-snapshot";
+import { formatTrustedProfileContext } from "@/lib/ai/chat-context";
+import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
+import { ensureMayaMealSaveAsk } from "@/lib/kaios/maya/meal-save-ask";
+import { relabelMayaMacroLabels } from "@/lib/kaios/maya/macro-labels";
+import { parseHydrationLiters } from "@/lib/kaios/analytics/chat-log";
+import { getTodayNutritionSnapshot } from "@/lib/services/analytics.service";
+import { resolvePhotoCoachSummary } from "@/lib/ai/photo-summary-fallback";
+import { parseGenderInput } from "@/lib/profile-mapper";
 import type { ScoreDrift } from "@/lib/ai/consistency";
 import type {
   AnalysisMimeType,
@@ -20,6 +39,7 @@ import type {
 } from "@/lib/validations/analysis.schema";
 import type {
   Json,
+  MessageType,
   UsageResource,
   WarningTrigger,
 } from "@/lib/types/database.types";
@@ -32,6 +52,9 @@ export type AnalyzePhotoParams = {
   imageBase64: string;
   mimeType: AnalysisMimeType;
   note?: string;
+  explicitLocale?: string;
+  clientMessageId?: string;
+  signal?: AbortSignal;
 };
 
 export type AnalyzePhotoResult = {
@@ -41,14 +64,17 @@ export type AnalyzePhotoResult = {
   quality: ImageQuality;
   warningTrigger: WarningTrigger | null;
   messageId: string | null;
+  userMessageId: string | null;
   confirmation: PhotoAnalyticsConfirmation | null;
+  geminiCalls: number;
+  deepseekCalls: number;
+  reused: boolean;
 };
 
 function resourceForCoach(coachId: "maya" | "leo"): UsageResource {
   return coachId === "maya" ? "maya_photo" : "leo_photo";
 }
 
-/** Safely extracts a previous score map from a stored analysis payload. */
 function extractScores(payload: Json | null): MuscleScores | null {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return null;
@@ -70,13 +96,95 @@ function extractScores(payload: Json | null): MuscleScores | null {
   return out;
 }
 
-async function getLocale(admin: AdminClient, userId: string): Promise<string> {
+function extractQuality(payload: Json | null): ImageQuality | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+  const quality = (payload as Record<string, unknown>).quality;
+  if (!quality || typeof quality !== "object" || Array.isArray(quality)) {
+    return null;
+  }
+  const score = (quality as Record<string, unknown>).score;
+  if (typeof score !== "number" || !Number.isFinite(score)) return null;
+  const issues = (quality as Record<string, unknown>).issues;
+  const tips = (quality as Record<string, unknown>).tips;
+  return {
+    score,
+    issues: Array.isArray(issues)
+      ? issues.filter((v): v is string => typeof v === "string")
+      : [],
+    tips: Array.isArray(tips)
+      ? tips.filter((v): v is string => typeof v === "string")
+      : [],
+  };
+}
+
+async function getLocale(
+  admin: AdminClient,
+  userId: string,
+  explicitLocale?: string,
+): Promise<string> {
   const { data } = await admin
     .from("profiles")
     .select("locale")
     .eq("id", userId)
     .maybeSingle();
-  return data?.locale ?? "tr";
+  const savedLocale = resolveLocale(data?.locale);
+  const requestedLocale = explicitLocale
+    ? resolveLocale(explicitLocale)
+    : savedLocale;
+  if (explicitLocale && requestedLocale !== savedLocale) {
+    await admin
+      .from("profiles")
+      .update({ locale: requestedLocale })
+      .eq("id", userId);
+  }
+  return resolveActiveLocale({
+    savedLocale: requestedLocale,
+    fallbackLocale: "en",
+  });
+}
+
+async function loadPhotoUserState(
+  admin: AdminClient,
+  userId: string,
+): Promise<string> {
+  const [{ data: profile }, { data: settings }, snapshot] = await Promise.all([
+    admin
+      .from("profiles")
+      .select(
+        "allergies, gender, experience_level, training_days_per_week, activity_level, height_cm, weight_kg, dietary_preference, disliked_foods, health_conditions",
+      )
+      .eq("id", userId)
+      .maybeSingle(),
+    admin
+      .from("user_settings")
+      .select("primary_goal")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    loadCrossCoachSnapshot(userId).catch(() => ""),
+  ]);
+  const parsed = profile?.gender ? parseGenderInput(String(profile.gender)) : null;
+  const parts = [
+    formatTrustedProfileContext({
+      primaryGoal:
+        typeof settings?.primary_goal === "string" ? settings.primary_goal : null,
+      experienceLevel: profile?.experience_level ?? null,
+      trainingDaysPerWeek: profile?.training_days_per_week ?? null,
+      activityLevel: profile?.activity_level ?? null,
+      heightCm: profile?.height_cm ?? null,
+      weightKg: profile?.weight_kg ?? null,
+      dietaryPreference: profile?.dietary_preference ?? null,
+      dislikedFoods: profile?.disliked_foods ?? null,
+      healthConditions: profile?.health_conditions ?? null,
+    }),
+    typeof profile?.allergies === "string" && profile.allergies.trim()
+      ? `allergies: ${profile.allergies.trim()}`
+      : "",
+    parsed === "male" ? "user_gender: male" : parsed === "female" ? "user_gender: female" : "",
+    snapshot,
+  ].filter((part) => part && part.trim());
+  return parts.join("; ");
 }
 
 async function getPreviousScores(
@@ -98,13 +206,84 @@ async function getPreviousScores(
   return extractScores(data?.payload ?? null);
 }
 
+async function loadRecentVisionRows(
+  admin: AdminClient,
+  userId: string,
+  coachId: string,
+  messageType: MessageType,
+): Promise<StoredVisionRow[]> {
+  const { data, error } = await admin
+    .from("chat_messages")
+    .select("id, created_at, content, payload, user_id, coach_id, message_type")
+    .eq("user_id", userId)
+    .eq("coach_id", coachId)
+    .eq("sender", "coach")
+    .eq("message_type", messageType)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    logger.warn("[analysis.service] vision reuse lookup failed", {
+      error: error.message,
+    });
+    return [];
+  }
+  return (data ?? []) as StoredVisionRow[];
+}
+
+function foodHasUsableMacros(analysis: TechnicalAnalysis): boolean {
+  const food = analysis.food_analysis;
+  if (!food) return false;
+  return [food.calories, food.protein, food.carb, food.fat].every(
+    (n) => typeof n === "number" && Number.isFinite(n) && n >= 0,
+  );
+}
+
+async function waterTotalForMealConfirm(
+  userId: string,
+  note?: string,
+): Promise<number | undefined> {
+  const glass = 0.25;
+  const logged = parseHydrationLiters(note ?? "");
+  try {
+    const snap = await getTodayNutritionSnapshot(userId);
+    const current = Math.max(0, snap.waterLiters ?? 0);
+    const add = logged ?? glass;
+    return Math.min(30, Math.round((current + add) * 100) / 100);
+  } catch {
+    return Math.round((logged ?? glass) * 100) / 100;
+  }
+}
+
+async function queueFoodPhotoConfirmation(params: {
+  userId: string;
+  coachId: string;
+  analysis: TechnicalAnalysis;
+  attachToMessageId: string | null;
+  note?: string;
+}): Promise<PhotoAnalyticsConfirmation | null> {
+  if (!foodHasUsableMacros(params.analysis)) return null;
+  const food = params.analysis.food_analysis!;
+  const waterLiters = await waterTotalForMealConfirm(params.userId, params.note);
+  return requestPhotoAnalyticsConfirmation({
+    userId: params.userId,
+    coachId: params.coachId,
+    attachToMessageId: params.attachToMessageId,
+    meal: {
+      calories: food.calories,
+      protein: food.protein,
+      carbs: food.carb,
+      fat: food.fat,
+    },
+    waterLiters,
+  });
+}
+
 /**
- * analyzeImagePipeline orchestration (§1 Pipelining):
- *   1. Reserve one photo credit atomically before AI work.
- *   2. Gemini quality gate -> Gemini measurement (JSON) -> DeepSeek synthesis.
- *   3. Persist on success; refund the credit when AI rejects or fails.
- *
- * Low-quality photos are rejected (AiError -> 400) and the reserved credit is refunded.
+ * Photo analysis:
+ *  1. Normalize image bytes (fingerprint source).
+ *  2. Same-user / same-type fingerprint reuse (no Gemini, no extra quota).
+ *  3. Else reserve quota → one Gemini envelope → DeepSeek synthesis → persist.
  */
 export async function analyzePhoto(
   params: AnalyzePhotoParams,
@@ -119,23 +298,69 @@ export async function analyzePhoto(
       "Bu koç fotoğraf analizini desteklemiyor.",
     );
   }
-  const visionCoachId = persona.id; // "maya" | "leo"
+  const visionCoachId = persona.id;
   const resource = resourceForCoach(visionCoachId);
+  const messageType = persona.kind === "food" ? "analysis" : "score";
 
-  // Validate + downscale BEFORE reserving quota, so a bad image never burns a
-  // credit and the (2×) Gemini calls receive a compact, cheaper payload.
   const vision = await prepareVisionImage(params.imageBase64);
+  const fingerprint = fingerprintVisionImage(vision.base64, vision.mimeType);
 
-  const usage = await reserveQuota({ userId: params.userId, resource, amount: 1 });
-
-  const [locale, previousScores] = await Promise.all([
-    getLocale(admin, params.userId),
+  const [locale, previousScores, priorRows, photoUserState] = await Promise.all([
+    getLocale(admin, params.userId, params.explicitLocale),
     persona.kind === "body"
       ? getPreviousScores(admin, params.userId, params.coachId)
       : Promise.resolve(null),
+    loadRecentVisionRows(admin, params.userId, params.coachId, messageType),
+    loadPhotoUserState(admin, params.userId).catch(() => ""),
   ]);
 
-  // 2) Hybrid pipeline (Gemini -> DeepSeek). May throw AI_LOW_QUALITY.
+  const reusedRow = selectReusableVisionRow({
+    rows: priorRows,
+    fingerprint,
+    userId: params.userId,
+    coachId: params.coachId,
+    messageType,
+  });
+
+  const hasCaption = Boolean(params.note?.trim());
+  if (reusedRow && !hasCaption) {
+    const analysis = extractAnalysisFromPayload(reusedRow.payload);
+    const quality = extractQuality(reusedRow.payload);
+    if (analysis && quality) {
+      let confirmation: PhotoAnalyticsConfirmation | null = null;
+      if (persona.kind === "food") {
+        try {
+          confirmation = await queueFoodPhotoConfirmation({
+            userId: params.userId,
+            coachId: params.coachId,
+            analysis,
+            attachToMessageId: reusedRow.id,
+            note: params.note,
+          });
+        } catch (error) {
+          logger.error("[analysis.service] reused meal confirmation failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+      return {
+        summary: reusedRow.content ?? "",
+        analysis,
+        drift: [],
+        quality,
+        warningTrigger: null,
+        messageId: reusedRow.id,
+        userMessageId: null,
+        confirmation,
+        geminiCalls: 0,
+        deepseekCalls: 0,
+        reused: true,
+      };
+    }
+  }
+
+  const usage = await reserveQuota({ userId: params.userId, resource, amount: 1 });
+
   let result: ImagePipelineResult;
   try {
     result = await ModelRouter.analyzeImagePipeline({
@@ -145,30 +370,74 @@ export async function analyzePhoto(
       image: { base64: vision.base64, mimeType: vision.mimeType },
       previousScores,
       userNote: params.note,
+      userState: photoUserState || undefined,
+      signal: params.signal,
     });
   } catch (error) {
     await refundQuota({ userId: params.userId, resource, amount: 1 });
-    throw toApiError(error);
+    throw toApiError(error, locale);
   }
 
-  // 3) Persist (no raw image stored) + consume one credit.
-  const messageType = persona.kind === "food" ? "analysis" : "score";
+  const polished = resolvePhotoCoachSummary({
+    summary: result.summary,
+    locale,
+    coachId: persona.id,
+    kind: persona.kind,
+    analysis: result.analysis,
+  });
+
+  if (persona.kind === "food") {
+    result = {
+      ...result,
+      summary: relabelMayaMacroLabels({
+        text: ensureMayaMealSaveAsk({
+          text: ensureMayaMealWaterReminder({
+            text: polished,
+            locale,
+            coachId: "maya",
+            intent: "meal_analysis",
+            userMessage: params.note,
+          }),
+          locale,
+          coachId: "maya",
+          intent: "meal_analysis",
+          userMessage: params.note,
+        }),
+        locale,
+        coachId: "maya",
+      }),
+    };
+  } else {
+    result = {
+      ...result,
+      summary: polished,
+    };
+  }
+
   const payload = {
     analysis: result.analysis,
     drift: result.drift,
     quality: result.quality,
+    image_fingerprint: fingerprint,
+    nutrition_provenance: persona.kind === "food" ? "model_estimate" : null,
+    score_authority: persona.kind === "body" ? "leo_eval" : null,
   } as unknown as Json;
 
-  const { error: userPhotoError } = await admin.from("chat_messages").insert({
-    user_id: params.userId,
-    coach_id: params.coachId,
-    thread_type: "direct",
-    sender: "user",
-    message_type: "photo_analysis",
-    content: params.note && params.note.length > 0 ? params.note : "[photo]",
-    payload: { mimeType: params.mimeType } as unknown as Json,
-    locale,
-  });
+  const { data: insertedUserPhoto, error: userPhotoError } = await admin
+    .from("chat_messages")
+    .insert({
+      ...(params.clientMessageId ? { id: params.clientMessageId } : {}),
+      user_id: params.userId,
+      coach_id: params.coachId,
+      thread_type: "direct",
+      sender: "user",
+      message_type: "photo_analysis",
+      content: params.note && params.note.length > 0 ? params.note : "[photo]",
+      payload: { mimeType: params.mimeType, image_fingerprint: fingerprint } as unknown as Json,
+      locale,
+    })
+    .select("id")
+    .single();
   if (userPhotoError) {
     logger.error("[analysis.service] persist user photo error", {
       error: userPhotoError.message,
@@ -182,6 +451,7 @@ export async function analyzePhoto(
     .insert({
       user_id: params.userId,
       coach_id: params.coachId,
+      reply_to_message_id: insertedUserPhoto?.id ?? null,
       thread_type: "direct",
       sender: "coach",
       message_type: messageType,
@@ -201,22 +471,34 @@ export async function analyzePhoto(
     throw new ApiError("INTERNAL_ERROR", "Analiz sonucu kaydedilemedi.");
   }
 
+  if (persona.kind === "body") {
+    const lagging = summarizePhysiqueScores(
+      result.analysis.scores ?? {},
+      result.analysis.overall_score,
+    );
+    await emitKaiosEventBestEffort({
+      category: "physique",
+      type: "physique_scored",
+      userId: params.userId,
+      payload: {
+        overall_score: lagging.overall,
+        priority: lagging.priority,
+        lagging: lagging.lagging,
+      },
+      at: new Date().toISOString(),
+    });
+  }
+
   let confirmation: PhotoAnalyticsConfirmation | null = null;
 
-  // Reflect a logged meal onto today's analytics after user confirmation.
-  if (persona.kind === "food" && result.analysis.food_analysis) {
-    const food = result.analysis.food_analysis;
+  if (persona.kind === "food") {
     try {
-      confirmation = await requestPhotoAnalyticsConfirmation({
+      confirmation = await queueFoodPhotoConfirmation({
         userId: params.userId,
         coachId: params.coachId,
+        analysis: result.analysis,
         attachToMessageId: inserted?.id ?? null,
-        meal: {
-          calories: food.calories,
-          protein: food.protein,
-          carbs: food.carb,
-          fat: food.fat,
-        },
+        note: params.note,
       });
     } catch (error) {
       logger.error("[analysis.service] meal confirmation failed", {
@@ -232,6 +514,13 @@ export async function analyzePhoto(
     quality: result.quality,
     warningTrigger: usage.warning_trigger,
     messageId: inserted?.id ?? null,
+    userMessageId: insertedUserPhoto?.id ?? null,
     confirmation,
+    geminiCalls: result.geminiCalls,
+    deepseekCalls: result.deepseekCalls,
+    reused: false,
   };
 }
+
+export { extractFingerprintFromPayload } from "@/lib/kaios/vision/fingerprint";
+export { fingerprintVisionImage };

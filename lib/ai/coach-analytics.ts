@@ -1,6 +1,7 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ModelRouter } from "@/lib/ai/model-router";
 import { TOKEN_BUDGET, AI_FEATURES } from "@/lib/ai/budget";
+import { extractJsonObject } from "@/lib/ai/extract-json";
 import { isAiPressureMode } from "@/lib/ai/daily-cost-cap";
 import { sanitizeUserText, wrapUntrustedInput } from "@/lib/ai/prompt-safety";
 import { resolveLocale } from "@/lib/i18n/dictionary";
@@ -47,6 +48,7 @@ async function attachConfirmationToMessage(params: {
   summary: string;
   patch: Record<string, number>;
   attachToMessageId?: string | null;
+  sourceMessageId?: string | null;
 }): Promise<{ content: string; messageId: string }> {
   const admin = createAdminSupabaseClient();
   const { data: profile } = await admin
@@ -59,7 +61,13 @@ async function attachConfirmationToMessage(params: {
   const content =
     locale === "tr"
       ? `Harika iş! Analiz sayfana şunu eklememi onaylıyor musun? ${params.summary}`
-      : `Great work! Should I add this to your analytics? ${params.summary}`;
+      : locale === "de"
+        ? `Starke Arbeit! Soll ich das zu deiner Analyse hinzufügen? ${params.summary}`
+        : locale === "es"
+          ? `¡Buen trabajo! ¿Lo añado a tu analítica? ${params.summary}`
+          : locale === "ar"
+            ? `عمل رائع! هل أضيف هذا إلى تحليلك؟ ${params.summary}`
+            : `Great work! Should I add this to your analytics? ${params.summary}`;
 
   const confirmationData = {
     confirmation: {
@@ -94,6 +102,7 @@ async function attachConfirmationToMessage(params: {
     .insert({
       user_id: params.userId,
       coach_id: params.coachId,
+      reply_to_message_id: params.sourceMessageId ?? null,
       thread_type: "direct",
       sender: "coach",
       message_type: "text",
@@ -112,6 +121,8 @@ export async function applyCoachAnalyticsFromChat(params: {
   coachId: string;
   userMessage: string;
   coachReply: string;
+  attachToMessageId?: string | null;
+  sourceMessageId?: string | null;
 }): Promise<void> {
   if (!AI_FEATURES.chatAnalytics) return;
   if (await isAiPressureMode()) return;
@@ -139,10 +150,10 @@ export async function applyCoachAnalyticsFromChat(params: {
       maxTokens: TOKEN_BUDGET.analytics,
       usageContext: { userId: params.userId, operation: "analytics" },
     });
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return;
+    const extracted = extractJsonObject(content);
+    if (!extracted.ok) return;
 
-    const parsed = JSON.parse(jsonMatch[0]) as AnalyticsPatch;
+    const parsed = extracted.value as AnalyticsPatch;
     const patch: Record<string, number> = {};
 
     for (const key of allowed) {
@@ -160,6 +171,7 @@ export async function applyCoachAnalyticsFromChat(params: {
       coachId: params.coachId,
       source: "chat",
       payload: { summary, patch },
+      sourceMessageId: params.sourceMessageId ?? params.attachToMessageId ?? null,
     });
 
     await attachConfirmationToMessage({
@@ -168,6 +180,8 @@ export async function applyCoachAnalyticsFromChat(params: {
       pendingId,
       summary,
       patch,
+      attachToMessageId: params.attachToMessageId,
+      sourceMessageId: params.sourceMessageId ?? params.attachToMessageId ?? null,
     });
   } catch {
     // Non-fatal
@@ -187,6 +201,7 @@ export async function requestPhotoAnalyticsConfirmation(params: {
   meal?: { calories: number; protein: number; carbs: number; fat: number };
   bodyScore?: number;
   attachToMessageId?: string | null;
+  waterLiters?: number;
 }): Promise<PhotoAnalyticsConfirmation | null> {
   const summary = params.meal
     ? buildSummary({
@@ -194,6 +209,7 @@ export async function requestPhotoAnalyticsConfirmation(params: {
         proteinG: params.meal.protein,
         carbsG: params.meal.carbs,
         fatG: params.meal.fat,
+        ...(params.waterLiters != null ? { waterLiters: params.waterLiters } : {}),
       })
     : params.bodyScore != null
       ? `body score ${params.bodyScore}/100`
@@ -210,7 +226,11 @@ export async function requestPhotoAnalyticsConfirmation(params: {
     payload: {
       summary,
       ...(params.meal ? { meal: params.meal } : {}),
+      ...(params.waterLiters != null
+        ? { patch: { waterLiters: params.waterLiters } }
+        : {}),
     },
+    sourceMessageId: params.attachToMessageId ?? null,
   });
 
   const { content, messageId } = await attachConfirmationToMessage({
@@ -227,6 +247,7 @@ export async function requestPhotoAnalyticsConfirmation(params: {
         }
       : {},
     attachToMessageId: params.attachToMessageId,
+    sourceMessageId: params.attachToMessageId ?? null,
   });
 
   return { pendingId, summary, content, messageId };

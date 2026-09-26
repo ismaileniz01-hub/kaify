@@ -1,6 +1,6 @@
 # Data Retention Policy (Compliance Faz 2–3)
 
-Last updated: 2026-07-05 · Version 2026-07-05
+Last updated: 2026-08-26 · Version 2026-08-26
 
 ## Purpose
 
@@ -18,11 +18,11 @@ This document defines how long Kaify Ai retains personal data. **Automated enfor
 | Gems & economy | `gem_ledger`, `user_market_inventory` | Until account deletion | Contract |
 | Notifications | `notifications` | **12 months** | Contract |
 | Push tokens | `push_subscriptions`, `native_push_tokens` | Until removed or account deletion | Consent |
-| Consent evidence | `consent_records`, `consent_revocations` | **6 years** after last event | Legal obligation |
+| Consent evidence | `consent_records`, `consent_revocations` | Until account deletion. Any post-deletion statutory archive is **pending legal/privacy approval** and is not implemented. | Consent / pending legal review |
 | Export audit | `data_export_logs` | **24 months** | Legitimate interest |
 | Billing webhooks | `billing_events` | **7 years** (tax/accounting) | Legal obligation |
 | Idempotency keys | `idempotency_keys` | **90 days** | Technical necessity |
-| Admin audit | `admin_audit_log` | **24 months** (admin_id anonymized on user delete) | Legitimate interest |
+| Admin audit | `admin_audit_log` | **Pending legal/privacy approval**. Automated TTL deletion is disabled until a versioned KVKK/GDPR decision is recorded. | Pending legal review |
 | Server logs | Vercel / Supabase | Per vendor policy (~30–90 days) | Legitimate interest |
 | Error monitoring | Sentry | **90 days** (PII scrubbed) | Legitimate interest |
 
@@ -31,6 +31,7 @@ This document defines how long Kaify Ai retains personal data. **Automated enfor
 When a user deletes their account:
 
 - Auth user is removed → `profiles` CASCADE deletes all child tables
+- `consent_records` and `consent_revocations` currently cascade with the account; no unsupported six-year archive is claimed
 - `ai_usage_ledger` rows are **CASCADE deleted** (Faz 2 migration)
 - Avatar files in Supabase Storage are explicitly removed
 - `billing_events.user_id` is SET NULL (financial audit retained without user link)

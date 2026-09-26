@@ -9,12 +9,18 @@ workflows:
 
     environment:
       ios_signing:
-        distribution_type: app_store
-        bundle_identifier: org.kaifyai.app
+        # Explicit profile reference only — excludes legacy "Kaify App Store".
+        # (Cannot mix with distribution_type / bundle_identifier per Codemagic docs.)
+        provisioning_profiles:
+          - profile: kaify_app_store_healthkit
+            environment_variable: KAIFY_PROVISIONING_PROFILE
       vars:
         XCODE_PROJECT: "App.xcodeproj"
         XCODE_SCHEME: "App"
+        NATIVE_API_BASE_URL: "https://kaifyai.org"
         NEXT_PUBLIC_API_BASE_URL: "https://kaifyai.org"
+        # Public client values only — never service_role / SMTP / secrets in native bundle.
+        # Prefer NEXT_PUBLIC_*; assert-native-public-env also maps SUPABASE_URL / SUPABASE_ANON_KEY.
         NEXT_PUBLIC_SUPABASE_URL: "https://urnetodzvszmddzdazdj.supabase.co"
         NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVybmV0b2R6dnN6bWRkemRhemRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MDQ3NTQsImV4cCI6MjA5ODM4MDc1NH0.EemHnCv-3wf36S-6u5-GxGRJ-1P4uYCOJ-Zl0U-BKxQ"
       node: 22
@@ -25,25 +31,52 @@ workflows:
         script: |
           npm ci
 
-      - name: Build web application
+      - name: Assert native public auth env
         script: |
-          npm run build:cap
+          # Map alternate public names if a Codemagic group uses them.
+          if [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ] && [ -n "${SUPABASE_URL:-}" ]; then
+            export NEXT_PUBLIC_SUPABASE_URL="$SUPABASE_URL"
+          fi
+          if [ -z "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" ] && [ -n "${SUPABASE_ANON_KEY:-}" ]; then
+            export NEXT_PUBLIC_SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+          fi
+          unset CAPACITOR_SERVER_URL || true
+          node scripts/native/assert-native-public-env.mjs
 
-      - name: Create and synchronize iOS project
+      - name: Build local native shell
         script: |
+          unset CAPACITOR_SERVER_URL || true
+          npm run native:build
+
+      - name: Sync Capacitor iOS (native-dist only)
+        script: |
+          unset CAPACITOR_SERVER_URL || true
           if [ ! -d "ios" ]; then
             npx cap add ios
           fi
           npx cap sync ios
+          node scripts/native/verify-native-bundle.mjs
 
       - name: Set iOS build metadata
         script: |
-          perl -0pi -e 's/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $ENV{BUILD_NUMBER};/g' ios/App/App.xcodeproj/project.pbxproj
+          BUILD_NUMBER="${BUILD_NUMBER:-${CM_BUILD_NUMBER:-24}}"
+          if [ "$BUILD_NUMBER" -lt 24 ]; then BUILD_NUMBER=24; fi
+          export BUILD_NUMBER
+          echo "Using iOS CFBundleVersion=$BUILD_NUMBER"
+          perl -0pi -e "s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" ios/App/App.xcodeproj/project.pbxproj
+          perl -0pi -e 's/MARKETING_VERSION = [^;]+;/MARKETING_VERSION = 1.0.5;/g' ios/App/App.xcodeproj/project.pbxproj
           /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/App/App/Info.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" ios/App/App/Info.plist
 
       - name: Configure Apple signing
         script: |
-          xcode-project use-profiles --project ios/App/App.xcodeproj
+          # Main app project only; CapApp-SPM / other projects must not pick profiles.
+          if [ -z "${KAIFY_PROVISIONING_PROFILE:-}" ]; then
+            echo "KAIFY_PROVISIONING_PROFILE is empty — expected Codemagic profile kaify_app_store_healthkit"
+            exit 1
+          fi
+          xcode-project use-profiles \
+            --project ios/App/App.xcodeproj \
+            --profile "$KAIFY_PROVISIONING_PROFILE"
 
       - name: Build signed IPA
         script: |
@@ -60,4 +93,134 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
+        submit_to_testflight: true
+        # Internal testing only — no App Store production submission.
+        submit_to_app_store: false
 
+  kaify-android:
+    name: Kaify Android
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+
+    environment:
+      android_signing:
+        - kaify_android_upload
+      vars:
+        NATIVE_API_BASE_URL: "https://kaifyai.org"
+        NEXT_PUBLIC_API_BASE_URL: "https://kaifyai.org"
+        NEXT_PUBLIC_SUPABASE_URL: "https://urnetodzvszmddzdazdj.supabase.co"
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVybmV0b2R6dnN6bWRkemRhemRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MDQ3NTQsImV4cCI6MjA5ODM4MDc1NH0.EemHnCv-3wf36S-6u5-GxGRJ-1P4uYCOJ-Zl0U-BKxQ"
+      node: 22
+      java: 21
+
+    scripts:
+      - name: Assert Java 21 toolchain
+        script: |
+          set -euo pipefail
+          java -version
+          javac -version
+          JAVA_VER=$(java -version 2>&1 | head -n 1)
+          JAVAC_VER=$(javac -version 2>&1)
+          echo "java reported: $JAVA_VER"
+          echo "javac reported: $JAVAC_VER"
+          echo "$JAVA_VER" | grep -Eq 'version "21(\.|")'
+          echo "$JAVAC_VER" | grep -Eq '^javac 21(\.|$)'
+
+      - name: Install dependencies
+        script: |
+          npm ci
+
+      - name: Assert native public auth env
+        script: |
+          if [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ] && [ -n "${SUPABASE_URL:-}" ]; then
+            export NEXT_PUBLIC_SUPABASE_URL="$SUPABASE_URL"
+          fi
+          if [ -z "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}" ] && [ -n "${SUPABASE_ANON_KEY:-}" ]; then
+            export NEXT_PUBLIC_SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+          fi
+          unset CAPACITOR_SERVER_URL || true
+          node scripts/native/assert-native-public-env.mjs
+
+      - name: Build local native shell
+        script: |
+          unset CAPACITOR_SERVER_URL || true
+          npm run native:build
+
+      - name: Sync Capacitor Android (native-dist only)
+        script: |
+          unset CAPACITOR_SERVER_URL || true
+          npx cap sync android
+          node scripts/native/verify-native-bundle.mjs
+
+      - name: Set Android version metadata
+        script: |
+          VERSION_CODE="${VERSION_CODE:-${CM_BUILD_NUMBER:-25}}"
+          if [ "$VERSION_CODE" -lt 25 ]; then VERSION_CODE=25; fi
+          echo "Using Android versionCode=$VERSION_CODE versionName=1.0.6"
+          sed -i.bak -E "s/versionCode [0-9]+/versionCode ${VERSION_CODE}/" android/app/build.gradle
+          sed -i.bak -E 's/versionName "[^"]+"/versionName "1.0.6"/' android/app/build.gradle
+
+      - name: Assert Codemagic Android signing env
+        script: |
+          # Presence checks only — never echo keystore secrets or path contents.
+          missing=0
+          for var in CM_KEYSTORE_PATH CM_KEYSTORE_PASSWORD CM_KEY_ALIAS CM_KEY_PASSWORD; do
+            if [ -z "${!var:-}" ]; then
+              echo "Missing required signing env: $var"
+              missing=1
+            else
+              echo "$var is set"
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "android_signing reference kaify_android_upload did not inject CM_* vars"
+            exit 1
+          fi
+          if [ ! -f "$CM_KEYSTORE_PATH" ]; then
+            echo "CM_KEYSTORE_PATH does not point to a readable keystore file"
+            exit 1
+          fi
+          if [ "$CM_KEY_ALIAS" != "kaify" ]; then
+            echo "Unexpected CM_KEY_ALIAS (expected kaify)"
+            exit 1
+          fi
+
+      - name: Assemble debug APK
+        script: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew :app:assembleDebug -x lint -x test
+
+      - name: Bundle signed release AAB
+        script: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew :app:bundleRelease -x lint -x test
+
+      - name: Verify signed AAB certificate fingerprint
+        script: |
+          set -euo pipefail
+          AAB=$(ls -1 android/app/build/outputs/bundle/release/*.aab | head -n 1)
+          echo "AAB=$AAB"
+          TMP=$(mktemp -d)
+          unzip -qo "$AAB" "META-INF/*" -d "$TMP"
+          CERT=$(find "$TMP/META-INF" -type f \( -name '*.RSA' -o -name '*.DSA' -o -name '*.EC' \) | head -n 1)
+          if [ -z "$CERT" ]; then
+            echo "No signing certificate found inside AAB (unsigned?)"
+            exit 1
+          fi
+          # Public cert fingerprints only — never print CM_* secret values.
+          keytool -printcert -file "$CERT" | tee /tmp/kaify-aab-cert.txt
+          if ! grep -Eq 'SHA(1|256):' /tmp/kaify-aab-cert.txt; then
+            echo "Could not parse SHA fingerprints from AAB certificate"
+            exit 1
+          fi
+          echo "Signed AAB certificate fingerprint verification OK (no Play upload)."
+
+    artifacts:
+      - android/app/build/outputs/apk/debug/*.apk
+      - android/app/build/outputs/bundle/release/*.aab
+      - android/app/build/outputs/apk/release/*.apk
+      - /tmp/kaify-aab-cert.txt
+
+    # Intentionally no google_play publishing — signed AAB only.

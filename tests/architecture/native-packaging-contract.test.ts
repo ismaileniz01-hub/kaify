@@ -1,0 +1,125 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+
+function source(path: string): string {
+  return readFileSync(join(process.cwd(), path), "utf8");
+}
+
+describe("native local packaging contract", () => {
+  const capacitor = source("capacitor.config.ts");
+  const nativeApp = source("native-app/src/App.tsx");
+  const nativeApi = source("native-app/src/api.ts");
+  const nativeSession = source("native-app/src/session.ts");
+  const serverAuth = source("lib/supabase/server.ts");
+  const middleware = source("middleware.ts");
+
+  it("keeps the local shell on localhost with a secure scheme", () => {
+    expect(capacitor).toContain('androidScheme: "https"');
+    expect(capacitor).toContain('iosScheme: "https"');
+    expect(capacitor).toContain('hostname: "localhost"');
+    expect(capacitor).toContain("allowNavigation");
+    expect(capacitor).toContain("kaifyai.org");
+  });
+
+  it("packages native-dist and cannot accept a production remote WebView URL", () => {
+    expect(capacitor).toContain('webDir: "native-dist"');
+    expect(capacitor).toContain('startsWith("http://")');
+    expect(capacitor).not.toContain("https://kaifyai.org/login");
+  });
+
+  it("keeps member sign-in and coaching examples in the local UI", () => {
+    for (const screen of ["login", "welcome", "chat"]) {
+      expect(nativeApp).toContain(`"${screen}"`);
+    }
+    expect(nativeApp).not.toContain('"plan"');
+    expect(nativeApp).not.toContain("PRICING_PLANS");
+    expect(nativeApp).not.toContain("Continue to Paddle");
+    expect(nativeApp).not.toContain("Browser.open");
+    expect(nativeApp).not.toContain("native-checkout");
+    expect(nativeApp).toContain("loginOnly");
+    expect(nativeApp).toContain("sendNativeEmailOtp");
+    expect(nativeApp).toContain("signInNativeWithPassword");
+    expect(nativeApp).toContain("verifyNativeEmailOtp");
+    expect(nativeApp).not.toContain("signInWithOtp");
+    expect(nativeApp).not.toContain("shouldCreateUser");
+  });
+
+  it("routes native OTP through Kaify APIs instead of direct Supabase GoTrue", () => {
+    const nativeOtp = source("native-app/src/auth-otp.ts");
+    expect(nativeOtp).toContain("/api/auth/otp/send");
+    expect(nativeOtp).toContain("/api/auth/otp/verify");
+    expect(nativeOtp).toContain("/api/auth/password");
+    expect(nativeOtp).toContain("__KAIFY_API_BASE__");
+    expect(nativeOtp).toContain("setSession");
+    expect(nativeOtp).not.toContain("SERVICE_ROLE");
+    expect(nativeOtp).not.toContain("service_role");
+    expect(nativeSession).toContain("nativeGoTrueFetch");
+    expect(nativeSession).not.toContain(
+      'from "@aparajita/capacitor-secure-storage"',
+    );
+    expect(source("native-app/src/native-gotrue-fetch.ts")).toContain(
+      "/api/auth/session/refresh",
+    );
+    expect(source("app/api/auth/session/refresh/route.ts")).toContain(
+      "refreshSession",
+    );
+    expect(source("app/api/auth/session/establish/route.ts")).toContain(
+      "setSession",
+    );
+    expect(source("app/api/auth/session/native-complete/route.ts")).toContain(
+      "NextResponse.redirect",
+    );
+    expect(source("app/api/auth/session/native-consume/route.ts")).toContain(
+      "consumeNativeHandoffTicket",
+    );
+    expect(source("native-app/src/enter-kaify.ts")).toContain(
+      "/api/auth/session/native-consume",
+    );
+    expect(source("lib/native/native-entry-boot.ts")).toContain(
+      "location.replace(",
+    );
+    expect(source("lib/native/native-entry-boot.ts")).toContain(
+      "NATIVE_WELCOME_HANDOFF_PATH",
+    );
+    expect(source("lib/native/native-entry-boot.ts")).toContain(
+      "NATIVE_HANDOFF_QUERY",
+    );
+    expect(source("lib/native/native-entry-boot.ts")).not.toContain("form.submit()");
+    expect(source("lib/native/native-entry-boot.ts")).not.toContain("goWelcome");
+    expect(source("app/api/auth/session/logout/route.ts")).toContain("signOut");
+    expect(source("native-app/src/App.tsx")).toContain("signed_out");
+  });
+
+  it("requires a paid membership before opening the real app", () => {
+    expect(nativeApp).toContain("profileHasPaidAccess");
+    expect(nativeApp).toContain("enterAsMember");
+    expect(nativeApp).toContain("This app is for members");
+    expect(nativeApi).toContain("active subscription is required");
+  });
+
+  it("keeps shell tokens in memory only and uses bearer API authentication", () => {
+    expect(nativeSession).toContain("SecureStorage");
+    expect(nativeSession).toContain("persistSession: false");
+    expect(nativeSession).toContain("autoRefreshToken: false");
+    expect(nativeSession).toContain("readWebStorage");
+    expect(nativeApp).toContain("useState(false)");
+    expect(nativeApp).toContain("SplashScreen.hide");
+    expect(nativeApi).toContain('"Authorization"');
+    expect(nativeApi).toContain("Bearer ${await accessToken(bearerToken)}");
+    expect(nativeApi).toContain("SESSION_READ_MS");
+    expect(nativeApp).toContain("loadProfile(accessToken)");
+    expect(source("native-app/src/enter-kaify.ts")).not.toContain(
+      "native-entry#",
+    );
+    expect(serverAuth).toContain("supabase.auth.getUser(bearerToken");
+    expect(middleware).toContain("Access-Control-Allow-Origin");
+    expect(middleware).toContain("isNativeShellOrigin");
+  });
+
+  it("handles App/Universal Links and offline retry in the local client", () => {
+    expect(nativeApp).toContain("appUrlOpen");
+    expect(nativeApp).toContain("nativeScreenFromUrl");
+    expect(nativeApp).toContain("Try again");
+  });
+});

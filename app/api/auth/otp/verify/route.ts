@@ -7,6 +7,9 @@ import { createRouteHandlerSupabase } from "@/lib/supabase/route-handler";
 import { SupabaseEnvError } from "@/lib/supabase/env";
 import { isNativeOtpOrigin } from "@/lib/native/otp-cors";
 import { otpVerifySchema } from "@/lib/validations/auth-otp.schema";
+import { emitProductEvent, productEventIdempotencyKey } from "@/lib/events/product";
+import { isNativeWebViewRequest } from "@/lib/native/webview-request";
+import { issueNativeHandoffTicket } from "@/lib/auth/native-handoff-ticket";
 
 export const runtime = "nodejs";
 
@@ -45,7 +48,7 @@ export const POST = defineRouteRaw(
         type: "email",
       });
 
-      let session = emailAttempt.data?.session;
+      let session = emailAttempt.data?.session ?? null;
 
       if (emailAttempt.error) {
         const signupAttempt = await supabase.auth.verifyOtp({
@@ -56,19 +59,50 @@ export const POST = defineRouteRaw(
 
         if (signupAttempt.error) {
           // Uniform unauthorized — do not reveal whether the email is registered.
+          emitProductEvent({
+            name: "signup.failed",
+            properties: { flow: "otp", error: "invalid_code" },
+            idempotencyKey: productEventIdempotencyKey([
+              "signup.failed",
+              "invalid_code",
+            ]),
+          });
           return withCookies(
             fail(
               new ApiError("UNAUTHORIZED", "Invalid or expired code. Please try again."),
             ),
           );
         }
-        session = signupAttempt.data?.session;
+        session = signupAttempt.data?.session ?? null;
       }
 
-      const origin = request.headers.get("origin");
+      emitProductEvent({
+        name: "signup.otp_verified",
+        properties: { flow: "otp", method: "email" },
+        idempotencyKey: productEventIdempotencyKey([
+          "signup.otp_verified",
+          String(Date.now()).slice(0, 8),
+        ]),
+      });
+
+      // Capacitor shells need bearer tokens (no shared cookie jar with kaifyai.org).
+      // Origin, UA, or X-Client-Version: native-* — iOS WKWebView often omits Origin.
       const returnNativeSession =
         Boolean(session?.access_token && session.refresh_token) &&
-        isNativeOtpOrigin(origin);
+        (isNativeOtpOrigin(request.headers.get("origin")) ||
+          isNativeWebViewRequest(request));
+
+      let handoffTicket: string | undefined;
+      if (returnNativeSession && session?.access_token && session.refresh_token) {
+        try {
+          handoffTicket = await issueNativeHandoffTicket({
+            accessToken: session.access_token,
+            refreshToken: session.refresh_token,
+          });
+        } catch {
+          // Tokens still return; native can mint a ticket itself.
+        }
+      }
 
       return withCookies(
         ok({
@@ -79,6 +113,7 @@ export const POST = defineRouteRaw(
                   accessToken: session.access_token,
                   refreshToken: session.refresh_token,
                 },
+                ...(handoffTicket ? { handoffTicket } : {}),
               }
             : {}),
         }),

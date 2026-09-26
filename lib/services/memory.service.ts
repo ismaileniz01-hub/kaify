@@ -8,48 +8,61 @@ import {
   wrapUntrustedInput,
 } from "@/lib/ai/prompt-safety";
 import type { ChatTurn } from "@/lib/ai/types";
-import type { MessageSender } from "@/lib/types/database.types";
+import type { Json, MessageSender } from "@/lib/types/database.types";
+import {
+  extractUserMemoryFacts,
+  MEMORY_TTL_DAYS,
+} from "@/lib/kaios/memory/keys";
+import { isPoisonMemory } from "@/lib/kaios/memory/sanitize";
+import type { StructuredMemoryFact } from "@/lib/kaios/memory/types";
 
 /**
- * Memory condensation (auto-summary).
+ * Coaching memory persistence.
  *
- * Every chat turn bumps `user_coaching_state.message_count_since_condense` via
- * an atomic RPC. Once the threshold is crossed we summarize the recent
- * conversation with DeepSeek (lightweight: low temperature + capped tokens, so
- * automatic prefix caching keeps cost down) and store a compact memory row,
- * then reset the counter.
- *
- * The shared memory is cross-coach: all 4 coaches read the same `coaching_memory`.
+ * Automatic periodic LLM condensation (every N turns) is disabled.
+ * Continuity comes from:
+ *  - keyed facts extracted from user messages (90-day TTL)
+ *  - deterministic KAIOS event-fact rows
+ *  - hint-gated analytics extraction
+ *  - `condenseMemory` which is opt-in only (not called from the chat path)
  */
 
-export const CONDENSE_THRESHOLD = 20;
+export type RecentMemory = {
+  summary: string;
+  createdAt: string;
+  factKey?: string | null;
+  keyFacts?: Record<string, string>;
+};
+
 const RECENT_WINDOW = 50;
 const SUMMARY_MAX_TOKENS = TOKEN_BUDGET.memory;
+const KEYED_FETCH_LIMIT = 80;
 
 type AdminClient = ReturnType<typeof createAdminSupabaseClient>;
 
-/** Atomically increments the counter and condenses when the threshold is hit. */
+function ninetyDaysAgoIso(now = Date.now()): string {
+  return new Date(now - MEMORY_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function asStringMap(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof v === "string" && v.trim()) out[k] = v.trim();
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+/**
+ * Formerly incremented a counter and summarized after 20 turns.
+ * Kept as a no-op so any leftover callers cannot spawn a hidden LLM call.
+ */
 export async function bumpAndMaybeCondense(params: {
   userId: string;
   coachId?: string;
   delta: number;
 }): Promise<void> {
-  const admin = createAdminSupabaseClient();
-
-  const { data, error } = await admin.rpc("increment_condense_counter", {
-    p_user_id: params.userId,
-    p_delta: params.delta,
-  });
-
-  if (error) {
-    logger.error("[memory.service] counter error", { error: error.message });
-    return;
-  }
-
-  const count = typeof data === "number" ? data : 0;
-  if (count >= CONDENSE_THRESHOLD) {
-    await condenseMemory({ userId: params.userId, coachId: params.coachId });
-  }
+  void params;
 }
 
 async function resetCounter(admin: AdminClient, userId: string): Promise<void> {
@@ -63,8 +76,8 @@ async function resetCounter(admin: AdminClient, userId: string): Promise<void> {
 }
 
 /**
- * Summarizes the recent conversation into a compact memory row and resets the
- * counter. Failures are swallowed (logged) so they never break the chat flow.
+ * Opt-in conversation compress. Not invoked automatically from chat.
+ * If used, the DeepSeek call is platform-metered (`operation: "memory"`).
  */
 export async function condenseMemory(params: {
   userId: string;
@@ -97,9 +110,6 @@ export async function condenseMemory(params: {
     return;
   }
 
-  // Second-order injection guard: this summary is later re-injected into the
-  // chat system prompt, so sanitize each turn and forbid the summarizer from
-  // acting on any instruction embedded in the conversation.
   const transcript = rows
     .map(
       (row) =>
@@ -128,7 +138,7 @@ export async function condenseMemory(params: {
     logger.error("[memory.service] condense AI error", {
       error: aiError instanceof Error ? aiError.message : "unknown",
     });
-    return; // keep the counter so we retry next turn
+    return;
   }
 
   if (!summary) {
@@ -149,24 +159,207 @@ export async function condenseMemory(params: {
   await resetCounter(admin, params.userId);
 }
 
-/** Returns the most recent condensed memory summaries for a user. */
-export async function getRecentMemories(
-  userId: string,
-  limit = 3,
-): Promise<string[]> {
-  const admin = createAdminSupabaseClient();
+function isMissingFactKeyColumn(error: { code?: string; message?: string }): boolean {
+  if (error.code === "23505") return false;
+  return /PGRST204|schema cache|column .*fact_key|could not find.*fact_key/i.test(
+    error.message ?? "",
+  );
+}
 
-  const { data, error } = await admin
-    .from("coaching_memory")
-    .select("summary, created_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    logger.error("[memory.service] getRecentMemories error", { error: error.message });
-    return [];
+async function upsertOneKeyedFact(input: {
+  userId: string;
+  coachId?: string | null;
+  sourceMessageId?: string | null;
+  fact: StructuredMemoryFact;
+}): Promise<void> {
+  if (
+    isPoisonMemory({
+      kind: "fact",
+      source: "user_message",
+      fact: input.fact,
+      text: `${input.fact.key}: ${input.fact.value}`,
+    })
+  ) {
+    return;
   }
 
-  return (data ?? []).map((row) => row.summary);
+  const admin = createAdminSupabaseClient();
+  const summary = `${input.fact.key}: ${input.fact.value}`;
+  const keyFacts = { [input.fact.key]: input.fact.value } as Json;
+  const now = new Date().toISOString();
+
+  const { data: recent, error: selectError } = await admin
+    .from("coaching_memory")
+    .select("id, summary, key_facts")
+    .eq("user_id", input.userId)
+    .gte("created_at", ninetyDaysAgoIso())
+    .not("key_facts", "eq", "{}")
+    .order("created_at", { ascending: false })
+    .limit(KEYED_FETCH_LIMIT);
+
+  if (selectError) {
+    logger.warn("[memory.service] keyed select failed", {
+      error: selectError.message,
+    });
+    return;
+  }
+
+  const existing = (recent ?? []).find((row) => {
+    const map = asStringMap(row.key_facts);
+    return (
+      Boolean(map?.[input.fact.key]) ||
+      (typeof row.summary === "string" &&
+        row.summary.startsWith(`${input.fact.key}:`))
+    );
+  });
+
+  if (existing?.id) {
+    const { error } = await admin
+      .from("coaching_memory")
+      .update({
+        summary,
+        key_facts: keyFacts,
+        fact_key: input.fact.key,
+        coach_id: input.coachId ?? null,
+        source_message_id: input.sourceMessageId ?? null,
+        created_at: now,
+      })
+      .eq("id", existing.id);
+    if (error) {
+      logger.warn("[memory.service] keyed update failed", { error: error.message });
+    }
+    return;
+  }
+
+  const base = {
+    user_id: input.userId,
+    coach_id: input.coachId ?? null,
+    source_message_id: input.sourceMessageId ?? null,
+    summary,
+    key_facts: keyFacts,
+  };
+  const withKey = await admin.from("coaching_memory").insert({
+    ...base,
+    fact_key: input.fact.key,
+  });
+  if (!withKey.error) return;
+  if (withKey.error.code === "23505") return;
+  if (!isMissingFactKeyColumn(withKey.error)) {
+    logger.warn("[memory.service] keyed insert failed", {
+      error: withKey.error.message,
+    });
+    return;
+  }
+  const fallback = await admin.from("coaching_memory").insert(base);
+  if (fallback.error && fallback.error.code !== "23505") {
+    logger.warn("[memory.service] keyed insert failed", {
+      error: fallback.error.message,
+    });
+  }
+}
+
+/**
+ * Persist important parts of a user message as keyed facts (90-day window).
+ * Safe to call from `after()` — never throws.
+ */
+export async function persistUserMessageMemories(params: {
+  userId: string;
+  coachId?: string | null;
+  userMessage: string;
+  sourceMessageId?: string | null;
+}): Promise<StructuredMemoryFact[]> {
+  try {
+    const facts = extractUserMemoryFacts(params.userMessage);
+    for (const fact of facts) {
+      await upsertOneKeyedFact({
+        userId: params.userId,
+        coachId: params.coachId,
+        sourceMessageId: params.sourceMessageId,
+        fact,
+      });
+    }
+    return facts;
+  } catch (error) {
+    logger.warn("[memory.service] persist user facts failed", {
+      error: error instanceof Error ? error.message : "unknown",
+    });
+    return [];
+  }
+}
+
+/** Last 90 days of memory summaries (newest first). */
+export async function getRecentMemories(
+  userId: string,
+  limit = 24,
+): Promise<RecentMemory[]> {
+  const admin = createAdminSupabaseClient();
+  const cutoff = ninetyDaysAgoIso();
+
+  const keyedQuery = admin
+    .from("coaching_memory")
+    .select("summary, created_at, key_facts")
+    .eq("user_id", userId)
+    .gte("created_at", cutoff)
+    .not("key_facts", "eq", "{}")
+    .order("created_at", { ascending: false })
+    .limit(40);
+  const restQuery = admin
+    .from("coaching_memory")
+    .select("summary, created_at, key_facts")
+    .eq("user_id", userId)
+    .gte("created_at", cutoff)
+    .eq("key_facts", "{}")
+    .order("created_at", { ascending: false })
+    .limit(8);
+
+  const [keyedRes, restRes] = await Promise.all([keyedQuery, restQuery]);
+
+  if (keyedRes.error) {
+    logger.warn("[memory.service] keyed memory filter failed; using mixed fetch", {
+      error: keyedRes.error.message,
+    });
+    const mixed = await admin
+      .from("coaching_memory")
+      .select("summary, created_at, key_facts")
+      .eq("user_id", userId)
+      .gte("created_at", cutoff)
+      .order("created_at", { ascending: false })
+      .limit(80);
+    if (mixed.error) {
+      logger.error("[memory.service] getRecentMemories error", {
+        error: mixed.error.message,
+      });
+      return [];
+    }
+    const mapped = mapMemoryRows(mixed.data);
+    const keyed = mapped.filter((row) => row.factKey);
+    const rest = mapped.filter((row) => !row.factKey);
+    return [...keyed, ...rest].slice(0, limit);
+  }
+
+  if (restRes.error) {
+    logger.warn("[memory.service] event memory fetch failed", {
+      error: restRes.error.message,
+    });
+  }
+
+  return [...mapMemoryRows(keyedRes.data), ...mapMemoryRows(restRes.data)].slice(
+    0,
+    limit,
+  );
+}
+
+function mapMemoryRows(
+  rows: { summary: string; created_at: string; key_facts: unknown }[] | null,
+): RecentMemory[] {
+  return (rows ?? []).map((row) => {
+    const keyFacts = asStringMap(row.key_facts);
+    const factKey = keyFacts ? Object.keys(keyFacts)[0] : undefined;
+    return {
+      summary: row.summary,
+      createdAt: row.created_at,
+      factKey: factKey ?? null,
+      keyFacts,
+    };
+  });
 }

@@ -28,6 +28,11 @@ Set repository variable `STAGING_URL` to a durable preview/staging URL, re-run
 `workflow_dispatch` on Security Scan, and archive results in
 `td008-zap-baseline.md`. Then mark this waiver **Superseded**.
 
+## Phase 3 note (2026-08-26)
+
+Phase 3 did not create a durable staging host. This waiver remains **Active**
+until `STAGING_URL` exists. See `f3-15-dast-phase3.md`.
+
 ## Sign-off
 
 ```

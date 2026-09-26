@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildContentSecurityPolicy, buildCspReportingEndpoints, generateCspNonce } from "@/lib/security/csp";
+import { NATIVE_ENTRY_BOOT_CSP_HASH } from "@/lib/native/native-entry-boot";
 
 describe("buildContentSecurityPolicy", () => {
   const nonce = "test-nonce-123";
@@ -41,11 +42,12 @@ describe("buildContentSecurityPolicy", () => {
     expect(csp).toContain("https://api.paddle.com");
   });
 
-  it("marketing static HTML CSP omits nonce so CDN HTML can hydrate", () => {
-    const staticCsp = buildContentSecurityPolicy(nonce, { staticHtml: true });
-    expect(staticCsp).not.toContain(`'nonce-${nonce}'`);
-    expect(staticCsp).toContain("'unsafe-inline'");
+  it("marketing and app CSPs both require a nonce and omit script unsafe-inline", () => {
     expect(csp).toContain(`'nonce-${nonce}'`);
+    expect(csp).toContain("'strict-dynamic'");
+    expect(csp).toContain(`'${NATIVE_ENTRY_BOOT_CSP_HASH}'`);
+    expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+    expect(csp).toContain("style-src 'self' 'unsafe-inline'");
   });
 
   it("declares CSP reporting without weakening object-src", () => {

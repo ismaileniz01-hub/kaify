@@ -14,17 +14,23 @@ describe("avatar storage policy (SEC-012)", () => {
     expect(isOwnedAvatarPath(`${USER_A}/../${USER_B}/avatar.jpg`, USER_A)).toBe(false);
   });
 
-  it("Wave 3 migration keeps the avatars bucket private with own-only writes", () => {
-    const sql = readFileSync(
+  it("Wave 3 keeps avatars private; Wave 8 drops client INSERT/UPDATE", () => {
+    const wave3 = readFileSync(
       join(process.cwd(), "supabase/migrations/20260814120000_wave3_security_privacy.sql"),
       "utf8",
     );
-    expect(sql).toMatch(/set public = false/);
-    expect(sql).toMatch(/drop policy if exists "avatars_public_read"/);
-    expect(sql).toContain("avatars_upload_own");
-    expect(sql).toContain("avatars_update_own");
-    expect(sql).toContain("avatars_delete_own");
-    expect(sql).toMatch(/auth\.uid\(\)/);
+    expect(wave3).toMatch(/set public = false/);
+    expect(wave3).toMatch(/drop policy if exists "avatars_public_read"/);
+    const wave8 = readFileSync(
+      join(
+        process.cwd(),
+        "supabase/migrations/20260814180000_wave8_admin_aal2_avatar_writes.sql",
+      ),
+      "utf8",
+    );
+    expect(wave8).toContain('drop policy if exists "avatars_upload_own"');
+    expect(wave8).toContain('drop policy if exists "avatars_update_own"');
+    expect(wave8).toMatch(/aal2/);
   });
 
   it("account deletion still removes avatar objects", () => {

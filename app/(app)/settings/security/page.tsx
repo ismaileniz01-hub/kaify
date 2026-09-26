@@ -5,6 +5,7 @@ import { ArrowLeft, Shield, ShieldCheck, ShieldOff, Download } from "lucide-reac
 import { useEffect, useState } from "react";
 import { useLang } from "@/lib/lang-context";
 import { signOutUser } from "@/lib/auth/logout";
+import { nativeShellLoginUrl } from "@/lib/native/sign-out-native";
 import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
   enrollTotp,
@@ -77,7 +78,7 @@ export default function SecuritySettingsPage() {
 
       const { data, error: enrollError } = await enrollTotp(supabase);
       if (enrollError || !data?.totp || !data.id) {
-        setError(enrollError?.message ?? t("mfa.error.enroll"));
+        setError(t("mfa.error.enroll"));
         return;
       }
 
@@ -135,7 +136,7 @@ export default function SecuritySettingsPage() {
 
       const { error: unenrollError } = await unenrollTotp(supabase, factorId);
       if (unenrollError) {
-        setError(unenrollError.message);
+        setError(t("mfa.error.enroll"));
         return;
       }
 
@@ -155,10 +156,10 @@ export default function SecuritySettingsPage() {
       if (!supabase) return;
       const { error: signOutError } = await supabase.auth.signOut({ scope: "others" });
       if (signOutError) {
-        setError(signOutError.message);
+        setError(t("login.error.failed"));
         return;
       }
-      setMessage("Diğer cihazlardaki oturumlar sonlandırıldı.");
+      setMessage(t("settings.security.sessions.revoke_others_success"));
     } finally {
       setLoading(false);
     }
@@ -171,10 +172,10 @@ export default function SecuritySettingsPage() {
     try {
       const result = await signOutUser();
       if (!result.ok) {
-        setError(result.message);
+        setError(t("login.error.failed"));
         return;
       }
-      window.location.href = "/login";
+      window.location.replace(nativeShellLoginUrl());
     } finally {
       setLoading(false);
     }
@@ -263,7 +264,8 @@ export default function SecuritySettingsPage() {
     setMessage(null);
     try {
       await apiDelete<{ deleted: boolean }>("/api/profile", { confirm: "DELETE" });
-      window.location.href = "/login";
+      await signOutUser();
+      window.location.replace(nativeShellLoginUrl());
     } catch (err) {
       if (isStepUpRequiredError(err) || (err instanceof ApiClientError && err.code === "STEP_UP_REQUIRED")) {
         setNeedsStepUp("delete");

@@ -1,0 +1,29 @@
+App name: Kaify Ai
+Package: org.kaifyai.app
+Short description (80 chars max):
+AI coaches for workouts, nutrition, form, and a dragon that keeps you showing up.
+
+Full description:
+Kaify Ai is your personal coaching team: Alex for training, Maya for nutrition, Leo for form, and Kai the companion who helps you stay consistent.
+
+Sign in with the email you used on kaifyai.org. Create your account and manage your subscription on the website. The app is for paying members to chat with coaches, log meals and workouts, track streaks, and follow progress.
+
+No in-app purchases. Billing is only on the website.
+
+Kaify Ai is not a medical device and does not diagnose, treat, cure, or prevent any medical condition. Always consult a healthcare professional before making medical decisions.
+
+Privacy: https://kaifyai.org/privacy
+Terms: https://kaifyai.org/terms
+Support: https://kaifyai.org
+
+Reviewer notes (Play Console → App content / notes):
+This is a members-only consumption app. There are no Google Play in-app purchases. Account creation and billing are only on the website (Paddle). The installed app has no pricing, checkout, or external payment buttons.
+
+Restricted access: use the App access email and password.
+1. Open the app and stay on Sign in.
+2. Enter the reviewer email and password.
+3. Tap "Sign in with password". Do not tap "Send login code" and do not request an email OTP.
+4. The account must already have an Essential (or higher) plan active from the website.
+5. The account lands on Home / Welcome in English.
+6. Coaches, streak, market, analytics, and meal photo are available.
+7. Account deletion: Settings → Delete account (type DELETE).

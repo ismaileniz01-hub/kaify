@@ -1,58 +1,31 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ScrollReveal } from "./ScrollReveal";
 import { Trophy, Flame, TrendingUp, Globe } from "lucide-react";
 import { FlagImage } from "@/components/FlagImage";
 import { useLang } from "@/lib/lang-context";
 import { formatNumber } from "@/lib/i18n/format";
+import { COUNTRY_NAMES } from "@/lib/country-names";
+import type { CountryLeaderboardDTO } from "@/lib/types/domain.types";
 
-const COUNTRIES = [
-  {
-    rank: 1,
-    flagCode: "tr",
-    countryKey: "turkey",
-    users: 12_400,
-    totalStreaks: 284_500,
-    color: "#f97316",
-    glow: "rgba(249, 115, 22, 0.35)",
-  },
-  {
-    rank: 2,
-    flagCode: "us",
-    countryKey: "united_states",
-    users: 9_800,
-    totalStreaks: 212_300,
-    color: "#3b82f6",
-    glow: "rgba(59, 130, 246, 0.35)",
-  },
-  {
-    rank: 3,
-    flagCode: "br",
-    countryKey: "brazil",
-    users: 7_200,
-    totalStreaks: 158_900,
-    color: "#22c55e",
-    glow: "rgba(34, 197, 94, 0.35)",
-  },
-  {
-    rank: 4,
-    flagCode: "de",
-    countryKey: "germany",
-    users: 5_100,
-    totalStreaks: 112_400,
-    color: "#a855f7",
-    glow: "rgba(168, 85, 247, 0.35)",
-  },
-  {
-    rank: 5,
-    flagCode: "gb",
-    countryKey: "united_kingdom",
-    users: 3_600,
-    totalStreaks: 79_800,
-    color: "#fbbf24",
-    glow: "rgba(251, 191, 36, 0.35)",
-  },
-];
+const RANK_STYLE = [
+  { color: "#f97316", glow: "rgba(249, 115, 22, 0.35)" },
+  { color: "#3b82f6", glow: "rgba(59, 130, 246, 0.35)" },
+  { color: "#22c55e", glow: "rgba(34, 197, 94, 0.35)" },
+  { color: "#a855f7", glow: "rgba(168, 85, 247, 0.35)" },
+  { color: "#fbbf24", glow: "rgba(251, 191, 36, 0.35)" },
+] as const;
+
+type RankedCountry = {
+  rank: number;
+  flagCode: string;
+  name: string;
+  users: number;
+  totalStreaks: number;
+  color: string;
+  glow: string;
+};
 
 // Floating flag orbs scattered around the card — positioned outside on left & right
 // Left side: leaderboard countries, Right side: developed / high-population nations
@@ -106,7 +79,7 @@ function CountryRow({
   country,
   index,
 }: {
-  country: (typeof COUNTRIES)[number];
+  country: RankedCountry;
   index: number;
 }) {
   const { lang, t } = useLang();
@@ -159,7 +132,7 @@ function CountryRow({
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-white">
-              {t(`landing.leaderboard.country.${country.countryKey}`)}
+              {country.name}
             </p>
             <p className="text-xs text-zinc-500">
               {t("landing.leaderboard.active_users", {
@@ -189,8 +162,46 @@ function CountryRow({
   );
 }
 
+function mapPublicCountries(entries: CountryLeaderboardDTO[]): RankedCountry[] {
+  return entries.slice(0, 5).map((entry, index) => {
+    const style = RANK_STYLE[index] ?? RANK_STYLE[4];
+    const code = (entry.flagCode || entry.countryCode || "xx").toLowerCase();
+    return {
+      rank: entry.rank || index + 1,
+      flagCode: code,
+      name: COUNTRY_NAMES[code] ?? code.toUpperCase(),
+      users: entry.userCount,
+      totalStreaks: entry.totalStreak,
+      color: style.color,
+      glow: style.glow,
+    };
+  });
+}
+
 export function LandingLeaderboard() {
   const { t } = useLang();
+  const [countries, setCountries] = useState<RankedCountry[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/public/leaderboard/country")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        if (cancelled) return;
+        const rows = Array.isArray(body?.data?.leaderboard)
+          ? (body.data.leaderboard as CountryLeaderboardDTO[])
+          : [];
+        setCountries(mapPublicCountries(rows));
+        setLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <section id="leaderboard" className="landing-section relative">
@@ -244,9 +255,15 @@ export function LandingLeaderboard() {
               </span>
             </div>
 
-            {COUNTRIES.map((country, i) => (
-              <CountryRow key={country.countryKey} country={country} index={i} />
-            ))}
+            {loaded && countries.length === 0 ? (
+              <p className="px-4 py-8 text-center text-sm text-zinc-500">
+                {t("landing.leaderboard.empty")}
+              </p>
+            ) : (
+              countries.map((country, i) => (
+                <CountryRow key={`${country.flagCode}-${country.rank}`} country={country} index={i} />
+              ))
+            )}
           </div>
 
           <p className="mt-6 text-center text-xs text-zinc-600">

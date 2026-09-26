@@ -21,6 +21,20 @@ export const featureFlags = {
   /** Paddle billing webhook processing. */
   paddleBilling: () =>
     envFlag("FEATURE_PADDLE", Boolean(process.env.PADDLE_NOTIFICATION_WEBHOOK_SECRET?.trim())),
+  /**
+   * Minimum-PII product event spine. Production stays off until legal/privacy
+   * approves a TTL (ADR 008). Tests default on so allowlist coverage is real.
+   */
+  productEvents: () =>
+    envFlag(
+      "FEATURE_PRODUCT_EVENTS",
+      process.env.NODE_ENV === "test" || process.env.VITEST === "true",
+    ),
+  /**
+   * Versioned workout plans + session history. Default on; library logging
+   * still increments the daily workout counter if the tables are not applied.
+   */
+  workoutPlans: () => envFlag("FEATURE_WORKOUT_PLANS", true),
 } as const;
 
 export type FeatureFlag = keyof typeof featureFlags;

@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { MARKET_EFFECTS, type MarketEffect } from "@/lib/market-catalog";
 import { AppHeader } from "@/components/navigation/AppHeader";
 import { hapticImpact, hapticNotification } from "@/lib/native/haptics";
+import { useOfflineRetry } from "@/hooks/useOfflineRetry";
 
 type EffectColor = MarketEffect;
 
@@ -68,6 +69,10 @@ export default function MarketPage() {
     const state = await apiGet<{ ownedIds: string[]; activeAura: string }>("/api/market");
     syncFromServer(state.ownedIds, state.activeAura);
   }, [isAuthenticated, syncFromServer]);
+
+  useOfflineRetry(() => {
+    void refreshMarketState().catch(() => undefined);
+  });
 
   useEffect(() => {
     if (!isAuthenticated || isLoading) return;

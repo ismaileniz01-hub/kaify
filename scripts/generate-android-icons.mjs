@@ -3,7 +3,7 @@
  * Run: node scripts/generate-android-icons.mjs
  */
 import sharp from "sharp";
-import { mkdir, copyFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 const SRC = "public/kaify-logo.png";
@@ -25,6 +25,14 @@ const SPLASH_SIZES = {
   "drawable-port-xxxhdpi": 1280,
 };
 
+const LAND_SPLASH_SIZES = {
+  "drawable-land-mdpi": 320,
+  "drawable-land-hdpi": 480,
+  "drawable-land-xhdpi": 720,
+  "drawable-land-xxhdpi": 960,
+  "drawable-land-xxxhdpi": 1280,
+};
+
 const THEME = { r: 10, g: 10, b: 10, alpha: 1 };
 
 async function maskableIcon(size) {
@@ -41,14 +49,14 @@ async function maskableIcon(size) {
     .toBuffer();
 }
 
-async function splash(size) {
-  const inner = Math.round(size * 0.35);
+async function splash(width, height) {
+  const inner = Math.round(Math.min(width, height) * 0.38);
   const logo = await sharp(SRC)
     .resize(inner, inner, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
     .toBuffer();
   return sharp({
-    create: { width: size, height: size * 2, channels: 4, background: THEME },
+    create: { width, height, channels: 4, background: THEME },
   })
     .composite([{ input: logo, gravity: "center" }])
     .png()
@@ -79,19 +87,42 @@ async function main() {
   for (const [folder, size] of Object.entries(SPLASH_SIZES)) {
     const dir = path.join(RES, folder);
     await mkdir(dir, { recursive: true });
-    const buf = await splash(size);
+    const buf = await splash(size, size * 2);
+    await sharp(buf).toFile(path.join(dir, "splash.png"));
+  }
+
+  for (const [folder, size] of Object.entries(LAND_SPLASH_SIZES)) {
+    const dir = path.join(RES, folder);
+    await mkdir(dir, { recursive: true });
+    const buf = await splash(size * 2, size);
     await sharp(buf).toFile(path.join(dir, "splash.png"));
   }
 
   const splashDir = path.join(RES, "drawable");
   await mkdir(splashDir, { recursive: true });
-  const defaultSplash = await splash(480);
+  const defaultSplash = await splash(480, 960);
   await sharp(defaultSplash).toFile(path.join(splashDir, "splash.png"));
 
   const stat = await notifStat(96);
   await sharp(stat).toFile(path.join(splashDir, "ic_stat_kaify.png"));
 
-  console.log("Android icons + splash + ic_stat_kaify generated.");
+  const iosIconDir = "ios/App/App/Assets.xcassets/AppIcon.appiconset";
+  await mkdir(iosIconDir, { recursive: true });
+  const iosIcon = await sharp(SRC)
+    .resize(1024, 1024, { fit: "cover" })
+    .flatten({ background: THEME })
+    .png()
+    .toBuffer();
+  await sharp(iosIcon).toFile(path.join(iosIconDir, "AppIcon-512@2x.png"));
+
+  const iosSplashDir = "ios/App/App/Assets.xcassets/Splash.imageset";
+  await mkdir(iosSplashDir, { recursive: true });
+  const iosSplash = await splash(2732, 2732);
+  await sharp(iosSplash).toFile(path.join(iosSplashDir, "splash-2732x2732.png"));
+  await sharp(iosSplash).toFile(path.join(iosSplashDir, "splash-2732x2732-1.png"));
+  await sharp(iosSplash).toFile(path.join(iosSplashDir, "splash-2732x2732-2.png"));
+
+  console.log("Android icons + splash + ic_stat_kaify + iOS icon/splash generated.");
 }
 
 main().catch((err) => {

@@ -73,6 +73,7 @@ export function PlanSavingsCard({ plan, interval }: Props) {
             <p>/{t("pricing.unit.month")}</p>
           </div>
         </div>
+        <p className="pricing-savings-card__billed">{t("pricing.depends_on_region")}</p>
 
         <div className="pricing-savings-card__save-banner">
           <span aria-hidden>💰</span>

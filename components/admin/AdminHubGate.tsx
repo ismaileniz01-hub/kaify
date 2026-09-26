@@ -3,6 +3,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { Loader2, Lock } from "lucide-react";
 import { apiPost } from "@/lib/api/client";
+import { errorToMessage } from "@/lib/i18n/api-error";
 import { useLang } from "@/lib/lang-context";
 import { InlineAlert } from "@/components/InlineAlert";
 
@@ -37,8 +38,8 @@ export function AdminHubGate({ children }: { children: ReactNode }) {
       });
       setPassword("");
       setUnlocked(true);
-    } catch {
-      setError(t("admin.gate.wrong_password"));
+    } catch (err) {
+      setError(errorToMessage(err, t) || t("admin.gate.wrong_password"));
     } finally {
       setBusy(false);
     }

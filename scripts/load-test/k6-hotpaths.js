@@ -23,6 +23,7 @@ export const options = {
     "http_req_duration{name:session}": [`p(95)<${P95_MS}`],
     "http_req_duration{name:leaderboard}": [`p(95)<${P95_MS}`],
     "http_req_duration{name:home}": [`p(95)<${P95_MS}`],
+    "http_req_duration{name:workout_plan}": [`p(95)<${P95_MS}`],
   },
 };
 
@@ -62,6 +63,14 @@ export default function () {
   });
   check(home, {
     "home 200": (r) => r.status === 200,
+  });
+
+  const workout = http.get(`${BASE}/api/workout/plan`, {
+    headers: authHeaders(),
+    tags: { name: "workout_plan" },
+  });
+  check(workout, {
+    "workout plan 200": (r) => r.status === 200,
   });
 
   sleep(0.1);

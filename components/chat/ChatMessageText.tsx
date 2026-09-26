@@ -1,4 +1,9 @@
+"use client";
+
+import { useEffect, useRef } from "react";
 import { splitChatInlineBold } from "@/lib/chat/inline-bold";
+import { coachVisibleMessage } from "@/lib/kaios/envelope-text";
+import { useTypedReveal } from "@/lib/chat/typed-reveal";
 
 export { splitChatInlineBold };
 
@@ -18,9 +23,32 @@ export function parseChatInlineBold(text: string) {
 export function ChatMessageText({
   text,
   className = "whitespace-pre-wrap",
+  streaming = false,
+  typeIn = false,
 }: {
   text: string;
   className?: string;
+  streaming?: boolean;
+  typeIn?: boolean;
 }) {
-  return <p className={className}>{parseChatInlineBold(text)}</p>;
+  const visible = coachVisibleMessage(text);
+  const revealed = useTypedReveal(visible, typeIn);
+  const catchingUp = typeIn && revealed !== visible;
+  const pRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (!catchingUp) return;
+    const root = pRef.current?.closest("[data-chat-scroller], .overflow-y-auto");
+    if (root instanceof HTMLElement) root.scrollTop = root.scrollHeight;
+  }, [revealed, catchingUp]);
+
+  if (!visible.trim() && !streaming) return null;
+  return (
+    <p ref={pRef} className={className}>
+      {revealed.trim() ? parseChatInlineBold(revealed) : null}
+      {streaming || catchingUp ? (
+        <span className="chat-stream-caret" aria-hidden />
+      ) : null}
+    </p>
+  );
 }

@@ -8,6 +8,9 @@ import { useKai } from "@/lib/kai-context";
 import { useSound } from "@/lib/use-sound";
 import { DEMO_USER_PROFILE } from "@/lib/user";
 import { useLang } from "@/lib/lang-context";
+import { WorkoutPlanCard } from "@/components/chat/WorkoutPlanCard";
+import { ChatPinnedBanner } from "@/components/chat/ChatPinnedBanner";
+import { ChatMessageText } from "@/components/chat/ChatMessageText";
 import { Activity, Target, Lightbulb, TrendingUp, Dumbbell } from "lucide-react";
 
 type ChatBubblesProps = {
@@ -31,6 +34,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
   const { play } = useSound();
   const [allMessages, setAllMessages] = useState<MessageItem[]>([]);
   const [typingId, setTypingId] = useState<number | null>(null);
+  const [pinOpen, setPinOpen] = useState(true);
   const prevVisibleCountRef = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const nextIdRef = useRef(1000);
@@ -110,7 +114,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
     if (msg.type === "analysis" && msg.analysis) {
       const a = msg.analysis;
       return (
-        <div className="animate-message overflow-hidden rounded-2xl" style={{ backgroundColor: `${primary}10`, border: `1px solid ${ring}`, boxShadow: `0 0 20px ${ring}` }}>
+        <div className="chat-card-unfold overflow-hidden rounded-2xl" style={{ backgroundColor: `${primary}10`, border: `1px solid ${ring}`, boxShadow: `0 0 20px ${ring}` }}>
           <div className="flex items-center gap-3 p-3" style={{ borderBottom: `1px solid ${ring}` }}>
             <div className="flex h-14 w-14 items-center justify-center rounded-full text-lg font-black text-white" style={{ background: `conic-gradient(${primary} ${a.overallScore * 10}%, #1a1a2e ${a.overallScore * 10}%)`, boxShadow: `0 0 15px ${ring}` }}>{a.overallScore}</div>
             <div><p className="text-sm font-bold text-white">{t("analysis.score")}</p><p className="text-xs text-zinc-400">{t("analysis.overall")}</p></div>
@@ -154,7 +158,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
         { key: "meal.fat", color: "#3b82f6", data: mp.macros.fat },
       ];
       return (
-        <div className="animate-message overflow-hidden rounded-2xl" style={{ backgroundColor: `${primary}10`, border: `1px solid ${ring}`, boxShadow: `0 0 20px ${ring}` }}>
+        <div className="chat-card-unfold overflow-hidden rounded-2xl" style={{ backgroundColor: `${primary}10`, border: `1px solid ${ring}`, boxShadow: `0 0 20px ${ring}` }}>
           <div className="flex items-center gap-3 p-3" style={{ borderBottom: `1px solid ${ring}` }}>
             <div className="flex h-14 w-14 items-center justify-center rounded-full text-lg font-black text-white" style={{ background: `conic-gradient(${primary} ${calPct}%, #1a1a2e ${calPct}%)`, boxShadow: `0 0 15px ${ring}` }}>{calPct}%</div>
             <div><p className="text-sm font-bold text-white">{t("meal.calories")}</p><p className="text-xs text-zinc-400">{t("meal.calorie_progress", { current: mp.totalCalories, target: mp.targetCalories })}</p></div>
@@ -200,34 +204,24 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
     if (msg.type === "workoutPlan" && msg.workoutPlan) {
       const wp = msg.workoutPlan;
       return (
-        <div className="animate-message overflow-hidden rounded-2xl" style={{ backgroundColor: `${primary}10`, border: `1px solid ${ring}`, boxShadow: `0 0 20px ${ring}` }}>
-          <div className="flex items-center gap-3 p-3" style={{ borderBottom: `1px solid ${ring}` }}>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}><Dumbbell className="h-6 w-6 text-white" /></div>
-            <div><p className="text-sm font-bold text-white">{t(wp.titleKey)}</p><p className="text-xs text-zinc-400">{t(wp.durationKey)}</p></div>
-          </div>
-          {wp.days.map((day: WorkoutPlanData["days"][number], di: number) => (
-            <div key={di} style={{ borderBottom: di < wp.days.length - 1 ? `1px solid ${ring}` : undefined }}>
-              <div className="flex items-center gap-2 px-3 pt-3 pb-1"><p className="text-xs font-bold text-zinc-300">{t(day.dayKey)}</p><span className="text-[10px] text-zinc-500">—</span><span className="text-[10px] text-zinc-400">{t(day.focusKey)}</span></div>
-              <div className="flex flex-col px-3 pb-2">{day.exercises.map((ex, ei: number) => (
-                <div key={ei} className="flex items-start gap-2 py-1">
-                  <div className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: primary }} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2"><span className="text-[11px] font-medium text-white truncate">{ex.name}</span><span className="shrink-0 text-[10px] text-zinc-500">{t("workout.sets", { sets: ex.sets, reps: ex.reps })}</span></div>
-                    <p className="text-[10px] text-zinc-500 leading-relaxed mt-0.5">{ex.notes}</p>
-                  </div>
-                </div>
-              ))}</div>
-            </div>
-          ))}
-          {wp.tips?.length > 0 && (
-            <div className="flex flex-col gap-1.5 p-3" style={{ borderTop: `1px solid ${ring}` }}>
-              <p className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400"><Lightbulb className="h-3.5 w-3.5" />{t("workout.tips")}</p>
-              {wp.tips.map((tip: string, i: number) => (
-                <div key={i} className="flex items-start gap-2"><div className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: primary }} /><span className="text-[11px] leading-relaxed text-zinc-300">{tip}</span></div>
-              ))}
-            </div>
-          )}
-        </div>
+        <WorkoutPlanCard
+          primary={primary}
+          primaryLight={primaryLight}
+          ring={ring}
+          title={t(wp.titleKey)}
+          subtitle={t(wp.durationKey)}
+          days={wp.days.map((day: WorkoutPlanData["days"][number]) => ({
+            day: t(day.dayKey),
+            focus: t(day.focusKey),
+            exercises: day.exercises.map((ex) => ({
+              name: ex.name,
+              setsLabel: t("workout.sets", { sets: ex.sets, reps: ex.reps }),
+              notes: ex.notes,
+            })),
+          }))}
+          tipsLabel={wp.tips?.length ? t("workout.tips") : undefined}
+          tips={wp.tips}
+        />
       );
     }
     if (msg.type === "dailySummary" && msg.dailySummary) {
@@ -235,7 +229,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
       const calPct = Math.round((ds.nutrition.calories.current / ds.nutrition.calories.target) * 100);
       const protPct = Math.round((ds.nutrition.protein.current / ds.nutrition.protein.target) * 100);
       return (
-        <div className="animate-message overflow-hidden rounded-2xl" style={{ backgroundColor: `${primary}10`, border: `1px solid ${ring}`, boxShadow: `0 0 20px ${ring}` }}>
+        <div className="chat-card-unfold overflow-hidden rounded-2xl" style={{ backgroundColor: `${primary}10`, border: `1px solid ${ring}`, boxShadow: `0 0 20px ${ring}` }}>
           <div className="p-3 flex items-center gap-3" style={{ borderBottom: `1px solid ${ring}` }}>
             <div className="flex h-12 w-12 items-center justify-center rounded-full" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}><Activity className="h-6 w-6 text-white" /></div>
             <p className="text-sm font-bold text-white">{ds.greeting}</p>
@@ -289,8 +283,36 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
     return null;
   };
 
+  const pinnedDemo =
+    contactId === "alex"
+      ? [...allMessages].reverse().find((m) => m.visible && m.type === "workoutPlan" && m.workoutPlan)
+      : contactId === "leo"
+        ? [...allMessages].reverse().find((m) => m.visible && m.type === "analysis" && m.analysis)
+        : undefined;
+  const pinMetric =
+    pinnedDemo?.type === "workoutPlan" && pinnedDemo.workoutPlan
+      ? String(pinnedDemo.workoutPlan.days.length)
+      : pinnedDemo?.type === "analysis" && pinnedDemo.analysis
+        ? String(Math.round(pinnedDemo.analysis.overallScore))
+        : "";
+
   return (
-    <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-36 pt-4">
+    <div className="flex min-h-0 flex-1 flex-col">
+      {pinnedDemo ? (
+        <ChatPinnedBanner
+          label={contactId === "leo" ? t("chat.pin.analysis") : t("chat.pin.program")}
+          title={contactId === "leo" ? t("analysis.score") : t("workout.weekly_title")}
+          metric={pinMetric}
+          primary={primary}
+          primaryLight={primaryLight}
+          ring={ring}
+          expanded={pinOpen}
+          onToggle={() => setPinOpen((open) => !open)}
+        >
+          {renderCard(pinnedDemo)}
+        </ChatPinnedBanner>
+      ) : null}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-36 pt-4" data-chat-scroller>
       <p className="mb-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-center text-[11px] text-amber-200/90" role="note">
         {t("chat.demo.notice")}
       </p>
@@ -301,7 +323,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
               msg.from === "contact" ? (
                 <div className="flex max-w-[82%] items-end gap-2">
                   <div className="relative h-8 w-8 shrink-0"><Image src={contactId === "leo" ? "/avatars/leo-1.png" : contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain [image-rendering:pixelated]" style={{ filter: "brightness(1.05) contrast(1.1)" }} /></div>
-                  <div className="flex items-center gap-1.5 px-5 py-3.5" style={{ backgroundColor: `${primary}22`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 0 20px ${ring}` }}>
+                  <div className="flex animate-message--coach items-center gap-1.5 px-5 py-3.5" style={{ backgroundColor: `${primary}22`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 0 20px ${ring}` }}>
                     <span className="typing-dot" style={{ backgroundColor: primaryLight }} /><span className="typing-dot" style={{ backgroundColor: primaryLight }} /><span className="typing-dot" style={{ backgroundColor: primaryLight }} />
                   </div>
                 </div>
@@ -319,19 +341,23 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
             {msg.visible && (
               msg.from === "contact" ? (
                 ["analysis", "mealPlan", "workoutPlan", "dailySummary"].includes(msg.type || "") ? (
-                  <div className="flex max-w-[90%] items-start gap-2">
-                    <div className="relative h-8 w-8 shrink-0 mt-1"><Image src={contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain" /></div>
+                  <div className="flex max-w-[90%] gap-2">
+                    <div className="flex w-8 shrink-0 flex-col justify-end">
+                      <div className="sticky bottom-3 h-8 w-8"><Image src={contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain" /></div>
+                    </div>
                     <div className="flex flex-col gap-1">
-                      <div className="chat-message-bubble animate-message px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}>{msg.text}</div>
-                      {renderCard(msg)}
+                      <div className="chat-message-bubble animate-message--coach px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}><ChatMessageText text={msg.text} typeIn /></div>
+                      {pinnedDemo?.id !== msg.id ? renderCard(msg) : null}
                       <span className="chat-message-time ps-1 text-zinc-600">{msg.time}</span>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex max-w-[82%] items-end gap-2">
-                    <div className="relative h-8 w-8 shrink-0"><Image src={contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain" /></div>
+                  <div className="flex max-w-[82%] gap-2">
+                    <div className="flex w-8 shrink-0 flex-col justify-end">
+                      <div className="sticky bottom-3 h-8 w-8"><Image src={contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain" /></div>
+                    </div>
                     <div className="flex flex-col gap-1">
-                      <div className="chat-message-bubble animate-message px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}>{msg.text}</div>
+                      <div className="chat-message-bubble animate-message--coach px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}><ChatMessageText text={msg.text} typeIn /></div>
                       <span className="chat-message-time ps-1 text-zinc-600">{msg.time}</span>
                     </div>
                   </div>
@@ -340,7 +366,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
                 <div className="ms-auto flex max-w-[82%] flex-col items-end gap-1">
                   <div className="flex items-end gap-2">
                     <div className="flex flex-col items-end gap-1">
-                      <div className="chat-message-bubble animate-message px-4 py-2.5 text-sm leading-relaxed text-white" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})`, borderRadius: "18px 18px 4px 18px", boxShadow: `0 8px 22px ${shadow}` }}>{msg.text}</div>
+                      <div className="chat-message-bubble animate-message--user px-4 py-2.5 text-sm leading-relaxed text-white" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})`, borderRadius: "18px 18px 4px 18px", boxShadow: `0 8px 22px ${shadow}` }}>{msg.text}</div>
                       <span className="chat-message-time pe-1 text-zinc-600">{msg.time}</span>
                     </div>
                     <div className="relative h-8 w-8 shrink-0"><Image src={DEMO_USER_PROFILE.avatar} alt={DEMO_USER_PROFILE.name} width={32} height={32} className="h-full w-full rounded-full object-cover" /></div>
@@ -351,6 +377,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
           </div>
         ))}
         <div ref={bottomRef} />
+      </div>
       </div>
     </div>
   );

@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
+import { hapticSelection } from "@/lib/native/haptics";
 import { formatRelativeShort } from "@/lib/i18n/format";
 import { useNotifications } from "@/lib/notification-context";
 import { PushToggle } from "@/components/notifications/PushToggle";
@@ -163,7 +164,7 @@ function NotificationPanel({
         className="flex min-h-0 flex-1 flex-col"
       >
         {/* Header */}
-        <div className="relative shrink-0 overflow-hidden border-b border-white/10 px-4 pb-4 pt-14">
+        <div className="relative shrink-0 overflow-hidden border-b border-white/10 px-4 pb-4 pt-[calc(var(--safe-top)+0.75rem)]">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 bg-gradient-to-br from-purple-600/30 via-violet-900/20 to-transparent"
@@ -211,7 +212,7 @@ function NotificationPanel({
               <button
                 type="button"
                 onClick={() => void handleMarkAllRead()}
-                className="flex items-center gap-1.5 rounded-full bg-purple-500/20 px-3 py-1.5 text-[11px] font-semibold text-purple-200 ring-1 ring-purple-400/30 transition hover:bg-purple-500/30 active:scale-95"
+                className="flex min-h-11 items-center gap-1.5 rounded-full bg-purple-500/20 px-3 py-2 text-[11px] font-semibold text-purple-200 ring-1 ring-purple-400/30 transition hover:bg-purple-500/30 active:scale-95"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
                 {t("notif.mark_all_read")}
@@ -225,7 +226,7 @@ function NotificationPanel({
         </div>
 
         {/* List */}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(var(--safe-bottom)+1rem)]">
           {loading && notifications.length === 0 ? (
             <div className="space-y-3 py-4">
               {[0, 1, 2].map((i) => (
@@ -277,7 +278,10 @@ export function NotificationCenter() {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          void hapticSelection();
+          setOpen(true);
+        }}
         aria-label={t("notif.title")}
         className="relative touch-44 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-zinc-400 ring-2 ring-white/15 transition hover:brightness-110 active:scale-95"
       >

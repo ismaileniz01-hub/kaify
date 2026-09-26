@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Check, Circle } from "lucide-react";
 import type { FirstTaskProgress } from "@/lib/activation/today-job";
 import { useLang } from "@/lib/lang-context";
+import { hapticSelection } from "@/lib/native/haptics";
 
 type Props = {
   progress: FirstTaskProgress;
@@ -97,7 +98,14 @@ export function FirstTaskChecklist({
           if (step.id === "goals" && step.onClick) {
             return (
               <li key={step.id}>
-                <button type="button" className="w-full text-start" onClick={step.onClick}>
+                <button
+                  type="button"
+                  className="w-full text-start"
+                  onClick={() => {
+                    void hapticSelection();
+                    step.onClick?.();
+                  }}
+                >
                   {row}
                 </button>
               </li>
@@ -106,7 +114,13 @@ export function FirstTaskChecklist({
 
           return (
             <li key={step.id}>
-              <Link href={step.href ?? "/welcome"} className="block">
+              <Link
+                href={step.href ?? "/welcome"}
+                className="block"
+                onClick={() => {
+                  void hapticSelection();
+                }}
+              >
                 {row}
               </Link>
             </li>

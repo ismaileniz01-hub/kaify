@@ -13,6 +13,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+/**
+ * Middleware sends a per-request CSP nonce with 'strict-dynamic'. Prerendered
+ * HTML has no nonce on Next's scripts, so the browser blocks them all and the
+ * page never hydrates (frozen "Welcome, …" / skeletons). Render per request.
+ */
+export const dynamic = "force-dynamic";
+
 /** Authenticated product shell (+ pricing/signup marketing styles). */
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (

@@ -54,27 +54,33 @@ vi.mock("@/lib/kai-food-insight", () => ({
 }));
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminSupabaseClient: () => ({
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          eq: () => ({
-            limit: () => ({
-              maybeSingle: async () => ({ data: null }),
-            }),
-          }),
-        }),
-      }),
-    }),
+    from: () => {
+      const chain: Record<string, unknown> = {};
+      const self = () => chain;
+      chain.select = self;
+      chain.eq = self;
+      chain.gte = self;
+      chain.lte = self;
+      chain.in = self;
+      chain.limit = () => ({ maybeSingle: async () => ({ data: null }) });
+      chain.then = (resolve: (value: { data: unknown[] }) => unknown) =>
+        resolve({ data: [] });
+      return chain;
+    },
   }),
 }));
 vi.mock("@/lib/activation/today-job", () => ({
   resolveTodayJob: vi.fn().mockReturnValue({
-    kind: "chat_kai",
+    kind: "continue",
     href: "/chat/kai",
     titleKey: "t",
     bodyKey: "b",
     ctaKey: "c",
   }),
+}));
+vi.mock("@/lib/events/product", () => ({
+  emitProductEvent: vi.fn(),
+  productEventIdempotencyKey: vi.fn((parts: string[]) => parts.join("|")),
 }));
 
 import { getHomeCoreData, localizeHomeData } from "@/lib/services/home.service";

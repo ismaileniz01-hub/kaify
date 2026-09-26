@@ -7,13 +7,17 @@ async function text(relativePath) {
   return readFile(path.join(root, relativePath), "utf8");
 }
 
-const [aasa, assetLinks, privacy, infoPlist, androidManifest] =
+const [aasa, assetLinks, privacy, infoPlist, androidManifest, nativeLogin, nativeLoginCopy, nativeApp, passwordRoute] =
   await Promise.all([
     text("public/.well-known/apple-app-site-association"),
     text("public/.well-known/assetlinks.json"),
     text("ios/App/App/PrivacyInfo.xcprivacy"),
     text("ios/App/App/Info.plist"),
     text("android/app/src/main/AndroidManifest.xml"),
+    text("native-app/src/login/NativeLoginScreen.tsx"),
+    text("native-app/src/login/native-login-copy.ts"),
+    text("native-app/src/App.tsx"),
+    text("app/api/auth/password/route.ts"),
   ]);
 
 const errors = [];
@@ -35,6 +39,36 @@ forbid(
   assetLinks,
   /REPLACE_WITH_PLAY/,
   "Replace the Play signing SHA-256 placeholder in assetlinks.json.",
+);
+requireMatch(
+  aasa,
+  /APZ7L5F5UZ\.org\.kaifyai\.app/,
+  "apple-app-site-association must use APZ7L5F5UZ.org.kaifyai.app.",
+);
+forbid(
+  aasa,
+  /org\.kaify\.app/,
+  "apple-app-site-association must not reference legacy org.kaify.app.",
+);
+requireMatch(
+  assetLinks,
+  /"package_name":\s*"org\.kaifyai\.app"/,
+  "assetlinks.json must use package_name org.kaifyai.app.",
+);
+requireMatch(
+  assetLinks,
+  /C9:A3:EC:0B:AD:B7:85:39:DF:94:A5:40:45:43:B8:1B:59:CC:91:B3:09:2F:13:48:A1:12:E8:04:EB:C2:74:98/,
+  "assetlinks.json must include the Play App Signing SHA-256 fingerprint.",
+);
+forbid(
+  assetLinks,
+  /E4:09:C6:A7:D6:C4:B8:ED:52:6A:C9:7D:6B:85:4A:6D:07:C9:BD:13:43:B0:51:40:46:40:BE:7B:91:3E:87:BD/,
+  "assetlinks.json must not include the Play upload-key SHA-256.",
+);
+forbid(
+  assetLinks,
+  /org\.kaify\.app/,
+  "assetlinks.json must not reference legacy org.kaify.app.",
 );
 
 for (const dataType of [
@@ -64,6 +98,41 @@ requireMatch(
   androidManifest,
   /android:scheme="kaify"/,
   "AndroidManifest.xml is missing the kaify URL scheme.",
+);
+requireMatch(
+  nativeLoginCopy,
+  /Sign in with password/,
+  "Native login must include password sign-in for Play reviewers.",
+);
+requireMatch(
+  nativeLogin,
+  /loginOnly/,
+  "Native login screen must support login-only store mode.",
+);
+requireMatch(
+  passwordRoute,
+  /isNativeWebViewRequest/,
+  "Password login must return native session tokens for Capacitor.",
+);
+forbid(
+  androidManifest,
+  /com\.android\.vending\.BILLING/,
+  "AndroidManifest must not declare Play Billing for this consumption-only app.",
+);
+forbid(
+  androidManifest,
+  /READ_MEDIA_IMAGES/,
+  "AndroidManifest must not declare READ_MEDIA_IMAGES; use the system Photo Picker.",
+);
+forbid(
+  androidManifest,
+  /READ_EXTERNAL_STORAGE/,
+  "AndroidManifest must not declare READ_EXTERNAL_STORAGE for photo access.",
+);
+forbid(
+  nativeApp,
+  /Continue to Paddle|native-checkout|PRICING_PLANS|Browser\.open/,
+  "Native app package must not include checkout or plan commerce UI.",
 );
 
 if (errors.length > 0) {

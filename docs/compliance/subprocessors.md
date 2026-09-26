@@ -1,6 +1,6 @@
 # Kaify Ai Subprocessors (Compliance Faz 1)
 
-Last updated: 2026-07-05
+Last updated: 2026-08-21
 
 | Processor | Purpose | Location | Data processed |
 |-----------|---------|----------|----------------|
@@ -12,10 +12,14 @@ Last updated: 2026-07-05
 | **Paddle** | Payments (MoR) | US / UK | Billing email, subscription status |
 | **Google reCAPTCHA** | Bot protection | US | IP, interaction signals |
 | **Sender.net** | Email marketing (waitlist) | US | Email, preferences |
-| **Termly** | Policy hosting/embed | US | Page views on legal pages |
+| **Upstash** | Redis rate limiting / caching | Vendor regions | IP / rate-limit keys, short-lived cache |
+| **Firebase (FCM) / Web Push** | Push notification delivery (when enabled) | US / global | Device push tokens, delivery metadata |
 
-Updates to this list will be reflected in the Privacy Policy. Data Processing Agreements
-should be signed in vendor dashboards where available.
+### Termly (optional — not canonical)
+
+**Termly** may be enabled via environment configuration (`NEXT_PUBLIC_TERMLY_PRIVACY_DATA_ID`) as an optional embed on legal pages. It is **not** the canonical Privacy Policy. The in-repo Privacy Policy at `/privacy` (and `lib/legal/documents/privacy.ts`) is authoritative. Prefer disabling Termly unless counsel explicitly requires the embed.
+
+Updates to this list will be reflected in the Privacy Policy. Data Processing Agreements should be signed in vendor dashboards where available.
 
 **Change process:** [subprocessor-change-process.md](./subprocessor-change-process.md)  
 **DPA signing tracker:** [transfer-signing-checklist.md](./transfer-signing-checklist.md)

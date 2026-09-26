@@ -16,6 +16,7 @@ import type { SubscriptionTier } from "@/lib/types/database.types";
 import { parsePaddleExpiresAt } from "@/lib/billing/paddle-period";
 import { logger } from "@/lib/logger";
 import { minimizeBillingPayload } from "@/lib/privacy/billing-payload";
+import { emitProductEvent, hashReferralCampaignId, productEventIdempotencyKey } from "@/lib/events/product";
 import {
   billingEventTypeRank,
   isBillingEventNewer,
@@ -49,6 +50,54 @@ function pickString(...values: unknown[]): string | undefined {
     if (typeof value === "string" && value.trim()) return value.trim();
   }
   return undefined;
+}
+
+export type AdjustmentEntitlementAction = "preserve" | "revoke" | "restore";
+
+export function classifyAdjustmentEntitlementAction(
+  data: Record<string, unknown>,
+): AdjustmentEntitlementAction {
+  const action = (pickString(data.action) ?? "").toLowerCase();
+  const adjustmentType = (
+    pickString(data.type, data.adjustment_type) ?? ""
+  ).toLowerCase();
+  const status = (pickString(data.status) ?? "").toLowerCase();
+  const final = status === "approved" || status === "completed";
+  const rejected =
+    status === "rejected" ||
+    status === "reversed" ||
+    status === "canceled" ||
+    status === "cancelled";
+
+  if (action === "chargeback_reverse" && final) return "restore";
+  if (
+    !rejected &&
+    (action === "chargeback" ||
+      action === "chargeback_warning" ||
+      action === "dispute")
+  ) {
+    return "revoke";
+  }
+  if (action === "refund" && adjustmentType === "full" && final) {
+    return "revoke";
+  }
+  return "preserve";
+}
+
+export function classifyDisputeEntitlementAction(
+  data: Record<string, unknown>,
+): AdjustmentEntitlementAction {
+  const status = (pickString(data.status) ?? "").toLowerCase();
+  const outcome = (pickString(data.outcome) ?? "").toLowerCase();
+  if (outcome === "won" || status === "won") return "restore";
+  if (
+    outcome === "lost" ||
+    status === "lost" ||
+    (status === "closed" && outcome !== "won")
+  ) {
+    return "revoke";
+  }
+  return "preserve";
 }
 
 function extractCustomUserId(custom: unknown): string | null {
@@ -184,6 +233,10 @@ async function resolveUserId(
   data: Record<string, unknown>,
 ): Promise<string | null> {
   const customerId = pickString(data.customerId, data.customer_id);
+  const subscriptionId = pickString(
+    data.subscriptionId,
+    data.subscription_id,
+  );
   const fromCustom =
     extractCustomUserId(data.customData) ??
     extractCustomUserId(data.custom_data);
@@ -196,6 +249,17 @@ async function resolveUserId(
       .eq("customer_id", customerId)
       .maybeSingle();
 
+    if (typeof row?.user_id === "string" && row.user_id) {
+      return row.user_id;
+    }
+  }
+
+  if (subscriptionId) {
+    const { data: row } = await admin
+      .from("paddle_subscriptions")
+      .select("user_id")
+      .eq("subscription_id", subscriptionId)
+      .maybeSingle();
     if (typeof row?.user_id === "string" && row.user_id) {
       return row.user_id;
     }
@@ -323,13 +387,15 @@ type BillingEventsDb = {
         value: string,
       ) => {
         maybeSingle: () => Promise<{
-          data: { processed_at: string | null } | null;
+          data: { processed_at: string | null; created_at?: string | null } | null;
           error: { code?: string; message: string } | null;
         }>;
       };
     };
   };
 };
+
+const STALE_BILLING_CLAIM_MS = 2 * 60 * 1000;
 
 /**
  * Acquires a webhook event claim with processed_at=null.
@@ -345,26 +411,42 @@ async function claimBillingEvent(
 ): Promise<ClaimResult> {
   const billingDb = admin as unknown as BillingEventsDb;
 
-  const { error } = await billingDb.from("billing_events").insert({
-    provider_event_id: eventId,
-    event_name: eventType,
-    user_id: userId,
-    payload: minimizeBillingPayload(payload),
-    subscription_id: extras?.subscriptionId ?? null,
-    customer_email: extras?.customerEmail ?? null,
-    processed_at: null,
-  });
+  const insertRow = () =>
+    billingDb.from("billing_events").insert({
+      provider_event_id: eventId,
+      event_name: eventType,
+      user_id: userId,
+      payload: minimizeBillingPayload(payload),
+      subscription_id: extras?.subscriptionId ?? null,
+      customer_email: null,
+      processed_at: null,
+    });
+
+  const { error } = await insertRow();
 
   if (!error) return "acquired";
   if (error.code !== "23505") throw error;
 
   const { data: existing, error: readError } = await billingDb
     .from("billing_events")
-    .select("processed_at")
+    .select("processed_at, created_at")
     .eq("provider_event_id", eventId)
     .maybeSingle();
   if (readError) throw readError;
   if (existing?.processed_at) return "already_done";
+
+  const created = Date.parse(String(existing?.created_at ?? ""));
+  if (Number.isFinite(created) && Date.now() - created > STALE_BILLING_CLAIM_MS) {
+    await billingDb
+      .from("billing_events")
+      .delete()
+      .eq("provider_event_id", eventId)
+      .is("processed_at", null);
+    const retry = await insertRow();
+    if (!retry.error) return "acquired";
+    if (retry.error.code === "23505") return "retry";
+    throw retry.error;
+  }
   return "retry";
 }
 
@@ -427,9 +509,27 @@ function expiresAtFromData(data: Record<string, unknown>): string | null {
 function priceIdFromData(data: Record<string, unknown>): string | undefined {
   const items = Array.isArray(data.items) ? data.items : [];
   const first = asRecord(items[0]);
-  if (!first) return undefined;
-  const price = asRecord(first.price);
-  return pickString(price?.id);
+  const price = first ? asRecord(first.price) : null;
+  const details = asRecord(data.details);
+  const lineItems = Array.isArray(details?.lineItems)
+    ? details.lineItems
+    : Array.isArray(details?.line_items)
+      ? details.line_items
+      : [];
+  const line = asRecord(lineItems[0]);
+  const linePrice = line ? asRecord(line.price) : null;
+  return pickString(
+    price?.id,
+    first?.priceId,
+    first?.price_id,
+    price?.priceId,
+    price?.price_id,
+    linePrice?.id,
+    line?.priceId,
+    line?.price_id,
+    data.priceId,
+    data.price_id,
+  );
 }
 
 function productIdFromData(data: Record<string, unknown>): string {
@@ -706,6 +806,31 @@ async function provisionFromPrice(
   return { ok: true };
 }
 
+async function restoreAfterChargebackReversal(
+  admin: ReturnType<typeof createAdminSupabaseClient>,
+  userId: string,
+  data: Record<string, unknown>,
+  eventMeta: { eventId: string; eventType: string; occurredAt?: string | null },
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const subscriptionId = pickString(
+    data.subscriptionId,
+    data.subscription_id,
+  );
+  if (!subscriptionId || !isPaddleServerConfigured()) {
+    return { ok: false, reason: "subscription_refresh_required" };
+  }
+
+  const subscription = await getPaddleServerClient().subscriptions.get(
+    subscriptionId,
+  );
+  const subscriptionData = entityToRecord(subscription);
+  await syncSubscriptionMirror(admin, subscriptionData, userId, eventMeta);
+  if (!subscriptionGrantsAccess(pickString(subscriptionData.status))) {
+    return { ok: true };
+  }
+  return provisionFromPrice(userId, subscriptionData);
+}
+
 /**
  * Processes a verified Paddle Billing webhook. Idempotent via provider_event_id.
  */
@@ -765,11 +890,6 @@ export async function handleNormalizedPaddleEvent(
     return { ok: false as const, reason, retryable: true };
   };
 
-  const failPermanent = async (reason: string) => {
-    await finalizeBillingEvent(admin, eventId);
-    return { ok: false as const, reason, retryable: false };
-  };
-
   try {
     if (subscriptionEventTypes().has(eventType)) {
       const stale = await isStaleSubscriptionEvent(admin, subscriptionId, {
@@ -816,9 +936,7 @@ export async function handleNormalizedPaddleEvent(
         if (subscriptionGrantsAccess(status)) {
           const result = await provisionFromPrice(userId, data);
           if (!result.ok) {
-            return result.reason === "unknown_price"
-              ? failPermanent(result.reason)
-              : failRetryable(result.reason);
+            return failRetryable(result.reason);
           }
         } else if (subscriptionIsCanceled(status)) {
           await revokeSubscription(userId);
@@ -852,9 +970,45 @@ export async function handleNormalizedPaddleEvent(
         if (!userId) return failRetryable("user_not_found");
         const result = await provisionFromPrice(userId, data);
         if (!result.ok) {
-          return result.reason === "unknown_price"
-            ? failPermanent(result.reason)
-            : failRetryable(result.reason);
+          return failRetryable(result.reason);
+        }
+        break;
+      }
+
+      case "adjustment.created":
+      case "adjustment.updated": {
+        if (!userId) return failRetryable("user_not_found");
+        const entitlementAction =
+          classifyAdjustmentEntitlementAction(data);
+        if (entitlementAction === "restore") {
+          const restored = await restoreAfterChargebackReversal(
+            admin,
+            userId,
+            data,
+            eventMeta,
+          );
+          if (!restored.ok) return failRetryable(restored.reason);
+        } else if (entitlementAction === "revoke") {
+          await revokeSubscription(userId);
+        }
+        // A partial refund changes the ledger but does not revoke the paid term.
+        break;
+      }
+
+      case "dispute.created":
+      case "dispute.updated": {
+        if (!userId) return failRetryable("user_not_found");
+        const disputeAction = classifyDisputeEntitlementAction(data);
+        if (disputeAction === "restore") {
+          const restored = await restoreAfterChargebackReversal(
+            admin,
+            userId,
+            data,
+            eventMeta,
+          );
+          if (!restored.ok) return failRetryable(restored.reason);
+        } else if (disputeAction === "revoke") {
+          await revokeSubscription(userId);
         }
         break;
       }
@@ -864,6 +1018,57 @@ export async function handleNormalizedPaddleEvent(
     }
 
     await finalizeBillingEvent(admin, eventId);
+    if (userId) {
+      const billingNames: Array<
+        | "billing.subscription_activated"
+        | "billing.checkout_completed"
+        | "billing.cancel_completed"
+        | "billing.refund_applied"
+        | "billing.dispute_updated"
+        | "billing.renewal_failed"
+        | "billing.renewal_succeeded"
+      > = [];
+      if (eventType.includes("activated")) billingNames.push("billing.subscription_activated");
+      if (eventType.includes("transaction.completed")) {
+        billingNames.push("billing.checkout_completed");
+      }
+      if (eventType.includes("canceled") || eventType.includes("cancelled")) {
+        billingNames.push("billing.cancel_completed");
+      }
+      if (eventType.includes("adjustment")) billingNames.push("billing.refund_applied");
+      if (eventType.includes("dispute")) billingNames.push("billing.dispute_updated");
+      if (eventType.includes("past_due") || eventType.includes("payment_failed")) {
+        billingNames.push("billing.renewal_failed");
+      }
+      if (eventType.includes("subscription.updated") && !eventType.includes("canceled")) {
+        billingNames.push("billing.renewal_succeeded");
+      }
+      for (const billingName of billingNames) {
+        emitProductEvent({
+          name: billingName,
+          userId,
+          properties: { plan: "unknown", state: eventType.slice(0, 40) },
+          idempotencyKey: productEventIdempotencyKey([billingName, eventId]),
+        });
+      }
+      if (billingNames.includes("billing.subscription_activated")) {
+        const { data: referred } = await admin
+          .from("profiles")
+          .select("referred_by_code")
+          .eq("id", userId)
+          .maybeSingle();
+        if (referred?.referred_by_code) {
+          emitProductEvent({
+            name: "referral.paid",
+            userId,
+            properties: {
+              campaign_id: hashReferralCampaignId(referred.referred_by_code),
+            },
+            idempotencyKey: productEventIdempotencyKey(["referral.paid", userId]),
+          });
+        }
+      }
+    }
     return { ok: true };
   } catch (error) {
     await releaseBillingEvent(admin, eventId);

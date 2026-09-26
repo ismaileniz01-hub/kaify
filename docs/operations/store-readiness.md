@@ -6,13 +6,13 @@ Last updated: 2026-08-05 · Policy: **ADR 019 (consumption-only native; web-only
 
 | Platform | ID |
 |----------|-----|
-| Capacitor `appId` | `org.kaify.app` |
-| iOS bundle | `org.kaify.app` |
-| Android `applicationId` | `org.kaify.app` |
-| Play Store URL | `https://play.google.com/store/apps/details?id=org.kaify.app` |
+| Capacitor `appId` | `org.kaifyai.app` |
+| iOS bundle | `org.kaifyai.app` |
+| Android `applicationId` | `org.kaifyai.app` |
+| Play Store URL | `https://play.google.com/store/apps/details?id=org.kaifyai.app` |
 | App Store URL | `NEXT_PUBLIC_APP_STORE_URL` or `https://apps.apple.com/app/kaify` |
 
-Do **not** use marketing id `org.kaifyai.app` — that mismatch is closed.
+Canonical package ID is **`org.kaifyai.app`** (matches Google Play Console and App Store Connect). Do **not** use `org.kaify.app`.
 
 ## Before a store build
 
@@ -28,19 +28,19 @@ node scripts/ops/verify-google-services.mjs
 npm run cap:verify-store
 ```
 
-`cap:verify-store` intentionally fails until the real Apple Team ID and Play
-signing SHA-256 replace the checked-in placeholders.
+`cap:verify-store` asserts live AASA Team ID, Play App Signing SHA-256, package
+`org.kaifyai.app`, privacy manifest fields, and the `kaify` URL scheme.
 
 ## Native account and billing flow
 
-1. The installed app opens at `/login`.
-2. Existing customers sign in with email OTP.
-3. Native UI contains no clickable signup, pricing, purchase, or external-payment link.
-4. Account creation and Paddle checkout exist only on the public website.
-5. Successful website checkout offers `kaify://login` to return to the installed app.
-6. Native navigations to `/signup` or `/pricing` are redirected to `/login`.
+1. The installed app opens at `/login` (sign-in only).
+2. Existing paying members sign in with email OTP or password.
+3. Users without an active paid entitlement are rejected and stay on login (plain text: create account / subscribe on kaifyai.org — no tappable checkout).
+4. Native UI contains no signup, pricing, purchase, upgrade, or external-payment button.
+5. Account creation and Paddle checkout exist only on the public website.
+6. Successful website checkout may offer `kaify://login` to return to the installed app.
 
-This is a consumption-only app policy. Kaify Ai is not submitted as an Apple
+This is a members-only consumption app. Kaify Ai is not submitted as an Apple
 reader app, and no reader-app external-link entitlement is claimed.
 
 ## Permissions
@@ -48,7 +48,7 @@ reader app, and no reader-app external-link entitlement is claimed.
 | Capability | Approach |
 |------------|----------|
 | Microphone / speech | Declared; Capacitor speech plugin |
-| Camera / photos | Info.plist usage strings; UI uses `<input type="file" capture>` (OS picker). **Permissions-Policy `camera=()`** denies `getUserMedia` — intentional; no in-page WebRTC camera. |
+| Camera / photos | Info.plist usage strings; UI uses OS Photo Picker / `<input type="file">`. **No `READ_MEDIA_IMAGES`.** Permissions-Policy `camera=()` denies `getUserMedia` — intentional. |
 | Push | `POST_NOTIFICATIONS` + `PushToggle` consent + runtime request |
 | HealthKit | **Not shipped** — no HealthKit entitlements/strings until a steps sync feature ships |
 
@@ -71,12 +71,12 @@ it to the store forms.
 
 | File | Purpose |
 |------|---------|
-| `public/.well-known/apple-app-site-association` | Universal Links — replace `APPLE_TEAM_ID` |
-| `public/.well-known/assetlinks.json` | Android App Links — replace SHA-256 fingerprints |
+| `public/.well-known/apple-app-site-association` | Universal Links — `APZ7L5F5UZ.org.kaifyai.app` |
+| `public/.well-known/assetlinks.json` | Android App Links — Play **App Signing** SHA-256 for `org.kaifyai.app` |
 | In-app | `/privacy`, `/terms`, `/terms&conditions` → rewrite |
 
-`APPLE_TEAM_ID` and the Play signing SHA-256 placeholders are release blockers,
-not optional documentation work.
+Association files must use the live Team ID and Play App Signing certificate fingerprint.
+Do **not** put the Play upload-key SHA-256 into production `assetlinks.json`.
 
 ## Screenshots
 

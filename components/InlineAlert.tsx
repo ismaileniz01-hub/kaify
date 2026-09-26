@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 import { useLang } from "@/lib/lang-context";
 
@@ -9,6 +10,8 @@ type InlineAlertProps = {
   onDismiss?: () => void;
   onRetry?: () => void;
   retryLabel?: string;
+  actionHref?: string;
+  actionLabel?: string;
   dismissLabel?: string;
   className?: string;
 };
@@ -19,6 +22,8 @@ export function InlineAlert({
   onDismiss,
   onRetry,
   retryLabel,
+  actionHref,
+  actionLabel,
   dismissLabel,
   className = "",
 }: InlineAlertProps) {
@@ -45,6 +50,14 @@ export function InlineAlert({
       </span>
       <p className="type-body flex-1 text-current">{message}</p>
       <div className="flex shrink-0 items-center gap-1">
+        {actionHref && actionLabel ? (
+          <Link
+            href={actionHref}
+            className="touch-44 rounded-lg px-2 py-1 font-semibold underline-offset-2 hover:underline"
+          >
+            {actionLabel}
+          </Link>
+        ) : null}
         {onRetry && (
           <button
             type="button"
