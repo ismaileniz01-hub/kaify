@@ -15,8 +15,15 @@ import {
 } from "@/lib/i18n/detect-lang";
 import { sendNativeEmailOtp, signInNativeWithPassword, verifyNativeEmailOtp } from "./auth-otp";
 import { NATIVE_CLIENT_VERSION } from "./client-version";
-import { enterRealKaify } from "./enter-kaify";
-import { hydrateSecureSession, supabase, clearNativeAuthStorage } from "./session";
+import { enterRealKaify, resumeRealKaify } from "./enter-kaify";
+import {
+  clearNativeAuthStorage,
+  clearNativeLogin,
+  readNativeLoginAt,
+  recordNativeLogin,
+  supabase,
+} from "./session";
+import { isLoginWithinMaxAge } from "@/lib/auth/session-max-age";
 import {
   NativeLoginBoot,
   NativeLoginScreen,
@@ -78,6 +85,7 @@ export function App() {
   screenRef.current = screen;
 
   const rejectNonMember = useCallback(async (detail?: string) => {
+    clearNativeLogin();
     await clearNativeAuthStorage();
     setProfile(null);
     setPassword("");
@@ -100,12 +108,14 @@ export function App() {
         return { ok: false as const };
       }
       setProfile(nextProfile);
+      recordNativeLogin();
       const handoff = await enterRealKaify(
         accessToken,
         refreshToken,
         handoffTicket,
       );
       if (!handoff.ok) {
+        clearNativeLogin();
         setError(handoff.message);
         return { ok: false as const };
       }
@@ -139,13 +149,20 @@ export function App() {
     void (async () => {
       try {
         const signedOut = new URLSearchParams(window.location.search).get("signed_out") === "1";
+        await clearNativeAuthStorage();
         if (signedOut) {
-          await clearNativeAuthStorage();
+          clearNativeLogin();
           window.history.replaceState(null, "", window.location.pathname);
           return;
         }
-        await hydrateSecureSession();
-        // Leftover JWTs must not skip OTP. Home opens only after verify/password.
+        // Sign-in is required once per SESSION_MAX_AGE_DAYS; kaifyai.org holds the
+        // live tokens and sends us back with ?signed_out=1 if they are gone.
+        if (navigator.onLine && isLoginWithinMaxAge(readNativeLoginAt())) {
+          setBusy(true);
+          resumeRealKaify();
+          return;
+        }
+        clearNativeLogin();
       } catch {
         // Stay on login. Never keep a boot spinner.
       }
@@ -339,6 +356,7 @@ export function App() {
   }
 
   async function signOut() {
+    clearNativeLogin();
     await supabase.auth.signOut();
     setProfile(null);
     setPassword("");

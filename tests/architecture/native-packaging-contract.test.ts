@@ -14,7 +14,7 @@ describe("native local packaging contract", () => {
   const serverAuth = source("lib/supabase/server.ts");
   const middleware = source("middleware.ts");
 
-  it("keeps Android and iOS on https://localhost for shared OTP CORS", () => {
+  it("keeps the local shell on localhost with a secure scheme", () => {
     expect(capacitor).toContain('androidScheme: "https"');
     expect(capacitor).toContain('iosScheme: "https"');
     expect(capacitor).toContain('hostname: "localhost"');
@@ -98,9 +98,10 @@ describe("native local packaging contract", () => {
     expect(nativeApi).toContain("active subscription is required");
   });
 
-  it("uses secure native session storage and bearer API authentication", () => {
+  it("keeps shell tokens in memory only and uses bearer API authentication", () => {
     expect(nativeSession).toContain("SecureStorage");
-    expect(nativeSession).toContain("persistSession: true");
+    expect(nativeSession).toContain("persistSession: false");
+    expect(nativeSession).toContain("autoRefreshToken: false");
     expect(nativeSession).toContain("readWebStorage");
     expect(nativeApp).toContain("useState(false)");
     expect(nativeApp).toContain("SplashScreen.hide");

@@ -5,6 +5,7 @@ import { fail, ok } from "@/lib/api/response";
 import { nativeSessionRefreshSchema } from "@/lib/validations/auth-otp.schema";
 import { isNativeWebViewRequest } from "@/lib/native/webview-request";
 import { getSupabasePublicEnv, SupabaseEnvError } from "@/lib/supabase/env";
+import { isSessionPastMaxAge } from "@/lib/auth/session-max-age";
 
 export const runtime = "nodejs";
 
@@ -43,7 +44,12 @@ export const POST = defineRouteRaw(
       const { data, error } = await supabase.auth.refreshSession({
         refresh_token: refreshToken,
       });
-      if (error || !data.session?.access_token || !data.session.refresh_token) {
+      if (
+        error ||
+        !data.session?.access_token ||
+        !data.session.refresh_token ||
+        isSessionPastMaxAge(data.session.access_token)
+      ) {
         return fail(
           new ApiError("UNAUTHORIZED", "Session expired. Please sign in again."),
         );

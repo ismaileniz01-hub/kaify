@@ -66,7 +66,7 @@ describe("native session consume (document GET)", () => {
     const response = await GET(request);
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(
-      "https://localhost/?signed_out=1",
+      "capacitor://localhost/?signed_out=1",
     );
     expect(setSession).not.toHaveBeenCalled();
   });

@@ -2,6 +2,7 @@ import { NATIVE_CLIENT_VERSION } from "./client-version";
 
 export const NATIVE_CONSUME_PATH = "/api/auth/session/native-consume";
 export const NATIVE_TICKET_PATH = "/api/auth/session/native-ticket";
+export const NATIVE_RESUME_PATH = "/welcome?native_handoff=1";
 
 export function nativeConsumeUrl(ticket: string): string {
   return `${__KAIFY_API_BASE__}${NATIVE_CONSUME_PATH}?ticket=${encodeURIComponent(ticket)}`;
@@ -39,7 +40,7 @@ export type EnterKaifyResult =
 /**
  * After OTP/password, open Kaify with a first-party document GET.
  * Ticket-only — never hash native-entry (WKWebView drops Location fragments).
- * Same path on iOS and Android once both shells use https://localhost.
+ * Same path on iOS (capacitor://localhost) and Android (https://localhost).
  */
 export async function enterRealKaify(
   accessToken: string,
@@ -59,4 +60,13 @@ export async function enterRealKaify(
   }
   globalThis.location.assign(nativeConsumeUrl(ticket));
   return { ok: true };
+}
+
+/**
+ * Cold start within the sign-in window: reopen Kaify with the tokens the
+ * kaifyai.org WebView already stores. If they are missing or expired, Kaify
+ * returns to the shell with `?signed_out=1` and the login screen shows.
+ */
+export function resumeRealKaify(): void {
+  globalThis.location.assign(`${__KAIFY_API_BASE__}${NATIVE_RESUME_PATH}`);
 }

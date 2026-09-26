@@ -16,12 +16,25 @@ export function parseNativeEntryHash(
   return { accessToken, refreshToken };
 }
 
-/** Capacitor shells after a failed handoff — iOS and Android both use https://localhost. */
+/**
+ * Local login shell origin. Android serves the bundle on https://localhost;
+ * iOS WKWebView cannot register `https`, so Capacitor falls back to
+ * capacitor://localhost. Sending iOS to https://localhost makes Capacitor hand
+ * the URL to Safari and leaves the WebView on the current (guest) page.
+ */
+export const ANDROID_SHELL_ORIGIN = "https://localhost";
+export const IOS_SHELL_ORIGIN = "capacitor://localhost";
+
+export function nativeShellOriginForUserAgent(userAgent: string): string | null {
+  if (/Android/i.test(userAgent)) return ANDROID_SHELL_ORIGIN;
+  if (/iPhone|iPad|iPod|KaifyNative/i.test(userAgent)) return IOS_SHELL_ORIGIN;
+  return null;
+}
+
+/** Capacitor shells after a failed handoff; plain browsers go to web /login. */
 export function nativeEntryShellUrl(userAgent: string): string {
-  if (/Android/i.test(userAgent) || /iPhone|iPad|iPod/i.test(userAgent)) {
-    return "https://localhost/?signed_out=1";
-  }
-  return "/login";
+  const origin = nativeShellOriginForUserAgent(userAgent);
+  return origin ? `${origin}/?signed_out=1` : "/login";
 }
 
 export const NATIVE_ENTRY_HANDOFF_KEY = "kaify-native-handoff";
@@ -39,7 +52,7 @@ export const NATIVE_WELCOME_HANDOFF_PATH = `${NATIVE_ENTRY_SUCCESS_PATH}?${NATIV
 
 /** CSP hash of NATIVE_ENTRY_BOOT_SCRIPT so WKWebView can run it without a nonce race. */
 export const NATIVE_ENTRY_BOOT_CSP_HASH =
-  "sha256-8jqdhdoSfw5jOMlc3uy7J04dwEz7F6cTTPOo/CXVb4g=";
+  "sha256-0zEYChHCVAyd2nOOeJl8vP9lrZZQ7W0eMNmXcCkm+tQ=";
 
 type NativeEntryTokens = { accessToken: string; refreshToken: string };
 
@@ -315,9 +328,9 @@ export const NATIVE_ENTRY_BOOT_SCRIPT = `(function () {
   }
   function goShell() {
     var ua = navigator.userAgent || "";
-    if (/Android/i.test(ua) || /iPhone|iPad|iPod/i.test(ua)) {
-      location.replace("https://localhost/?signed_out=1");
-    } else location.replace("/login");
+    if (/Android/i.test(ua)) location.replace("${ANDROID_SHELL_ORIGIN}/?signed_out=1");
+    else if (/iPhone|iPad|iPod|KaifyNative/i.test(ua)) location.replace("${IOS_SHELL_ORIGIN}/?signed_out=1");
+    else location.replace("/login");
   }
   function readCookie(name) {
     var prefix = name + "=";

@@ -6,6 +6,7 @@ import {
   assertServerRuntime,
   getSupabasePublicEnv,
 } from "@/lib/supabase/env";
+import { isSessionPastMaxAge } from "@/lib/auth/session-max-age";
 
 export type ServerSupabaseClient = SupabaseClient<Database>;
 
@@ -79,6 +80,14 @@ export async function getServerAuthUser(request?: Request): Promise<{
   } = await supabase.auth.getUser(bearerToken || undefined);
 
   if (error || !user) {
+    return null;
+  }
+
+  const accessToken =
+    bearerToken ||
+    (await supabase.auth.getSession()).data.session?.access_token ||
+    "";
+  if (accessToken && isSessionPastMaxAge(accessToken)) {
     return null;
   }
 

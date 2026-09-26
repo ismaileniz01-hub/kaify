@@ -7,9 +7,12 @@ const ROUTE_FILE = "route.ts";
 
 /** OAuth redirect — intentionally outside defineRoute (open-redirect hardening is inline). */
 /** Webhooks — raw body required for HMAC signature verification. */
+/** Native handoff — top-level WebView navigations that answer with HTML / 303, not JSON. */
 const ROUTE_ALLOWLIST = new Set([
   "app/api/auth/callback/route.ts",
   "app/api/webhooks/paddle/route.ts",
+  "app/api/auth/session/native-complete/route.ts",
+  "app/api/auth/session/native-consume/route.ts",
 ]);
 
 const WRAPPER_MARKERS = [

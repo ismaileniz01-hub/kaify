@@ -1,3 +1,8 @@
+import {
+  ANDROID_SHELL_ORIGIN,
+  IOS_SHELL_ORIGIN,
+} from "@/lib/native/native-entry-boot";
+
 const SIGNED_OUT_QUERY = "signed_out=1";
 
 /** Social/mail apps embed WKWebView without "Safari/" in the UA, like our shell does. */
@@ -41,19 +46,23 @@ export function looksLikeNativeWebView(): boolean {
   );
 }
 
-export function nativeShellLoginUrl(): string {
-  if (typeof window === "undefined") return "/login";
+/** Shell origin for this WebView, or null in a normal browser. */
+export function currentNativeShellOrigin(): string | null {
+  if (typeof window === "undefined") return null;
   const platform = document.documentElement.dataset.platform;
-  const ua = navigator.userAgent || "";
-  const nativeShell =
-    platform === "android" ||
-    platform === "ios" ||
-    (/Android/i.test(ua) && looksLikeNativeWebView()) ||
-    (/iPhone|iPad|iPod/i.test(ua) && looksLikeNativeWebView());
-  if (nativeShell) {
-    return `https://localhost/?${SIGNED_OUT_QUERY}`;
-  }
-  return `/login?${SIGNED_OUT_QUERY}`;
+  if (platform === "android") return ANDROID_SHELL_ORIGIN;
+  if (platform === "ios") return IOS_SHELL_ORIGIN;
+  if (!looksLikeNativeWebView()) return null;
+  return /Android/i.test(navigator.userAgent || "")
+    ? ANDROID_SHELL_ORIGIN
+    : IOS_SHELL_ORIGIN;
+}
+
+export function nativeShellLoginUrl(): string {
+  const origin = currentNativeShellOrigin();
+  return origin
+    ? `${origin}/?${SIGNED_OUT_QUERY}`
+    : `/login?${SIGNED_OUT_QUERY}`;
 }
 
 export function urlHasSignedOutFlag(search = ""): boolean {

@@ -3,6 +3,7 @@ import {
   readNativeEntrySession,
   storeNativeEntryTokens,
 } from "@/lib/native/native-entry-boot";
+import { decodeJwtPayload, isSessionPastMaxAge } from "@/lib/auth/session-max-age";
 
 export const NATIVE_REFRESH_PATH = "/api/auth/session/refresh";
 /** Refresh this long before `exp` so a request never lands with a dead bearer. */
@@ -19,17 +20,8 @@ export type NativeRefreshResult =
 let inflight: Promise<NativeRefreshResult> | null = null;
 
 export function accessTokenExpiresAtMs(token: string): number | null {
-  const segment = token.split(".")[1];
-  if (!segment) return null;
-  try {
-    const normalized = segment.replace(/-/g, "+").replace(/_/g, "/");
-    const pad =
-      normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
-    const payload = JSON.parse(atob(normalized + pad)) as { exp?: unknown };
-    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
-  } catch {
-    return null;
-  }
+  const exp = decodeJwtPayload(token)?.exp;
+  return typeof exp === "number" ? exp * 1000 : null;
 }
 
 export function isAccessTokenExpiring(token: string, now = Date.now()): boolean {
@@ -106,6 +98,10 @@ export function refreshNativeEntryTokens(): Promise<NativeRefreshResult> {
 export async function getFreshNativeAccessToken(): Promise<string | null> {
   const current = readNativeEntrySession();
   if (!current) return null;
+  if (isSessionPastMaxAge(current.accessToken)) {
+    clearNativeEntryTokens();
+    return null;
+  }
   if (!isAccessTokenExpiring(current.accessToken)) return current.accessToken;
   const refreshed = await refreshNativeEntryTokens();
   if (refreshed.status === "ok") return refreshed.accessToken;

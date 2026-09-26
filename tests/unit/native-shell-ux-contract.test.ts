@@ -45,7 +45,9 @@ describe("native shell UX contracts", () => {
     expect(app).toContain("minimizeApp");
     const boot = app.slice(app.indexOf("SplashScreen.hide"), app.indexOf("kaify_install_id"));
     expect(boot).not.toContain("enterRealKaify");
-    expect(boot).toContain("hydrateSecureSession");
+    expect(boot).toContain("clearNativeAuthStorage");
+    expect(boot).toContain("isLoginWithinMaxAge(readNativeLoginAt())");
+    expect(boot).toContain("resumeRealKaify");
   });
 });
 
