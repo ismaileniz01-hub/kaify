@@ -23,10 +23,10 @@
 }
 
 * { box-sizing: border-box; }
+/* --app-visible-height: layout top to keyboard top (lib/native/keyboard-inset.ts). */
 html, body, #root {
-  min-height: 100%;
-  height: calc(100dvh - var(--keyboard-offset, 0px));
-  max-height: calc(100dvh - var(--keyboard-offset, 0px));
+  height: var(--app-visible-height, 100dvh);
+  max-height: var(--app-visible-height, 100dvh);
 }
 body {
   margin: 0;
@@ -59,9 +59,9 @@ a { color: #d8b4fe; }
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
-  height: calc(100dvh - var(--keyboard-offset, 0px));
-  max-height: calc(100dvh - var(--keyboard-offset, 0px));
+  /* No min-height: it would override the keyboard-sized height below. */
+  height: var(--app-visible-height, 100dvh);
+  max-height: var(--app-visible-height, 100dvh);
   overflow-x: hidden;
   overflow-y: auto;
   background: #1a0530;

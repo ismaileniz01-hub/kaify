@@ -135,19 +135,6 @@ export function EmailOtpLogin({
     return () => clearTimeout(timer);
   }, [resendIn]);
 
-  useEffect(() => {
-    if (step !== "code") return;
-    const onViewport = () => {
-      document
-        .querySelector("[data-otp-code]")
-        ?.scrollIntoView({ block: "center", behavior: "smooth" });
-    };
-    window.visualViewport?.addEventListener("resize", onViewport);
-    return () => {
-      window.visualViewport?.removeEventListener("resize", onViewport);
-    };
-  }, [step]);
-
   const canSendCode =
     otpSendSchema.safeParse({ email: email.trim() }).success &&
     (!isSignup || legalAccepted);

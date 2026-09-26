@@ -158,18 +158,6 @@ export function NativeLoginScreen({
     };
   }, [email, refreshNow]);
 
-  useEffect(() => {
-    const onViewport = () => {
-      document
-        .querySelector("[data-keyboard-cta]")
-        ?.scrollIntoView({ block: "end", behavior: "smooth" });
-    };
-    window.visualViewport?.addEventListener("resize", onViewport);
-    return () => {
-      window.visualViewport?.removeEventListener("resize", onViewport);
-    };
-  }, [step]);
-
   async function applyResendCooldown(seconds: number) {
     const at = computeResendAvailableAt(seconds);
     setResendAvailableAt(at);

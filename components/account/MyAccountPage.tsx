@@ -362,7 +362,7 @@ export function MyAccountPage() {
                   />
 
                   {editingName ? (
-                    <div className="flex w-full max-w-sm flex-col items-center gap-3">
+                    <div className="flex w-full max-w-sm flex-col items-center gap-3" data-keyboard-scope>
                       <input
                         value={nameDraft}
                         onChange={(e) => setNameDraft(e.target.value)}
@@ -383,6 +383,7 @@ export function MyAccountPage() {
                         </button>
                         <button
                           type="button"
+                          data-keyboard-cta
                           onClick={() => void handleSaveName()}
                           disabled={saving}
                           className="account-btn account-btn--primary"

@@ -401,15 +401,53 @@ html.native-app body {
 
 html.native-app .phone-shell {
   --app-header-top: max(4rem, calc(var(--safe-top) + 0.75rem));
-  min-height: calc(100dvh - var(--keyboard-offset, 0px));
+  min-height: 100dvh;
   padding-left: var(--safe-left);
   padding-right: var(--safe-right);
 }
 
 html.native-app .phone-shell.chat-shell {
-  height: calc(100dvh - var(--keyboard-offset, 0px));
-  max-height: calc(100dvh - var(--keyboard-offset, 0px));
+  height: 100dvh;
+  max-height: 100dvh;
   overscroll-behavior: none;
+}
+
+/*
+ * Keyboard (lib/native/keyboard-inset.ts). --app-visible-height is the px
+ * distance from the top of the layout to the keyboard top, so sizing by it is
+ * correct whether or not the WebView also shrinks 100dvh. Apply it once per
+ * surface — never shrink a parent and also pad its child by the same amount.
+ */
+/* min-height too: `.phone-shell { min-height: 100dvh }` would override height. */
+html[data-keyboard-open] .phone-shell.chat-shell {
+  height: var(--app-visible-height, 100dvh);
+  min-height: var(--app-visible-height, 100dvh);
+  max-height: var(--app-visible-height, 100dvh);
+}
+
+/* Document-scrolling pages: room to scroll the focused field and its CTA up. */
+html[data-keyboard-open] .phone-shell:not(.chat-shell) {
+  padding-bottom: calc(var(--keyboard-offset, 0px) + 1.5rem);
+}
+
+html[data-keyboard-open] .phone-shell > main,
+html[data-keyboard-open] .phone-shell .overflow-y-auto {
+  scroll-padding-bottom: calc(var(--keyboard-offset, 0px) + 1rem);
+}
+
+/* Fixed overlays end at the keyboard top; their panel scrolls inside. */
+html[data-keyboard-open] .motion-overlay,
+html[data-keyboard-open] .keyboard-overlay {
+  bottom: auto;
+  height: var(--app-visible-height, 100dvh);
+}
+
+html[data-keyboard-open] .motion-overlay > .motion-panel,
+html[data-keyboard-open] .motion-overlay > .motion-sheet,
+html[data-keyboard-open] .keyboard-overlay > [role="dialog"] {
+  max-height: calc(var(--app-visible-height, 100dvh) - var(--safe-top, 0px) - 1.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* Web chat / app headers: clear status bar + notch safe area */
@@ -523,10 +561,13 @@ html:not([data-route-transition="true"]) .contact-avatar {
   visibility: visible !important;
 }
 
+/* Room for the avatar aura/presence ring while the title still clips, so long
+   coach names truncate instead of painting over the back/actions buttons. */
 .app-header__title:has(.contact-avatar) {
-  overflow: visible;
+  min-width: 0;
+  margin-block: -0.625rem;
+  padding: 0.625rem 0.75rem;
   white-space: normal;
-  text-overflow: unset;
 }
 
 .app-header__action,
@@ -601,6 +642,14 @@ html.native-app .offline-banner {
   );
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  transition: transform 180ms ease;
+}
+
+/* Keyboard open: the dock would sit on top of focused fields and CTAs. */
+html[data-keyboard-open] .bottom-nav {
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, 100%);
 }
 
 .bottom-nav__list {
@@ -657,7 +706,11 @@ html.native-app .offline-banner {
 
 html.native-app .chat-composer {
   padding-bottom: max(1.25rem, var(--safe-bottom));
-  margin-bottom: var(--keyboard-offset, 0px);
+}
+
+/* The keyboard covers the home indicator, so its safe-area gap is not needed. */
+html[data-keyboard-open] .chat-composer {
+  padding-bottom: 0.5rem;
 }
 
 /* Login page — allow scroll when OTP step is taller than viewport */
@@ -669,7 +722,7 @@ html.native-app .chat-composer {
 
 .login-page-main {
   min-height: min(100dvh, 100%);
-  padding-bottom: calc(2rem + var(--safe-bottom, 0px) + var(--keyboard-offset, 0px));
+  padding-bottom: calc(2rem + var(--safe-bottom, 0px));
   scroll-padding-bottom: calc(1.5rem + var(--keyboard-offset, 0px));
 }
 
@@ -1195,10 +1248,11 @@ html.native-app .chat-composer {
   }
 }
 
+/* Short travel: longer rises swept new bubbles across the previous ones. */
 @keyframes message-in-user {
   from {
     opacity: 0;
-    transform: translateY(4.25rem) scale(0.88);
+    transform: translateY(12px) scale(0.97);
   }
   to {
     opacity: 1;
@@ -1207,12 +1261,37 @@ html.native-app .chat-composer {
 }
 
 .animate-message--coach {
+  transform-origin: 0 100%;
   animation: message-in-coach 280ms var(--ease-premium-out) both;
 }
 
 .animate-message--user {
   transform-origin: 100% 100%;
-  animation: message-in-user 420ms 70ms var(--ease-premium-out) both;
+  animation: message-in-user 320ms 40ms var(--ease-premium-out) both;
+}
+
+[dir="rtl"] .animate-message--coach {
+  transform-origin: 100% 100%;
+}
+
+[dir="rtl"] .animate-message--user {
+  transform-origin: 0 100%;
+}
+
+/* Transform only: the -translate-x-1/2 centering lives on `translate`. */
+@keyframes chat-jump-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-jump-latest {
+  animation: chat-jump-in var(--motion-fast) var(--ease-premium-out) both;
 }
 
 @keyframes chat-send-launch {
@@ -1296,7 +1375,7 @@ html.native-app .chat-composer {
 @keyframes chat-photo-in {
   from {
     opacity: 0;
-    transform: translateY(16px) scale(0.84);
+    transform: translateY(6px) scale(0.97);
   }
   to {
     opacity: 1;
@@ -1323,7 +1402,7 @@ html.native-app .chat-composer {
 .chat-delivery {
   display: inline-flex;
   align-items: center;
-  margin-left: 4px;
+  margin-inline-start: 4px;
   color: #bbf7d0;
 }
 
@@ -1338,7 +1417,7 @@ html.native-app .chat-composer {
 }
 
 .chat-delivery__tick--second {
-  margin-left: -7px;
+  margin-inline-start: -7px;
   animation: chat-tick-in var(--motion-fast) var(--ease-premium-out) both;
 }
 
@@ -3401,6 +3480,7 @@ html:not([data-theme="light"]) .text-zinc-600 {
   .chat-confirm-settle,
   .chat-photo-in,
   .chat-bubble-shake,
+  .chat-jump-latest,
   .chat-delivery__tick--second,
   .chat-presence-ring,
   .chat-presence-scan,

@@ -31,8 +31,9 @@ describe("native shell UX contracts", () => {
       'android:windowSoftInputMode="adjustNothing"',
     );
     expect(source("components/CapacitorShell.tsx")).toContain("KeyboardResize.None");
-    expect(source("components/CapacitorShell.tsx")).toContain("coveredByKeyboard");
-    expect(source("components/CapacitorShell.tsx")).toContain("keyboardDidShow");
+    expect(source("components/CapacitorShell.tsx")).toContain("bindKeyboardInset");
+    expect(source("components/CapacitorShell.tsx")).toContain("bindKeyboardReveal");
+    expect(source("lib/native/keyboard-inset.ts")).toContain("keyboardDidShow");
   });
 
   it("sends native OTP with the detected locale", () => {
@@ -95,8 +96,9 @@ describe("wave C+D native UX remaining gaps", () => {
   });
 
   it("scrolls focused inputs above the native keyboard", () => {
+    expect(source("lib/native/keyboard-inset.ts")).toContain("visualViewport");
     expect(source("hooks/useScrollFocusedInputIntoView.ts")).toContain(
-      "visualViewport",
+      "bindKeyboardReveal",
     );
     expect(source("app/(app)/settings/page.tsx")).toContain(
       "useScrollFocusedInputIntoView",
@@ -110,7 +112,7 @@ describe("wave C+D native UX remaining gaps", () => {
     expect(source("app/(app)/settings/contact/page.tsx")).toContain(
       "useScrollFocusedInputIntoView",
     );
-    expect(source("hooks/useScrollFocusedInputIntoView.ts")).toContain(
+    expect(source("lib/native/keyboard-reveal.ts")).toContain(
       "data-keyboard-cta",
     );
   });

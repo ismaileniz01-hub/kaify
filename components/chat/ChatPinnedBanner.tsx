@@ -36,7 +36,7 @@ export function ChatPinnedBanner({
         aria-expanded={expanded}
         aria-label={label}
         onClick={onToggle}
-        className="flex w-full items-center gap-3 px-3 py-2 text-left"
+        className="flex min-h-11 w-full items-center gap-3 px-3 py-2 text-start"
       >
         <Pin className="h-4 w-4 shrink-0" style={{ color: primaryLight }} aria-hidden />
         {metric ? (
@@ -67,7 +67,7 @@ export function ChatPinnedBanner({
         />
       </button>
       {expanded ? (
-        <div className="max-h-[min(55vh,28rem)] overflow-y-auto overscroll-contain px-3 pb-3">
+        <div className="max-h-[min(38dvh,20rem)] overflow-y-auto overscroll-contain px-3 pb-3">
           {children}
         </div>
       ) : null}

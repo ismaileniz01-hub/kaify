@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { splitChatInlineBold } from "@/lib/chat/inline-bold";
 import { coachVisibleMessage } from "@/lib/kaios/envelope-text";
 import { useTypedReveal } from "@/lib/chat/typed-reveal";
+import { isNearBottom } from "@/lib/chat/scroll-anchor";
 
 export { splitChatInlineBold };
 
@@ -20,9 +21,12 @@ export function parseChatInlineBold(text: string) {
   );
 }
 
+/** Chat copy always wraps: long words and URLs must never widen a bubble. */
+const BASE_TEXT_CLASS = "whitespace-pre-wrap break-words [overflow-wrap:anywhere]";
+
 export function ChatMessageText({
   text,
-  className = "whitespace-pre-wrap",
+  className = "",
   streaming = false,
   typeIn = false,
 }: {
@@ -39,12 +43,15 @@ export function ChatMessageText({
   useEffect(() => {
     if (!catchingUp) return;
     const root = pRef.current?.closest("[data-chat-scroller], .overflow-y-auto");
-    if (root instanceof HTMLElement) root.scrollTop = root.scrollHeight;
+    // Follow the reveal only when the reader is already at the bottom.
+    if (root instanceof HTMLElement && isNearBottom(root, 160)) {
+      root.scrollTop = root.scrollHeight;
+    }
   }, [revealed, catchingUp]);
 
   if (!visible.trim() && !streaming) return null;
   return (
-    <p ref={pRef} className={className}>
+    <p ref={pRef} className={`${BASE_TEXT_CLASS} ${className}`.trim()}>
       {revealed.trim() ? parseChatInlineBold(revealed) : null}
       {streaming || catchingUp ? (
         <span className="chat-stream-caret" aria-hidden />

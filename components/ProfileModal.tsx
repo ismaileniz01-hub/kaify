@@ -412,6 +412,7 @@ export function ProfileModal({ isOpen, onClose, profile, onSave }: ProfileModalP
               {t("profile.cancel_button")}
             </button>
             <button
+              data-keyboard-cta
               onClick={() => void handleSave()}
               disabled={saving}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-purple-500 py-3 text-sm font-medium text-white transition hover:bg-purple-400 active:scale-95 disabled:opacity-50"

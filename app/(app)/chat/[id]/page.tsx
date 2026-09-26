@@ -56,6 +56,9 @@ export default function ChatPage() {
   // Kai için unlock edilmiş level'a göre avatar ve aura rengi
   const { avatar: kaiAvatar, auraColor } = useKai();
 
+  // The chat shell is sized to the visible area; iOS still pans the document
+  // when the composer focuses (KeyboardResize.None), which would shift the
+  // header off-screen. Nothing on this page should ever scroll the window.
   useEffect(() => {
     const lockViewport = () => {
       if (window.scrollY !== 0 || window.scrollX !== 0) {
@@ -176,24 +179,26 @@ export default function ChatPage() {
         backHref="/messages"
         backLabel={t("nav.back")}
         title={
-          <span className="flex items-center justify-center gap-2">
-            <ContactAvatar
-              src={getAvatarSrc()}
-              alt={contact.name}
-              size="xs"
-              effect={getEffect()}
-              auraColor={contactId === "kai" ? auraColor : "default"}
-              transitionName={coachAvatarTransitionName(contactId)}
-              presence={avatarState}
-              coachId={contactId}
-            />
-            <span className="flex flex-col items-start">
-              <span className="font-semibold" style={{ color: contact.color.primaryLight }}>
+          <span className="flex min-w-0 items-center justify-center gap-2">
+            <span className="shrink-0">
+              <ContactAvatar
+                src={getAvatarSrc()}
+                alt={contact.name}
+                size="xs"
+                effect={getEffect()}
+                auraColor={contactId === "kai" ? auraColor : "default"}
+                transitionName={coachAvatarTransitionName(contactId)}
+                presence={avatarState}
+                coachId={contactId}
+              />
+            </span>
+            <span className="flex min-w-0 flex-col items-start">
+              <span className="max-w-full truncate font-semibold" style={{ color: contact.color.primaryLight }}>
                 {contact.name}
               </span>
-              <span className="flex items-center gap-1 text-xs font-normal" style={{ color: contact.color.primaryLight }}>
-                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: contact.color.primary }} />
-                {t(contact.roleKey as "contact.alex.role")}
+              <span className="flex min-w-0 max-w-full items-center gap-1 text-xs font-normal" style={{ color: contact.color.primaryLight }}>
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: contact.color.primary }} />
+                <span className="truncate">{t(contact.roleKey as "contact.alex.role")}</span>
               </span>
             </span>
           </span>
@@ -247,22 +252,6 @@ export default function ChatPage() {
           </>
         )}
       </div>
-
-      {/* Large coach presence — sits above the composer on the bottom-left. */}
-      {!sessionLoading && (
-      <div className="pointer-events-none absolute bottom-36 -left-8 z-[5]">
-        <ContactAvatar
-          src={getAvatarSrc()}
-          alt={contact.name}
-          size="xl"
-          pulse={false}
-          effect={getEffect()}
-          auraColor={contactId === "kai" ? auraColor : "default"}
-          presence={avatarState}
-          coachId={contactId}
-        />
-      </div>
-      )}
 
       <ImagePickerModal
         isOpen={showImagePicker}

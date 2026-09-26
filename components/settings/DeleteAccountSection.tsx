@@ -77,7 +77,7 @@ export function DeleteAccountSection() {
   }
 
   return (
-    <div className="mt-3 space-y-3 rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+    <div className="mt-3 space-y-3 rounded-xl border border-red-500/20 bg-red-500/5 p-4" data-keyboard-scope>
       <p className="text-sm font-semibold text-red-200">{t("settings.delete.title")}</p>
       <p className="text-xs leading-relaxed text-zinc-400">{t("settings.delete.retention")}</p>
       <label className="block">
@@ -110,6 +110,7 @@ export function DeleteAccountSection() {
         </button>
         <button
           type="button"
+          data-keyboard-cta
           disabled={confirm !== "DELETE" || busy}
           onClick={() => void deleteAccount()}
           className="flex-1 rounded-lg bg-red-600/80 py-2 text-xs font-semibold text-white disabled:opacity-40"

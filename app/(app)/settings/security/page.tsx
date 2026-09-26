@@ -342,7 +342,7 @@ export default function SecuritySettingsPage() {
         </section>
 
         {pending && (
-          <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-5">
+          <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-5" data-keyboard-scope>
             <p className="text-sm text-zinc-300">{t("mfa.enroll.scan")}</p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -364,6 +364,7 @@ export default function SecuritySettingsPage() {
             />
             <button
               type="button"
+              data-keyboard-cta
               onClick={() => void confirmEnroll()}
               disabled={loading || code.length < 6}
               className="w-full rounded-xl bg-white py-3 text-sm font-semibold text-zinc-900 disabled:opacity-50"

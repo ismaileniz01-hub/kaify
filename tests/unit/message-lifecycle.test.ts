@@ -44,7 +44,10 @@ describe("chat message lifecycle (UX-005 + A11Y-001)", () => {
     expect(src).toContain("shouldReuseIdempotencyKeyOnRetry");
     expect(src).toContain("createIdempotencyKey");
     expect(src).toContain("streamTextRef.current");
-    expect(src).toContain("sticky bottom-3");
+    // Sticky per-message avatars slid over neighbouring bubbles while scrolling.
+    expect(src).not.toContain("sticky bottom-3");
+    expect(src).toContain("chatGroupPosition");
+    expect(src).not.toContain('"/kaify-logo.png"');
     expect(src).toContain("ChatPinnedBanner");
     expect(src).toContain("findLatestPinnableMessage");
   });

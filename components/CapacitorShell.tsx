@@ -16,9 +16,10 @@ import { bindInAppNavigation } from "@/lib/native/in-app-navigation";
 import { consumeAppBack } from "@/lib/native/app-back-stack";
 import { useAppBackStack } from "@/hooks/useAppBackStack";
 import {
-  applyKeyboardOffset,
-  coveredByKeyboard,
-} from "@/lib/native/keyboard-covered";
+  bindKeyboardInset,
+  type KeyboardEventSource,
+} from "@/lib/native/keyboard-inset";
+import { bindKeyboardReveal } from "@/lib/native/keyboard-reveal";
 
 function statusBarStyleForTheme(): "DARK" | "LIGHT" {
   if (typeof document === "undefined") return "DARK";
@@ -51,7 +52,7 @@ export function CapacitorShell() {
           { SplashScreen },
           { PushNotifications },
           { App },
-          { Keyboard },
+          { Keyboard, KeyboardResize },
         ] = await Promise.all([
           import("@capacitor/status-bar"),
           import("@capacitor/splash-screen"),
@@ -78,27 +79,13 @@ export function CapacitorShell() {
         await SplashScreen.hide().catch(() => {});
 
         await Keyboard.setResizeMode({
-          mode: (await import("@capacitor/keyboard")).KeyboardResize.None,
+          mode: KeyboardResize.None,
         }).catch(() => {});
 
-        let pluginHeight = 0;
-        const syncKeyboard = (nextPlugin?: number) => {
-          if (typeof nextPlugin === "number") pluginHeight = nextPlugin;
-          applyKeyboardOffset(coveredByKeyboard(pluginHeight));
-        };
-
-        const keyboardShow = await Keyboard.addListener(
-          "keyboardWillShow",
-          (info) => syncKeyboard(Math.max(0, info.keyboardHeight)),
+        const releaseKeyboardInset = bindKeyboardInset(
+          async () => Keyboard as unknown as KeyboardEventSource,
         );
-        const keyboardDidShow = await Keyboard.addListener(
-          "keyboardDidShow",
-          (info) => syncKeyboard(Math.max(0, info.keyboardHeight)),
-        );
-        const keyboardHide = await Keyboard.addListener("keyboardWillHide", () => {
-          pluginHeight = 0;
-          applyKeyboardOffset(0);
-        });
+        const releaseKeyboardReveal = bindKeyboardReveal();
 
         void checkDeviceIntegrity().then((integrity) => {
           if (integrity.compromised) {
@@ -171,16 +158,14 @@ export function CapacitorShell() {
         removeListeners = () => {
           unbindNavigation();
           themeObserver.disconnect();
-          void keyboardShow.remove();
-          void keyboardDidShow.remove();
-          void keyboardHide.remove();
+          releaseKeyboardReveal();
+          releaseKeyboardInset();
           void regHandle.remove();
           void regErrHandle.remove();
           void actionHandle.remove();
           void appUrlHandle.remove();
           void appStateHandle.remove();
           void backHandle?.remove();
-          applyKeyboardOffset(0);
           clearNativeAppRoot();
         };
       } catch {

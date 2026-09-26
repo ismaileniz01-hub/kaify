@@ -147,6 +147,7 @@ export function ChatComposer({
   return (
     <footer
       className="chat-composer relative shrink-0 border-t border-white/[0.07] bg-[#0a0812]/95 px-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl"
+      data-keyboard-reveal="off"
       aria-busy={sending}
       style={
         {
@@ -157,7 +158,7 @@ export function ChatComposer({
     >
       {launchText ? (
         <div
-          className="chat-send-launch pointer-events-none absolute bottom-[calc(100%-0.35rem)] right-14 z-30 line-clamp-4 max-w-[70%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed text-white shadow-lg"
+          className="chat-send-launch pointer-events-none absolute bottom-[calc(100%-0.35rem)] end-14 z-30 line-clamp-4 max-w-[70%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed text-white shadow-lg"
           style={{
             background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
           }}

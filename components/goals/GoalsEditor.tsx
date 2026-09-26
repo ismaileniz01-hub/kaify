@@ -87,7 +87,7 @@ export function GoalsEditor({ initial, onSaved, onCancel }: Props) {
   };
 
   return (
-    <div className="rounded-2xl border border-purple-400/25 bg-zinc-950/90 p-4">
+    <div className="rounded-2xl border border-purple-400/25 bg-zinc-950/90 p-4" data-keyboard-scope>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-bold text-white">{t("goals.title")}</h2>
@@ -175,6 +175,7 @@ export function GoalsEditor({ initial, onSaved, onCancel }: Props) {
 
       <button
         type="button"
+        data-keyboard-cta
         disabled={!valid || saving}
         onClick={() => void handleSave()}
         className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-purple-500 px-5 text-sm font-bold text-white transition hover:bg-purple-400 disabled:cursor-not-allowed disabled:opacity-50"

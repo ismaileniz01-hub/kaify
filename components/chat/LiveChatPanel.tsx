@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type Ref } from "react";
-import Image from "next/image";
+import { useCallback, useEffect, useMemo, useRef, useState, type Ref } from "react";
 import {
   streamChatMessage,
   apiGet,
@@ -38,7 +37,18 @@ import {
 import { errorToMessage, photoAnalysisFailureText, quotaErrorMessage, quotaResourceFromError, visionQuotaResourceFromError, isAnalyzeQuotaDenied } from "@/lib/i18n/api-error";
 import { useToast } from "@/components/ui/ToastProvider";
 import { coachRetryLine, isSoftCoachFailure, isUsableCoachReply } from "@/lib/kaios/coach-retry";
-import { MessageCircle, MoreVertical, Check } from "lucide-react";
+import { ArrowDown, MessageCircle, MoreVertical, Check } from "lucide-react";
+import {
+  ChatAvatarSlot,
+  CoachChatAvatar,
+  UserChatAvatar,
+} from "@/components/chat/ChatAvatar";
+import { chatBubbleRadius, chatGroupPosition } from "@/lib/chat/message-groups";
+import { isNearBottom } from "@/lib/chat/scroll-anchor";
+import {
+  KEYBOARD_INSET_EVENT,
+  type KeyboardMeasurement,
+} from "@/lib/native/keyboard-inset";
 import {
   markMessageDelivered,
   markMessageFailed,
@@ -103,13 +113,17 @@ function newPersistedMessageId(): string {
   return createIdempotencyKey();
 }
 
+/**
+ * Lives in the bubble's meta row; the menu is positioned against the bubble
+ * (which is `relative`) and opens toward the screen edge the bubble hugs.
+ */
 function MessageOverflowMenu({
   open,
   menuRef,
   label,
   deleteLabel,
   deleting,
-  compact,
+  align,
   onToggle,
   onDelete,
 }: {
@@ -118,15 +132,12 @@ function MessageOverflowMenu({
   label: string;
   deleteLabel: string;
   deleting: boolean;
-  compact?: boolean;
+  align: "start" | "end";
   onToggle: () => void;
   onDelete: () => void;
 }) {
   return (
-    <div
-      ref={menuRef}
-      className={`relative shrink-0 ${compact ? "z-10 -mb-0.5" : "self-center"}`}
-    >
+    <div ref={menuRef} className="contents">
       <button
         type="button"
         aria-label={label}
@@ -136,16 +147,16 @@ function MessageOverflowMenu({
           event.stopPropagation();
           onToggle();
         }}
-        className={`rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white ${
-          compact ? "p-0.5" : "p-2"
-        }`}
+        className="-my-2 -me-2 ms-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white"
       >
-        <MoreVertical className="h-4 w-4" aria-hidden />
+        <MoreVertical className="h-3.5 w-3.5" aria-hidden />
       </button>
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-full z-20 mt-1 min-w-[9rem] overflow-hidden rounded-xl border border-white/10 bg-zinc-900/95 py-1 shadow-xl backdrop-blur-sm"
+          className={`absolute top-full z-20 mt-1 min-w-[9rem] overflow-hidden rounded-xl border border-white/10 bg-zinc-900/95 py-1 shadow-xl backdrop-blur-sm ${
+            align === "start" ? "start-0" : "end-0"
+          }`}
         >
           <button
             role="menuitem"
@@ -155,7 +166,7 @@ function MessageOverflowMenu({
               onDelete();
             }}
             disabled={deleting}
-            className="w-full px-3 py-2 text-left text-sm text-red-300 transition-colors hover:bg-white/5 disabled:opacity-50"
+            className="w-full px-3 py-2 text-start text-sm text-red-300 transition-colors hover:bg-white/5 disabled:opacity-50"
           >
             {deleteLabel}
           </button>
@@ -181,7 +192,8 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const { userProfile, refreshHome } = useSession();
   const { primary, primaryLight, secondary, ring, shadow } = contact.color;
   const coachAvatar = coachId === "kai" ? kaiAvatar : contact.avatar;
-  const userAvatar = userProfile?.avatar ?? "/kaify-logo.png";
+  const userAvatar = userProfile?.avatar;
+  const userName = userProfile?.name;
   const [messages, setMessages] = useState<LiveMessage[]>([]);
   const [input, setInput] = useState("");
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -205,6 +217,10 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     url: string;
   } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const threadRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
+  const renderedCountRef = useRef(0);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const [imagePickerOpen, setImagePickerOpen] = useState(false);
   const streamTextRef = useRef("");
@@ -215,6 +231,8 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   );
   const [queueNotice, setQueueNotice] = useState(false);
   const pendingDeleteTimerRef = useRef<number | null>(null);
+  /** Collapsed by default so the pinned card never crowds the thread. */
+  const [pinOpen, setPinOpen] = useState(false);
 
   useEffect(() => {
     const previewUrls = transferredPreviewRef.current;
@@ -338,6 +356,8 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     setError(null);
     setErrorUpgrade(false);
     setQuotaWarning(null);
+    stickToBottomRef.current = true;
+    setShowJumpToLatest(false);
 
     const idempotencyKey =
       options?.idempotencyKey &&
@@ -540,10 +560,56 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
 
   sendTextMessageRef.current = sendTextMessage;
 
+  const scrollToLatest = useCallback((smooth = false) => {
+    const list = listRef.current;
+    stickToBottomRef.current = true;
+    setShowJumpToLatest(false);
+    if (!list) return;
+    list.scrollTo({ top: list.scrollHeight, behavior: smooth ? "smooth" : "auto" });
+  }, []);
+
   useEffect(() => {
     const list = listRef.current;
     if (!list) return;
-    list.scrollTop = list.scrollHeight;
+    const onScroll = () => {
+      const atBottom = isNearBottom(list);
+      stickToBottomRef.current = atBottom;
+      if (atBottom) setShowJumpToLatest(false);
+    };
+    // Keyboard, composer growth, images and rich cards resize the list or its
+    // content without a scroll event; keep the latest message in view.
+    const follow = () => {
+      if (stickToBottomRef.current) list.scrollTop = list.scrollHeight;
+    };
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(follow);
+    observer?.observe(list);
+    if (threadRef.current) observer?.observe(threadRef.current);
+    const onKeyboard = (event: Event) => {
+      if ((event as CustomEvent<KeyboardMeasurement>).detail?.open) {
+        setPinOpen(false);
+      }
+      follow();
+    };
+    list.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener(KEYBOARD_INSET_EVENT, onKeyboard);
+    return () => {
+      observer?.disconnect();
+      list.removeEventListener("scroll", onScroll);
+      window.removeEventListener(KEYBOARD_INSET_EVENT, onKeyboard);
+    };
+  }, []);
+
+  useEffect(() => {
+    const list = listRef.current;
+    const grew = messages.length > renderedCountRef.current;
+    renderedCountRef.current = messages.length;
+    if (!list) return;
+    if (stickToBottomRef.current) {
+      list.scrollTop = list.scrollHeight;
+    } else if (grew) {
+      setShowJumpToLatest(true);
+    }
   }, [messages, sending]);
 
   const handleSend = async () => {
@@ -690,6 +756,8 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
     setError(null);
     setErrorUpgrade(false);
     setQuotaWarning(null);
+    stickToBottomRef.current = true;
+    setShowJumpToLatest(false);
     onCoachTyping?.(true);
 
     const caption = options?.note?.trim() ?? "";
@@ -915,15 +983,17 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   };
 
   const youLabel = t("chat.a11y.you");
+  const visibleMessages = messages.slice(-MESSAGE_RENDER_WINDOW);
   const pinned = useMemo(
     () => findLatestPinnableMessage(coachId, messages),
     [coachId, messages],
   );
-  const [pinOpen, setPinOpen] = useState(true);
   const pinnedId = pinned?.id ?? null;
+  const pinnedFresh = Boolean(pinned?.fresh);
+  // A plan/score that just arrived is not repeated in the thread, so show it.
   useEffect(() => {
-    if (pinnedId) setPinOpen(true);
-  }, [pinnedId]);
+    if (pinnedId && pinnedFresh) setPinOpen(true);
+  }, [pinnedId, pinnedFresh]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -971,6 +1041,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           />
         </ChatPinnedBanner>
       ) : null}
+      <div className="relative flex min-h-0 flex-1 flex-col">
       <div
         ref={listRef}
         className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 py-4"
@@ -1029,12 +1100,14 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
           aria-relevant="additions"
           aria-label={t("chat.a11y.log")}
         >
-          <div role="list" className="flex flex-col gap-3">
-            {messages.slice(-MESSAGE_RENDER_WINDOW).map((msg) => {
+          <div role="list" ref={threadRef} className="flex flex-col">
+            {visibleMessages.map((msg, index) => {
               const isCoach = msg.from === "coach";
+              const side = isCoach ? "coach" : "user";
               const isTyping = isCoach && msg.streaming && msg.text === "";
               const isStreamingText = isCoach && msg.streaming && msg.text !== "";
               const isFailed = msg.status === "failed";
+              const group = chatGroupPosition(visibleMessages, index);
               const authorLabel = isCoach ? contact.name : youLabel;
               const bubbleAriaLabel = isFailed
                 ? `${authorLabel}: ${msg.text}. ${t("chat.message.failed")}`
@@ -1043,12 +1116,16 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
               const canSelect = canSelectForDelete(msg);
               const selected = selectedIds.has(msg.id);
               const showMenu = !selectingDelete && canSelect;
+              // The photo has its own entrance; stacking both reads as overlap.
+              const enterMotion = Boolean(msg.enter) && !msg.photoPreviewUrl;
 
               return (
                 <div
                   key={msg.id}
                   role="listitem"
-                  className={`flex items-end gap-2 ${isCoach ? "justify-start" : "justify-end"}`}
+                  className={`flex items-end gap-2 ${isCoach ? "justify-start" : "justify-end"} ${
+                    index === 0 ? "" : group.first ? "mt-3" : "mt-1"
+                  }`}
                   onClick={
                     selectingDelete && canSelect
                       ? () => toggleDeleteSelect(msg.id)
@@ -1068,52 +1145,22 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                     </span>
                   )}
                   {isCoach && (
-                    <div className="flex w-8 shrink-0 flex-col justify-end self-stretch" aria-hidden>
-                      <div className="contact-avatar sticky bottom-3 h-8 w-8">
-                        <Image
-                          src={publicAssetUrl(coachAvatar)}
-                          alt=""
-                          width={32}
-                          height={32}
-                          unoptimized
-                          className="h-full w-full object-contain"
-                        />
-                      </div>
-                    </div>
+                    <ChatAvatarSlot>
+                      {group.last ? (
+                        <CoachChatAvatar src={publicAssetUrl(coachAvatar)} />
+                      ) : null}
+                    </ChatAvatarSlot>
                   )}
                   <div
-                    className={`min-w-0 ${
-                      isCoach ? "max-w-[78%]" : "max-w-[calc(100%-2.75rem)]"
+                    className={`flex min-w-0 max-w-[min(78%,22rem)] flex-col ${
+                      isCoach ? "items-start" : "items-end"
                     }`}
                   >
-                    {isTyping ? (
                       <>
                         <div
-                          className="flex animate-message--coach items-center gap-2 px-4 py-3"
-                          style={{
-                            backgroundColor: `${primary}22`,
-                            borderRadius: "18px 18px 18px 4px",
-                            boxShadow: `0 0 20px ${ring}`,
-                          }}
-                        >
-                          <span className="typing-dot" style={{ backgroundColor: primaryLight }} aria-hidden />
-                          <span className="typing-dot" style={{ backgroundColor: primaryLight }} aria-hidden />
-                          <span className="typing-dot" style={{ backgroundColor: primaryLight }} aria-hidden />
-                          <span className="text-xs text-zinc-300">
-                            {t("chat.thinking")}
-                          </span>
-                        </div>
-                        <p className="sr-only" aria-live="polite">
-                          {t("chat.a11y.typing", { name: contact.name })}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <div
-                          className={`${chatBubbleEnterClass(
-                            isCoach ? "coach" : "user",
-                            Boolean(msg.enter),
-                          )} rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                          className={`${chatBubbleEnterClass(side, enterMotion)} relative px-3.5 py-2.5 text-sm leading-relaxed ${
+                            isTyping ? "min-h-[2.75rem]" : ""
+                          } ${
                             isFailed ? "chat-bubble-shake opacity-80 ring-1 ring-red-400/50" : ""
                           }`}
                           onAnimationEnd={(event) => {
@@ -1125,18 +1172,20 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                               ),
                             );
                           }}
-                          aria-label={bubbleAriaLabel}
-                          aria-busy={isStreamingText || undefined}
+                          aria-label={isTyping ? undefined : bubbleAriaLabel}
+                          aria-busy={isTyping || isStreamingText || undefined}
                           aria-invalid={isFailed || undefined}
                           style={
                             isCoach
                               ? {
+                                  borderRadius: chatBubbleRadius(side, group.last),
                                   backgroundColor: `${primary}18`,
                                   border: `1px solid ${ring}`,
                                   color: "#fff",
                                   boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`,
                                 }
                               : {
+                                  borderRadius: chatBubbleRadius(side, group.last),
                                   background: `linear-gradient(135deg, ${primary}, ${secondary})`,
                                   color: "#fff",
                                   boxShadow: `0 8px 22px ${shadow}`,
@@ -1146,24 +1195,57 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                                 }
                           }
                         >
+                          {isTyping ? (
+                            <span className="flex items-center gap-2 py-0.5">
+                              <span className="typing-dot" style={{ backgroundColor: primaryLight }} aria-hidden />
+                              <span className="typing-dot" style={{ backgroundColor: primaryLight }} aria-hidden />
+                              <span className="typing-dot" style={{ backgroundColor: primaryLight }} aria-hidden />
+                              <span className="text-xs text-zinc-300">
+                                {t("chat.thinking")}
+                              </span>
+                            </span>
+                          ) : (
+                          <>
                           {msg.photoPreviewUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={msg.photoPreviewUrl}
-                              alt=""
-                              className="chat-photo-in mb-2 max-h-48 w-full rounded-xl object-cover"
-                            />
+                            <div className="chat-photo-in mb-2 aspect-[4/3] w-56 max-w-full overflow-hidden rounded-xl bg-black/25">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={msg.photoPreviewUrl}
+                                alt=""
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
                           ) : null}
                           <ChatMessageText
                             text={msg.text}
                             streaming={isStreamingText}
                             typeIn={isCoach && Boolean(msg.fresh)}
                           />
-                          <p className="chat-message-time mt-1 inline-flex items-center opacity-60">
-                            {msg.time}
-                            {!isCoach ? <ChatDeliveryTicks status={msg.status} /> : null}
-                          </p>
-                          {isCoach && !isStreamingText && msg.id && !String(msg.id).startsWith("local-") ? (
+                          <div className="mt-1 flex items-center gap-1.5">
+                            <p className="chat-message-time inline-flex items-center opacity-60">
+                              {msg.time}
+                              {!isCoach ? <ChatDeliveryTicks status={msg.status} /> : null}
+                            </p>
+                            {showMenu ? (
+                              <MessageOverflowMenu
+                                open={openMenuId === msg.id}
+                                menuRef={openMenuId === msg.id ? openMenuRef : undefined}
+                                label={t("chat.message.menu")}
+                                deleteLabel={t("chat.delete.action")}
+                                deleting={deleting}
+                                align={isCoach ? "start" : "end"}
+                                onToggle={() =>
+                                  setOpenMenuId((current) =>
+                                    current === msg.id ? null : msg.id,
+                                  )
+                                }
+                                onDelete={() => enterDeleteSelect(msg)}
+                              />
+                            ) : null}
+                          </div>
+                          </>
+                          )}
+                          {isCoach && !msg.streaming && msg.id && !String(msg.id).startsWith("local-") ? (
                             <button
                               type="button"
                               className="mt-1 text-[10px] font-medium text-zinc-400 underline-offset-2 hover:text-zinc-200 hover:underline"
@@ -1173,6 +1255,11 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                             </button>
                           ) : null}
                         </div>
+                        {isTyping ? (
+                          <p className="sr-only" aria-live="polite">
+                            {t("chat.a11y.typing", { name: contact.name })}
+                          </p>
+                        ) : null}
                         {isFailed && (
                           <div
                             role="status"
@@ -1240,56 +1327,33 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                           />
                         ) : null}
                       </>
-                    )}
                   </div>
                   {!isCoach && (
-                    <div className="flex w-8 shrink-0 flex-col items-center justify-end">
-                      {showMenu ? (
-                        <MessageOverflowMenu
-                          open={openMenuId === msg.id}
-                          menuRef={openMenuId === msg.id ? openMenuRef : undefined}
-                          label={t("chat.message.menu")}
-                          deleteLabel={t("chat.delete.action")}
-                          deleting={deleting}
-                          compact
-                          onToggle={() =>
-                            setOpenMenuId((current) =>
-                              current === msg.id ? null : msg.id,
-                            )
-                          }
-                          onDelete={() => enterDeleteSelect(msg)}
+                    <ChatAvatarSlot>
+                      {group.last ? (
+                        <UserChatAvatar
+                          src={userAvatar ? publicAssetUrl(userAvatar) : null}
+                          name={userName}
                         />
                       ) : null}
-                      <div className="contact-avatar sticky bottom-3 h-8 w-8" aria-hidden>
-                        <Image
-                          src={publicAssetUrl(userAvatar)}
-                          alt=""
-                          width={32}
-                          height={32}
-                          unoptimized
-                          className="h-full w-full rounded-full object-cover"
-                        />
-                      </div>
-                    </div>
+                    </ChatAvatarSlot>
                   )}
-                  {isCoach && showMenu ? (
-                    <MessageOverflowMenu
-                      open={openMenuId === msg.id}
-                      menuRef={openMenuId === msg.id ? openMenuRef : undefined}
-                      label={t("chat.message.menu")}
-                      deleteLabel={t("chat.delete.action")}
-                      deleting={deleting}
-                      onToggle={() =>
-                        setOpenMenuId((current) => (current === msg.id ? null : msg.id))
-                      }
-                      onDelete={() => enterDeleteSelect(msg)}
-                    />
-                  ) : null}
                 </div>
               );
             })}
           </div>
         </div>
+      </div>
+      {showJumpToLatest ? (
+        <button
+          type="button"
+          onClick={() => scrollToLatest(true)}
+          className="chat-jump-latest absolute bottom-3 left-1/2 z-10 flex min-h-9 -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/15 bg-zinc-900/95 px-3.5 text-xs font-semibold text-white shadow-lg"
+        >
+          <ArrowDown className="h-3.5 w-3.5" aria-hidden />
+          {t("chat.jump_latest")}
+        </button>
+      ) : null}
       </div>
 
       {selectingDelete ? (

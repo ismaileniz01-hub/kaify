@@ -81,7 +81,7 @@ export function ExerciseDetailSheet({
   return (
     <div
       data-app-overlay="open"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 pt-[calc(var(--safe-top)+1rem)] pb-[calc(var(--safe-bottom)+1rem)] sm:items-center"
+      className="keyboard-overlay fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 pt-[calc(var(--safe-top)+1rem)] pb-[calc(var(--safe-bottom)+1rem)] sm:items-center"
     >
       <div
         role="dialog"
@@ -169,6 +169,7 @@ export function ExerciseDetailSheet({
         <div className="mt-5 flex flex-col gap-2">
           <button
             type="button"
+            data-keyboard-cta
             disabled={saving || done}
             onClick={() => void handleDidThis()}
             className="min-h-11 rounded-full bg-emerald-500 px-4 text-sm font-bold text-zinc-950 disabled:opacity-50"

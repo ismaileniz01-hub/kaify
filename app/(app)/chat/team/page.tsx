@@ -190,7 +190,7 @@ export default function TeamChatPage() {
             <span className="text-[10px] text-zinc-500">{t("messages.team_sub")}</span>
           </span>
         }
-        trailing={<Users className="mr-3 h-5 w-5 text-purple-400" aria-hidden />}
+        trailing={<Users className="me-3 h-5 w-5 text-purple-400" aria-hidden />}
       />
 
       {!unlocked && (
@@ -240,18 +240,21 @@ export default function TeamChatPage() {
           const c = CONTACTS[msg.coachId];
           const avatar = msg.coachId === "kai" ? kaiAvatar : c.avatar;
           return (
-            <div key={msg.id} className="flex items-start gap-2">
-              <Image src={avatar} alt="" width={32} height={32} className="h-8 w-8 rounded-full" />
+            <div key={msg.id} className="flex items-end gap-2">
+              <div className="h-8 w-8 shrink-0" aria-hidden>
+                <Image src={avatar} alt="" width={32} height={32} className="h-full w-full object-contain" />
+              </div>
               <div
-                className="max-w-[85%] rounded-2xl px-3 py-2 text-sm text-white"
+                className="chat-message-bubble min-w-0 max-w-[min(85%,24rem)] px-3.5 py-2.5 text-sm leading-relaxed text-white"
                 style={{
+                  borderRadius: "18px 18px 18px 6px",
                   backgroundColor: `${c.color.primary}18`,
                   border: `1px solid ${c.color.ring}`,
                 }}
               >
-                <p className="mb-0.5 text-[10px] font-bold text-zinc-400">{c.name}</p>
-                <ChatMessageText text={msg.text} className="" />
-                <p className="mt-1 text-[10px] text-zinc-600">{msg.time}</p>
+                <p className="mb-0.5 text-[11px] font-bold" style={{ color: c.color.primaryLight }}>{c.name}</p>
+                <ChatMessageText text={msg.text} />
+                <p className="chat-message-time mt-1 text-zinc-500">{msg.time}</p>
               </div>
             </div>
           );
@@ -260,7 +263,7 @@ export default function TeamChatPage() {
       </main>
 
       {unlocked && isAuthenticated && (
-        <footer className="space-y-2 px-4 pb-8">
+        <footer className="shrink-0 space-y-2 px-4 pb-[max(2rem,calc(var(--safe-bottom,0px)+1rem))] pt-2">
           {meetingDone && (
             <p className="text-center text-[11px] text-zinc-500">{t("team.meeting_done_hint")}</p>
           )}

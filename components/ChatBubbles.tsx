@@ -6,7 +6,11 @@ import type { ContactId, AnalysisCategory, MealPlanData, WorkoutPlanData, DemoCh
 import { CHAT_THREADS, CONTACTS } from "@/lib/contacts";
 import { useKai } from "@/lib/kai-context";
 import { useSound } from "@/lib/use-sound";
-import { DEMO_USER_PROFILE } from "@/lib/user";
+import {
+  ChatAvatarSlot,
+  CoachChatAvatar,
+  UserChatAvatar,
+} from "@/components/chat/ChatAvatar";
 import { useLang } from "@/lib/lang-context";
 import { WorkoutPlanCard } from "@/components/chat/WorkoutPlanCard";
 import { ChatPinnedBanner } from "@/components/chat/ChatPinnedBanner";
@@ -312,7 +316,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
           {renderCard(pinnedDemo)}
         </ChatPinnedBanner>
       ) : null}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-36 pt-4" data-chat-scroller>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4 pt-4" data-chat-scroller>
       <p className="mb-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-center text-[11px] text-amber-200/90" role="note">
         {t("chat.demo.notice")}
       </p>
@@ -333,7 +337,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
                     <div className="flex items-center gap-1.5 px-5 py-3.5" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})`, borderRadius: "18px 18px 4px 18px", boxShadow: `0 4px 15px ${shadow}` }}>
                       <span className="typing-dot typing-dot--user" /><span className="typing-dot typing-dot--user" /><span className="typing-dot typing-dot--user" />
                     </div>
-                    <div className="relative h-8 w-8 shrink-0"><Image src={DEMO_USER_PROFILE.avatar} alt={DEMO_USER_PROFILE.name} width={32} height={32} className="h-full w-full rounded-full object-cover" /></div>
+                    <ChatAvatarSlot><UserChatAvatar src={null} name={null} /></ChatAvatarSlot>
                   </div>
                 </div>
               )
@@ -341,10 +345,8 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
             {msg.visible && (
               msg.from === "contact" ? (
                 ["analysis", "mealPlan", "workoutPlan", "dailySummary"].includes(msg.type || "") ? (
-                  <div className="flex max-w-[90%] gap-2">
-                    <div className="flex w-8 shrink-0 flex-col justify-end">
-                      <div className="sticky bottom-3 h-8 w-8"><Image src={contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain" /></div>
-                    </div>
+                  <div className="flex max-w-[90%] items-end gap-2">
+                    <ChatAvatarSlot><CoachChatAvatar src={contactAvatar} /></ChatAvatarSlot>
                     <div className="flex flex-col gap-1">
                       <div className="chat-message-bubble animate-message--coach px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}><ChatMessageText text={msg.text} typeIn /></div>
                       {pinnedDemo?.id !== msg.id ? renderCard(msg) : null}
@@ -352,10 +354,8 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
                     </div>
                   </div>
                 ) : (
-                  <div className="flex max-w-[82%] gap-2">
-                    <div className="flex w-8 shrink-0 flex-col justify-end">
-                      <div className="sticky bottom-3 h-8 w-8"><Image src={contactAvatar} alt={contact.name} width={32} height={32} className="h-full w-full object-contain" /></div>
-                    </div>
+                  <div className="flex max-w-[82%] items-end gap-2">
+                    <ChatAvatarSlot><CoachChatAvatar src={contactAvatar} /></ChatAvatarSlot>
                     <div className="flex flex-col gap-1">
                       <div className="chat-message-bubble animate-message--coach px-4 py-2.5 text-sm leading-relaxed text-white" style={{ backgroundColor: `${primary}18`, borderRadius: "18px 18px 18px 4px", boxShadow: `0 8px 22px rgba(0,0,0,0.18), 0 0 10px ${ring}`, border: `1px solid ${ring}` }}><ChatMessageText text={msg.text} typeIn /></div>
                       <span className="chat-message-time ps-1 text-zinc-600">{msg.time}</span>
@@ -369,7 +369,7 @@ export function ChatBubbles({ contactId, onTypingChange, onUserTyping, onConvers
                       <div className="chat-message-bubble animate-message--user px-4 py-2.5 text-sm leading-relaxed text-white" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})`, borderRadius: "18px 18px 4px 18px", boxShadow: `0 8px 22px ${shadow}` }}>{msg.text}</div>
                       <span className="chat-message-time pe-1 text-zinc-600">{msg.time}</span>
                     </div>
-                    <div className="relative h-8 w-8 shrink-0"><Image src={DEMO_USER_PROFILE.avatar} alt={DEMO_USER_PROFILE.name} width={32} height={32} className="h-full w-full rounded-full object-cover" /></div>
+                    <ChatAvatarSlot><UserChatAvatar src={null} name={null} /></ChatAvatarSlot>
                   </div>
                 </div>
               )

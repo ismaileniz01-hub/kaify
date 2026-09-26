@@ -53,12 +53,15 @@ describe("native login UI contract (canonical web parity)", () => {
   });
 
   it("applies safe-area and Capacitor keyboard offset handling", () => {
-    expect(keyboard).toContain("keyboardWillShow");
-    expect(keyboard).toContain("keyboardDidShow");
-    expect(keyboard).toContain("keyboardWillHide");
-    expect(keyboard).toContain("coveredByKeyboard");
-    expect(keyboard).not.toContain("if (window.visualViewport)");
-    expect(css).toContain("calc(100dvh - var(--keyboard-offset");
+    const inset = source("lib/native/keyboard-inset.ts");
+    expect(keyboard).toContain("bindKeyboardInset");
+    expect(keyboard).toContain("bindKeyboardReveal");
+    expect(inset).toContain("keyboardWillShow");
+    expect(inset).toContain("keyboardDidShow");
+    expect(inset).toContain("keyboardWillHide");
+    expect(css).toContain("var(--app-visible-height, 100dvh)");
+    // min-height on the login shell would override the keyboard-sized height.
+    expect(css).not.toMatch(/\.phone-shell\.login-page \{[^}]*min-height: 100dvh/);
     expect(css).toContain("env(safe-area-inset-top");
     expect(css).toContain("env(safe-area-inset-bottom");
   });

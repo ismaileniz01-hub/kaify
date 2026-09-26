@@ -537,6 +537,7 @@ export function OnboardingProfileForm({
 
       <button
         type="button"
+        data-keyboard-cta
         onClick={() => void handleSubmit()}
         disabled={!valid || submitting}
         className="landing-btn landing-btn--primary mt-1 flex w-full items-center justify-center gap-2 disabled:opacity-40"

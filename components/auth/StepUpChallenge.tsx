@@ -58,7 +58,7 @@ export function StepUpChallenge({ onVerified, onCancel }: StepUpChallengeProps) 
   };
 
   return (
-    <div className="space-y-3 rounded-xl border border-amber-400/25 bg-amber-500/5 p-4">
+    <div className="space-y-3 rounded-xl border border-amber-400/25 bg-amber-500/5 p-4" data-keyboard-scope>
       <p className="text-sm font-semibold text-amber-100">{t("settings.step_up.title")}</p>
       <p className="text-xs leading-relaxed text-zinc-400">{t("settings.step_up.body")}</p>
       {error && (
@@ -97,6 +97,7 @@ export function StepUpChallenge({ onVerified, onCancel }: StepUpChallengeProps) 
           </label>
           <button
             type="button"
+            data-keyboard-cta
             disabled={busy || code.trim().length < 4}
             onClick={() => void verify()}
             className="touch-44 w-full rounded-xl bg-amber-500/25 px-3 py-2.5 text-sm font-semibold text-amber-50 disabled:opacity-50"

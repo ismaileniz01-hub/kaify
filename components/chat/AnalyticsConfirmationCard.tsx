@@ -81,7 +81,7 @@ export function AnalyticsConfirmationCard({
   }
 
   return (
-    <div className="chat-confirm-settle mt-2 rounded-xl border border-white/10 bg-black/30 p-3">
+    <div className="chat-confirm-settle mt-2 rounded-xl border border-white/10 bg-black/30 p-3" data-keyboard-scope>
       <p className="text-xs text-zinc-300">{payload.summary}</p>
       {typeof payload.confidence === "number" && payload.confidence < 0.7 ? (
         <p className="mt-1 text-[11px] text-amber-300">{t("analytics.confirm.low_confidence")}</p>
@@ -116,6 +116,7 @@ export function AnalyticsConfirmationCard({
         ) : null}
         <button
           type="button"
+          data-keyboard-cta
           disabled={busy}
           onClick={() => void act(pendingAction ?? "confirm")}
           className="flex-1 rounded-lg bg-emerald-600/80 py-2 text-xs font-semibold text-white disabled:opacity-50"

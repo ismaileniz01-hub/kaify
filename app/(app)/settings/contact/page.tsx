@@ -96,7 +96,7 @@ export default function ContactSupportPage() {
           />
         )}
 
-        <div className="flex gap-2">
+        <div className="flex gap-2" data-keyboard-scope>
           <input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -108,6 +108,7 @@ export default function ContactSupportPage() {
           />
           <button
             type="button"
+            data-keyboard-cta
             disabled={busy || !message.trim()}
             onClick={() => void send()}
             aria-label={t("support.send")}
