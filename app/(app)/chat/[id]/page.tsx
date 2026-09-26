@@ -14,6 +14,7 @@ import { useLang } from "@/lib/lang-context";
 import { formatTime } from "@/lib/i18n/format";
 import { useSession } from "@/lib/session-context";
 import { AppHeader } from "@/components/navigation/AppHeader";
+import { useKeyboardOffset } from "@/hooks/useKeyboardOffset";
 import { coachAvatarTransitionName } from "@/lib/motion/shared-element";
 
 const LiveChatPanel = dynamic(
@@ -52,29 +53,24 @@ export default function ChatPage() {
   const [inputValue, setInputValue] = useState("");
   const [userMessages, setUserMessages] = useState<{ text: string; time: string }[]>([]);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useKeyboardOffset();
 
   // Kai için unlock edilmiş level'a göre avatar ve aura rengi
   const { avatar: kaiAvatar, auraColor } = useKai();
 
-  // The chat shell is sized to the visible area; iOS still pans the document
-  // when the composer focuses (KeyboardResize.None), which would shift the
-  // header off-screen. Nothing on this page should ever scroll the window.
+  // Keep the header on screen while the keyboard is closed. While it is open,
+  // iOS pans the visual viewport to the composer; forcing scroll 0 puts the
+  // composer back under the keyboard.
   useEffect(() => {
     const lockViewport = () => {
+      if (document.documentElement.hasAttribute("data-keyboard-open")) return;
       if (window.scrollY !== 0 || window.scrollX !== 0) {
         window.scrollTo(0, 0);
       }
     };
     lockViewport();
-    const viewport = window.visualViewport;
-    viewport?.addEventListener("resize", lockViewport);
-    viewport?.addEventListener("scroll", lockViewport);
     window.addEventListener("scroll", lockViewport, { passive: true });
-    return () => {
-      viewport?.removeEventListener("resize", lockViewport);
-      viewport?.removeEventListener("scroll", lockViewport);
-      window.removeEventListener("scroll", lockViewport);
-    };
+    return () => window.removeEventListener("scroll", lockViewport);
   }, []);
 
   if (!contact) {

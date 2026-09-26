@@ -58,6 +58,18 @@ describe("measureKeyboard", () => {
     expect(m.visibleTop).toBe(KEYBOARD);
   });
 
+  it("iOS pan without the plugin still counts the covered screen height", () => {
+    const m = measureKeyboard({
+      baselineHeight: SCREEN,
+      layoutHeight: SCREEN,
+      pluginHeight: 0,
+      viewport: { height: SCREEN - KEYBOARD, offsetTop: KEYBOARD, scale: 1 },
+    });
+    expect(m.visibleBottom).toBe(SCREEN - KEYBOARD);
+    expect(m.inset).toBe(KEYBOARD);
+    expect(m.open).toBe(true);
+  });
+
   it("mobile Safari without the plugin reads the visual viewport", () => {
     const m = measureKeyboard({
       baselineHeight: SCREEN,
@@ -147,6 +159,8 @@ function fakeDom() {
     },
   };
   const doc = {
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
     documentElement: {
       style: {
         setProperty: (name: string, value: string) => styles.set(name, value),

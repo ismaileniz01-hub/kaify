@@ -31,6 +31,7 @@ describe("native shell UX contracts", () => {
       'android:windowSoftInputMode="adjustNothing"',
     );
     expect(source("components/CapacitorShell.tsx")).toContain("KeyboardResize.None");
+    expect(source("components/CapacitorShell.tsx")).toContain("KeyboardResize.Native");
     expect(source("components/CapacitorShell.tsx")).toContain("bindKeyboardInset");
     expect(source("components/CapacitorShell.tsx")).toContain("bindKeyboardReveal");
     expect(source("lib/native/keyboard-inset.ts")).toContain("keyboardDidShow");

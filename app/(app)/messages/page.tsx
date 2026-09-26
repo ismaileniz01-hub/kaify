@@ -132,7 +132,11 @@ export default function MessagesPage() {
         backHref="/welcome"
         backLabel={t("nav.back")}
         title={t("nav.messages")}
-        trailing={<span className="type-caption font-medium type-muted" suppressHydrationWarning>{todayLabel(lang)}</span>}
+        trailing={
+          <span className="type-caption shrink-0 whitespace-nowrap font-medium type-muted" suppressHydrationWarning>
+            {todayLabel(lang)}
+          </span>
+        }
         divider
       />
 

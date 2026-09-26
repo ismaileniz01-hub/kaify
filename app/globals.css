@@ -432,6 +432,13 @@ html[data-keyboard-open] .phone-shell.chat-shell {
   max-height: var(--app-visible-height, 100dvh);
 }
 
+/* Beats html.native-app .phone-shell.chat-shell { height: 100dvh }. */
+html.native-app[data-keyboard-open] .phone-shell.chat-shell {
+  height: var(--app-visible-height, 100dvh);
+  min-height: var(--app-visible-height, 100dvh);
+  max-height: var(--app-visible-height, 100dvh);
+}
+
 /* Document-scrolling pages: room to scroll the focused field and its CTA up. */
 html[data-keyboard-open] .phone-shell:not(.chat-shell) {
   padding-bottom: calc(var(--keyboard-offset, 0px) + 1.5rem);
@@ -544,7 +551,7 @@ html.native-app [class*="fire-aura"] {
 
 .app-header__side {
   display: flex;
-  min-width: 0;
+  min-width: max-content;
   align-items: center;
   gap: 0.5rem;
 }

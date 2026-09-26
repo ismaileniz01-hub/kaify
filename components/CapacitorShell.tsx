@@ -78,8 +78,11 @@ export function CapacitorShell() {
 
         await SplashScreen.hide().catch(() => {});
 
+        // iOS: shrink the WebView with the keyboard. None leaves the composer
+        // under the keyboard whenever the inset listener misses a frame.
+        // Android keeps None (adjustNothing) and uses the manual inset.
         await Keyboard.setResizeMode({
-          mode: KeyboardResize.None,
+          mode: platform === "ios" ? KeyboardResize.Native : KeyboardResize.None,
         }).catch(() => {});
 
         const releaseKeyboardInset = bindKeyboardInset(

@@ -58,6 +58,12 @@ export function measureKeyboard(input: KeyboardMeasureInput): KeyboardMeasuremen
   if (viewport && !zoomed) {
     visibleTop = Math.max(0, viewport.offsetTop);
     candidates.push(viewport.offsetTop + viewport.height);
+    // iOS pans instead of shrinking the layout: offsetTop rises by the same
+    // amount the visual viewport loses, so offsetTop+height stays at the
+    // layout bottom and the keyboard looks closed. The covered screen height
+    // is layoutHeight − visualViewport.height.
+    const covered = Math.max(0, input.layoutHeight - viewport.height);
+    if (covered > 0) candidates.push(Math.max(0, baseline - covered));
   }
   const visibleBottom = Math.max(0, Math.round(Math.min(...candidates)));
   const inset = Math.max(0, Math.round(baseline - visibleBottom));
@@ -81,7 +87,13 @@ export function nextBaselineHeight(
   const viewport = input.viewport;
   if (viewport && Math.abs(viewport.scale - 1) <= 0.01) {
     const hidden = input.layoutHeight - (viewport.offsetTop + viewport.height);
-    if (hidden >= KEYBOARD_OPEN_THRESHOLD_PX) return previous;
+    const covered = input.layoutHeight - viewport.height;
+    if (
+      hidden >= KEYBOARD_OPEN_THRESHOLD_PX ||
+      covered >= KEYBOARD_OPEN_THRESHOLD_PX
+    ) {
+      return previous;
+    }
   }
   return input.layoutHeight > 0 ? input.layoutHeight : previous;
 }
@@ -176,6 +188,16 @@ function start(loadSource: KeyboardSourceLoader): () => void {
   viewport?.addEventListener("scroll", sync);
   window.addEventListener("resize", sync);
   window.addEventListener("orientationchange", sync);
+  // iOS often updates the visual viewport a frame after focus, and sometimes
+  // never fires resize when the keyboard only overlays the WebView.
+  const onFocusChange = () => {
+    sync();
+    requestAnimationFrame(sync);
+    window.setTimeout(sync, 60);
+    window.setTimeout(sync, 280);
+  };
+  document.addEventListener("focusin", onFocusChange);
+  document.addEventListener("focusout", onFocusChange);
 
   void loadSource().then(async (source) => {
     if (!source || stopped) return;
@@ -213,6 +235,8 @@ function start(loadSource: KeyboardSourceLoader): () => void {
     viewport?.removeEventListener("scroll", sync);
     window.removeEventListener("resize", sync);
     window.removeEventListener("orientationchange", sync);
+    document.removeEventListener("focusin", onFocusChange);
+    document.removeEventListener("focusout", onFocusChange);
     for (const handle of handles) void handle.remove();
     publish({ inset: 0, visibleTop: 0, visibleBottom: window.innerHeight, open: false });
   };
