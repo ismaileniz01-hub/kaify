@@ -53,7 +53,8 @@ import {
   readNativeEntrySession,
 } from "@/lib/native/native-entry-boot";
 
-const SESSION_GET_TIMEOUT_MS = 4_000;
+/** How long to wait for getSession before asking /api/session. WKWebView locks can sit for seconds. */
+const SESSION_GET_TIMEOUT_MS = 250;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   return new Promise((resolve) => {
@@ -299,18 +300,35 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     });
 
     void (async () => {
-      const { data } = await withTimeout(
-        supabase.auth.getSession(),
+      const hinted =
+        hasBrowserAuthCookie() ||
+        hasNativeHandoffClient() ||
+        Boolean(readNativeEntryAccessToken());
+      if (hinted) {
+        void refreshSession();
+        return;
+      }
+      let settled = false;
+      const result = await withTimeout(
+        supabase.auth.getSession().then((value) => {
+          settled = true;
+          return value;
+        }),
         SESSION_GET_TIMEOUT_MS,
-        { data: { session: null }, error: null },
+        null,
       );
       if (cancelled) return;
       if (
-        data.session ||
+        result?.data.session ||
         hasBrowserAuthCookie() ||
         consumeNativeEntryHandoff() ||
         readNativeEntryAccessToken()
       ) {
+        void refreshSession();
+        return;
+      }
+      if (!settled) {
+        // Cookie is httpOnly, or getSession is still locked. Do not paint Joe.
         void refreshSession();
         return;
       }
@@ -396,13 +414,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return result;
   }, []);
 
-  const displayName = useMemo(
-    () =>
-      isAuthenticated && profile?.displayName
-        ? profile.displayName
-        : home?.displayName ?? DEMO_USER_NAME,
-    [isAuthenticated, profile, home],
-  );
+  const displayName = useMemo(() => {
+    if (isAuthenticated && profile?.displayName) return profile.displayName;
+    if (isLoading) return "";
+    return home?.displayName ?? DEMO_USER_NAME;
+  }, [isAuthenticated, isLoading, profile, home]);
 
   const authValue = useMemo<SessionAuthValue>(
     () => ({

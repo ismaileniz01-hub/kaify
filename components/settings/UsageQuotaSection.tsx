@@ -19,6 +19,7 @@ function UsageBar({
   limit,
   warning,
   warningLabel,
+  showCounts = true,
 }: {
   label: string;
   percent: number;
@@ -26,24 +27,28 @@ function UsageBar({
   limit: number;
   warning?: string | null;
   warningLabel?: string;
+  /** Token usage is a percentage. Photo quotas still show the count. */
+  showCounts?: boolean;
 }) {
   const { t, lang } = useLang();
-  const pct = Math.min(100, Math.max(0, percent));
+  const pct = Math.min(100, Math.max(0, Math.round(percent)));
   const color =
     pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-purple-500";
 
   return (
     <div>
-      <div className="mb-1 flex justify-between text-xs">
-        <span className="text-zinc-400">{label}</span>
-        <span className="font-medium text-zinc-300">%{pct}</span>
+      <div className="mb-1 flex items-baseline justify-between gap-3 text-xs">
+        <span className="min-w-0 text-zinc-400">{label}</span>
+        <span className="shrink-0 font-semibold tabular-nums text-zinc-200">{pct}%</span>
       </div>
-      <p className="mb-1 text-[10px] text-zinc-500">
-        {t("usage.used_of", {
-          used: formatNumber(used, lang),
-          limit: formatNumber(limit, lang),
-        })}
-      </p>
+      {showCounts ? (
+        <p className="mb-1 text-[10px] text-zinc-500">
+          {t("usage.used_of", {
+            used: formatNumber(used, lang),
+            limit: formatNumber(limit, lang),
+          })}
+        </p>
+      ) : null}
       <div
         className="h-1.5 overflow-hidden rounded-full bg-white/10"
         role="progressbar"
@@ -51,7 +56,7 @@ function UsageBar({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(pct)}
-        aria-valuetext={`${formatNumber(used, lang)} / ${formatNumber(limit, lang)}`}
+        aria-valuetext={showCounts ? `${formatNumber(used, lang)} / ${formatNumber(limit, lang)}` : `${pct}%`}
       >
         <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
@@ -110,6 +115,7 @@ export function UsageQuotaSection() {
           percent={usage.textTokens.percent}
           used={usage.textTokens.used}
           limit={usage.textTokens.limit}
+          showCounts={false}
           warning={usage.textTokens.warning}
           warningLabel={
             usage.textTokens.warning === "LIMIT_100"

@@ -3,6 +3,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { TERMS_DOCUMENT_TR } from "@/lib/legal/documents/terms-tr";
 import { COOKIES_DOCUMENT_TR } from "@/lib/legal/documents/cookies-tr";
+import { SUPPORTED_LOCALES } from "@/lib/i18n/dictionary";
+import { LOCALE_PICKER_OPTIONS } from "@/lib/i18n/locale-picker";
 import {
   REVIEWED_LANG_CODES,
   REVIEWED_LANG_OPTIONS,
@@ -130,7 +132,7 @@ describe("EN/TR localization quality", () => {
     expect(untranslated).toEqual([]);
   });
 
-  it("exposes only production-ready reviewed locales in the picker", () => {
+  it("keeps the quality gate on reviewed locales and lists every dictionary in the picker", () => {
     expect(REVIEWED_LANG_CODES).toEqual([
       "tr",
       "en",
@@ -142,14 +144,18 @@ describe("EN/TR localization quality", () => {
       "it",
       "ar",
     ]);
-    for (const incomplete of ["pt", "nl", "pl", "ru", "ko", "zh-CN", "ja"]) {
-      expect(REVIEWED_LANG_CODES).not.toContain(incomplete);
-    }
     const source = readFileSync(
       join(process.cwd(), "lib", "lang-context.tsx"),
       "utf8",
     );
-    expect(source).toContain("REVIEWED_LANG_OPTIONS");
+    expect(source).toContain("LOCALE_PICKER_OPTIONS");
+    expect(LOCALE_PICKER_OPTIONS.map((option) => option.code)).toEqual([
+      ...SUPPORTED_LOCALES,
+    ]);
+    expect(LOCALE_PICKER_OPTIONS.length).toBeGreaterThan(50);
+    for (const option of LOCALE_PICKER_OPTIONS) {
+      expect(option.label).toMatch(/\p{Regional_Indicator}{2}/u);
+    }
   });
 
   it("requires every reviewed non-English locale to pass corpus completeness", () => {

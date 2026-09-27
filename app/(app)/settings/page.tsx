@@ -513,6 +513,27 @@ export default function SettingsPage() {
             </h2>
             <div className="overflow-hidden rounded-2xl border border-white/5 bg-white/[0.03]">
               {group.items.map((item, ii) => {
+                if (item.label === "settings.billing" && native) {
+                  return (
+                    <div
+                      key={item.label}
+                      className="flex items-start gap-3 border-b border-white/5 px-4 py-3.5"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5">
+                        <item.icon className="h-4 w-4 text-zinc-400" strokeWidth={1.5} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-white">{t(item.label)}</p>
+                        <p className="mt-0.5 text-[11px] leading-snug text-zinc-500">
+                          {t(item.description)}
+                        </p>
+                        <p className="mt-1.5 text-[11px] leading-snug text-zinc-400">
+                          {t("myaccount.billing_on_website")}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
                 const navigableHref =
                   item.type === "link" &&
                   item.href &&
@@ -596,9 +617,9 @@ export default function SettingsPage() {
                           aria-expanded={langPickerOpen}
                           aria-haspopup="listbox"
                           aria-label={t("settings.language")}
-                          className="touch-44 flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-zinc-200 transition-all hover:border-white/20 hover:bg-white/[0.06]"
+                          className="touch-44 flex max-w-[9.5rem] items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-zinc-200 transition-all hover:border-white/20 hover:bg-white/[0.06]"
                         >
-                          <span>{currentLangLabel}</span>
+                          <span className="truncate">{currentLangLabel}</span>
                           <svg
                             className={`h-3.5 w-3.5 text-zinc-500 transition-transform ${langPickerOpen ? "rotate-180" : ""}`}
                             fill="none"
@@ -620,7 +641,7 @@ export default function SettingsPage() {
                                 setLangSearch("");
                               }}
                             />
-                            <div className="fixed start-1/2 top-1/2 z-50 max-h-[70vh] w-[320px] -translate-x-1/2 -translate-y-1/2 animate-in overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/95 shadow-2xl shadow-black/50 backdrop-blur-xl">
+                            <div className="fixed start-1/2 top-1/2 z-50 max-h-[min(70dvh,36rem)] w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 animate-in overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/95 shadow-2xl shadow-black/50 backdrop-blur-xl">
                               <div className="relative border-b border-white/5 px-3 py-2.5">
                                 <Search className="absolute left-5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
                                 <input
@@ -632,7 +653,7 @@ export default function SettingsPage() {
                                   className="w-full rounded-lg border border-white/5 bg-white/[0.03] py-1.5 pl-7 pr-2 text-xs text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-purple-500/40"
                                 />
                               </div>
-                              <div className="max-h-[280px] overflow-y-auto overscroll-contain py-1">
+                              <div className="max-h-[min(60dvh,28rem)] overflow-y-auto overscroll-contain py-1">
                                 {filteredLangs.length === 0 ? (
                                   <div className="px-4 py-6 text-center text-xs text-zinc-600">
                                     {t("settings.lang_not_found")}
@@ -701,11 +722,7 @@ export default function SettingsPage() {
                           {logoutLoading ? "…" : t(item.value || "")}
                         </button>
                       ) : item.label === "settings.billing" ? (
-                        native ? (
-                          <span className="max-w-[12rem] text-right text-[10px] leading-snug text-zinc-400">
-                            {t("myaccount.billing_on_website")}
-                          </span>
-                        ) : (
+                        native ? null : (
                         <button
                           type="button"
                           onClick={() => void openPortal()}

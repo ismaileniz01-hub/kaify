@@ -4183,12 +4183,19 @@ html:not([data-theme="light"]) .text-zinc-600 {
 
 .account-btn {
   display: inline-flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   border-radius: 0.875rem;
   padding: 0.75rem 1.25rem;
   font-size: 0.875rem;
   font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
   transition: all 0.2s;
 }
 
@@ -4217,7 +4224,7 @@ html:not([data-theme="light"]) .text-zinc-600 {
 
 .account-stat {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.875rem;
   padding: 1rem 1.125rem;
   border-radius: 1rem;
@@ -4235,9 +4242,14 @@ html:not([data-theme="light"]) .text-zinc-600 {
 
 .account-stat__value {
   margin-top: 0.125rem;
+  overflow-wrap: anywhere;
   font-size: 1.125rem;
   font-weight: 700;
   color: #fafafa;
+}
+
+.account-stat > div {
+  min-width: 0;
 }
 
 .account-info-row {

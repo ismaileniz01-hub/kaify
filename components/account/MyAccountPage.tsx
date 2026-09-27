@@ -527,7 +527,7 @@ export function MyAccountPage() {
                   </div>
                 ) : null}
 
-                <div className="flex flex-col gap-3 border-t border-white/8 px-6 py-6 sm:flex-row sm:flex-wrap sm:px-10">
+                <div className="flex flex-col gap-3 border-t border-white/8 px-6 py-6 sm:px-10">
                   {hasPlan ? (
                     <Link href="/welcome" className="account-btn account-btn--primary flex-1 justify-center">
                       {t("myaccount.open_app")}

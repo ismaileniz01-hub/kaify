@@ -13,10 +13,15 @@ describe("phase 3–4 chrome contract", () => {
     );
   });
 
-  it("puts gem and freezie in one chip and parks overflow actions in a menu", () => {
+  it("puts gem and freezie in one chip and the leaderboard button beside it", () => {
     const welcome = read("app/(app)/welcome/page.tsx");
     expect(welcome).toContain("<BalanceChip");
+    const chip = welcome.indexOf("<BalanceChip");
+    const board = welcome.indexOf('href="/leaderboard"');
+    expect(board).toBeGreaterThan(chip);
+    expect(welcome).toContain('aria-label={t("nav.leaderboard")}');
     expect(welcome).toContain("<HeaderMenu");
+    expect(welcome).not.toContain('href: "/leaderboard"');
     expect(welcome).not.toContain("<GemBalance");
     expect(welcome).not.toContain("<FreezieBalance");
     expect(read("app/(app)/streak/page.tsx")).toContain("<BalanceChip");

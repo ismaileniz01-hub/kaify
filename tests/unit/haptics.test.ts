@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/native/platform", () => ({
@@ -40,5 +42,13 @@ describe("haptics", () => {
     });
     await hapticSelection();
     expect(isNativePlatform).not.toHaveBeenCalled();
+  });
+
+  it("binds a tap on every control in the app shell", () => {
+    const shell = readFileSync(join(process.cwd(), "components/CapacitorShell.tsx"), "utf8");
+    const press = readFileSync(join(process.cwd(), "lib/native/press-haptics.ts"), "utf8");
+    expect(shell).toContain("bindPressHaptics()");
+    expect(press).toContain("hapticImpact(\"light\")");
+    expect(press).toContain("button, a, select");
   });
 });

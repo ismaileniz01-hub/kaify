@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { BarChart3, Flame, Globe, MessageCircle, Settings, ShoppingCart, User } from "lucide-react";
+import { BarChart3, Flame, MessageCircle, Settings, ShoppingCart, Trophy, User } from "lucide-react";
 import { BalanceChip } from "@/components/navigation/BalanceChip";
 import { HeaderMenu } from "@/components/navigation/HeaderMenu";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
@@ -151,14 +151,20 @@ function WelcomeContent() {
               freezies={streak.freezieBalance}
               animate
             />
+            <Link
+              href="/leaderboard"
+              prefetch
+              className="app-header__action"
+              aria-label={t("nav.leaderboard")}
+              onClick={() => {
+                void hapticSelection();
+              }}
+            >
+              <Trophy className="h-4 w-4 text-amber-400" />
+            </Link>
             <NotificationCenter />
             <HeaderMenu
               items={[
-                {
-                  href: "/leaderboard",
-                  label: t("nav.leaderboard"),
-                  icon: <Globe className="h-4 w-4 text-amber-400" />,
-                },
                 {
                   href: "/settings",
                   label: t("nav.settings"),

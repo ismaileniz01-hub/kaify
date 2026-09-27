@@ -2,10 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import enFallback from "@/lib/lang/en.json";
-import {
-  REVIEWED_LANG_OPTIONS,
-  type ReviewedLangOption,
-} from "@/lib/i18n/reviewed-locales";
+import { LOCALE_PICKER_OPTIONS, type LocalePickerOption } from "@/lib/i18n/locale-picker";
 import type { LangCode } from "@/lib/lang-context-types";
 import {
   detectLangFromNavigator,
@@ -14,10 +11,10 @@ import {
 
 export type { LangCode } from "@/lib/lang-context-types";
 
-export type LangOption = ReviewedLangOption;
+export type LangOption = LocalePickerOption;
 
-// Faz 3: öncelikli market dilleri MT QA sonrası seçicide açık.
-export const LANG_OPTIONS: LangOption[] = REVIEWED_LANG_OPTIONS;
+/** Every shipped locale, flag included. Quality gates stay on the reviewed subset. */
+export const LANG_OPTIONS: LangOption[] = [...LOCALE_PICKER_OPTIONS];
 
 export type UnitSystem = "metric" | "imperial";
 

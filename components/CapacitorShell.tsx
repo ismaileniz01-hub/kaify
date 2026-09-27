@@ -20,6 +20,7 @@ import {
   type KeyboardEventSource,
 } from "@/lib/native/keyboard-inset";
 import { bindKeyboardReveal } from "@/lib/native/keyboard-reveal";
+import { bindPressHaptics } from "@/lib/native/press-haptics";
 
 function statusBarStyleForTheme(): "DARK" | "LIGHT" {
   if (typeof document === "undefined") return "DARK";
@@ -36,6 +37,7 @@ export function CapacitorShell() {
   useAppBackStack();
 
   useEffect(() => {
+    const releasePressHaptics = bindPressHaptics();
     let removeListeners: (() => void) | undefined;
 
     void (async () => {
@@ -176,7 +178,10 @@ export function CapacitorShell() {
       }
     })();
 
-    return () => removeListeners?.();
+    return () => {
+      releasePressHaptics();
+      removeListeners?.();
+    };
   }, []);
 
   return null;

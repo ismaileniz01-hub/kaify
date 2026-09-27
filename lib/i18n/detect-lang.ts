@@ -1,4 +1,5 @@
 import type { LangCode } from "@/lib/lang-context-types";
+import { SUPPORTED_LOCALES } from "@/lib/i18n/dictionary";
 import { REVIEWED_LANG_CODES } from "@/lib/i18n/reviewed-locales";
 
 const PLACEHOLDER_COPY = new Set(["", "UNSUPPORTED_LANG"]);
@@ -49,7 +50,7 @@ export function detectLangFromNavigator(
         : navigator.language
           ? [navigator.language]
           : []);
-  return detectLangFromTags(list);
+  return detectLangFromTags(list, SUPPORTED_LOCALES);
 }
 
 export function otpLocaleForLang(lang: LangCode): "tr" | "en" {
