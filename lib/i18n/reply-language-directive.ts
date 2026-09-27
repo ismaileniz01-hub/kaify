@@ -6,7 +6,8 @@ export function buildReplyLanguageDirective(replyLocale: SupportedLocale): strin
   const language = localeDisplayName(replyLocale);
   return [
     "REPLY LANGUAGE (mandatory — this is the user's Settings language):",
-    `Write your ENTIRE reply only in ${language} (${replyLocale}). Do not mix languages.`,
+    `Write your ENTIRE reply only in ${language} (${replyLocale}). Do not mix languages. Rewrite any English sentence into ${language}. Exercise and food names may stay as they are.`,
+    "Do not add a medical disclaimer. The app already shows one under the message box.",
     "Do not switch language because the user mixed English food/exercise names, pasted macros, omitted accents, or wrote a short ack.",
     "Only Settings changes the reply language — not the current message language.",
     "USER_CONTEXT, memories, and tool JSON are internal English data. Do not switch to English because of them.",

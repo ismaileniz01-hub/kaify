@@ -1,3 +1,4 @@
+import { isReplyLanguageMismatch } from "@/lib/i18n/reply-language-guard";
 import {
   isUsableCoachReply,
   sanitizeCoachVisibleText,
@@ -63,8 +64,18 @@ export function resolvePhotoCoachSummary(input: {
     input.locale,
     input.coachId,
   );
-  if (isUsableCoachReply(sanitized)) return sanitized;
-  if (isUsableCoachReply(input.summary)) return input.summary;
+  if (
+    isUsableCoachReply(sanitized) &&
+    !isReplyLanguageMismatch(sanitized, input.locale)
+  ) {
+    return sanitized;
+  }
+  if (
+    isUsableCoachReply(input.summary) &&
+    !isReplyLanguageMismatch(input.summary, input.locale)
+  ) {
+    return input.summary;
+  }
   return fallbackPhotoSummaryFromAnalysis(
     input.analysis,
     input.locale,

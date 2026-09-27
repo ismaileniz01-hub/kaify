@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { splitChatInlineBold } from "@/lib/chat/inline-bold";
 import { coachVisibleMessage } from "@/lib/kaios/envelope-text";
+import { stripMedicalDisclaimer } from "@/lib/kaios/coach-retry";
 import { useTypedReveal } from "@/lib/chat/typed-reveal";
 import { isNearBottom } from "@/lib/chat/scroll-anchor";
 
@@ -35,7 +36,7 @@ export function ChatMessageText({
   streaming?: boolean;
   typeIn?: boolean;
 }) {
-  const visible = coachVisibleMessage(text);
+  const visible = stripMedicalDisclaimer(coachVisibleMessage(text));
   const revealed = useTypedReveal(visible, typeIn);
   const catchingUp = typeIn && revealed !== visible;
   const pRef = useRef<HTMLParagraphElement>(null);

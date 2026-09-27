@@ -64,10 +64,33 @@ export function interpretStepAuthorization(
   return null;
 }
 
+const HEALTH_CALL_MS = 12_000;
+
+/** Plugin sheets and reads must settle. A hung native call was leaving Connect disabled. */
+function settleWithin<T>(promise: Promise<T>, ms: number): Promise<T | undefined> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(undefined), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(undefined);
+      },
+    );
+  });
+}
+
 async function stepsAuthorizationGranted(): Promise<boolean | null> {
   try {
     const Health = await loadHealthPlugin();
-    const auth = await Health.checkAuthorization({ read: ["steps"] });
+    const auth = await settleWithin(
+      Health.checkAuthorization({ read: ["steps"] }),
+      HEALTH_CALL_MS,
+    );
+    if (!auth) return null;
     return interpretStepAuthorization(auth);
   } catch {
     return null;
@@ -99,15 +122,14 @@ async function ensureStepAccess(): Promise<boolean> {
   const asked = typeof localStorage !== "undefined" && localStorage.getItem(ASKED_KEY) === "1";
   if (!asked) {
     if (typeof localStorage !== "undefined") localStorage.setItem(ASKED_KEY, "1");
-    try {
-      await Health.requestAuthorization({
+    await settleWithin(
+      Health.requestAuthorization({
         read: ["steps"],
         write: [],
         requestHistoryAccess: true,
-      });
-    } catch {
-      // The sheet can fail to open. A read still succeeds when access already exists.
-    }
+      }),
+      HEALTH_CALL_MS,
+    );
     const after = await stepsAuthorizationGranted();
     if (after === false) {
       writeConnectedFlag(false);
@@ -150,11 +172,14 @@ export async function connectHealthSteps(): Promise<HealthStepsStatus> {
   }
 
   if (typeof localStorage !== "undefined") localStorage.setItem(ASKED_KEY, "1");
-  await Health.requestAuthorization({
-    read: ["steps"],
-    write: [],
-    requestHistoryAccess: true,
-  });
+  await settleWithin(
+    Health.requestAuthorization({
+      read: ["steps"],
+      write: [],
+      requestHistoryAccess: true,
+    }),
+    HEALTH_CALL_MS,
+  );
   const granted = await stepsAuthorizationGranted();
   if (granted === false) {
     writeConnectedFlag(false);
@@ -188,14 +213,17 @@ async function syncNativeHealthStepsOnce(): Promise<number> {
 
   let aggregated: Array<{ startDate?: string; value?: number; values?: { sum?: number } }> = [];
   try {
-    const result = await Health.queryAggregated({
-      dataType: "steps",
-      startDate: range.startIso,
-      endDate: range.endIso,
-      bucket: "day",
-      aggregation: "sum",
-    });
-    aggregated = result.samples ?? [];
+    const result = await settleWithin(
+      Health.queryAggregated({
+        dataType: "steps",
+        startDate: range.startIso,
+        endDate: range.endIso,
+        bucket: "day",
+        aggregation: "sum",
+      }),
+      HEALTH_CALL_MS,
+    );
+    aggregated = result?.samples ?? [];
   } catch {
     aggregated = [];
   }
@@ -203,14 +231,17 @@ async function syncNativeHealthStepsOnce(): Promise<number> {
   let raw: Array<{ startDate?: string; value?: number }> = [];
   if (pickStepSamples(aggregated, []).length === 0) {
     try {
-      const result = await Health.readSamples({
-        dataType: "steps",
-        startDate: range.startIso,
-        endDate: range.endIso,
-        limit: 5000,
-        ascending: true,
-      });
-      raw = result.samples ?? [];
+      const result = await settleWithin(
+        Health.readSamples({
+          dataType: "steps",
+          startDate: range.startIso,
+          endDate: range.endIso,
+          limit: 5000,
+          ascending: true,
+        }),
+        HEALTH_CALL_MS,
+      );
+      raw = result?.samples ?? [];
     } catch {
       raw = [];
     }

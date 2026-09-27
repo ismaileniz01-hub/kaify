@@ -77,6 +77,18 @@ export function looksLikeUnsafeCoachText(text: string): boolean {
   return false;
 }
 
+const MEDICAL_DISCLAIMER_LINE =
+  /^.*(?:not medical advice|tıbbi tavsiye|tibbi tavsiye|tıbbi bir öneri|tibbi bir oneri|consult a (?:medical |qualified )?professional|bir sağlık profesyoneline|saglik profesyoneline|uzmana danış|uzmana danis).*$/gim;
+
+/** The composer already shows the medical notice, so coach replies must not repeat it. */
+export function stripMedicalDisclaimer(text: string): string {
+  return text
+    .replace(MEDICAL_DISCLAIMER_LINE, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 /** Spoken coach copy, or a retry line if the model leaked internals / failed. */
 export function sanitizeCoachVisibleText(
   text: string,
@@ -88,11 +100,11 @@ export function sanitizeCoachVisibleText(
   if (looksLikeUnsafeCoachText(spoken)) {
     const stripped = stripUnsafeCoachLeaks(spoken);
     if (isUsableCoachReply(stripped)) {
-      return scrubCoachLaneVoice(stripped, coachId);
+      return stripMedicalDisclaimer(scrubCoachLaneVoice(stripped, coachId));
     }
     return coachRetryLine(locale);
   }
-  return scrubCoachLaneVoice(spoken, coachId);
+  return stripMedicalDisclaimer(scrubCoachLaneVoice(spoken, coachId));
 }
 
 const LEO_NICKNAME_RE =

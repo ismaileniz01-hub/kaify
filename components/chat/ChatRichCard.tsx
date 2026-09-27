@@ -6,6 +6,7 @@ import { CONTACTS } from "@/lib/contacts";
 import { useLang } from "@/lib/lang-context";
 import type { MessageType } from "@/lib/types/database.types";
 import { WorkoutPlanCard } from "@/components/chat/WorkoutPlanCard";
+import { extractPhysiqueFromLeoPayload } from "@/lib/kaios/context/physique-summary";
 import {
   displayPlanLabel,
   unwrapChatCardPayload,
@@ -22,26 +23,26 @@ type ChatRichCardProps = {
 const SCORE_COLORS = ["#ef4444", "#f59e0b", "#3b82f6", "#22c55e", "#a855f7", "#ec4899"];
 
 function scorePayloadToAnalysis(payload: Record<string, unknown>) {
-  const analysis = (payload.analysis ?? payload) as Record<string, unknown>;
-  const rawScores = (analysis.scores ?? {}) as Record<string, unknown>;
+  const physique = extractPhysiqueFromLeoPayload(payload);
+  const rawScores = physique?.scores ?? {};
   // Muscle scores are on a 0-100 scale (see vision prompt). Keep only numeric
   // entries and clamp defensively so a stray value never breaks the bars.
   const categories = Object.entries(rawScores)
     .filter(([, v]) => typeof v === "number" && Number.isFinite(v))
     .map(([key, score], i) => ({
       key: `analysis.${key}`,
-      score: Math.min(100, Math.max(0, score as number)),
+      score: Math.min(100, Math.max(0, score)),
       maxScore: 100,
       color: SCORE_COLORS[i % SCORE_COLORS.length],
     }));
-  const overallRaw = analysis.overall_score;
   const values = categories.map((c) => c.score);
   const overallScore =
-    typeof overallRaw === "number" && Number.isFinite(overallRaw)
-      ? Math.round(Math.min(100, Math.max(0, overallRaw)))
+    physique?.overall != null
+      ? Math.round(Math.min(100, Math.max(0, physique.overall)))
       : values.length > 0
         ? Math.round(values.reduce((a, b) => a + b, 0) / values.length)
         : 0;
+  const analysis = (payload.analysis ?? payload) as Record<string, unknown>;
   return {
     overallScore,
     categories,
@@ -149,7 +150,10 @@ export function ChatRichCard({
     );
   }
 
-  if (messageType === "score") {
+  if (
+    messageType === "score" ||
+    (messageType === "photo_analysis" && extractPhysiqueFromLeoPayload(p))
+  ) {
     const a = scorePayloadToAnalysis(p);
     return (
       <div

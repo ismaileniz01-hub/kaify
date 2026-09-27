@@ -17,6 +17,7 @@ import { ChatRichCard } from "@/components/chat/ChatRichCard";
 import { ChatPinnedBanner } from "@/components/chat/ChatPinnedBanner";
 import { AnalyticsConfirmationCard } from "@/components/chat/AnalyticsConfirmationCard";
 import { ChatMessageText } from "@/components/chat/ChatMessageText";
+import { stripWrittenScoreDump } from "@/lib/chat/score-message-text";
 import { InlineAlert } from "@/components/InlineAlert";
 import { EmptyState } from "@/components/EmptyState";
 import { CoachStarterChips } from "@/components/chat/CoachStarterChips";
@@ -64,6 +65,7 @@ import {
 } from "@/lib/chat/offline-queue";
 import {
   findLatestPinnableMessage,
+  isLeoAnalysisMessage,
   pinnedCardMetric,
 } from "@/lib/chat/pinned-card";
 
@@ -89,6 +91,10 @@ type LiveMessage = {
   /** This-session message — coach copy types in instead of popping. */
   fresh?: boolean;
 };
+
+function isLeoScoreMessage(msg: LiveMessage): boolean {
+  return isLeoAnalysisMessage(msg);
+}
 
 type LiveChatPanelProps = {
   coachId: ContactId;
@@ -994,10 +1000,12 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   );
   const pinnedId = pinned?.id ?? null;
   const pinnedFresh = Boolean(pinned?.fresh);
-  // A plan/score that just arrived is not repeated in the thread, so show it.
+  // Leo's score chart lives in this banner. Keep it open so the bars are on
+  // screen instead of only the written summary in the thread.
   useEffect(() => {
-    if (pinnedId && pinnedFresh) setPinOpen(true);
-  }, [pinnedId, pinnedFresh]);
+    if (!pinnedId) return;
+    if (coachId === "leo" || pinnedFresh) setPinOpen(true);
+  }, [coachId, pinnedId, pinnedFresh]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -1220,8 +1228,20 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                               />
                             </div>
                           ) : null}
+                          {isCoach && !isStreamingText && isLeoScoreMessage(msg) ? (
+                            <ChatRichCard
+                              contactId={coachId}
+                              messageType={msg.messageType ?? "score"}
+                              payload={msg.payload ?? {}}
+                              fallbackText={msg.text}
+                            />
+                          ) : null}
                           <ChatMessageText
-                            text={msg.text}
+                            text={
+                              isCoach && isLeoScoreMessage(msg)
+                                ? stripWrittenScoreDump(msg.text)
+                                : msg.text
+                            }
                             streaming={isStreamingText}
                             typeIn={isCoach && Boolean(msg.fresh)}
                           />
@@ -1322,7 +1342,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                             }}
                           />
                         ) : null}
-                        {isCoach && !msg.streaming && msg.id !== pinnedId ? (
+                        {isCoach && !msg.streaming && msg.id !== pinnedId && !isLeoScoreMessage(msg) ? (
                           <ChatRichCard
                             contactId={coachId}
                             messageType={msg.messageType ?? "text"}

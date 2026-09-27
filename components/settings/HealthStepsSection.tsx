@@ -30,6 +30,7 @@ export function HealthStepsSection() {
   const handleConnect = async () => {
     setBusy(true);
     setMessage(null);
+    const release = window.setTimeout(() => setBusy(false), 20_000);
     try {
       const next = await connectHealthSteps();
       setStatus(next);
@@ -40,6 +41,7 @@ export function HealthStepsSection() {
       setStatus("denied");
       setMessage(t("health.steps.denied"));
     } finally {
+      window.clearTimeout(release);
       setBusy(false);
     }
   };
