@@ -109,6 +109,14 @@ function resolveMutationIdempotencyKey(
 }
 
 const FETCH_TIMEOUT_MS = 12_000;
+/** Maya/Leo vision + coach synthesis. Server maxDuration is 120s. */
+export const ANALYZE_FETCH_TIMEOUT_MS = 110_000;
+
+type ApiFetchOptions = {
+  timeoutMs?: number;
+  /** Dropped connections are not sent again. Photo analysis must not run twice. */
+  retry?: boolean;
+};
 
 function isAbortLike(error: unknown): boolean {
   if (typeof DOMException !== "undefined" && error instanceof DOMException) {
@@ -131,9 +139,9 @@ function isLikelyNetworkFailure(error: unknown): boolean {
   return false;
 }
 
-function abortSignalWithTimeout(user?: AbortSignal): AbortSignal {
+function abortSignalWithTimeout(user: AbortSignal | undefined, timeoutMs: number): AbortSignal {
   const controller = new AbortController();
-  globalThis.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  globalThis.setTimeout(() => controller.abort(), timeoutMs);
   if (!user) return controller.signal;
   if (typeof AbortSignal.any === "function") {
     return AbortSignal.any([controller.signal, user]);
@@ -145,6 +153,7 @@ function abortSignalWithTimeout(user?: AbortSignal): AbortSignal {
 export async function apiFetch<T>(
   path: string,
   init?: RequestInit,
+  options?: ApiFetchOptions,
 ): Promise<ApiResponseBody<T>> {
   const method = (init?.method ?? "GET").toUpperCase();
   const idempotent = isIdempotentMethod(method);
@@ -156,11 +165,22 @@ export async function apiFetch<T>(
   if (idempotencyKey) {
     baseHeaders[IDEMPOTENCY_HEADER] = idempotencyKey;
   }
-  const signal = abortSignalWithTimeout(init?.signal ?? undefined);
+  const signal = abortSignalWithTimeout(
+    init?.signal ?? undefined,
+    options?.timeoutMs ?? FETCH_TIMEOUT_MS,
+  );
   const nativeBearer = nativeBearerFrom(baseHeaders);
 
   try {
-    const body = await sendApiRequest<T>(path, init, method, baseHeaders, signal, idempotent);
+    const body = await sendApiRequest<T>(
+      path,
+      init,
+      method,
+      baseHeaders,
+      signal,
+      idempotent,
+      options?.retry !== false,
+    );
     if (!nativeBearer || body.success || body.error.code !== "UNAUTHORIZED") {
       return body;
     }
@@ -182,6 +202,7 @@ export async function apiFetch<T>(
       { ...baseHeaders, Authorization: `Bearer ${retryToken}` },
       signal,
       idempotent,
+      options?.retry !== false,
     );
   } catch (error) {
     if (isLikelyNetworkFailure(error)) {
@@ -204,6 +225,7 @@ async function sendApiRequest<T>(
   headers: Record<string, string>,
   signal: AbortSignal,
   idempotent: boolean,
+  retry: boolean,
 ): Promise<ApiResponseBody<T>> {
   return withRetry(
     async () => {
@@ -229,7 +251,7 @@ async function sendApiRequest<T>(
       return json;
     },
     {
-      retries: idempotent ? 2 : 1,
+      retries: retry ? (idempotent ? 2 : 1) : 0,
       baseDelayMs: 200,
       maxDelayMs: 1500,
       signal,
@@ -254,12 +276,17 @@ export async function apiPost<T>(
   path: string,
   payload?: unknown,
   headers?: HeadersInit,
+  options?: ApiFetchOptions,
 ): Promise<T> {
-  const body = await apiFetch<T>(path, {
-    method: "POST",
-    body: payload !== undefined ? JSON.stringify(payload) : undefined,
-    headers,
-  });
+  const body = await apiFetch<T>(
+    path,
+    {
+      method: "POST",
+      body: payload !== undefined ? JSON.stringify(payload) : undefined,
+      headers,
+    },
+    options,
+  );
   if (!body.success) {
     throw new ApiClientError(body.error.code, body.error.message, body.error.details);
   }

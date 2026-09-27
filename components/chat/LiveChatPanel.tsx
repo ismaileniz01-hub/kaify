@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type Ref } from "react";
 import {
+  ANALYZE_FETCH_TIMEOUT_MS,
   streamChatMessage,
   apiGet,
   apiPost,
@@ -851,6 +852,9 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
         ...(PERSISTED_ID_RE.test(photoUserId)
           ? { clientMessageId: photoUserId }
           : {}),
+      }, undefined, {
+        timeoutMs: ANALYZE_FETCH_TIMEOUT_MS,
+        retry: false,
       });
 
       if (isAnalyzeQuotaDenied(analysis)) {

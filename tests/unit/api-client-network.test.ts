@@ -60,4 +60,25 @@ describe("apiFetch NETWORK taxonomy", () => {
     expect(src).toContain("GET_SESSION_HEADER_TIMEOUT_MS = 800");
     expect(src).toContain("hasNativeHandoffClient");
   });
+
+  it("does not resend photo analysis after a dropped connection", async () => {
+    fetchMock.mockRejectedValue(new DOMException("The operation was aborted.", "AbortError"));
+
+    await expect(
+      apiFetch(
+        "/api/chat/leo/analyze",
+        { method: "POST", body: "{}" },
+        { timeoutMs: 110_000, retry: false },
+      ),
+    ).rejects.toMatchObject({ code: "NETWORK" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits long enough for Leo and Maya photo analysis", () => {
+    const client = readFileSync(join(process.cwd(), "lib/api/client.ts"), "utf8");
+    const panel = readFileSync(join(process.cwd(), "components/chat/LiveChatPanel.tsx"), "utf8");
+    expect(client).toContain("ANALYZE_FETCH_TIMEOUT_MS = 110_000");
+    expect(panel).toContain("timeoutMs: ANALYZE_FETCH_TIMEOUT_MS");
+    expect(panel).toContain("retry: false");
+  });
 });
