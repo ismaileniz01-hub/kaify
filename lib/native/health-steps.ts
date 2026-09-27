@@ -2,7 +2,12 @@
 
 import { apiPost } from "@/lib/api/client";
 import { notifyAnalyticsUpdated } from "@/lib/analytics-client-cache";
-import { aggregateStepSamples } from "@/lib/health/aggregate-samples";
+import {
+  aggregateStepSamples,
+  localDateKeyFromIso,
+  pickStepSamples,
+  stepReadWindow,
+} from "@/lib/health/aggregate-samples";
 import { getNativePlatform, isNativePlatform } from "@/lib/native/platform";
 
 const CONNECTED_KEY = "kaify:health-steps-connected";
@@ -89,27 +94,29 @@ async function ensureStepAccess(): Promise<boolean> {
     return true;
   }
 
-  const platform = await getNativePlatform();
+  // Not determined. Ask once, then read on both platforms. An empty status is
+  // not a denial: iOS hides the grant, and Android does the same until answered.
   const asked = typeof localStorage !== "undefined" && localStorage.getItem(ASKED_KEY) === "1";
   if (!asked) {
     if (typeof localStorage !== "undefined") localStorage.setItem(ASKED_KEY, "1");
-    await Health.requestAuthorization({
-      read: ["steps"],
-      write: [],
-      requestHistoryAccess: true,
-    });
+    try {
+      await Health.requestAuthorization({
+        read: ["steps"],
+        write: [],
+        requestHistoryAccess: true,
+      });
+    } catch {
+      // The sheet can fail to open. A read still succeeds when access already exists.
+    }
     const after = await stepsAuthorizationGranted();
     if (after === false) {
       writeConnectedFlag(false);
       return false;
     }
-    writeConnectedFlag(true);
-    return true;
   }
 
-  // Already asked. iOS still hides the grant, so try a read.
-  if (platform === "ios" || readConnectedFlag()) return true;
-  return false;
+  writeConnectedFlag(true);
+  return true;
 }
 
 export async function getHealthStepsStatus(): Promise<HealthStepsStatus> {
@@ -126,10 +133,7 @@ export async function getHealthStepsStatus(): Promise<HealthStepsStatus> {
       writeConnectedFlag(false);
       return "denied";
     }
-    if (granted === true) return "connected";
-    if (readConnectedFlag() || (await getNativePlatform()) === "ios") {
-      return readConnectedFlag() ? "connected" : "disconnected";
-    }
+    if (granted === true || readConnectedFlag()) return "connected";
     return "disconnected";
   } catch {
     return "unavailable";
@@ -162,7 +166,17 @@ export async function connectHealthSteps(): Promise<HealthStepsStatus> {
   return "connected";
 }
 
-export async function syncNativeHealthSteps(): Promise<number> {
+let syncInFlight: Promise<number> | null = null;
+
+export function syncNativeHealthSteps(): Promise<number> {
+  if (syncInFlight) return syncInFlight;
+  syncInFlight = syncNativeHealthStepsOnce().finally(() => {
+    syncInFlight = null;
+  });
+  return syncInFlight;
+}
+
+async function syncNativeHealthStepsOnce(): Promise<number> {
   if (!(await isNativePlatform())) return 0;
   if (!(await ensureStepAccess())) return 0;
 
@@ -170,39 +184,42 @@ export async function syncNativeHealthSteps(): Promise<number> {
   const platform = await getNativePlatform();
   const source = platform === "ios" ? "healthkit" : "google_fit";
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-  const end = new Date();
-  const start = new Date(end);
-  start.setDate(start.getDate() - 6);
-  start.setHours(0, 0, 0, 0);
+  const range = stepReadWindow(new Date(), timeZone);
 
-  let samples: Array<{ startDate: string; value: number }> = [];
+  let aggregated: Array<{ startDate?: string; value?: number; values?: { sum?: number } }> = [];
   try {
-    const aggregated = await Health.queryAggregated({
+    const result = await Health.queryAggregated({
       dataType: "steps",
-      startDate: start.toISOString(),
-      endDate: end.toISOString(),
+      startDate: range.startIso,
+      endDate: range.endIso,
       bucket: "day",
+      aggregation: "sum",
     });
-    samples = (aggregated.samples ?? []).map((sample) => ({
-      startDate: sample.startDate,
-      value: sample.value,
-    }));
+    aggregated = result.samples ?? [];
   } catch {
-    const raw = await Health.readSamples({
-      dataType: "steps",
-      startDate: start.toISOString(),
-      endDate: end.toISOString(),
-      limit: 5000,
-      ascending: true,
-    });
-    samples = (raw.samples ?? []).map((sample) => ({
-      startDate: sample.startDate,
-      value: sample.value,
-    }));
+    aggregated = [];
   }
 
+  let raw: Array<{ startDate?: string; value?: number }> = [];
+  if (pickStepSamples(aggregated, []).length === 0) {
+    try {
+      const result = await Health.readSamples({
+        dataType: "steps",
+        startDate: range.startIso,
+        endDate: range.endIso,
+        limit: 5000,
+        ascending: true,
+      });
+      raw = result.samples ?? [];
+    } catch {
+      raw = [];
+    }
+  }
+
+  const samples = pickStepSamples(aggregated, raw);
+  const todayKey = localDateKeyFromIso(new Date().toISOString(), timeZone);
   const entries = aggregateStepSamples(samples, timeZone)
-    .filter((row) => row.date >= start.toISOString().slice(0, 10))
+    .filter((row) => row.date >= range.startKey && row.steps > 0)
     .map((row) => ({
       date: row.date,
       steps: row.steps,
@@ -216,12 +233,18 @@ export async function syncNativeHealthSteps(): Promise<number> {
   }
   const uniqueEntries = [...deduped.values()];
 
+  const todaySteps = uniqueEntries.find((entry) => entry.date === todayKey)?.steps ?? 0;
   if (uniqueEntries.length === 0) return 0;
 
   await apiPost("/api/health/steps", { entries: uniqueEntries });
   notifyAnalyticsUpdated();
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(HEALTH_STEPS_SYNCED_EVENT));
-  }
+  dispatchStepsSynced(todaySteps);
   return uniqueEntries.length;
+}
+
+function dispatchStepsSynced(todaySteps: number): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent(HEALTH_STEPS_SYNCED_EVENT, { detail: { todaySteps } }),
+  );
 }

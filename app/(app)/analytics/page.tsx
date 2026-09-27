@@ -14,7 +14,7 @@ import { useLang } from "@/lib/lang-context";
 import { useSession } from "@/lib/session-context";
 import { InlineAlert } from "@/components/InlineAlert";
 import { errorToMessage } from "@/lib/i18n/api-error";
-import { formatTime } from "@/lib/i18n/format";
+import { formatNumber, formatTime } from "@/lib/i18n/format";
 import { apiGet } from "@/lib/api/client";
 import type { AnalyticsBundleDTO } from "@/lib/services/analytics.service";
 import { AppHeader } from "@/components/navigation/AppHeader";
@@ -244,6 +244,15 @@ export default function AnalyticsPage() {
           maintenanceCalories={today?.maintenanceCalories}
           onOpenHistory={today ? () => setHistoryOpen(true) : undefined}
         />
+
+        <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
+            {t("analytics.steps")}
+          </p>
+          <p className="mt-1 text-3xl font-semibold tabular-nums text-white">
+            {formatNumber(today?.steps ?? 0, lang)}
+          </p>
+        </div>
 
         <div className="mt-3">
           <WeeklyChart stepsData={data?.weeklySteps} />

@@ -18,6 +18,11 @@ import { AppHeader } from "@/components/navigation/AppHeader";
 import { hapticSelection } from "@/lib/native/haptics";
 import { FirstTaskChecklist } from "@/components/welcome/FirstTaskChecklist";
 import { GoalsEditor } from "@/components/goals/GoalsEditor";
+import { formatNumber } from "@/lib/i18n/format";
+import {
+  HEALTH_STEPS_SYNCED_EVENT,
+  syncNativeHealthSteps,
+} from "@/lib/native/health-steps";
 import { hasNativeHandoffClient } from "@/lib/native/native-entry-boot";
 import {
   looksLikeNativeWebView,
@@ -56,6 +61,7 @@ function WelcomeContent() {
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [pendingReferral, setPendingReferral] = useState<string | null>(null);
   const [nativeHandoff, setNativeHandoff] = useState(false);
+  const [todaySteps, setTodaySteps] = useState<number | null>(null);
   const { t, setLang, lang } = useLang();
   const {
     displayName,
@@ -125,6 +131,17 @@ function WelcomeContent() {
   useEffect(() => {
     if (isAuthenticated) void refreshHome(lang);
   }, [lang, isAuthenticated, refreshHome]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const onSynced = (event: Event) => {
+      const detail = (event as CustomEvent<{ todaySteps?: number }>).detail;
+      if (typeof detail?.todaySteps === "number") setTodaySteps(detail.todaySteps);
+    };
+    window.addEventListener(HEALTH_STEPS_SYNCED_EVENT, onSynced);
+    void syncNativeHealthSteps().catch(() => undefined);
+    return () => window.removeEventListener(HEALTH_STEPS_SYNCED_EVENT, onSynced);
+  }, [isAuthenticated]);
 
   return (
     <div className="phone-shell welcome-page relative flex h-dvh max-h-dvh flex-col overflow-x-hidden">
@@ -271,7 +288,11 @@ function WelcomeContent() {
               <WelcomeCard
                 href="/analytics"
                 title={t("welcome.analytics")}
-                subtitle={t("welcome.analytics.sub")}
+                subtitle={
+                  todaySteps != null && todaySteps > 0
+                    ? `${formatNumber(todaySteps, lang)} ${t("analytics.steps")}`
+                    : t("welcome.analytics.sub")
+                }
                 icon={BarChart3}
                 gradient="green"
               />

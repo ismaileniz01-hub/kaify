@@ -5,6 +5,49 @@ export type StepSample = {
 
 const MAX_DAILY_STEPS = 100_000;
 
+export type StepReadWindow = {
+  startIso: string;
+  endIso: string;
+  startKey: string;
+};
+
+/**
+ * Local last-7-days window. `endIso` is the next local midnight so an exclusive
+ * HealthKit / Health Connect end still includes every step taken today.
+ */
+export function stepReadWindow(now: Date, timeZone: string): StepReadWindow {
+  const start = new Date(now);
+  start.setDate(start.getDate() - 6);
+  start.setHours(0, 0, 0, 0);
+  const exclusiveEnd = new Date(now);
+  exclusiveEnd.setDate(exclusiveEnd.getDate() + 1);
+  exclusiveEnd.setHours(0, 0, 0, 0);
+  return {
+    startIso: start.toISOString(),
+    endIso: exclusiveEnd.toISOString(),
+    startKey: localDateKeyFromIso(start.toISOString(), timeZone),
+  };
+}
+
+export function pickStepSamples(
+  aggregated: Array<{ startDate?: string; value?: number; values?: { sum?: number } }>,
+  raw: Array<{ startDate?: string; value?: number }>,
+): StepSample[] {
+  const fromAggregated = aggregated
+    .map((sample) => ({
+      startDate: sample.startDate ?? "",
+      value: Math.round(Number(sample.value) || Number(sample.values?.sum) || 0),
+    }))
+    .filter((sample) => sample.startDate && sample.value > 0);
+  if (fromAggregated.length > 0) return fromAggregated;
+  return raw
+    .map((sample) => ({
+      startDate: sample.startDate ?? "",
+      value: Math.round(Number(sample.value) || 0),
+    }))
+    .filter((sample) => sample.startDate && sample.value > 0);
+}
+
 export function localDateKeyFromIso(iso: string, timeZone: string): string {
   try {
     return new Intl.DateTimeFormat("en-CA", {
