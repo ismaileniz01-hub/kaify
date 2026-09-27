@@ -36,9 +36,9 @@ import {
   canAttachChatPhoto,
   prepareChatPhoto,
 } from "@/lib/chat/prepare-chat-photo";
-import { errorToMessage, photoAnalysisFailureText, quotaErrorMessage, quotaResourceFromError, visionQuotaResourceFromError, isAnalyzeQuotaDenied } from "@/lib/i18n/api-error";
+import { errorToMessage, informativeFailureText, photoAnalysisFailureText, quotaErrorMessage, quotaResourceFromError, visionQuotaResourceFromError, isAnalyzeQuotaDenied } from "@/lib/i18n/api-error";
 import { useToast } from "@/components/ui/ToastProvider";
-import { coachRetryLine, isSoftCoachFailure, isUsableCoachReply } from "@/lib/kaios/coach-retry";
+import { isSoftCoachFailure, isUsableCoachReply } from "@/lib/kaios/coach-retry";
 import { ArrowDown, MessageCircle, MoreVertical, Check } from "lucide-react";
 import {
   ChatAvatarSlot,
@@ -530,7 +530,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
               const streamed = streamTextRef.current.trim();
               const kept = isUsableCoachReply(streamed)
                 ? streamed
-                : coachRetryLine(lang);
+                : informativeFailureText({ code, details }, t);
               setMessages((prev) =>
                 markMessageDelivered(
                   prev.map((msg) =>

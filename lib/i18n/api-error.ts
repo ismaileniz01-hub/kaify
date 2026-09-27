@@ -147,25 +147,60 @@ function thrownErrorMessage(error: unknown): string {
   return typeof message === "string" ? message.trim() : "";
 }
 
+const TECHNICAL_CODES = new Set([
+  "INTERNAL_ERROR",
+  "STREAM_ERROR",
+  "SERVICE_UNAVAILABLE",
+  "PROVIDER_UNAVAILABLE",
+  "ANALYSIS_UNAVAILABLE",
+  "SAVE_FAILED",
+  "AI_TIMEOUT",
+  "AI_UPSTREAM",
+  "AI_BAD_OUTPUT",
+  "AI_CONFIG",
+]);
+
+function isUserFacingSentence(message: string): boolean {
+  if (message.length < 12) return false;
+  if (/^[A-Z0-9_]+$/.test(message)) return false;
+  if (
+    /\b(INTERNAL_ERROR|STREAM_ERROR|AI_BAD_OUTPUT|AI_UPSTREAM|AI_TIMEOUT|ZodError|TOOL_RESULTS)\b/.test(
+      message,
+    )
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Tell the user what failed. A blurry photo asks for a clearer one.
+ * A provider or save fault apologizes and names it as a technical error.
+ */
+export function informativeFailureText(error: unknown, t: Translator): string {
+  const quota = quotaResourceFromError(error);
+  if (quota) return quotaErrorMessage(quota, t);
+  const code = errorCode(error);
+  if (code === "VALIDATION_ERROR") {
+    const message = thrownErrorMessage(error);
+    if (isUserFacingSentence(message)) return message;
+    return t("chat.error.photo");
+  }
+  if (code === "UNSUPPORTED_IMAGE") return t("chat.error.photoFormat");
+  if (code === "UPLOAD_TOO_LARGE") return t("chat.error.photoSize");
+  if (code === "NETWORK") return t("errors.NETWORK");
+  if (code === "STREAM_ERROR") return t("errors.STREAM_ERROR");
+  if (TECHNICAL_CODES.has(code) || !code) return t("errors.INTERNAL_ERROR");
+  return errorToMessage(error, t);
+}
+
 /**
  * Photo analyze failures must not become the spoken "say it again" retry line.
- * Blurry photos keep the server copy; provider faults use chat.error.photo.
+ * Blurry photos keep the server copy; provider faults apologize as a technical error.
  */
 export function photoAnalysisFailureText(
   error: unknown,
   t: Translator,
 ): string {
-  const code = errorCode(error);
-  if (code === "VALIDATION_ERROR") {
-    const message = thrownErrorMessage(error);
-    if (message) return message;
-  }
-  if (
-    code === "UNSUPPORTED_IMAGE" ||
-    code === "UPLOAD_TOO_LARGE" ||
-    code === "NETWORK"
-  ) {
-    return errorToMessage(error, t);
-  }
-  return t("chat.error.photo");
+  return informativeFailureText(error, t);
 }

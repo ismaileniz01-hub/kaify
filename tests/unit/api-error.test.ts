@@ -76,9 +76,15 @@ describe("photoAnalysisFailureText", () => {
     );
   });
 
-  it("uses photo-analysis copy for provider faults, not the spoken retry line", () => {
+  it("apologizes for a technical photo failure instead of a generic analysis line", () => {
     expect(
       photoAnalysisFailureText({ code: "INTERNAL_ERROR", message: "AI_BAD_OUTPUT" }, t),
-    ).toBe("L:chat.error.photo");
+    ).toBe("L:errors.INTERNAL_ERROR");
+  });
+
+  it("asks for a supported format instead of a technical apology", () => {
+    expect(
+      photoAnalysisFailureText({ code: "UNSUPPORTED_IMAGE" }, t),
+    ).toBe("L:chat.error.photoFormat");
   });
 });
