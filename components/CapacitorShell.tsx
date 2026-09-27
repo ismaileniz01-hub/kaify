@@ -38,6 +38,9 @@ export function CapacitorShell() {
 
   useEffect(() => {
     const releasePressHaptics = bindPressHaptics();
+    void import("@/lib/native/health-steps").then((mod) =>
+      mod.syncNativeHealthSteps().catch(() => undefined),
+    );
     let removeListeners: (() => void) | undefined;
 
     void (async () => {

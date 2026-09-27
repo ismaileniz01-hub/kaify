@@ -43,6 +43,12 @@ import { hasBrowserAuthCookie } from "@/lib/auth/browser-auth-hint";
 import { alreadyCheckedInOnLocalDay } from "@/lib/check-in-gate";
 import { returnToNativeLoginShell } from "@/lib/native/sign-out-native";
 import {
+  clearCachedDisplayName,
+  nameFromAccessToken,
+  readCachedDisplayName,
+  writeCachedDisplayName,
+} from "@/lib/session/cached-display-name";
+import {
   clearNativeEntryTokens,
   consumeNativeEntryHandoff,
   hasNativeHandoffClient,
@@ -152,6 +158,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     let redirectingToShell = false;
     try {
+      // Paint the name from the profile row without waiting for home, kai, and admin.
+      void apiGet<ProfileDTO>("/api/profile")
+        .then((early) => {
+          if (!early.displayName) return;
+          setIsAuthenticated(true);
+          setIsPreviewMode(false);
+          setProfile(early);
+          setUserProfile(profileDtoToUserProfile(early));
+          writeCachedDisplayName(early.displayName);
+        })
+        .catch(() => undefined);
+
       let bundle: SessionBundleDTO;
       try {
         bundle = await loadBundle();
@@ -177,6 +195,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setProfile(bundle.profile);
       setIsAdmin(bundle.isAdmin);
       setUserProfile(profileDtoToUserProfile(bundle.profile));
+      writeCachedDisplayName(bundle.profile.displayName);
       setGemBalance(bundle.gems);
       setStreak(bundle.streak);
       syncFreezieBalanceFromServer(bundle.streak.freezieBalance);
@@ -234,6 +253,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     const result = await signOutUser();
+    clearCachedDisplayName();
     applyGuestState();
     setIsLoading(false);
     setHasHydrated(true);
@@ -416,6 +436,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const displayName = useMemo(() => {
     if (isAuthenticated && profile?.displayName) return profile.displayName;
+    const immediate =
+      readCachedDisplayName() || nameFromAccessToken(readNativeEntryAccessToken());
+    if (immediate) return immediate;
     if (isLoading) return "";
     return home?.displayName ?? DEMO_USER_NAME;
   }, [isAuthenticated, isLoading, profile, home]);

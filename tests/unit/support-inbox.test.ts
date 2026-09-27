@@ -93,6 +93,43 @@ describe("support inbox", () => {
     expect(tickets[0]?.lastMessage).toBe("Uygulama açılmıyor");
   });
 
+  it("falls back to the tables when the inbox RPC returns no rows", async () => {
+    rpc.mockResolvedValue({ data: [], error: null });
+    from.mockImplementation((table: string) => {
+      if (table === "support_tickets") {
+        return thenable({
+          data: [
+            {
+              id: "t1",
+              user_id: "user-1",
+              subject: "Support request",
+              status: "open",
+              updated_at: "2026-08-28T12:00:00.000Z",
+            },
+          ],
+          error: null,
+        });
+      }
+      if (table === "support_messages") {
+        return thenable({
+          data: { ticket_id: "t1", body: "Yardım" },
+          error: null,
+        });
+      }
+      if (table === "profiles") {
+        return thenable({
+          data: [{ id: "user-1", display_name: "Ayşe" }],
+          error: null,
+        });
+      }
+      return thenable({ data: [], error: null });
+    });
+
+    const tickets = await listAdminSupportTickets();
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0]?.lastMessage).toBe("Yardım");
+  });
+
   it("uses the inbox RPC when it is available", async () => {
     rpc.mockResolvedValue({
       data: [

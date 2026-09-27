@@ -23,7 +23,7 @@ type BroadcastResult = {
 export default function AdminHubPage() {
   const { t } = useLang();
   const { profile } = useSession();
-  const [tab, setTab] = useState<Tab>("broadcast");
+  const [tab, setTab] = useState<Tab>("support");
 
   const [broadcastTitle, setBroadcastTitle] = useState("");
   const [broadcastBody, setBroadcastBody] = useState("");

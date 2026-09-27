@@ -46,19 +46,70 @@ async function loadHealthPlugin() {
   return Health;
 }
 
+/**
+ * `true` granted, `false` denied, `null` not determined.
+ * iOS HealthKit often leaves both lists empty even after a grant.
+ * Android Health Connect does the same until the user answers.
+ */
+export function interpretStepAuthorization(
+  auth: { readAuthorized?: readonly string[] | null; readDenied?: readonly string[] | null },
+): boolean | null {
+  if (auth.readDenied?.includes("steps") === true) return false;
+  if (auth.readAuthorized?.includes("steps") === true) return true;
+  return null;
+}
+
 async function stepsAuthorizationGranted(): Promise<boolean | null> {
   try {
     const Health = await loadHealthPlugin();
     const auth = await Health.checkAuthorization({ read: ["steps"] });
-    const denied = auth.readDenied?.includes("steps") === true;
-    const granted = auth.readAuthorized?.includes("steps") === true;
-    if (denied) return false;
-    if (granted) return true;
-    // Unknown / empty status must not fail-open as connected.
-    return false;
+    return interpretStepAuthorization(auth);
   } catch {
     return null;
   }
+}
+
+const ASKED_KEY = "kaify:health-steps-asked";
+
+async function ensureStepAccess(): Promise<boolean> {
+  const Health = await loadHealthPlugin();
+  const availability = await Health.isAvailable();
+  if (!availability.available) {
+    writeConnectedFlag(false);
+    return false;
+  }
+
+  const status = await stepsAuthorizationGranted();
+  if (status === false) {
+    writeConnectedFlag(false);
+    return false;
+  }
+  if (status === true) {
+    writeConnectedFlag(true);
+    return true;
+  }
+
+  const platform = await getNativePlatform();
+  const asked = typeof localStorage !== "undefined" && localStorage.getItem(ASKED_KEY) === "1";
+  if (!asked) {
+    if (typeof localStorage !== "undefined") localStorage.setItem(ASKED_KEY, "1");
+    await Health.requestAuthorization({
+      read: ["steps"],
+      write: [],
+      requestHistoryAccess: true,
+    });
+    const after = await stepsAuthorizationGranted();
+    if (after === false) {
+      writeConnectedFlag(false);
+      return false;
+    }
+    writeConnectedFlag(true);
+    return true;
+  }
+
+  // Already asked. iOS still hides the grant, so try a read.
+  if (platform === "ios" || readConnectedFlag()) return true;
+  return false;
 }
 
 export async function getHealthStepsStatus(): Promise<HealthStepsStatus> {
@@ -70,17 +121,16 @@ export async function getHealthStepsStatus(): Promise<HealthStepsStatus> {
       writeConnectedFlag(false);
       return "unavailable";
     }
-    if (!readConnectedFlag()) return "disconnected";
     const granted = await stepsAuthorizationGranted();
     if (granted === false) {
       writeConnectedFlag(false);
       return "denied";
     }
-    if (granted == null) {
-      writeConnectedFlag(false);
-      return "unavailable";
+    if (granted === true) return "connected";
+    if (readConnectedFlag() || (await getNativePlatform()) === "ios") {
+      return readConnectedFlag() ? "connected" : "disconnected";
     }
-    return "connected";
+    return "disconnected";
   } catch {
     return "unavailable";
   }
@@ -95,15 +145,16 @@ export async function connectHealthSteps(): Promise<HealthStepsStatus> {
     return "unavailable";
   }
 
+  if (typeof localStorage !== "undefined") localStorage.setItem(ASKED_KEY, "1");
   await Health.requestAuthorization({
     read: ["steps"],
     write: [],
     requestHistoryAccess: true,
   });
   const granted = await stepsAuthorizationGranted();
-  if (granted !== true) {
+  if (granted === false) {
     writeConnectedFlag(false);
-    return granted === false ? "denied" : "unavailable";
+    return "denied";
   }
 
   writeConnectedFlag(true);
@@ -112,7 +163,8 @@ export async function connectHealthSteps(): Promise<HealthStepsStatus> {
 }
 
 export async function syncNativeHealthSteps(): Promise<number> {
-  if (!(await isNativePlatform()) || !readConnectedFlag()) return 0;
+  if (!(await isNativePlatform())) return 0;
+  if (!(await ensureStepAccess())) return 0;
 
   const Health = await loadHealthPlugin();
   const platform = await getNativePlatform();

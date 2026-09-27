@@ -260,7 +260,7 @@ export async function listAdminSupportTickets(): Promise<AdminSupportTicketSumma
     p_limit: 100,
   });
 
-  if (!error && Array.isArray(data)) {
+  if (!error && Array.isArray(data) && data.length > 0) {
     return data.map((row) => ({
       id: row.id,
       userId: row.user_id,

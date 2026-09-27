@@ -185,10 +185,7 @@ function WelcomeContent() {
             }}
           >
             {t("welcome.title", {
-              name:
-                isAuthenticated || (!isLoading && !nativeHandoff)
-                  ? displayName
-                  : "…",
+              name: displayName || "…",
             })}
           </h1>
           <p className="mt-4 max-w-[280px] text-sm font-medium leading-relaxed text-purple-100/80">
