@@ -12,6 +12,10 @@ if (!__SUPABASE_URL__ || !__SUPABASE_ANON_KEY__) {
   throw new Error("Native Supabase public configuration is missing.");
 }
 
+export function nativeCodeVerifierKey(): string {
+  return `${authStorageKey()}-code-verifier`;
+}
+
 function authStorageKey(): string {
   try {
     const ref = new URL(__SUPABASE_URL__).hostname.split(".")[0] || "kaify";

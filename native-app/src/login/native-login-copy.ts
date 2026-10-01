@@ -31,6 +31,9 @@ type NativeLoginCopy = {
   signInPassword: string;
   createAnAccount: string;
   preparing: string;
+  continueApple: string;
+  continueGoogle: string;
+  socialFailed: string;
 };
 
 const EN: NativeLoginCopy = {
@@ -66,6 +69,9 @@ const EN: NativeLoginCopy = {
   signInPassword: "Sign in with password",
   createAnAccount: "Create an account",
   preparing: "Preparing sign-in…",
+  continueApple: "Continue with Apple",
+  continueGoogle: "Continue with Google",
+  socialFailed: "Apple or Google sign-in did not finish. Try again.",
 };
 
 const TR: NativeLoginCopy = {
@@ -101,6 +107,9 @@ const TR: NativeLoginCopy = {
   signInPassword: "Şifre ile giriş yap",
   createAnAccount: "Hesap oluştur",
   preparing: "Giriş hazırlanıyor…",
+  continueApple: "Apple ile devam et",
+  continueGoogle: "Google ile devam et",
+  socialFailed: "Apple veya Google girişi tamamlanmadı. Tekrar dene.",
 };
 
 export function nativeLoginCopy(lang: LangCode | "tr" | "en"): NativeLoginCopy {

@@ -310,7 +310,7 @@ async function revokeSubscription(userId: string): Promise<void> {
     .from("paddle_subscriptions")
     .select("subscription_id")
     .eq("user_id", userId)
-    .in("status", ["active", "trialing"])
+    .in("status", ["active"])
     .limit(1);
 
   if (activeError) {

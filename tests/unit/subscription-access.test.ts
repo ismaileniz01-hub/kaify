@@ -5,10 +5,10 @@ import {
 } from "@/lib/billing/subscription-access";
 
 describe("subscriptionGrantsAccess", () => {
-  it("grants access for active and trialing", () => {
+  it("grants access only for an active paid subscription", () => {
     expect(subscriptionGrantsAccess("active")).toBe(true);
-    expect(subscriptionGrantsAccess("trialing")).toBe(true);
     expect(subscriptionGrantsAccess("ACTIVE")).toBe(true);
+    expect(subscriptionGrantsAccess("trialing")).toBe(false);
   });
 
   it("does not revoke on scheduled cancel — only real canceled status", () => {

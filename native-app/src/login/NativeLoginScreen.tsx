@@ -64,6 +64,7 @@ export type NativeLoginScreenProps = {
   onPasswordSignIn: () => Promise<{ ok: true } | NativeOtpFailure>;
   onVerifyCode: () => Promise<{ ok: true } | NativeOtpFailure>;
   onClearError: () => void;
+  onSocialSignIn: (provider: "apple" | "google") => Promise<void>;
 };
 
 /**
@@ -93,6 +94,7 @@ export function NativeLoginScreen({
   onPasswordSignIn,
   onVerifyCode,
   onClearError,
+  onSocialSignIn,
 }: NativeLoginScreenProps) {
   const idPrefix = useId();
   const copy = nativeLoginCopy(otpLocaleForLang(detectLangFromNavigator()));
@@ -376,6 +378,27 @@ export function NativeLoginScreen({
           className="login-otp-panel"
           onSubmit={(event) => void handleSend(event)}
         >
+          {!isSignup ? (
+            <div className="login-social">
+              <button
+                type="button"
+                className="btn-white"
+                disabled={busy || !online}
+                onClick={() => void onSocialSignIn("apple")}
+              >
+                {copy.continueApple}
+              </button>
+              <button
+                type="button"
+                className="btn-social"
+                disabled={busy || !online}
+                onClick={() => void onSocialSignIn("google")}
+              >
+                {copy.continueGoogle}
+              </button>
+              <p className="login-password-or">{copy.or}</p>
+            </div>
+          ) : null}
           <label htmlFor={emailId} className="sr-only">
             {copy.emailPlaceholder}
           </label>

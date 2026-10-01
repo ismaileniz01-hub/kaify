@@ -254,7 +254,7 @@ export const TERMS_DOCUMENT_TR: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Ücretli planlar (ödeme ve fiyatlandırma sayfasında gösterilen adlar, aralıklar ve fiyatlar) yenilemeden önce iptal edilmedikçe otomatik yenilenir. Ücretler her fatura döneminin başında (ve ücretli plana başladığınızda veya denemeden dönüştüğünüzde, sunuluyorsa) tahsil edilir. Vergiler, para birimi ve yerel fiyatlandırma bölgeye göre değişebilir ve Paddle Checkout'ta gösterilir.",
+          text: "Ücretli planlar (ödeme ve fiyatlandırma sayfasında gösterilen adlar, aralıklar ve fiyatlar) yenilemeden önce iptal edilmedikçe otomatik yenilenir. Ücretler her fatura döneminin başında ve ücretli plana başladığınızda tahsil edilir. Vergiler, para birimi ve yerel fiyatlandırma bölgeye göre değişebilir ve Paddle Checkout'ta gösterilir.",
         },
         {
           type: "ul",

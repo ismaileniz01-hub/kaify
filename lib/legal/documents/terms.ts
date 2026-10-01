@@ -254,7 +254,7 @@ export const TERMS_DOCUMENT: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Paid plans (names, intervals, and prices as displayed at checkout and on the pricing page) renew automatically unless cancelled before renewal. Charges occur at the start of each billing period (and when you start a paid plan or convert from a trial, if offered). Taxes, currency, and local pricing may vary by region and are shown in Paddle Checkout.",
+          text: "Paid plans (names, intervals, and prices as displayed at checkout and on the pricing page) renew automatically unless cancelled before renewal. Charges occur at the start of each billing period and when you start a paid plan. Taxes, currency, and local pricing may vary by region and are shown in Paddle Checkout.",
         },
         {
           type: "ul",

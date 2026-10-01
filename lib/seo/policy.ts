@@ -60,7 +60,9 @@ export function isPublicAuthPath(pathname: string): boolean {
     pathname === "/login" ||
     pathname.startsWith("/login/") ||
     pathname === "/signup" ||
-    pathname.startsWith("/signup/")
+    pathname.startsWith("/signup/") ||
+    pathname === "/auth/social-complete" ||
+    pathname.startsWith("/auth/social-complete/")
   );
 }
 

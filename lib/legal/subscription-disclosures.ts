@@ -18,10 +18,6 @@ export const SUBSCRIPTION_DISCLOSURES = {
     en: "You will complete purchase with Paddle. Paddle collects payment and applicable taxes. Kaify provides the fitness service. See Paddle Buyer Terms, Refund Policy, and Privacy Notice.",
     tr: "Satın alma Paddle ile tamamlanır. Ödemeyi ve geçerli vergileri Paddle tahsil eder. Kaify fitness hizmetini sağlar. Paddle Alıcı Şartları, İade Politikası ve Gizlilik Bildirimi'ne bakın.",
   },
-  trial: {
-    en: "If a free or paid trial is offered, it converts to the displayed paid price unless you cancel before the trial ends. Trial availability is shown at checkout.",
-    tr: "Ücretsiz veya ücretli deneme sunulursa, deneme bitmeden iptal etmezseniz gösterilen ücretli fiyata geçer. Deneme koşulları ödeme ekranında yer alır.",
-  },
   accountSubscription: {
     en: "Your subscription status is managed with Paddle. Use Manage billing to cancel, update payment method, or view invoices. Cancelling stops future renewals; access usually continues until the paid period ends unless immediate cancellation applies.",
     tr: "Abonelik durumunuz Paddle ile yönetilir. İptal, ödeme yöntemi veya faturalar için Faturalandırmayı yönet'i kullanın. İptal sonraki yenilemeleri durdurur; anında iptal geçerli değilse erişim genellikle ödenen dönemin sonuna kadar sürer.",

@@ -14,6 +14,8 @@ import {
   otpLocaleForLang,
 } from "@/lib/i18n/detect-lang";
 import { sendNativeEmailOtp, signInNativeWithPassword, verifyNativeEmailOtp } from "./auth-otp";
+import { beginNativeSocialSignIn, emailFromSocialReturn } from "./social-sign-in";
+import { nativeLoginCopy } from "./login/native-login-copy";
 import { NATIVE_CLIENT_VERSION } from "./client-version";
 import { enterRealKaify, resumeRealKaify } from "./enter-kaify";
 import {
@@ -194,6 +196,46 @@ export function App() {
         void handle.remove();
       };
     }).catch(() => undefined);
+    async function finishSocialReturn(raw: string) {
+      const copy = nativeLoginCopy(otpLocaleForLang(detectLangFromNavigator()));
+      try {
+        const browser = await import("@capacitor/browser");
+        await browser.Browser.close().catch(() => undefined);
+      } catch {
+        // The system browser may already be closed.
+      }
+      try {
+        const address = await emailFromSocialReturn(raw);
+        if (!address) {
+          setError(copy.socialFailed);
+          setAuthStep("email");
+          setScreen("login");
+          return;
+        }
+        setEmail(address);
+        setAuthBusy(true);
+        setError("");
+        const result = await sendNativeEmailOtp(
+          address,
+          otpLocaleForLang(detectLangFromNavigator()),
+        );
+        if (!result.ok) {
+          setError(result.message);
+          setAuthStep("email");
+          setScreen("login");
+          return;
+        }
+        setAuthStep("code");
+        setScreen("verify");
+      } catch {
+        setError(copy.socialFailed);
+        setAuthStep("email");
+        setScreen("login");
+      } finally {
+        setAuthBusy(false);
+      }
+    }
+
     void CapacitorApp.addListener("appUrlOpen", (event) => {
       const next = nativeScreenFromUrl(event.url);
       postNativeEvent("native.deep_link_received", installId, { route: next });
@@ -204,6 +246,10 @@ export function App() {
       const currentProfile = profileRef.current;
       if (next === "welcome" || next === "chat") {
         setScreen(profileHasPaidAccess(currentProfile) ? next : "login");
+        return;
+      }
+      if (next === "login" && /[?&](code|email|error)=/.test(event.url)) {
+        void finishSocialReturn(event.url);
         return;
       }
       setScreen(next);
@@ -239,6 +285,20 @@ export function App() {
       removeBackListener?.();
     };
   }, [resolveSignedInDestination]);
+
+  async function startSocial(provider: "apple" | "google") {
+    setAuthBusy(true);
+    setError("");
+    try {
+      await beginNativeSocialSignIn(provider);
+    } catch {
+      setError(
+        nativeLoginCopy(otpLocaleForLang(detectLangFromNavigator())).socialFailed,
+      );
+    } finally {
+      setAuthBusy(false);
+    }
+  }
 
   async function sendCode() {
     setAuthBusy(true);
@@ -400,6 +460,7 @@ export function App() {
         onPasswordSignIn={signInWithPassword}
         onVerifyCode={verifyCode}
         onClearError={() => setError("")}
+        onSocialSignIn={startSocial}
       />
     );
   }

@@ -16,6 +16,7 @@ import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { FloatingOrbs } from "@/components/landing/FloatingOrbs";
 import { FitnessWallpaper } from "@/components/FitnessWallpaper";
 import { sendEmailLoginCode } from "@/lib/auth/email-otp";
+import { requestProviderEmail, SocialEmailError, type SocialProvider } from "@/lib/auth/social-email";
 import { apiErrorMessage } from "@/lib/i18n/api-error";
 import {
   executeInvisibleRecaptcha,
@@ -69,23 +70,25 @@ import { referralCodeSchema } from "@/lib/validations/referral.schema";
 import type { ProfileDTO } from "@/lib/types/domain.types";
 
 type WizardStepId =
+  | "email"
   | "about"
   | "body"
   | "goal"
   | "activity"
   | "background"
   | "nutrition"
-  | "account";
+  | "verify";
 
-/** Questions, then account. Payment is the next screen after this list. */
+/** Email first, then the profile, then the code. Payment is the screen after this list. */
 const FULL_FLOW: WizardStepId[] = [
+  "email",
   "about",
   "body",
   "goal",
   "activity",
   "background",
   "nutrition",
-  "account",
+  "verify",
 ];
 
 /** Already has an account. Paid members stop here; unpaid members continue to checkout. */
@@ -144,7 +147,6 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
   const [flowKind, setFlowKind] = useState<"pending" | "signup" | "returning" | "paid">(
     "pending",
   );
-  const [codeSent, setCodeSent] = useState(false);
   useEffect(() => {
     if (isLoading || flowKind !== "pending") return;
     if (alreadyAuthedNeedsProfile && hasPaidPlan(profile)) {
@@ -229,7 +231,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     if (pending) setReferralCodeInput(pending);
   }, []);
 
-  const currentStep = flow[stepIndex] ?? "about";
+  const currentStep = flow[stepIndex] ?? "email";
   const progressPct = Math.round(((stepIndex + 1) / progressTotal) * 100);
 
   const heightNum = useMemo(() => {
@@ -368,8 +370,10 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
         if (!raw) return true;
         return referralCodeSchema.safeParse(raw).success;
       }
-      case "account":
+      case "email":
         return otpSendSchema.safeParse({ email: email.trim() }).success && legalAccepted;
+      case "verify":
+        return true;
       case "body":
         return (
           Number.isFinite(heightNum) &&
@@ -398,18 +402,12 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
   ]);
 
   const goBack = useCallback(() => {
-    if (currentStep === "account" && codeSent) {
-      void hapticSelection();
-      setError(null);
-      setCodeSent(false);
-      return;
-    }
     if (stepIndex <= 0) return;
     void hapticSelection();
     setDirection("back");
     setError(null);
     setStepIndex((i) => i - 1);
-  }, [codeSent, currentStep, stepIndex]);
+  }, [stepIndex]);
 
   const sendAccountCode = useCallback(async () => {
     const trimmedEmail = email.trim().toLowerCase();
@@ -424,13 +422,41 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
       );
       if (!result.ok) {
         setError(apiErrorMessage(result.code, t));
-        return;
+        return false;
       }
-      setCodeSent(true);
+      return true;
     } finally {
       setBusy(false);
     }
   }, [captchaRef, email, lang, t]);
+
+  const continueWithProvider = useCallback(
+    async (provider: SocialProvider) => {
+      if (!legalAccepted) {
+        setError(t("signup.social.need_terms"));
+        return;
+      }
+      void hapticSelection();
+      setBusy(true);
+      setError(null);
+      try {
+        const nextEmail = await requestProviderEmail(provider);
+        if (!otpSendSchema.safeParse({ email: nextEmail }).success) {
+          setError(t("signup.social.failed"));
+          return;
+        }
+        setEmail(nextEmail);
+        setDirection("forward");
+        setStepIndex(1);
+      } catch (error) {
+        if (error instanceof SocialEmailError && error.code === "cancelled") return;
+        setError(t("signup.social.failed"));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [legalAccepted, t],
+  );
 
   const goNext = useCallback(async () => {
     void hapticSelection();
@@ -453,11 +479,8 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
         }
         return;
       }
-    }
-
-    if (currentStep === "account") {
-      await sendAccountCode();
-      return;
+      const sent = await sendAccountCode();
+      if (!sent) return;
     }
 
     if (stepIndex < flow.length - 1) {
@@ -563,7 +586,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
 
         <ScrollReveal delay={160} className="mt-8">
           <div className="signup-wizard-card mx-auto max-w-md">
-            {(stepIndex > 0 || codeSent) && (
+            {stepIndex > 0 && (
               <button
                 type="button"
                 onClick={goBack}
@@ -1038,38 +1061,55 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                   </div>
                 )}
 
-                {currentStep === "account" && (
+                {currentStep === "email" && (
                   <div className="flex flex-col gap-4">
-                    {codeSent ? (
-                      <SignupVerifyStep
-                        email={email.trim().toLowerCase()}
-                        onVerified={handleVerified}
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void continueWithProvider("apple")}
+                        disabled={busy}
+                        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-black disabled:opacity-40"
+                      >
+                        {t("signup.social.apple")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void continueWithProvider("google")}
+                        disabled={busy}
+                        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white disabled:opacity-40"
+                      >
+                        {t("signup.social.google")}
+                      </button>
+                    </div>
+                    <p className="text-center text-xs text-zinc-500">{t("signup.social.or")}</p>
+                    <div className="signup-wizard-input-wrap">
+                      <label htmlFor={fid("email")} className="sr-only">
+                        {t("login.email_placeholder")}
+                      </label>
+                      <Mail className="signup-wizard-input-icon" aria-hidden />
+                      <input
+                        id={fid("email")}
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && canContinue && void goNext()}
+                        placeholder={t("login.email_placeholder")}
+                        autoComplete="email"
+                        autoFocus
+                        className="signup-wizard-input"
+                        aria-invalid={error ? true : undefined}
+                        aria-describedby={error ? errorId : undefined}
                       />
-                    ) : (
-                      <>
-                        <div className="signup-wizard-input-wrap">
-                          <label htmlFor={fid("email")} className="sr-only">
-                            {t("login.email_placeholder")}
-                          </label>
-                          <Mail className="signup-wizard-input-icon" aria-hidden />
-                          <input
-                            id={fid("email")}
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && canContinue && void goNext()}
-                            placeholder={t("login.email_placeholder")}
-                            autoComplete="email"
-                            autoFocus
-                            className="signup-wizard-input"
-                            aria-invalid={error ? true : undefined}
-                            aria-describedby={error ? errorId : undefined}
-                          />
-                        </div>
-                        <LegalConsentCheckbox checked={legalAccepted} onChange={setLegalAccepted} />
-                      </>
-                    )}
+                    </div>
+                    <LegalConsentCheckbox checked={legalAccepted} onChange={setLegalAccepted} />
                   </div>
+                )}
+
+                {currentStep === "verify" && (
+                  <SignupVerifyStep
+                    email={email.trim().toLowerCase()}
+                    onVerified={handleVerified}
+                  />
                 )}
               </div>
             </div>
@@ -1084,7 +1124,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
               </p>
             )}
 
-            {!codeSent && (
+            {currentStep !== "verify" && (
               <div className="mt-6 flex flex-col gap-3">
                 <button
                   type="button"
@@ -1095,12 +1135,10 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                 >
                   {busy
                     ? t("login.otp.loading")
-                    : currentStep === "account"
-                      ? t("signup.wizard.send_code")
-                      : currentStep === "nutrition" &&
-                          (flowKind === "paid" || flowKind === "returning")
-                        ? t("signup.profile.submit")
-                        : t("signup.wizard.continue")}
+                    : currentStep === "nutrition" &&
+                        (flowKind === "paid" || flowKind === "returning")
+                      ? t("signup.profile.submit")
+                      : t("signup.wizard.continue")}
                   <ArrowRight className="h-4 w-4 rtl:rotate-180" />
                 </button>
 
@@ -1127,8 +1165,12 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
                         });
                         return;
                       }
-                      setDirection("forward");
-                      setStepIndex((i) => i + 1);
+                      void (async () => {
+                        const sent = await sendAccountCode();
+                        if (!sent) return;
+                        setDirection("forward");
+                        setStepIndex((i) => i + 1);
+                      })();
                     }}
                     disabled={busy}
                     className="min-h-11 text-center text-sm text-zinc-500 transition hover:text-zinc-300"

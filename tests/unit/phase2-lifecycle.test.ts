@@ -83,11 +83,11 @@ describe("F2 progressive signup", () => {
       "utf8",
     );
     const full = src.match(/const FULL_FLOW[\s\S]*?;/)?.[0] ?? "";
+    expect(full).toContain('"email"');
     expect(full).toContain('"about"');
     expect(full).toContain('"nutrition"');
-    expect(full).toContain('"account"');
-    expect(full).not.toContain('"email"');
-    expect(full).not.toContain('"verify"');
+    expect(full).toContain('"verify"');
+    expect(full).not.toContain('"account"');
     expect(src).toContain("progressTotal");
     expect(src).toContain("redirectToWebCheckoutAfterSignup");
   });
