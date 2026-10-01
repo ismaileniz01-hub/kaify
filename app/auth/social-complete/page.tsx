@@ -32,9 +32,13 @@ export default function SocialCompletePage() {
         window.close();
         return;
       }
-      window.location.replace(
-        `kaify://login?email=${encodeURIComponent(normalized)}`,
-      );
+      try {
+        sessionStorage.setItem("kaify_social_email", normalized);
+        sessionStorage.removeItem("kaify_social_pending");
+      } catch {
+        // The signup page can still ask for the email if storage is blocked.
+      }
+      window.location.replace("/signup");
     };
 
     const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {

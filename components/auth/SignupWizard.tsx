@@ -148,6 +148,22 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     "pending",
   );
   useEffect(() => {
+    if (flowKind !== "signup") return;
+    let stored = "";
+    try {
+      stored = sessionStorage.getItem("kaify_social_email") ?? "";
+      sessionStorage.removeItem("kaify_social_email");
+    } catch {
+      return;
+    }
+    const emailValue = stored.trim().toLowerCase();
+    if (!otpSendSchema.safeParse({ email: emailValue }).success) return;
+    setEmail(emailValue);
+    setLegalAccepted(true);
+    setStepIndex(1);
+  }, [flowKind]);
+
+  useEffect(() => {
     if (isLoading || flowKind !== "pending") return;
     if (alreadyAuthedNeedsProfile && hasPaidPlan(profile)) {
       setFlowKind("paid");
@@ -450,6 +466,10 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
         setStepIndex(1);
       } catch (error) {
         if (error instanceof SocialEmailError && error.code === "cancelled") return;
+        if (error instanceof SocialEmailError && error.code === "unavailable") {
+          setError(t("signup.social.unavailable"));
+          return;
+        }
         setError(t("signup.social.failed"));
       } finally {
         setBusy(false);

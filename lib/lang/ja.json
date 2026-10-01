@@ -906,6 +906,7 @@
   "signup.social.or": "or",
   "signup.social.need_terms": "Accept the terms to continue.",
   "signup.social.failed": "That sign-in did not return an email. Try again or type it.",
+  "signup.social.unavailable": "Apple and Google sign-in is not switched on yet. Type your email.",
   "signup.wizard.name.title": "あなたを何と呼べばいいでしょうか？",
   "signup.wizard.name.subtitle": "コーチはチャットでこの名前を使用します。",
   "signup.wizard.gender.title": "どうやって特定するのですか？",

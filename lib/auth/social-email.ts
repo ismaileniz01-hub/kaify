@@ -22,7 +22,12 @@ export function requestProviderEmail(provider: SocialProvider): Promise<string> 
   const redirectTo = `${window.location.origin}/auth/social-complete`;
 
   return new Promise((resolve, reject) => {
-    let popup: Window | null = null;
+    // Open during the tap. Mobile browsers block a popup opened after the network call.
+    let popup: Window | null = window.open(
+      "about:blank",
+      "kaify-social",
+      "popup,width=480,height=720",
+    );
     let settled = false;
 
     const finish = (error: SocialEmailError | null, email?: string) => {
@@ -48,7 +53,12 @@ export function requestProviderEmail(provider: SocialProvider): Promise<string> 
     };
 
     const watch = window.setInterval(() => {
-      if (popup && popup.closed) finish(new SocialEmailError("cancelled"));
+      if (!popup) return;
+      try {
+        if (popup.closed) finish(new SocialEmailError("cancelled"));
+      } catch {
+        // The provider page is cross-origin. Wait for the return message.
+      }
     }, 400);
 
     window.addEventListener("message", onMessage);
@@ -65,17 +75,31 @@ export function requestProviderEmail(provider: SocialProvider): Promise<string> 
       })
       .then(({ data, error }) => {
         if (error || !data.url) {
-          finish(new SocialEmailError("failed"));
+          popup?.close();
+          const message = error?.message ?? "";
+          finish(
+            new SocialEmailError(
+              /not enabled|unsupported provider/i.test(message) ? "unavailable" : "failed",
+            ),
+          );
           return;
         }
-        popup = window.open(
-          data.url,
-          "kaify-social",
-          "popup,width=480,height=720",
-        );
-        if (!popup) finish(new SocialEmailError("failed"));
+        const blocked = !popup || popup.closed;
+        if (blocked) {
+          try {
+            sessionStorage.setItem("kaify_social_pending", "1");
+          } catch {
+            // Same-tab return still works if storage is available on the way back.
+          }
+          window.location.assign(data.url);
+          return;
+        }
+        popup.location.replace(data.url);
       })
-      .catch(() => finish(new SocialEmailError("failed")));
+      .catch(() => {
+        popup?.close();
+        finish(new SocialEmailError("failed"));
+      });
   });
 }
 

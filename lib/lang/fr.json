@@ -906,6 +906,7 @@
   "signup.social.or": "ou",
   "signup.social.need_terms": "Accepte les conditions pour continuer.",
   "signup.social.failed": "Cette connexion n'a pas renvoyé d'e-mail. Réessaie ou saisis-le.",
+  "signup.social.unavailable": "La connexion Apple et Google n'est pas encore activée. Saisis ton e-mail.",
   "signup.wizard.name.title": "Comment devrions-nous vous appeler ?",
   "signup.wizard.name.subtitle": "Vos coachs utiliseront ce nom dans le chat.",
   "signup.wizard.gender.title": "Comment s’identifier ?",

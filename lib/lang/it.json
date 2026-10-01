@@ -906,6 +906,7 @@
   "signup.social.or": "oppure",
   "signup.social.need_terms": "Accetta i termini per continuare.",
   "signup.social.failed": "Questo accesso non ha restituito un'email. Riprova o scrivila.",
+  "signup.social.unavailable": "L'accesso con Apple e Google non è ancora attivo. Scrivi la tua email.",
   "signup.wizard.name.title": "Come dovremmo chiamarti?",
   "signup.wizard.name.subtitle": "I tuoi allenatori utilizzeranno questo nome nella chat.",
   "signup.wizard.gender.title": "Come ti identifichi?",

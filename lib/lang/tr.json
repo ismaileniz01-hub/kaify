@@ -897,6 +897,7 @@
   "signup.social.or": "veya",
   "signup.social.need_terms": "Devam etmek için koşulları kabul et.",
   "signup.social.failed": "Bu giriş bir e-posta döndürmedi. Tekrar dene veya yaz.",
+  "signup.social.unavailable": "Apple ve Google girişi henüz açık değil. E-postanı yaz.",
   "signup.wizard.name.title": "Sana nasıl hitap edelim?",
   "signup.wizard.name.subtitle": "Koçlar sohbette bu ismi kullanacak.",
   "signup.wizard.gender.title": "Kendini nasıl tanımlıyorsun?",

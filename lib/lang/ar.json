@@ -906,6 +906,7 @@
   "signup.social.or": "أو",
   "signup.social.need_terms": "اقبل الشروط للمتابعة.",
   "signup.social.failed": "لم يُرجع تسجيل الدخول هذا بريداً. أعد المحاولة أو اكتبه.",
+  "signup.social.unavailable": "تسجيل الدخول عبر Apple وGoogle غير مفعّل بعد. اكتب بريدك.",
   "signup.wizard.name.title": "ماذا يجب أن نسميك؟",
   "signup.wizard.name.subtitle": "سيستخدم مدربوك هذا الاسم في الدردشة.",
   "signup.wizard.gender.title": "كيف يمكنك تحديد؟",
