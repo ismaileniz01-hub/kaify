@@ -437,6 +437,11 @@ export function PricingPage() {
                             {t("landing.pricing.most_popular")}
                           </div>
                         )}
+                        {billingInterval === "yearly" && (
+                          <div className="pricing-year-free-badge">
+                            {t("pricing.one_month_free")}
+                          </div>
+                        )}
 
                         <div className="pricing-card-header">
                           <div className="flex items-center gap-2">

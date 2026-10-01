@@ -77,15 +77,19 @@ describe("F2 progressive signup", () => {
     ).toBe(true);
   });
 
-  it("keeps the packaged signup flow short", () => {
+  it("asks coaching questions before account, with payment after the wizard", () => {
     const src = readFileSync(
       join(process.cwd(), "components/auth/SignupWizard.tsx"),
       "utf8",
     );
     const full = src.match(/const FULL_FLOW[\s\S]*?;/)?.[0] ?? "";
-    expect(full).toContain('"email"');
-    expect(full).toContain('"verify"');
-    expect(full).not.toContain('"lifestyle"');
+    expect(full).toContain('"about"');
+    expect(full).toContain('"nutrition"');
+    expect(full).toContain('"account"');
+    expect(full).not.toContain('"email"');
+    expect(full).not.toContain('"verify"');
+    expect(src).toContain("progressTotal");
+    expect(src).toContain("redirectToWebCheckoutAfterSignup");
   });
 });
 

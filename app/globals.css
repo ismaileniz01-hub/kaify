@@ -4331,6 +4331,27 @@ html:not([data-theme="light"]) .text-zinc-600 {
   }
 }
 
+.pricing-card:has(.pricing-year-free-badge) .pricing-card-header {
+  padding-inline-end: 6.75rem;
+}
+
+.pricing-year-free-badge {
+  position: absolute;
+  top: 0.85rem;
+  inset-inline-end: 0.85rem;
+  z-index: 2;
+  padding: 0.28rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #052e16;
+  background: linear-gradient(135deg, #6ee7b7, #34d399);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+  white-space: nowrap;
+}
+
 .pricing-popular-badge {
   position: absolute;
   top: -0.75rem;
