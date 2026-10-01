@@ -190,7 +190,7 @@ export function SignupWizard({ redirectTo = "/pricing" }: Props) {
     if (!step) return;
     postClientProductEvent({
       name: "onboarding.step_viewed",
-      properties: { flow: flowKind === "authed" ? "lifestyle" : "signup", step },
+      properties: { flow: flowKind === "signup" ? "signup" : "lifestyle", step },
     });
   }, [flow, flowKind, stepIndex]);
   const [error, setError] = useState<string | null>(null);
