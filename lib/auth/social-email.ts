@@ -23,7 +23,7 @@ export function requestProviderEmail(provider: SocialProvider): Promise<string> 
 
   return new Promise((resolve, reject) => {
     // Open during the tap. Mobile browsers block a popup opened after the network call.
-    let popup: Window | null = window.open(
+    const popup: Window | null = window.open(
       "about:blank",
       "kaify-social",
       "popup,width=480,height=720",
