@@ -19,32 +19,43 @@ export default function SocialCompletePage() {
     }
 
     let done = false;
-    const deliver = async (email: string) => {
+    // Sign-out inside onAuthStateChange waits on the same lock and the page
+    // stays on "Signing you in…". Hand the email off after the callback returns.
+    const deliver = (email: string) => {
       if (done) return;
       done = true;
       const normalized = email.trim().toLowerCase();
-      await supabase.auth.signOut().catch(() => undefined);
-      if (window.opener && !window.opener.closed) {
-        window.opener.postMessage(
-          { type: SOCIAL_EMAIL_MESSAGE, email: normalized },
-          window.location.origin,
-        );
-        window.close();
-        return;
-      }
-      try {
-        sessionStorage.setItem("kaify_social_email", normalized);
-        sessionStorage.removeItem("kaify_social_pending");
-      } catch {
-        // The signup page can still ask for the email if storage is blocked.
-      }
-      window.location.replace("/signup");
+      window.setTimeout(() => {
+        const opener = window.opener;
+        const canMessage = Boolean(opener && !opener.closed);
+        if (canMessage) {
+          opener.postMessage(
+            { type: SOCIAL_EMAIL_MESSAGE, email: normalized },
+            window.location.origin,
+          );
+        } else {
+          try {
+            sessionStorage.setItem("kaify_social_email", normalized);
+            sessionStorage.removeItem("kaify_social_pending");
+          } catch {
+            // The signup page can still ask for the email if storage is blocked.
+          }
+        }
+        void supabase.auth.signOut().finally(() => {
+          if (canMessage) {
+            window.close();
+            setMessage("You can close this window.");
+            return;
+          }
+          window.location.replace("/signup");
+        });
+      }, 0);
     };
 
     const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
       const email = session?.user.email;
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && email) {
-        void deliver(email);
+        deliver(email);
       }
     });
 
