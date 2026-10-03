@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@trystero-p2p/mqtt": "^0.25.4",
+    "mqtt": "^5.16.0",
     "trystero": "^0.25.4"
   },
   "devDependencies": {

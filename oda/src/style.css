@@ -98,7 +98,8 @@ label {
   font-size: 13px;
 }
 
-input[type="text"] {
+input[type="text"],
+input[type="password"] {
   width: 100%;
   border: 1px solid var(--line);
   background: #10131a;
@@ -108,7 +109,66 @@ input[type="text"] {
   transition: border-color 160ms ease;
 }
 
-input[type="text"]:focus { border-color: rgba(142, 171, 255, 0.8); }
+input[type="text"]:focus,
+input[type="password"]:focus { border-color: rgba(142, 171, 255, 0.8); }
+
+.home {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 28px 20px;
+}
+
+.card.wide { width: min(560px, 100%); }
+
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 6px 0 10px;
+}
+
+.list-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.ghost {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: #10131a;
+}
+
+.rooms { display: flex; flex-direction: column; gap: 8px; }
+
+.room {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line);
+  background: #10131a;
+  border-radius: 16px;
+  padding: 12px 14px;
+}
+
+.room strong { display: block; font-weight: 650; }
+.room span { color: var(--muted); font-size: 13px; }
+.room.mine { border-color: rgba(142, 171, 255, 0.45); }
+
+.empty { color: var(--muted); margin: 0 0 8px; }
+
+.create, .ask {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ask[hidden], .create[hidden] { display: none; }
+
+.row { display: flex; gap: 8px; }
+.row .primary { margin-top: 0; }
 
 .note {
   margin: 14px 0 0;
@@ -344,6 +404,30 @@ input[type="text"]:focus { border-color: rgba(142, 171, 255, 0.8); }
   font-size: 11px;
   opacity: 0.65;
   margin-bottom: 2px;
+}
+
+.chat-photo {
+  display: block;
+  width: min(220px, 100%);
+  border-radius: 12px;
+  cursor: zoom-in;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(6, 8, 12, 0.86);
+}
+
+.lightbox img {
+  max-width: min(1100px, 100%);
+  max-height: 100%;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
 }
 
 .composer-wrap { position: relative; }
