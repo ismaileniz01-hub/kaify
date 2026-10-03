@@ -78,12 +78,10 @@ function renderGate(message) {
   state.ui = null;
   app.replaceChildren();
   const gate = el("main", "gate");
-  const copy = el("section", "gate-copy");
+  const card = el("section", "card");
   const mark = el("div", "mark");
   mark.append(el("span", "dot"), el("span", null, "İki kişi"));
-  copy.append(mark, el("h1", null, "Oda"), el("p", "lede", "Sadece ikiniz. Ses, yazı, ekran. Linki gönder, gir."));
-
-  const card = el("section", "card");
+  card.append(mark, el("h1", null, "Oda"), el("p", "lede", "Sadece ikiniz. Ses, yazı, ekran. Linki gönder, gir."));
   const field = el("label", null, "Adın");
   const input = document.createElement("input");
   input.type = "text";
@@ -107,7 +105,7 @@ function renderGate(message) {
     void enterRoom();
   });
   card.append(button);
-  gate.append(copy, card);
+  gate.append(card);
   app.append(gate);
   input.focus();
 }
@@ -147,7 +145,10 @@ function renderShell() {
   previewVideo.playsInline = true;
   const previewLabel = el("span", null, "Ekranın karşıya gidiyor");
   preview.append(previewVideo, previewLabel);
-  stage.append(people, remoteVideo, badge, preview);
+  const fullBtn = el("button", "full-btn", "Tam ekran");
+  fullBtn.type = "button";
+  fullBtn.hidden = true;
+  stage.append(people, remoteVideo, badge, fullBtn, preview);
 
   const chat = el("aside", "chat");
   chat.append(el("header", null, "Yazışma"));
@@ -178,9 +179,9 @@ function renderShell() {
   chat.append(log, composerWrap);
 
   const bar = el("footer", "bar");
-  const micBtn = el("button", "icon-btn on", "Mikrofon");
-  const screenBtn = el("button", "icon-btn", "Ekran");
-  const linkBtn = el("button", "icon-btn", "Link");
+  const micBtn = el("button", "icon-btn on", "Mikrofon açık");
+  const screenBtn = el("button", "icon-btn", "Ekran paylaş");
+  const linkBtn = el("button", "icon-btn", "Linki kopyala");
   const leaveBtn = el("button", "icon-btn warn", "Ayrıl");
   micBtn.type = screenBtn.type = linkBtn.type = leaveBtn.type = "button";
   bar.append(micBtn, screenBtn, linkBtn, leaveBtn);
@@ -209,6 +210,13 @@ function renderShell() {
     toast("Link kopyalandı");
   });
   leaveBtn.addEventListener("click", hangup);
+  fullBtn.addEventListener("click", () => toggleFullscreen(stage, fullBtn));
+  remoteVideo.addEventListener("dblclick", () => {
+    if (!remoteVideo.hidden) toggleFullscreen(stage, fullBtn);
+  });
+  const onFullscreen = () => syncFullscreenButton(stage, fullBtn);
+  document.addEventListener("fullscreenchange", onFullscreen);
+  state.cleanups.push(() => document.removeEventListener("fullscreenchange", onFullscreen));
 
   function insertEmoji(emoji) {
     const start = chatInput.selectionStart ?? chatInput.value.length;
@@ -219,7 +227,7 @@ function renderShell() {
     chatInput.setSelectionRange(caret, caret);
   }
 
-  return { people, remoteVideo, preview, previewVideo, previewLabel, badge, micBtn, screenBtn };
+  return { people, remoteVideo, preview, previewVideo, previewLabel, badge, fullBtn, micBtn, screenBtn };
 }
 
 function personNode(role, name) {
@@ -227,6 +235,22 @@ function personNode(role, name) {
   wrap.dataset.who = role;
   wrap.append(el("div", "avatar", initial(name)), el("div", "pname", name));
   return wrap;
+}
+
+function toggleFullscreen(stage, button) {
+  if (document.fullscreenElement) {
+    void document.exitFullscreen();
+    return;
+  }
+  const request = stage.requestFullscreen || stage.webkitRequestFullscreen;
+  if (request) void request.call(stage);
+  syncFullscreenButton(stage, button);
+}
+
+function syncFullscreenButton(stage, button) {
+  if (!button) return;
+  const open = document.fullscreenElement === stage;
+  button.textContent = open ? "Küçült" : "Tam ekran";
 }
 
 function setStatus(text, live) {
@@ -509,7 +533,9 @@ async function enterRoom() {
     ui.remoteVideo.hidden = true;
     ui.remoteVideo.srcObject = null;
     ui.badge.hidden = true;
+    ui.fullBtn.hidden = true;
     ui.people.hidden = false;
+    if (document.fullscreenElement) void document.exitFullscreen();
     setPerson("peer", "Bekleniyor");
     setStatus("Ayrıldı");
     for (const audio of app.querySelectorAll("audio[data-peer]")) audio.remove();
@@ -522,6 +548,7 @@ async function enterRoom() {
     if (videoTracks.length > 0 || metadata?.kind === "screen") {
       ui.people.hidden = true;
       ui.remoteVideo.hidden = false;
+      ui.fullBtn.hidden = false;
       ui.remoteVideo.muted = true;
       ui.remoteVideo.srcObject = stream;
       void ui.remoteVideo.play().catch(() => {});
@@ -531,7 +558,9 @@ async function enterRoom() {
           ui.remoteVideo.hidden = true;
           ui.remoteVideo.srcObject = null;
           ui.badge.hidden = true;
+          ui.fullBtn.hidden = true;
           ui.people.hidden = false;
+          if (document.fullscreenElement) void document.exitFullscreen();
         });
       }
     }
@@ -559,8 +588,8 @@ async function enterRoom() {
     if (state.audioCtx?.state === "suspended") await state.audioCtx.resume();
   } catch {
     ui.micBtn.classList.remove("on");
-    ui.micBtn.textContent = "Mik yok";
-    setStatus("Mik yok");
+    ui.micBtn.textContent = "Mikrofon kapalı";
+    setStatus("Mikrofon yok");
   }
 }
 
@@ -570,7 +599,7 @@ function toggleMute(button) {
   state.muted = !state.muted;
   track.enabled = !state.muted;
   button.classList.toggle("on", !state.muted);
-  button.textContent = state.muted ? "Sessiz" : "Mikrofon";
+  button.textContent = state.muted ? "Sessiz" : "Mikrofon açık";
 }
 
 async function toggleScreen(button, previewLabel) {
@@ -597,7 +626,7 @@ async function toggleScreen(button, previewLabel) {
     previewLabel.textContent = state.captureLabel || "Ekran gidiyor";
   }
   button.classList.add("on");
-  button.textContent = "Bırak";
+  button.textContent = "Paylaşımı bırak";
   stream.getVideoTracks()[0]?.addEventListener("ended", () => stopScreen(button));
 }
 
@@ -614,7 +643,7 @@ function stopScreen(button) {
   }
   if (button) {
     button.classList.remove("on");
-    button.textContent = "Ekran";
+    button.textContent = "Ekran paylaş";
   }
 }
 
