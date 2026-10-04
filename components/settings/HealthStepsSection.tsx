@@ -7,7 +7,9 @@ import { useNativeApp } from "@/lib/native/platform";
 import {
   connectHealthSteps,
   disconnectHealthSteps,
-  getHealthStepsStatus,
+  isHealthStepsConnected,
+  preloadHealthPlugin,
+  requestStepAccessNow,
   syncNativeHealthSteps,
   type HealthStepsStatus,
 } from "@/lib/native/health-steps";
@@ -22,7 +24,8 @@ export function HealthStepsSection() {
 
   useEffect(() => {
     if (native !== true) return;
-    void getHealthStepsStatus().then(setStatus);
+    preloadHealthPlugin();
+    setStatus(isHealthStepsConnected() ? "connected" : "disconnected");
   }, [native]);
 
   if (native !== true) return null;
@@ -30,12 +33,23 @@ export function HealthStepsSection() {
   const handleConnect = async () => {
     setBusy(true);
     setMessage(null);
-    const release = window.setTimeout(() => setBusy(false), 20_000);
+    const release = window.setTimeout(() => {
+      setBusy(false);
+      setStatus("disconnected");
+      setMessage(t("health.steps.denied"));
+    }, 16_000);
     try {
       const next = await connectHealthSteps();
-      setStatus(next);
-      if (next === "connected") setMessage(t("health.steps.synced"));
-      if (next === "denied") setMessage(t("health.steps.denied"));
+      setStatus(next === "disconnected" ? "disconnected" : next);
+      if (next === "connected") {
+        setMessage(t("health.steps.synced"));
+        void syncNativeHealthSteps()
+          .then((count) => {
+            setMessage(count > 0 ? t("health.steps.synced") : t("health.steps.empty"));
+          })
+          .catch(() => undefined);
+      }
+      if (next === "denied" || next === "disconnected") setMessage(t("health.steps.denied"));
       if (next === "unavailable") setMessage(t("health.steps.unavailable"));
     } catch {
       setStatus("denied");
@@ -113,7 +127,10 @@ export function HealthStepsSection() {
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => void handleConnect()}
+                  onClick={() => {
+                    requestStepAccessNow();
+                    void handleConnect();
+                  }}
                   className="min-h-11 rounded-full bg-purple-500 px-4 text-xs font-semibold text-white disabled:opacity-50"
                 >
                   {t("health.steps.connect")}

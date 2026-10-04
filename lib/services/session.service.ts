@@ -32,28 +32,35 @@ export type SessionBundleDTO = {
  * Gems / streak / kai use a short Redis TTL to blunt auth refresh storms.
  */
 export async function getSessionBundle(userId: string): Promise<SessionBundleDTO> {
-  const [profile, gems, streak, referral, kai, isAdmin] = await Promise.all([
-    getOwnProfile(userId),
+  const profilePromise = getOwnProfile(userId);
+  const streakPromise = cached(CacheKeys.sessionStreak(userId), CacheTTL.sessionSlice, () =>
+    getStreakStatus(userId),
+  );
+  const homePromise = Promise.all([profilePromise, streakPromise]).then(
+    async ([profile, streak]) => {
+      const homeCore = await cachedWithStale(
+        CacheKeys.homeBundle(userId),
+        CacheTTL.homeBundle,
+        CacheTTL.homeBundleStale,
+        () => getHomeCoreData(userId, { profile, streakStatus: streak }),
+      );
+      return localizeHomeData(homeCore, profile.locale);
+    },
+  );
+
+  const [profile, gems, streak, referral, kai, isAdmin, home] = await Promise.all([
+    profilePromise,
     cached(CacheKeys.sessionGems(userId), CacheTTL.sessionSlice, () =>
       getGemBalance(userId),
     ),
-    cached(CacheKeys.sessionStreak(userId), CacheTTL.sessionSlice, () =>
-      getStreakStatus(userId),
-    ),
+    streakPromise,
     getReferralSummary(userId),
     cached(CacheKeys.sessionKai(userId), CacheTTL.sessionSlice, () =>
       getKaiState(userId),
     ),
     resolveIsHubAdmin(userId),
+    homePromise,
   ]);
-
-  const homeCore = await cachedWithStale(
-    CacheKeys.homeBundle(userId),
-    CacheTTL.homeBundle,
-    CacheTTL.homeBundleStale,
-    () => getHomeCoreData(userId, { profile, streakStatus: streak }),
-  );
-  const home = await localizeHomeData(homeCore, profile.locale);
 
   return {
     profile,

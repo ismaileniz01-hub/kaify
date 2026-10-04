@@ -158,6 +158,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     let redirectingToShell = false;
     try {
+      const cachedName =
+        readCachedDisplayName() || nameFromAccessToken(readNativeEntryAccessToken());
+      if (cachedName) {
+        setUserProfile((prev) =>
+          prev.name === cachedName ? prev : { ...prev, name: cachedName },
+        );
+        setIsPreviewMode(false);
+      }
+
+      if (readNativeEntrySession() && !nativeCookiesEstablishedRef.current) {
+        const established = await tryEstablishNativeCookies();
+        if (established) nativeCookiesEstablishedRef.current = true;
+      }
+
       // Paint the name from the profile row without waiting for home, kai, and admin.
       void apiGet<ProfileDTO>("/api/profile")
         .then((early) => {
@@ -439,8 +453,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const immediate =
       readCachedDisplayName() || nameFromAccessToken(readNativeEntryAccessToken());
     if (immediate) return immediate;
-    if (isLoading) return "";
-    return home?.displayName ?? DEMO_USER_NAME;
+    if (isLoading || hasNativeHandoffClient()) return "";
+    if (!isAuthenticated) return DEMO_USER_NAME;
+    return home?.displayName ?? "";
   }, [isAuthenticated, isLoading, profile, home]);
 
   const authValue = useMemo<SessionAuthValue>(

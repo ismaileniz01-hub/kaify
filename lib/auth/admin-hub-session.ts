@@ -82,29 +82,48 @@ export async function mintAdminHubToken(userId: string): Promise<string> {
   if (!secret) {
     throw new Error("ADMIN_HUB_SECRET is required in production/preview");
   }
-  const expiresAt = Math.floor(Date.now() / 1000) + ADMIN_HUB_MAX_AGE_SEC;
-  const payload = `${userId}.${expiresAt}`;
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const expiresAt = issuedAt + ADMIN_HUB_MAX_AGE_SEC;
+  const payload = `${userId}.${issuedAt}.${expiresAt}`;
   const sig = await hmacSha256Base64Url(secret, payload);
   return `${payload}.${sig}`;
 }
 
-async function parseAdminHubToken(token: string): Promise<{ userId: string; expiresAt: number } | null> {
+async function parseAdminHubToken(
+  token: string,
+): Promise<{ userId: string; issuedAt: number; expiresAt: number } | null> {
   const secret = hubSecret();
   if (!secret) return null;
 
   const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  const [userId, expiresRaw, sig] = parts;
+  let userId = "";
+  let issuedAt = 0;
+  let expiresRaw = "";
+  let sig = "";
+  if (parts.length === 4) {
+    userId = parts[0] ?? "";
+    issuedAt = Number(parts[1]);
+    expiresRaw = parts[2] ?? "";
+    sig = parts[3] ?? "";
+    if (!Number.isFinite(issuedAt)) return null;
+  } else if (parts.length === 3) {
+    userId = parts[0] ?? "";
+    expiresRaw = parts[1] ?? "";
+    sig = parts[2] ?? "";
+  } else {
+    return null;
+  }
   if (!userId || !expiresRaw || !sig) return null;
 
   const expiresAt = Number(expiresRaw);
   if (!Number.isFinite(expiresAt)) return null;
 
-  const payload = `${userId}.${expiresAt}`;
+  const payload =
+    parts.length === 4 ? `${userId}.${issuedAt}.${expiresAt}` : `${userId}.${expiresAt}`;
   const expected = await hmacSha256Base64Url(secret, payload);
   if (!timingSafeEqualStrings(sig, expected)) return null;
 
-  return { userId, expiresAt };
+  return { userId, issuedAt, expiresAt };
 }
 
 export async function verifyAdminHubSession(userId: string): Promise<boolean> {
@@ -118,6 +137,19 @@ export async function verifyAdminHubSession(userId: string): Promise<boolean> {
   if (parsed.expiresAt < Math.floor(Date.now() / 1000)) return false;
 
   return true;
+}
+
+/**
+ * Drop the hub cookie unless it was minted after this lock started.
+ * A slow lock from page load must not erase the password the operator just entered.
+ */
+export async function clearAdminHubSessionIfNotNewer(startedAtSec: number): Promise<void> {
+  const jar = await cookies();
+  const token = jar.get(ADMIN_HUB_COOKIE_NAME)?.value;
+  if (!token) return;
+  const parsed = await parseAdminHubToken(token);
+  if (parsed && parsed.issuedAt >= startedAtSec && parsed.issuedAt > 0) return;
+  jar.delete(ADMIN_HUB_COOKIE_NAME);
 }
 
 export function adminHubCookieOptions(): {

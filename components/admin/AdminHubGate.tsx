@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Loader2, Lock } from "lucide-react";
 import { apiPost } from "@/lib/api/client";
 import { errorToMessage } from "@/lib/i18n/api-error";
@@ -14,16 +14,20 @@ export function AdminHubGate({ children }: { children: ReactNode }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lockGeneration = useRef(0);
 
   useEffect(() => {
+    const generation = ++lockGeneration.current;
     void apiPost("/api/admin/hub/lock", {})
       .catch(() => undefined)
       .finally(() => {
+        if (lockGeneration.current !== generation) return;
         setUnlocked(false);
         setLoading(false);
       });
 
     return () => {
+      lockGeneration.current += 1;
       void apiPost("/api/admin/hub/lock", {}).catch(() => undefined);
     };
   }, []);

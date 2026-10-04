@@ -38,8 +38,10 @@ export function isHealthStepsConnected(): boolean {
 export async function disconnectHealthSteps(): Promise<HealthStepsStatus> {
   writeConnectedFlag(false);
   try {
-    const Health = await loadHealthPlugin();
-    await Health.requestAuthorization({ read: [], write: [] }).catch(() => undefined);
+    const Health = await settleWithin(loadHealthPluginCached(), 4_000);
+    if (Health) {
+      await settleWithin(Health.requestAuthorization({ read: [], write: [] }), HEALTH_CALL_MS);
+    }
   } catch {
     // Plugin absence must not leave the app in a connected state.
   }
@@ -49,6 +51,40 @@ export async function disconnectHealthSteps(): Promise<HealthStepsStatus> {
 async function loadHealthPlugin() {
   const { Health } = await import("@capgo/capacitor-health");
   return Health;
+}
+
+type HealthPlugin = Awaited<ReturnType<typeof loadHealthPlugin>>;
+
+let healthPluginPromise: Promise<HealthPlugin> | null = null;
+let healthPluginSync: HealthPlugin | null = null;
+let pendingAuthorization: Promise<unknown> | null = null;
+
+function loadHealthPluginCached() {
+  healthPluginPromise ??= loadHealthPlugin().then((plugin) => {
+    healthPluginSync = plugin;
+    return plugin;
+  });
+  return healthPluginPromise;
+}
+
+const STEP_READ = {
+  read: ["steps"] as ["steps"],
+  write: [] as [],
+  requestHistoryAccess: true,
+};
+
+/** Call inside the click, before any await, so iOS still presents the Health sheet. */
+export function requestStepAccessNow(): void {
+  const Health = healthPluginSync;
+  if (!Health || pendingAuthorization) return;
+  pendingAuthorization = Health.requestAuthorization(STEP_READ);
+}
+
+/** Warm the native bridge so Connect does not spend the tap on a dynamic import. */
+export function preloadHealthPlugin(): void {
+  void loadHealthPluginCached().catch(() => {
+    healthPluginPromise = null;
+  });
 }
 
 /**
@@ -85,7 +121,8 @@ function settleWithin<T>(promise: Promise<T>, ms: number): Promise<T | undefined
 
 async function stepsAuthorizationGranted(): Promise<boolean | null> {
   try {
-    const Health = await loadHealthPlugin();
+    const Health = await settleWithin(loadHealthPluginCached(), 4_000);
+    if (!Health) return null;
     const auth = await settleWithin(
       Health.checkAuthorization({ read: ["steps"] }),
       HEALTH_CALL_MS,
@@ -100,9 +137,10 @@ async function stepsAuthorizationGranted(): Promise<boolean | null> {
 const ASKED_KEY = "kaify:health-steps-asked";
 
 async function ensureStepAccess(): Promise<boolean> {
-  const Health = await loadHealthPlugin();
-  const availability = await Health.isAvailable();
-  if (!availability.available) {
+  const Health = await settleWithin(loadHealthPluginCached(), 4_000);
+  if (!Health) return false;
+  const availability = await settleWithin(Health.isAvailable(), 3_000);
+  if (!availability?.available) {
     writeConnectedFlag(false);
     return false;
   }
@@ -142,10 +180,12 @@ async function ensureStepAccess(): Promise<boolean> {
 }
 
 export async function getHealthStepsStatus(): Promise<HealthStepsStatus> {
-  if (!(await isNativePlatform())) return "web";
+  if (!(await settleWithin(isNativePlatform(), 2_000))) return "web";
   try {
-    const Health = await loadHealthPlugin();
-    const availability = await Health.isAvailable();
+    const Health = await settleWithin(loadHealthPluginCached(), 4_000);
+    if (!Health) return "unavailable";
+    const availability = await settleWithin(Health.isAvailable(), 3_000);
+    if (!availability) return readConnectedFlag() ? "connected" : "disconnected";
     if (!availability.available) {
       writeConnectedFlag(false);
       return "unavailable";
@@ -163,31 +203,42 @@ export async function getHealthStepsStatus(): Promise<HealthStepsStatus> {
 }
 
 export async function connectHealthSteps(): Promise<HealthStepsStatus> {
-  if (!(await isNativePlatform())) return "web";
-  const Health = await loadHealthPlugin();
-  const availability = await Health.isAvailable();
-  if (!availability.available) {
+  if (!(await settleWithin(isNativePlatform(), 2_000))) return "web";
+  const Health = await settleWithin(loadHealthPluginCached(), 4_000);
+  if (!Health) return "unavailable";
+
+  if (typeof localStorage !== "undefined") localStorage.setItem(ASKED_KEY, "1");
+  // Ask on the tap. Waiting for isAvailable first drops the user gesture and
+  // the Health sheet never opens, which left Connect looking stuck.
+  if (!pendingAuthorization) {
+    pendingAuthorization = Health.requestAuthorization(STEP_READ);
+  }
+  const authorization = settleWithin(pendingAuthorization, 15_000).finally(() => {
+    pendingAuthorization = null;
+  });
+  const availability = settleWithin(Health.isAvailable(), 3_000);
+  const [authSettled, available] = await Promise.all([authorization, availability]);
+  if (available && available.available === false) {
     writeConnectedFlag(false);
     return "unavailable";
   }
+  if (authSettled === undefined && !available) {
+    writeConnectedFlag(false);
+    return "disconnected";
+  }
 
-  if (typeof localStorage !== "undefined") localStorage.setItem(ASKED_KEY, "1");
-  await settleWithin(
-    Health.requestAuthorization({
-      read: ["steps"],
-      write: [],
-      requestHistoryAccess: true,
-    }),
-    HEALTH_CALL_MS,
-  );
   const granted = await stepsAuthorizationGranted();
   if (granted === false) {
     writeConnectedFlag(false);
     return "denied";
   }
+  if (granted === null && authSettled === undefined) {
+    writeConnectedFlag(false);
+    return "disconnected";
+  }
 
   writeConnectedFlag(true);
-  await syncNativeHealthSteps();
+  void syncNativeHealthSteps().catch(() => undefined);
   return "connected";
 }
 
@@ -202,10 +253,11 @@ export function syncNativeHealthSteps(): Promise<number> {
 }
 
 async function syncNativeHealthStepsOnce(): Promise<number> {
-  if (!(await isNativePlatform())) return 0;
+  if (!(await settleWithin(isNativePlatform(), 2_000))) return 0;
   if (!(await ensureStepAccess())) return 0;
 
-  const Health = await loadHealthPlugin();
+  const Health = await settleWithin(loadHealthPluginCached(), 4_000);
+  if (!Health) return 0;
   const platform = await getNativePlatform();
   const source = platform === "ios" ? "healthkit" : "google_fit";
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -267,7 +319,7 @@ async function syncNativeHealthStepsOnce(): Promise<number> {
   const todaySteps = uniqueEntries.find((entry) => entry.date === todayKey)?.steps ?? 0;
   if (uniqueEntries.length === 0) return 0;
 
-  await apiPost("/api/health/steps", { entries: uniqueEntries });
+  await settleWithin(apiPost("/api/health/steps", { entries: uniqueEntries }), HEALTH_CALL_MS);
   notifyAnalyticsUpdated();
   dispatchStepsSynced(todaySteps);
   return uniqueEntries.length;
