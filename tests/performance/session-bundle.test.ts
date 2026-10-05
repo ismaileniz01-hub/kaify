@@ -1,16 +1,21 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/services/profile.service", () => ({
-  getOwnProfile: vi.fn().mockResolvedValue({ id: "u1", displayName: "Test" }),
+  getOwnProfile: vi.fn().mockResolvedValue({
+    id: "u1",
+    displayName: "Test",
+    referralCode: "ABC123",
+    role: "user",
+    locale: "en",
+  }),
 }));
 vi.mock("@/lib/services/gem-balance.service", () => ({
-  getGemBalance: vi.fn().mockResolvedValue({ balance: 100, totalEarned: 0, totalSpent: 0 }),
+  getMaterializedGemBalance: vi
+    .fn()
+    .mockResolvedValue({ balance: 100, totalEarned: 0, totalSpent: 0 }),
 }));
 vi.mock("@/lib/services/streak-status.service", () => ({
   getStreakStatus: vi.fn().mockResolvedValue({ currentStreak: 3, longestStreak: 5 }),
-}));
-vi.mock("@/lib/services/referral.service", () => ({
-  getReferralSummary: vi.fn().mockResolvedValue({ referralCode: "ABC123" }),
 }));
 vi.mock("@/lib/services/kai-state.service", () => ({
   getKaiState: vi.fn().mockResolvedValue({
@@ -20,6 +25,29 @@ vi.mock("@/lib/services/kai-state.service", () => ({
   }),
 }));
 vi.mock("@/lib/services/home.service", () => ({
+  getFastHomeData: vi.fn().mockResolvedValue({
+    displayName: "Test",
+    motivation: "Go",
+    dailyTip: "Tip",
+    kaiFoodInsight: null,
+    stats: { steps: null, streak: 3, goalPercent: null },
+    kaiLevel: 2,
+    todayJob: {
+      kind: "continue",
+      href: "/chat/kai",
+      titleKey: "home.today_job.continue.title",
+      bodyKey: "home.today_job.continue.body",
+      ctaKey: "home.today_job.continue.cta",
+    },
+    firstTask: { checkInDone: true, goalsDone: true, chatDone: true },
+    goals: {
+      configured: true,
+      primaryGoal: "stay_fit",
+      calorieGoal: 2100,
+      workoutsTarget: 5,
+      waterGoalLiters: 2.5,
+    },
+  }),
   getHomeCoreData: vi.fn().mockResolvedValue({
     displayName: "Test",
     stats: { steps: null, streak: 3, goalPercent: null },
@@ -87,13 +115,13 @@ describe("getSessionBundle", () => {
   it("loads all bootstrap fields in one parallel call", async () => {
     const { getSessionBundle } = await import("@/lib/services/session.service");
     const { getOwnProfile } = await import("@/lib/services/profile.service");
-    const { getGemBalance } = await import("@/lib/services/gem-balance.service");
+    const { getMaterializedGemBalance } = await import("@/lib/services/gem-balance.service");
     const { getKaiState } = await import("@/lib/services/kai-state.service");
 
     const bundle = await getSessionBundle("u1");
 
-    expect(getOwnProfile).toHaveBeenCalledWith("u1");
-    expect(getGemBalance).toHaveBeenCalledWith("u1");
+    expect(getOwnProfile).toHaveBeenCalledWith("u1", { signAvatar: false });
+    expect(getMaterializedGemBalance).toHaveBeenCalledWith("u1");
     expect(getKaiState).toHaveBeenCalledWith("u1");
     expect(bundle.referral.referralCode).toBe("ABC123");
     expect(bundle.home.displayName).toBe("Test");

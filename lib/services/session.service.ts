@@ -1,15 +1,8 @@
-import { cached, cachedWithStale } from "@/lib/cache";
-import { CacheKeys, CacheTTL } from "@/lib/cache/keys";
 import { resolveIsHubAdmin } from "@/lib/auth/admin-access";
-import { getGemBalance } from "@/lib/services/gem-balance.service";
-import {
-  getHomeCoreData,
-  localizeHomeData,
-  type HomeDTO,
-} from "@/lib/services/home.service";
+import { getMaterializedGemBalance } from "@/lib/services/gem-balance.service";
+import { getFastHomeData, type HomeDTO } from "@/lib/services/home.service";
 import { getKaiState, type KaiStateDTO } from "@/lib/services/kai-state.service";
 import { getOwnProfile } from "@/lib/services/profile.service";
-import { getReferralSummary } from "@/lib/services/referral.service";
 import { getStreakStatus } from "@/lib/services/streak-status.service";
 import type { ProfileDTO } from "@/lib/types/domain.types";
 import type { GemBalanceDTO } from "@/lib/services/gem-balance.service";
@@ -26,42 +19,26 @@ export type SessionBundleDTO = {
 };
 
 /**
- * Single round-trip bootstrap: replaces 6 parallel client calls
- * (profile, gems, streak, referral, home, kai).
- * Profile + streak are fetched once and reused for the home bundle.
- * Gems / streak / kai use a short Redis TTL to blunt auth refresh storms.
+ * App-open bundle. Only the rows the welcome screen paints.
+ * The gem ledger aggregate, referral counts, avatar signing, and the full
+ * home history scan stay off this path.
  */
 export async function getSessionBundle(userId: string): Promise<SessionBundleDTO> {
-  const profilePromise = getOwnProfile(userId);
-  const streakPromise = cached(CacheKeys.sessionStreak(userId), CacheTTL.sessionSlice, () =>
-    getStreakStatus(userId),
+  const profilePromise = getOwnProfile(userId, { signAvatar: false });
+  const streakPromise = getStreakStatus(userId);
+  const homePromise = Promise.all([profilePromise, streakPromise]).then(([profile, streak]) =>
+    getFastHomeData(userId, profile, streak),
   );
-  // A Redis hit must not wait for profile and streak. Those are only
-  // needed when the home bundle is cold.
-  const homeCorePromise = cachedWithStale(
-    CacheKeys.homeBundle(userId),
-    CacheTTL.homeBundle,
-    CacheTTL.homeBundleStale,
-    () =>
-      Promise.all([profilePromise, streakPromise]).then(([profile, streak]) =>
-        getHomeCoreData(userId, { profile, streakStatus: streak }),
-      ),
-  );
-  const homePromise = Promise.all([profilePromise, homeCorePromise]).then(
-    ([profile, homeCore]) => localizeHomeData(homeCore, profile.locale),
+  const isAdminPromise = profilePromise.then((profile) =>
+    profile.role === "admin" ? resolveIsHubAdmin(userId) : Promise.resolve(false),
   );
 
-  const [profile, gems, streak, referral, kai, isAdmin, home] = await Promise.all([
+  const [profile, gems, streak, kai, isAdmin, home] = await Promise.all([
     profilePromise,
-    cached(CacheKeys.sessionGems(userId), CacheTTL.sessionSlice, () =>
-      getGemBalance(userId),
-    ),
+    getMaterializedGemBalance(userId),
     streakPromise,
-    getReferralSummary(userId),
-    cached(CacheKeys.sessionKai(userId), CacheTTL.sessionSlice, () =>
-      getKaiState(userId),
-    ),
-    resolveIsHubAdmin(userId),
+    getKaiState(userId),
+    isAdminPromise,
     homePromise,
   ]);
 
@@ -70,7 +47,7 @@ export async function getSessionBundle(userId: string): Promise<SessionBundleDTO
     isAdmin,
     gems,
     streak,
-    referral: { referralCode: referral.referralCode },
+    referral: { referralCode: profile.referralCode },
     home,
     kai,
   };

@@ -6,6 +6,11 @@ import {
 } from "@/lib/services/analytics.service";
 import { getUserSettings } from "@/lib/services/settings.service";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import {
+  createAnalyticsAdminReadClient,
+  readAnalyticsDailyRow,
+  readHealthStepsRange,
+} from "@/lib/repositories/analytics-read.repository";
 import { buildKaiFoodInsight } from "@/lib/kai-food-insight";
 import { resolveLocale, translateKey } from "@/lib/i18n/dictionary";
 import { getDailyMotivationQuote } from "@/lib/motivation-quotes";
@@ -256,4 +261,76 @@ export async function getHomeData(
 ): Promise<HomeDTO> {
   const core = await getHomeCoreData(userId, prefetch);
   return localizeHomeData(core, localeOverride);
+}
+
+/**
+ * Welcome numbers only: today's row, today's steps, streak, goals.
+ * Skips the ledger, weekly scan, chat scan, and weight history that the
+ * full home bundle waits on.
+ */
+export async function getFastHomeData(
+  userId: string,
+  profile: ProfileDTO,
+  streak: StreakStatusDTO,
+): Promise<HomeDTO> {
+  const today = localTodayDate(profile.timezone ?? "UTC");
+  const client = createAnalyticsAdminReadClient();
+  const [todayRow, stepRows, settings] = await Promise.all([
+    readAnalyticsDailyRow(client, userId, today).catch(() => null),
+    readHealthStepsRange(client, userId, today, today).catch(() => []),
+    getUserSettings(userId).catch(() => null),
+  ]);
+
+  const healthSteps = Number(stepRows[0]?.steps) || 0;
+  const steps = healthSteps > 0 ? healthSteps : Number(todayRow?.steps ?? 0);
+  const calorieGoal = todayRow?.calorie_goal ?? 2100;
+  const calories = todayRow?.calories_consumed ?? 0;
+  const goalPercent =
+    calorieGoal > 0 ? Math.min(100, Math.round((calories / calorieGoal) * 100)) : 0;
+  const checkedInToday = streak.lastCheckInDate === today;
+  const goalsConfigured = settings?.goalsConfigured ?? false;
+  const workoutsTarget = todayRow?.workouts_target ?? 5;
+
+  const core: HomeCoreDTO = {
+    displayName: profile.displayName,
+    stats: {
+      steps,
+      streak: streak.currentStreak,
+      goalPercent,
+    },
+    kaiLevel: streak.kaiUnlockedLevel,
+    todayJob: resolveTodayJob({
+      checkedInToday,
+      goalsConfigured,
+      mealLogged: calories > 0,
+      workoutLogged: Number(todayRow?.workouts_completed ?? 0) > 0,
+      waterLogged: Number(todayRow?.water_liters ?? 0) > 0,
+      inactivityDays: daysSince(
+        streak.lastCheckInDate ? `${streak.lastCheckInDate}T00:00:00Z` : null,
+      ),
+    }),
+    weeklyReview: resolveWeeklyReview({
+      workouts: Number(todayRow?.workouts_completed ?? 0),
+      meals: calories > 0 ? 1 : 0,
+      waterDays: Number(todayRow?.water_liters ?? 0) > 0 ? 1 : 0,
+      streak: streak.currentStreak,
+      workoutsTarget,
+    }),
+    firstTask: {
+      checkInDone: checkedInToday || streak.currentStreak > 0,
+      goalsDone: goalsConfigured,
+      chatDone: true,
+    },
+    goals: {
+      configured: goalsConfigured,
+      primaryGoal: settings?.primaryGoal ?? null,
+      calorieGoal,
+      workoutsTarget,
+      waterGoalLiters: Number(todayRow?.water_goal_liters ?? 2.5),
+    },
+    nutrition: null,
+    profileLocale: profile.locale,
+  };
+
+  return localizeHomeData(core, profile.locale);
 }

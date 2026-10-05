@@ -37,7 +37,7 @@ async function redisCommand<T>(command: (string | number)[]): Promise<T | null> 
     },
     body: JSON.stringify(command),
     // Never let a slow cache stall a request longer than necessary.
-    signal: AbortSignal.timeout(1500),
+    signal: AbortSignal.timeout(300),
   });
   if (!res.ok) return null;
   const json = (await res.json()) as { result?: T };
@@ -223,10 +223,6 @@ export async function cached<T>(
 
   const pending = (async () => {
     try {
-      // Re-check after winning the race — another isolate may have filled Redis.
-      const again = await cacheGet<T>(key);
-      if (again !== null) return again;
-
       const fresh = await producer();
       await cacheSet(key, fresh, ttlSeconds);
       return fresh;
@@ -261,9 +257,6 @@ export async function cachedWithStale<T>(
 
   const pending = (async () => {
     try {
-      const again = await cacheGet<T>(key);
-      if (again !== null) return again;
-
       const fresh = await producer();
       await cacheSet(key, fresh, ttlSeconds);
       await cacheSet(staleKey, fresh, staleTtlSeconds);

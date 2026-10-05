@@ -40,8 +40,9 @@ describe("home cache identity (PERF-002)", () => {
     expect(homeRoute).toContain("CacheKeys.homeBundle(user.id)");
     expect(homeRoute).toContain("localizeHomeData");
     expect(homeRoute).not.toMatch(/homeBundle\([^)]+locale/);
-    expect(session).toContain("CacheKeys.homeBundle(userId)");
-    expect(session).toContain("getHomeCoreData");
+    expect(session).toContain("getFastHomeData");
+    expect(session).not.toContain("getHomeCoreData");
+    expect(session).not.toContain("getGemBalance");
   });
 
   it("invalidateHomeBundleCache deletes stale companions and legacy variants", () => {

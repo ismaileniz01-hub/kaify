@@ -23,7 +23,10 @@ async function withSignedProfileAvatar(
  * Fetches the authenticated user's own profile.
  * RLS restricts the row to the caller; the explicit id filter is defense-in-depth.
  */
-export async function getOwnProfile(userId: string): Promise<ProfileDTO> {
+export async function getOwnProfile(
+  userId: string,
+  options?: { signAvatar?: boolean },
+): Promise<ProfileDTO> {
   const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
@@ -37,6 +40,13 @@ export async function getOwnProfile(userId: string): Promise<ProfileDTO> {
   }
 
   const dto = mapProfileRow(data);
+  if (options?.signAvatar === false) {
+    const avatar = dto.avatarUrl;
+    if (avatar && !avatar.startsWith("http") && !avatar.startsWith("/")) {
+      return { ...dto, avatarUrl: null };
+    }
+    return dto;
+  }
   return withSignedProfileAvatar(dto, userId);
 }
 

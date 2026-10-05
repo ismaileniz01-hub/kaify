@@ -28,7 +28,8 @@ describe("app-open waterfall (PERF-003)", () => {
       "utf8",
     );
     expect(svc).toContain("home:");
-    expect(svc).toContain("homeCorePromise");
+    expect(svc).toContain("getFastHomeData");
+    expect(svc).not.toContain("getReferralSummary");
     expect(sessionSrc).toContain("setHome(bundle.home)");
     expect(sessionSrc).toContain("readHomePaint");
     expect(sessionSrc).toContain("establishPromise = tryEstablishNativeCookies()");

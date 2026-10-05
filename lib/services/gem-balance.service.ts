@@ -41,6 +41,29 @@ export function pickAuthoritativeGemBalance(
  * If kai_state drifted from the ledger view (streak/check-in wrote the audit
  * trail without updating kai), return the ledger total and repair kai_state.
  */
+/**
+ * Open-screen balance. Reads the materialized kai columns only.
+ * The ledger view aggregates every gem row and must not block app open.
+ */
+export async function getMaterializedGemBalance(userId: string): Promise<GemBalanceDTO> {
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("user_kai_state")
+    .select("gem_balance, gem_total_earned, gem_total_spent")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || !data || typeof data.gem_balance !== "number") {
+    return { balance: 0, totalEarned: 0, totalSpent: 0 };
+  }
+
+  return {
+    balance: Number(data.gem_balance ?? 0),
+    totalEarned: Number(data.gem_total_earned ?? 0),
+    totalSpent: Number(data.gem_total_spent ?? 0),
+  };
+}
+
 export async function getGemBalance(userId: string): Promise<GemBalanceDTO> {
   const supabase = await createServerSupabaseClient();
 
