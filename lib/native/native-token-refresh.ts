@@ -29,6 +29,12 @@ export function isAccessTokenExpiring(token: string, now = Date.now()): boolean 
   return expiresAt !== null && expiresAt - EXPIRY_SKEW_MS <= now;
 }
 
+/** True only after `exp`. A token inside the skew window is still accepted. */
+export function isAccessTokenExpired(token: string, now = Date.now()): boolean {
+  const expiresAt = accessTokenExpiresAtMs(token);
+  return expiresAt !== null && expiresAt <= now;
+}
+
 async function requestRefresh(refreshToken: string): Promise<
   | { accessToken: string; refreshToken: string }
   | "rejected"

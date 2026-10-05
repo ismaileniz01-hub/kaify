@@ -23,7 +23,15 @@ describe("app-open waterfall (PERF-003)", () => {
 
   it("session bundle already includes home so open does not require /api/home", () => {
     const svc = readFileSync(join(process.cwd(), "lib/services/session.service.ts"), "utf8");
+    const welcome = readFileSync(
+      join(process.cwd(), "app/(app)/welcome/page.tsx"),
+      "utf8",
+    );
     expect(svc).toContain("home:");
+    expect(svc).toContain("homeCorePromise");
     expect(sessionSrc).toContain("setHome(bundle.home)");
+    expect(sessionSrc).toContain("readHomePaint");
+    expect(sessionSrc).toContain("establishPromise = tryEstablishNativeCookies()");
+    expect(welcome).toContain("if (!isAuthenticated || isLoading) return");
   });
 });

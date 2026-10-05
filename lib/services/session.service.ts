@@ -36,16 +36,19 @@ export async function getSessionBundle(userId: string): Promise<SessionBundleDTO
   const streakPromise = cached(CacheKeys.sessionStreak(userId), CacheTTL.sessionSlice, () =>
     getStreakStatus(userId),
   );
-  const homePromise = Promise.all([profilePromise, streakPromise]).then(
-    async ([profile, streak]) => {
-      const homeCore = await cachedWithStale(
-        CacheKeys.homeBundle(userId),
-        CacheTTL.homeBundle,
-        CacheTTL.homeBundleStale,
-        () => getHomeCoreData(userId, { profile, streakStatus: streak }),
-      );
-      return localizeHomeData(homeCore, profile.locale);
-    },
+  // A Redis hit must not wait for profile and streak. Those are only
+  // needed when the home bundle is cold.
+  const homeCorePromise = cachedWithStale(
+    CacheKeys.homeBundle(userId),
+    CacheTTL.homeBundle,
+    CacheTTL.homeBundleStale,
+    () =>
+      Promise.all([profilePromise, streakPromise]).then(([profile, streak]) =>
+        getHomeCoreData(userId, { profile, streakStatus: streak }),
+      ),
+  );
+  const homePromise = Promise.all([profilePromise, homeCorePromise]).then(
+    ([profile, homeCore]) => localizeHomeData(homeCore, profile.locale),
   );
 
   const [profile, gems, streak, referral, kai, isAdmin, home] = await Promise.all([

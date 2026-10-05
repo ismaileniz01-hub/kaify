@@ -11,6 +11,8 @@ import {
 } from "@/lib/native/native-entry-boot";
 import {
   getFreshNativeAccessToken,
+  isAccessTokenExpired,
+  isAccessTokenExpiring,
   refreshNativeEntryTokens,
 } from "@/lib/native/native-token-refresh";
 
@@ -44,7 +46,14 @@ function withAuthHeaderTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> 
 
 /** Bearer from native-entry tokens; never wait on WKWebView navigator.locks. */
 export async function getApiAuthHeaders(): Promise<Record<string, string>> {
-  if (readNativeEntryAccessToken()) {
+  const stored = readNativeEntryAccessToken();
+  if (stored) {
+    // A token that is still valid must not block Home on a refresh round trip.
+    // Rotate in the background when it is inside the expiry skew.
+    if (!isAccessTokenExpired(stored)) {
+      if (isAccessTokenExpiring(stored)) void refreshNativeEntryTokens();
+      return { Authorization: `Bearer ${stored}` };
+    }
     const nativeToken = await getFreshNativeAccessToken();
     if (nativeToken) {
       return { Authorization: `Bearer ${nativeToken}` };

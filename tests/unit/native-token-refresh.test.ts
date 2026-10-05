@@ -7,6 +7,7 @@ import {
 import {
   NATIVE_REFRESH_PATH,
   getFreshNativeAccessToken,
+  isAccessTokenExpired,
   isAccessTokenExpiring,
   refreshNativeEntryTokens,
 } from "@/lib/native/native-token-refresh";
@@ -46,6 +47,8 @@ describe("native token refresh", () => {
     expect(isAccessTokenExpiring(jwt(Math.floor(now / 1000) + 30), now)).toBe(true);
     expect(isAccessTokenExpiring(jwt(Math.floor(now / 1000) + 3600), now)).toBe(false);
     expect(isAccessTokenExpiring("not-a-jwt", now)).toBe(false);
+    expect(isAccessTokenExpired(jwt(Math.floor(now / 1000) + 30), now)).toBe(false);
+    expect(isAccessTokenExpired(jwt(Math.floor(now / 1000) - 5), now)).toBe(true);
   });
 
   it("returns a valid stored token without calling the network", async () => {

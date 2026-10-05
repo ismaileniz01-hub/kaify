@@ -4,6 +4,7 @@ import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import { clearAnalyticsCache } from "@/lib/analytics-client-cache";
 import { returnToNativeLoginShell } from "@/lib/native/sign-out-native";
 import { clearNativeEntryTokens } from "@/lib/native/native-entry-boot";
+import { clearHomePaint } from "@/lib/session/home-paint-cache";
 
 /** Remembers email between OTP send and verify on /login. */
 export const PENDING_OTP_EMAIL_KEY = "kaify-pending-otp-email";
@@ -17,6 +18,7 @@ export function clearAuthLocalState(): void {
   localStorage.removeItem(STREAK_CLAIMED_MILESTONES_KEY);
   localStorage.removeItem(STREAK_CLAIMED_STATIONS_KEY);
   clearAnalyticsCache();
+  clearHomePaint();
   clearStoredNativeToken();
   clearKaiLocalCache();
   clearNativeEntryTokens();

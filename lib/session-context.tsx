@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -48,6 +49,11 @@ import {
   readCachedDisplayName,
   writeCachedDisplayName,
 } from "@/lib/session/cached-display-name";
+import {
+  clearHomePaint,
+  readHomePaint,
+  writeHomePaint,
+} from "@/lib/session/home-paint-cache";
 import {
   clearNativeEntryTokens,
   consumeNativeEntryHandoff,
@@ -114,6 +120,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const clearSessionError = useCallback(() => setSessionError(false), []);
 
   const applyGuestState = useCallback(() => {
+    clearHomePaint();
     setIsAuthenticated(false);
     setIsPreviewMode(true);
     setProfile(null);
@@ -156,6 +163,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    let establishPromise: Promise<boolean> | null = null;
     let redirectingToShell = false;
     try {
       const cachedName =
@@ -167,22 +175,29 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setIsPreviewMode(false);
       }
 
+      // Cookie establish is a second round trip. The session call already
+      // sends the stored bearer, so do not wait for cookies before it.
       if (readNativeEntrySession() && !nativeCookiesEstablishedRef.current) {
-        const established = await tryEstablishNativeCookies();
-        if (established) nativeCookiesEstablishedRef.current = true;
+        establishPromise = tryEstablishNativeCookies().then((established) => {
+          if (established) nativeCookiesEstablishedRef.current = true;
+          return established;
+        });
       }
 
-      // Paint the name from the profile row without waiting for home, kai, and admin.
-      void apiGet<ProfileDTO>("/api/profile")
-        .then((early) => {
-          if (!early.displayName) return;
-          setIsAuthenticated(true);
-          setIsPreviewMode(false);
-          setProfile(early);
-          setUserProfile(profileDtoToUserProfile(early));
-          writeCachedDisplayName(early.displayName);
-        })
-        .catch(() => undefined);
+      // Name is already on screen from the local cache. A parallel /api/profile
+      // only pays for another auth round trip before the bundle returns.
+      if (!cachedName) {
+        void apiGet<ProfileDTO>("/api/profile")
+          .then((early) => {
+            if (!early.displayName) return;
+            setIsAuthenticated(true);
+            setIsPreviewMode(false);
+            setProfile(early);
+            setUserProfile(profileDtoToUserProfile(early));
+            writeCachedDisplayName(early.displayName);
+          })
+          .catch(() => undefined);
+      }
 
       let bundle: SessionBundleDTO;
       try {
@@ -194,8 +209,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           firstError.code === "UNAUTHORIZED" &&
           (nativeShell || Boolean(readNativeEntryAccessToken()))
         ) {
-          const established = await tryEstablishNativeCookies();
+          const established = establishPromise
+            ? await establishPromise
+            : await tryEstablishNativeCookies();
           if (established) {
+            nativeCookiesEstablishedRef.current = true;
             bundle = await loadBundle();
           } else {
             throw firstError;
@@ -216,9 +234,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setReferralCode(bundle.referral.referralCode);
       setHome(bundle.home);
       setKai(bundle.kai);
+      writeHomePaint({
+        profile: bundle.profile,
+        gems: bundle.gems,
+        streak: bundle.streak,
+        home: bundle.home,
+        kai: bundle.kai,
+        referralCode: bundle.referral.referralCode,
+        isAdmin: bundle.isAdmin,
+      });
       if (!nativeShell) {
         clearNativeEntryTokens();
-      } else if (!nativeCookiesEstablishedRef.current) {
+      } else if (!nativeCookiesEstablishedRef.current && !establishPromise) {
         nativeCookiesEstablishedRef.current = true;
         void tryEstablishNativeCookies();
       }
@@ -273,6 +300,40 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setHasHydrated(true);
     return result.ok;
   }, [applyGuestState]);
+
+  useLayoutEffect(() => {
+    try {
+      const paint = readHomePaint();
+      if (!paint) return;
+      setIsAuthenticated(true);
+      setIsPreviewMode(false);
+      setProfile(paint.profile);
+      setUserProfile(profileDtoToUserProfile(paint.profile));
+      setGemBalance(paint.gems);
+      setStreak(paint.streak);
+      syncFreezieBalanceFromServer(paint.streak.freezieBalance);
+      setReferralCode(paint.referralCode);
+      setHome(paint.home);
+      setKai(paint.kai);
+      setIsAdmin(paint.isAdmin);
+      if (paint.profile.displayName) writeCachedDisplayName(paint.profile.displayName);
+    } catch {
+      clearHomePaint();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || !profile || !home) return;
+    writeHomePaint({
+      profile,
+      gems: gemBalance,
+      streak,
+      home,
+      kai,
+      referralCode,
+      isAdmin,
+    });
+  }, [isAuthenticated, profile, gemBalance, streak, home, kai, referralCode, isAdmin]);
 
   useEffect(() => {
     let cancelled = false;

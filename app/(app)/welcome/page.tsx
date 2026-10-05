@@ -129,8 +129,12 @@ function WelcomeContent() {
   }, [isLoading, isAuthenticated, nativeHandoff, sessionError]);
 
   useEffect(() => {
-    if (isAuthenticated) void refreshHome(lang);
-  }, [lang, isAuthenticated, refreshHome]);
+    // /api/session already returns home. Starting /api/home while that
+    // bundle is in flight recomputes the same data and keeps the
+    // placeholder (0 gems, "—") on screen for seconds.
+    if (!isAuthenticated || isLoading) return;
+    void refreshHome(lang);
+  }, [lang, isAuthenticated, isLoading, refreshHome]);
 
   useEffect(() => {
     if (!isAuthenticated) return;

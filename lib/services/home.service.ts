@@ -106,25 +106,37 @@ export async function getHomeCoreData(
   userId: string,
   prefetch?: HomeDataPrefetch,
 ): Promise<HomeCoreDTO> {
-  const [profile, streakStatus, todayNutrition, settings, chatDone] =
+  const profilePromise = prefetch?.profile
+    ? Promise.resolve(prefetch.profile)
+    : getOwnProfile(userId);
+  const streakPromise = prefetch?.streakStatus
+    ? Promise.resolve(prefetch.streakStatus)
+    : getStreakStatus(userId);
+  const nutritionPromise = getTodayNutritionSnapshot(userId).catch(() => null);
+  const settingsPromise = getUserSettings(userId).catch(() => null);
+  const chatPromise = userHasSentChat(userId).catch(() => false);
+  const weekPromise = profilePromise.then((profile) =>
+    loadWeeklyTotals(userId, localTodayDate(profile.timezone ?? "UTC")).catch(
+      () => null,
+    ),
+  );
+
+  const [profile, streakStatus, todayNutrition, settings, chatDone, weekResult] =
     await Promise.all([
-      prefetch?.profile
-        ? Promise.resolve(prefetch.profile)
-        : getOwnProfile(userId),
-      prefetch?.streakStatus
-        ? Promise.resolve(prefetch.streakStatus)
-        : getStreakStatus(userId),
-      getTodayNutritionSnapshot(userId).catch(() => null),
-      getUserSettings(userId).catch(() => null),
-      userHasSentChat(userId).catch(() => false),
+      profilePromise,
+      streakPromise,
+      nutritionPromise,
+      settingsPromise,
+      chatPromise,
+      weekPromise,
     ]);
 
   const today = localTodayDate(profile.timezone ?? "UTC");
-  const week = await loadWeeklyTotals(userId, today).catch(() => ({
+  const week = weekResult ?? {
     workouts: todayNutrition?.workoutsCompleted ?? 0,
     meals: (todayNutrition?.caloriesConsumed ?? 0) > 0 ? 1 : 0,
     waterDays: (todayNutrition?.waterLiters ?? 0) > 0 ? 1 : 0,
-  }));
+  };
   const checkedInToday = streakStatus.lastCheckInDate === today;
   const goalsConfigured = settings?.goalsConfigured ?? false;
   const inactivityDays = daysSince(

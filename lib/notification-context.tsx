@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -16,6 +17,10 @@ import type {
   NotificationListDTO,
 } from "./services/notifications.service";
 import { playNotificationChime } from "./notifications/sound";
+import {
+  readCachedUnreadCount,
+  writeCachedUnreadCount,
+} from "./session/home-paint-cache";
 
 type NotificationContextValue = {
   notifications: NotificationDTO[];
@@ -31,13 +36,21 @@ const NotificationContext = createContext<NotificationContextValue | null>(null)
 const POLL_INTERVAL_MS = 60_000;
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useSessionAuth();
+  const { isAuthenticated, isLoading } = useSessionAuth();
   const [notifications, setNotifications] = useState<NotificationDTO[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const inFlight = useRef(false);
   const knownIds = useRef<Set<string>>(new Set());
   const hasPrimed = useRef(false);
+  const paintedUnread = useRef(false);
+
+  useLayoutEffect(() => {
+    if (!isAuthenticated || paintedUnread.current) return;
+    paintedUnread.current = true;
+    const cached = readCachedUnreadCount();
+    if (cached > 0) setUnreadCount(cached);
+  }, [isAuthenticated]);
 
   const refresh = useCallback(async () => {
     if (!isAuthenticated || inFlight.current) return;
@@ -55,6 +68,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
       setNotifications(res.items);
       setUnreadCount(res.unreadCount);
+      writeCachedUnreadCount(res.unreadCount);
       knownIds.current = incomingIds;
       hasPrimed.current = true;
 
@@ -72,12 +86,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // Initial load + polling while authenticated and tab visible.
   useEffect(() => {
     if (!isAuthenticated) {
+      // Stay quiet while bootstrap is still deciding. Clearing here would
+      // wipe the cached badge in the same turn the paint applies it.
+      if (isLoading) return;
       setNotifications([]);
       setUnreadCount(0);
       knownIds.current = new Set();
       hasPrimed.current = false;
+      paintedUnread.current = false;
       return;
     }
+    // The unread badge is painted from cache. The list request waits until
+    // /api/session finishes so it does not compete with the open path.
+    if (isLoading) return;
     void refresh();
     const timer = setInterval(() => void refresh(), POLL_INTERVAL_MS);
     const onVisibility = () => {
@@ -88,7 +109,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [isAuthenticated, refresh]);
+  }, [isAuthenticated, isLoading, refresh]);
 
   const markAllRead = useCallback(async () => {
     if (unreadCount === 0) return;

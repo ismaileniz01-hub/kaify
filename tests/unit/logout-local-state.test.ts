@@ -42,6 +42,8 @@ describe("clearAuthLocalState", () => {
     );
     local.setItem("streak_claimed_milestones", "[1]");
     local.setItem("streak_claimed_stations", "[2]");
+    local.setItem("kaify:home-paint:v1", "{\"v\":1}");
+    local.setItem("kaify:notif-unread:v1", "9");
   });
 
   it("drops analytics cache and streak claim flags", () => {
@@ -49,5 +51,7 @@ describe("clearAuthLocalState", () => {
     expect(sessionStorage.getItem("kaify:analytics:v2")).toBeNull();
     expect(localStorage.getItem("streak_claimed_milestones")).toBeNull();
     expect(localStorage.getItem("streak_claimed_stations")).toBeNull();
+    expect(localStorage.getItem("kaify:home-paint:v1")).toBeNull();
+    expect(localStorage.getItem("kaify:notif-unread:v1")).toBeNull();
   });
 });
