@@ -2,7 +2,8 @@ import mqtt from "mqtt";
 import { joinRoom } from "@trystero-p2p/mqtt";
 import "./style.css";
 
-const APP_ID = "oda.private.v1";
+const APP_ID = "oda.private.v3";
+const SIGNAL_PASSWORD = "oda-signal-v3";
 const BROKERS = ["wss://broker.emqx.io:8084/mqtt", "wss://broker.hivemq.com:8884/mqtt"];
 const ROOM_TOPIC = "oda/v2/rooms/";
 const RELAY = { urls: BROKERS };
@@ -53,6 +54,7 @@ const state = {
   roomTitle: "",
   roomPassword: "",
   name: localStorage.getItem(NAME_KEY) || "",
+  acceptedPeer: "",
   peerId: null,
   peerName: "",
   micStream: null,
@@ -70,6 +72,16 @@ function el(tag, className, text) {
   if (className) node.className = className;
   if (text != null) node.textContent = text;
   return node;
+}
+
+function normalizePassword(value) {
+  return String(value || "").normalize("NFC").trim().slice(0, 80);
+}
+
+async function hashPassword(password) {
+  const bytes = new TextEncoder().encode(normalizePassword(password));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function roomCode() {
@@ -240,7 +252,7 @@ function renderHome(message) {
   passInput.maxLength = 80;
   passInput.required = true;
   passInput.placeholder = "Karşı tarafa söyleyeceğin şifre";
-  passInput.autocomplete = "new-password";
+  passInput.autocomplete = "off";
   passLabel.append(passInput);
   const createSubmit = el("button", "primary", "Kur ve gir");
   createSubmit.type = "submit";
@@ -267,7 +279,7 @@ function renderHome(message) {
   askInput.type = "password";
   askInput.maxLength = 80;
   askInput.required = true;
-  askInput.autocomplete = "current-password";
+  askInput.autocomplete = "off";
   askLabel.append(askInput);
   const askError = el("p", "note");
   askError.dataset.role = "ask-error";
@@ -285,7 +297,7 @@ function renderHome(message) {
     event.preventDefault();
     const displayName = createName.value.trim();
     const name = roomInput.value.trim().slice(0, 40);
-    const password = passInput.value;
+    const password = normalizePassword(passInput.value);
     if (!displayName || !name || !password) return;
     saveName(displayName);
     const id = roomCode();
@@ -298,13 +310,15 @@ function renderHome(message) {
     event.preventDefault();
     const room = visibleRooms().find((item) => item.id === state.selectedId && !item.self);
     if (!room) return;
+    const password = normalizePassword(askInput.value);
+    if (!password) return;
     saveName(nameInput.value);
     state.checking = true;
     state.joinError = "";
     paintAsk();
     void enterVoice({
       id: room.id,
-      password: askInput.value,
+      password,
       title: room.name,
       reveal: false,
     });
@@ -693,10 +707,9 @@ function watchLevel(stream, onLevel) {
 }
 
 function publish(stream, metadata) {
-  const peers = Object.keys(state.room.getPeers());
-  if (peers.length === 0) return;
-  state.room.addStream(stream, { metadata, target: peers });
-  for (const peerId of peers) scheduleBoost(peerId);
+  if (!state.room || !state.acceptedPeer) return;
+  state.room.addStream(stream, { metadata, target: state.acceptedPeer });
+  scheduleBoost(state.acceptedPeer);
 }
 
 async function boostQuality(pc) {
@@ -874,6 +887,7 @@ function rejectJoin(message, failedRoom) {
   state.room = null;
   state.roomId = "";
   state.peerId = null;
+  state.acceptedPeer = "";
   room?.leave();
   rejoinAfter = Date.now() + 1600;
   stopStream(state.micStream);
@@ -907,6 +921,7 @@ async function enterVoice({ id, password, title, reveal }) {
   state.outbox = [];
   state.photoOutbox = [];
   state.peerId = null;
+  state.acceptedPeer = "";
   state.peerName = "";
   state.checking = !reveal;
   state.joinError = "";
@@ -922,30 +937,25 @@ async function enterVoice({ id, password, title, reveal }) {
     state.cleanups.push(() => clearTimeout(joinTimeout));
   }
 
-  const room = joinRoom({ appId: APP_ID, password, relayConfig: RELAY }, id, {
+  const room = joinRoom({ appId: APP_ID, password: SIGNAL_PASSWORD, relayConfig: RELAY }, id, {
     onPeerHandshake: async () => {
-      if (Object.keys(room.getPeers()).length >= 1) throw new Error("oda-dolu");
+      if (state.acceptedPeer) throw new Error("oda-dolu");
     },
     onJoinError(details) {
       const message = String(details?.error?.message || details?.error || "");
-      const wrong = /incorrect|password/i.test(message);
-      const full = !wrong && (message.includes("oda-dolu") || message.includes("handshake"));
+      if (/incorrect room password|incorrect password/i.test(message)) return;
+      const full = message.includes("oda-dolu");
       const owner = state.hosted?.id === id;
-      if (wrong) {
-        if (owner) return;
-        rejectJoin("Şifre yanlış.", room);
-        return;
-      }
       if (full) {
-        if (owner || (state.ui && state.peerId)) return;
+        if (owner || state.acceptedPeer) return;
         rejectJoin("Bu oda dolu. Aynı anda iki kişi girebilir.", room);
         return;
       }
       if (state.ui) setStatus("Bağlanamadı");
-      else rejectJoin("Bağlanılamadı. Şifreyi ve odanın açık olduğunu kontrol et.", room);
     },
   });
   state.room = room;
+  const auth = room.makeAction("auth");
   state.chat = room.makeAction("chat");
   state.photo = room.makeAction("photo");
   const names = room.makeAction("name");
@@ -975,7 +985,9 @@ async function enterVoice({ id, password, title, reveal }) {
     showBadge(incoming.slice(0, 48));
   };
 
-  room.onPeerJoin = (peerId) => {
+  const acceptPeer = (peerId) => {
+    if (state.acceptedPeer && state.acceptedPeer !== peerId) return;
+    state.acceptedPeer = peerId;
     if (!state.ui) revealCall();
     state.peerId = peerId;
     setStatus("Bağlanıyor");
@@ -1011,9 +1023,45 @@ async function enterVoice({ id, password, title, reveal }) {
     scheduleBoost(peerId);
   };
 
+  auth.onMessage = async (payload, { peerId }) => {
+    if (!payload || typeof payload !== "object") return;
+    if (owner && payload.type === "check" && typeof payload.hash === "string") {
+      if (state.acceptedPeer === peerId) {
+        auth.send({ type: "result", ok: true }, { target: peerId });
+        return;
+      }
+      if (state.acceptedPeer) {
+        auth.send({ type: "result", ok: false, full: true }, { target: peerId });
+        return;
+      }
+      const expected = await hashPassword(state.roomPassword);
+      const ok = payload.hash === expected;
+      auth.send({ type: "result", ok }, { target: peerId });
+      if (ok) acceptPeer(peerId);
+      return;
+    }
+    if (!owner && payload.type === "result") {
+      if (state.acceptedPeer === peerId) return;
+      if (!payload.ok) {
+        rejectJoin(payload.full ? "Bu oda dolu. Aynı anda iki kişi girebilir." : "Şifre yanlış.", room);
+        return;
+      }
+      acceptPeer(peerId);
+    }
+  };
+
+  room.onPeerJoin = (peerId) => {
+    if (owner) return;
+    void hashPassword(password).then((hash) => {
+      if (state.room !== room) return;
+      auth.send({ type: "check", hash }, { target: peerId });
+    });
+  };
+
   room.onPeerLeave = (peerId) => {
     if (peerId !== state.peerId) return;
     state.peerId = null;
+    state.acceptedPeer = "";
     state.peerName = "";
     const ui = state.ui;
     if (!ui) return;
