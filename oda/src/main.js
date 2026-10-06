@@ -11,7 +11,8 @@ let rejoinAfter = 0;
 const NAME_KEY = "oda-name";
 const HOST_KEY = "oda-hosted";
 const VOICE_BITRATE = 256_000;
-const SCREEN_BITRATE = 12_000_000;
+const SCREEN_BITRATE = 20_000_000;
+const SCREEN_AUDIO_BITRATE = 510_000;
 const EMOJIS = [
   "😀", "😁", "😂", "🤣", "😊", "😍", "😘", "😎",
   "🤔", "😅", "😢", "😭", "😡", "🤯", "😴", "🤗",
@@ -59,6 +60,8 @@ const state = {
   peerName: "",
   micStream: null,
   screenStream: null,
+  screenVideoStream: null,
+  screenAudioStream: null,
   muted: false,
   audioCtx: null,
   outbox: [],
@@ -115,6 +118,14 @@ function cleanup() {
 
 function stopStream(stream) {
   stream?.getTracks().forEach((track) => track.stop());
+}
+
+function forgetScreen() {
+  stopStream(state.screenStream);
+  state.screenStream = null;
+  state.screenVideoStream = null;
+  state.screenAudioStream = null;
+  state.captureLabel = "";
 }
 
 function currentName() {
@@ -709,11 +720,56 @@ function watchLevel(stream, onLevel) {
 function publish(stream, metadata) {
   if (!state.room || !state.acceptedPeer) return;
   state.room.addStream(stream, { metadata, target: state.acceptedPeer });
+  tunePeer(state.acceptedPeer);
   scheduleBoost(state.acceptedPeer);
+}
+
+function publishScreen(stream) {
+  const videoTracks = stream.getVideoTracks();
+  const audioTracks = stream.getAudioTracks();
+  if (!state.screenVideoStream && videoTracks.length) state.screenVideoStream = new MediaStream(videoTracks);
+  if (!state.screenAudioStream && audioTracks.length) state.screenAudioStream = new MediaStream(audioTracks);
+  if (state.screenVideoStream) publish(state.screenVideoStream, { kind: "screen" });
+  if (state.screenAudioStream) publish(state.screenAudioStream, { kind: "screen-audio" });
+}
+
+function orderScreenCodecs(codecs) {
+  const groups = [];
+  for (const codec of codecs) {
+    const name = String(codec.mimeType || "").toLowerCase();
+    const extra = name === "video/rtx" || name === "video/red" || name === "video/ulpfec" || name === "video/flexfec-03";
+    if (extra && groups.length) groups[groups.length - 1].push(codec);
+    else groups.push([codec]);
+  }
+  const rank = (group) => {
+    const name = String(group[0].mimeType || "").toLowerCase();
+    if (name === "video/av1") return 0;
+    if (name === "video/vp9") return 1;
+    if (name === "video/h264") return 2;
+    if (name === "video/vp8") return 3;
+    return 4;
+  };
+  groups.sort((a, b) => rank(a) - rank(b));
+  return groups.flat();
+}
+
+function preferSharpVideo(pc) {
+  const codecs = RTCRtpSender.getCapabilities?.("video")?.codecs;
+  if (!codecs?.length || !pc?.getTransceivers) return;
+  const ordered = orderScreenCodecs(codecs);
+  for (const transceiver of pc.getTransceivers()) {
+    if (transceiver.sender?.track?.kind !== "video") continue;
+    try {
+      transceiver.setCodecPreferences(ordered);
+    } catch {
+      /* The browser keeps its default codec order. */
+    }
+  }
 }
 
 async function boostQuality(pc) {
   if (!pc?.getSenders) return;
+  preferSharpVideo(pc);
   for (const sender of pc.getSenders()) {
     const track = sender.track;
     if (!track) continue;
@@ -721,7 +777,7 @@ async function boostQuality(pc) {
     if (!params.encodings?.length) continue;
     const encoding = params.encodings[0];
     if (track.kind === "audio") {
-      encoding.maxBitrate = VOICE_BITRATE;
+      encoding.maxBitrate = track.contentHint === "music" ? SCREEN_AUDIO_BITRATE : VOICE_BITRATE;
       encoding.priority = "high";
     }
     if (track.kind === "video") {
@@ -729,7 +785,7 @@ async function boostQuality(pc) {
       encoding.maxFramerate = 60;
       encoding.priority = "high";
       encoding.scaleResolutionDownBy = 1;
-      params.degradationPreference = "balanced";
+      params.degradationPreference = "maintain-resolution";
     }
     try {
       await sender.setParameters(params);
@@ -739,12 +795,16 @@ async function boostQuality(pc) {
   }
 }
 
+function tunePeer(peerId) {
+  const pc = state.room?.getPeers?.()[peerId];
+  if (!pc) return;
+  preferSharpVideo(pc);
+  void boostQuality(pc);
+}
+
 function scheduleBoost(peerId) {
-  for (const wait of [250, 1000, 2500]) {
-    const timer = setTimeout(() => {
-      const pc = state.room?.getPeers?.()[peerId];
-      if (pc) void boostQuality(pc);
-    }, wait);
+  for (const wait of [250, 1000, 2500, 5000]) {
+    const timer = setTimeout(() => tunePeer(peerId), wait);
     state.cleanups.push(() => clearTimeout(timer));
   }
 }
@@ -779,12 +839,13 @@ async function openMic() {
 async function sharpenScreen(stream) {
   const video = stream.getVideoTracks()[0];
   if (video) {
-    video.contentHint = "motion";
+    video.contentHint = "detail";
+    const current = video.getSettings?.() || {};
     try {
       await video.applyConstraints({
         frameRate: { ideal: 60, max: 60 },
-        width: { ideal: 2560, max: 3840 },
-        height: { ideal: 1440, max: 2160 },
+        ...(current.width ? { width: { ideal: current.width } } : {}),
+        ...(current.height ? { height: { ideal: current.height } } : {}),
       });
     } catch {
       /* The display source keeps the resolution the browser already granted. */
@@ -793,17 +854,7 @@ async function sharpenScreen(stream) {
   const audio = stream.getAudioTracks()[0];
   if (audio) {
     audio.contentHint = "music";
-    try {
-      await audio.applyConstraints({
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-        sampleRate: 48000,
-        channelCount: 2,
-      });
-    } catch {
-      /* System audio stays on the browser default. */
-    }
+    audio.enabled = true;
   }
   return video?.getSettings?.() || {};
 }
@@ -816,36 +867,46 @@ function formatCapture(settings) {
   return fps ? `${width}×${height} · ${fps} fps` : `${width}×${height}`;
 }
 
-async function captureScreen() {
+function screenVideoConstraints(native) {
+  const dpr = window.devicePixelRatio || 1;
+  const width = Math.min(3840, Math.max(1280, Math.round(window.screen.width * dpr)));
+  const height = Math.min(2160, Math.max(720, Math.round(window.screen.height * dpr)));
   const video = {
     frameRate: { ideal: 60, max: 60 },
-    width: { ideal: 2560, max: 3840 },
-    height: { ideal: 1440, max: 2160 },
     cursor: "always",
+    displaySurface: "monitor",
   };
-  const audio = {
-    echoCancellation: false,
-    noiseSuppression: false,
-    autoGainControl: false,
-    sampleRate: 48000,
-    channelCount: 2,
-  };
-  try {
-    return await navigator.mediaDevices.getDisplayMedia({
-      video,
-      audio,
+  if (native) {
+    video.width = { ideal: width };
+    video.height = { ideal: height };
+    video.resizeMode = "none";
+  }
+  return video;
+}
+
+async function captureScreen() {
+  const attempts = [
+    {
+      video: screenVideoConstraints(true),
+      audio: true,
       systemAudio: "include",
+      suppressLocalAudioPlayback: false,
       selfBrowserSurface: "exclude",
-    });
-  } catch (error) {
-    if (error?.name === "NotAllowedError") throw error;
+    },
+    { video: screenVideoConstraints(false), audio: true, systemAudio: "include" },
+    { video: screenVideoConstraints(false), audio: true },
+    { video: true, audio: true },
+  ];
+  let lastError;
+  for (const options of attempts) {
     try {
-      return await navigator.mediaDevices.getDisplayMedia({ video, audio: true });
-    } catch (second) {
-      if (second?.name === "NotAllowedError") throw second;
-      return navigator.mediaDevices.getDisplayMedia({ video: true });
+      return await navigator.mediaDevices.getDisplayMedia(options);
+    } catch (error) {
+      if (error?.name === "NotAllowedError") throw error;
+      lastError = error;
     }
   }
+  throw lastError;
 }
 
 function revealCall() {
@@ -870,7 +931,7 @@ async function startMic(ui) {
     publish(state.micStream, { kind: "mic" });
     watchLevel(state.micStream, (level) => setPerson("self", currentName(), level > 0.06 && !state.muted));
     if (state.audioCtx?.state === "suspended") await state.audioCtx.resume();
-    setStatus("Bekleniyor");
+    if (!state.acceptedPeer) setStatus("Bekleniyor");
   } catch {
     ui.micBtn.classList.remove("on");
     ui.micBtn.textContent = "Mikrofon kapalı";
@@ -891,9 +952,8 @@ function rejectJoin(message, failedRoom) {
   room?.leave();
   rejoinAfter = Date.now() + 1600;
   stopStream(state.micStream);
-  stopStream(state.screenStream);
+  forgetScreen();
   state.micStream = null;
-  state.screenStream = null;
   state.view = "home";
   renderHome();
 }
@@ -913,9 +973,8 @@ async function enterVoice({ id, password, title, reveal }) {
     state.room.leave();
     state.room = null;
     stopStream(state.micStream);
-    stopStream(state.screenStream);
+    forgetScreen();
     state.micStream = null;
-    state.screenStream = null;
   }
   state.roomId = id;
   state.outbox = [];
@@ -999,7 +1058,7 @@ async function enterVoice({ id, password, title, reveal }) {
       room.addStream(state.micStream, { target: peerId, metadata: { kind: "mic" } });
     }
     if (state.screenStream) {
-      room.addStream(state.screenStream, { target: peerId, metadata: { kind: "screen" } });
+      publishScreen(state.screenStream);
       if (state.captureLabel) quality.send(state.captureLabel, { target: peerId });
     }
     for (const payload of state.outbox) state.chat.send(payload, { target: peerId });
@@ -1076,43 +1135,79 @@ async function enterVoice({ id, password, title, reveal }) {
     for (const audio of app.querySelectorAll("audio[data-peer]")) audio.remove();
   };
 
+  const watchedStreams = new WeakSet();
+  const endedVideos = new WeakSet();
+  const showRemoteVideo = (tracks) => {
+    const ui = state.ui;
+    if (!ui) return;
+    ui.people.hidden = true;
+    ui.remoteVideo.hidden = false;
+    ui.fullBtn.hidden = false;
+    ui.remoteVideo.muted = true;
+    let holder = ui.remoteVideo.srcObject;
+    if (!(holder instanceof MediaStream)) {
+      holder = new MediaStream();
+      ui.remoteVideo.srcObject = holder;
+    }
+    for (const track of tracks) {
+      if (!holder.getTracks().includes(track)) holder.addTrack(track);
+      if (endedVideos.has(track)) continue;
+      endedVideos.add(track);
+      track.addEventListener("ended", () => {
+        ui.remoteVideo.hidden = true;
+        ui.remoteVideo.srcObject = null;
+        ui.badge.hidden = true;
+        ui.fullBtn.hidden = true;
+        ui.people.hidden = false;
+        for (const audio of app.querySelectorAll('audio[data-kind="screen"]')) audio.remove();
+        if (document.fullscreenElement) void document.exitFullscreen();
+      });
+    }
+    void ui.remoteVideo.play().catch(() => {});
+  };
+  const playRemoteAudio = (tracks, peerId, screen) => {
+    const kind = screen ? "screen" : "mic";
+    let audio = [...app.querySelectorAll("audio")].find((node) => node.dataset.peer === peerId && node.dataset.kind === kind);
+    if (!audio) {
+      audio = document.createElement("audio");
+      audio.autoplay = true;
+      audio.dataset.peer = peerId;
+      audio.dataset.kind = kind;
+      app.append(audio);
+    }
+    let holder = audio.srcObject;
+    if (!(holder instanceof MediaStream)) {
+      holder = new MediaStream();
+      audio.srcObject = holder;
+    }
+    for (const track of tracks) {
+      track.enabled = true;
+      if (!holder.getTracks().includes(track)) holder.addTrack(track);
+    }
+    if (!screen && !audio.dataset.level) {
+      audio.dataset.level = "1";
+      watchLevel(holder, (level) => setPerson("peer", state.peerName || "Karşı taraf", level > 0.06));
+    }
+    audio.muted = false;
+    audio.volume = 1;
+    void audio.play().catch(() => {});
+  };
   room.onPeerStream = (stream, peerId, metadata) => {
     if (peerId !== state.peerId && state.peerId) return;
     if (!state.ui) revealCall();
-    const ui = state.ui;
-    if (!ui) return;
+    if (!state.ui) return;
     state.peerId = peerId;
-    const videoTracks = stream.getVideoTracks();
-    if (videoTracks.length > 0 || metadata?.kind === "screen") {
-      ui.people.hidden = true;
-      ui.remoteVideo.hidden = false;
-      ui.fullBtn.hidden = false;
-      ui.remoteVideo.muted = true;
-      ui.remoteVideo.srcObject = stream;
-      void ui.remoteVideo.play().catch(() => {});
-      const track = videoTracks[0];
-      if (track) {
-        track.addEventListener("ended", () => {
-          ui.remoteVideo.hidden = true;
-          ui.remoteVideo.srcObject = null;
-          ui.badge.hidden = true;
-          ui.fullBtn.hidden = true;
-          ui.people.hidden = false;
-          if (document.fullscreenElement) void document.exitFullscreen();
-        });
-      }
-    }
-    if (stream.getAudioTracks().length > 0) {
-      const audio = document.createElement("audio");
-      audio.autoplay = true;
-      audio.dataset.peer = peerId;
-      audio.srcObject = stream;
-      app.append(audio);
-      void audio.play().catch(() => {});
-      if (metadata?.kind !== "screen") {
-        watchLevel(stream, (level) => setPerson("peer", state.peerName || "Karşı taraf", level > 0.06));
-      }
-    }
+    if (watchedStreams.has(stream)) return;
+    watchedStreams.add(stream);
+    const screen = metadata?.kind === "screen" || metadata?.kind === "screen-audio";
+    const apply = () => {
+      const videos = stream.getVideoTracks();
+      const audios = stream.getAudioTracks();
+      if (videos.length) showRemoteVideo(videos);
+      if (audios.length) playRemoteAudio(audios, peerId, screen);
+    };
+    apply();
+    stream.addEventListener("addtrack", apply);
   };
 
   if (state.ui) setStatus(state.peerId ? "Bağlı" : "Bekleniyor", Boolean(state.peerId));
@@ -1141,14 +1236,17 @@ async function toggleScreen(button, previewLabel) {
   const settings = await sharpenScreen(stream);
   state.captureLabel = formatCapture(settings);
   state.screenStream = stream;
-  publish(stream, { kind: "screen" });
+  publishScreen(stream);
   if (state.peerId && state.captureLabel) state.quality?.send(state.captureLabel, { target: state.peerId });
   const preview = state.ui?.preview;
   const video = state.ui?.previewVideo;
+  const audioNote = stream.getAudioTracks().length
+    ? "Ses de gidiyor"
+    : "Ses yok. Paylaşırken “Sistem sesini paylaş”ı işaretle";
   if (preview && video) {
     preview.hidden = false;
-    video.srcObject = stream;
-    previewLabel.textContent = state.captureLabel || "Ekran gidiyor";
+    video.srcObject = new MediaStream(stream.getVideoTracks());
+    previewLabel.textContent = [state.captureLabel, audioNote].filter(Boolean).join(" · ");
   }
   button.classList.add("on");
   button.textContent = "Paylaşımı bırak";
@@ -1156,10 +1254,11 @@ async function toggleScreen(button, previewLabel) {
 }
 
 function stopScreen(button) {
-  if (state.screenStream && state.room) state.room.removeStream(state.screenStream);
-  stopStream(state.screenStream);
-  state.screenStream = null;
-  state.captureLabel = "";
+  if (state.room) {
+    if (state.screenVideoStream) state.room.removeStream(state.screenVideoStream);
+    if (state.screenAudioStream) state.room.removeStream(state.screenAudioStream);
+  }
+  forgetScreen();
   const preview = state.ui?.preview;
   if (preview) {
     preview.hidden = true;
@@ -1182,9 +1281,8 @@ function hangup(message) {
   state.room?.leave();
   state.room = null;
   stopStream(state.micStream);
-  stopStream(state.screenStream);
+  forgetScreen();
   state.micStream = null;
-  state.screenStream = null;
   state.peerId = null;
   cleanup();
   state.audioCtx?.close().catch(() => {});

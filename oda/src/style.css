@@ -282,6 +282,7 @@ input[type="password"]:focus { border-color: rgba(142, 171, 255, 0.8); }
   height: 100%;
   background: #000;
   object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
   cursor: zoom-in;
 }
 
