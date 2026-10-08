@@ -1,3 +1,8 @@
+import {
+  extractMealMacrosFromCoachText,
+  extractMealMacrosFromRecord,
+} from "@/lib/kaios/nutrition/parse-macros";
+
 /** Unwrap KAIOS envelopes so cards read ui/data the same way as the snapshot. */
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -45,4 +50,37 @@ export function displayPlanLabel(
   if (!raw) return "";
   if (looksLikeI18nKey(raw)) return translate(raw);
   return raw.replace(/^workout\./i, "").replace(/_/g, " ");
+}
+
+export type FoodCardMacros = {
+  calories: number;
+  protein: number;
+  carb: number;
+  fat: number;
+};
+
+/**
+ * Maya's calorie ring. Reads envelope food_analysis first, then the spoken
+ * macro line, so a text-only reply still draws the card.
+ */
+export function resolveFoodCardMacros(
+  payload: unknown,
+  fallbackText?: string,
+): FoodCardMacros | null {
+  const root = asRecord(payload) ?? {};
+  const unwrapped = unwrapChatCardPayload(root);
+  const parsed =
+    extractMealMacrosFromRecord(unwrapped) ??
+    extractMealMacrosFromRecord(root.analysis) ??
+    extractMealMacrosFromRecord(root) ??
+    (fallbackText?.trim()
+      ? extractMealMacrosFromCoachText(fallbackText)
+      : null);
+  if (!parsed) return null;
+  return {
+    calories: parsed.calories,
+    protein: parsed.protein,
+    carb: parsed.carbs,
+    fat: parsed.fat,
+  };
 }

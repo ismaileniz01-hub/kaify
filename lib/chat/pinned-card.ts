@@ -1,5 +1,9 @@
 import type { ContactId } from "@/lib/contacts";
-import { extractPhysiqueFromLeoPayload } from "@/lib/kaios/context/physique-summary";
+import {
+  extractPhysiqueFromCoachText,
+  extractPhysiqueFromLeoPayload,
+  resolvePhysiqueCard,
+} from "@/lib/kaios/context/physique-summary";
 import { resolveWorkoutPlanDays } from "@/lib/kaios/plan-speech";
 import type { MessageType } from "@/lib/types/database.types";
 
@@ -23,8 +27,13 @@ export function isAlexProgramMessage(msg: PinnableChatMessage): boolean {
 export function isLeoAnalysisMessage(msg: PinnableChatMessage): boolean {
   if (!isCoachSide(msg.from) || msg.streaming) return false;
   const type = msg.messageType;
-  if (type !== "score" && type !== "photo_analysis") return false;
-  return extractPhysiqueFromLeoPayload(msg.payload) != null;
+  if (
+    (type === "score" || type === "photo_analysis") &&
+    extractPhysiqueFromLeoPayload(msg.payload) != null
+  ) {
+    return true;
+  }
+  return extractPhysiqueFromCoachText(msg.text ?? "") != null;
 }
 
 export function findLatestPinnableMessage<T extends PinnableChatMessage>(
@@ -48,6 +57,6 @@ export function pinnedCardMetric(
     const days = resolveWorkoutPlanDays(msg.payload, msg.text).length;
     return days > 0 ? String(days) : "";
   }
-  const overall = extractPhysiqueFromLeoPayload(msg.payload)?.overall;
+  const overall = resolvePhysiqueCard(msg.payload, msg.text)?.overall;
   return overall != null ? String(overall) : "";
 }

@@ -100,9 +100,15 @@ export function extractPhysiqueFromLeoPayload(
     root.data && typeof root.data === "object"
       ? (root.data as Record<string, unknown>)
       : null;
+  const ui =
+    root.ui && typeof root.ui === "object"
+      ? (root.ui as Record<string, unknown>)
+      : null;
   const scores = {
     ...readScoreMap(analysis.scores),
+    ...readScoreMap(data?.scores),
     ...readScoreMap(data?.body_parts),
+    ...readScoreMap(ui?.scores),
     ...readScoreMap(root.scores),
   };
   if (Object.keys(scores).length === 0) return null;
@@ -110,9 +116,85 @@ export function extractPhysiqueFromLeoPayload(
     finiteNumber(analysis.overall_score) ??
     finiteNumber(analysis.overallScore) ??
     finiteNumber(data?.overall) ??
+    finiteNumber(data?.overall_score) ??
+    finiteNumber(ui?.overall_score) ??
     finiteNumber(root.overall_score) ??
     finiteNumber(root.overallScore);
   return summarizePhysiqueScores(scores, overall);
+}
+
+const MUSCLE_LABELS: Record<string, string> = {
+  chest: "chests",
+  chests: "chests",
+  pecs: "chests",
+  göğüs: "chests",
+  gogus: "chests",
+  shoulder: "shoulders",
+  shoulders: "shoulders",
+  omuz: "shoulders",
+  omuzlar: "shoulders",
+  biceps: "biceps",
+  biseps: "biceps",
+  pazı: "biceps",
+  pazi: "biceps",
+  triceps: "triceps",
+  triseps: "triceps",
+  core: "core",
+  abs: "core",
+  karın: "core",
+  karin: "core",
+  back: "back",
+  sırt: "back",
+  sirt: "back",
+  legs: "upper_legs",
+  quads: "upper_legs",
+  quadriceps: "upper_legs",
+  bacak: "upper_legs",
+  "üst bacak": "upper_legs",
+  "ust bacak": "upper_legs",
+  upper_legs: "upper_legs",
+  calves: "calves",
+  calf: "calves",
+  baldır: "calves",
+  baldir: "calves",
+};
+
+const SCORE_HEADER_RE =
+  /(?:scores as observed|gözlenen skorlar|skorlar|puanlar)\s*:/i;
+
+/** Bar chart from a written score list when the payload has no muscle map. */
+export function extractPhysiqueFromCoachText(
+  text: string,
+): PhysiqueLaggingSummary | null {
+  if (!SCORE_HEADER_RE.test(text)) return null;
+  const scores: PhysiqueScoreMap = {};
+  let overall: number | null = null;
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim().replace(/^[-*•]\s+/, "").replace(/\*/g, "");
+    const match = line.match(/^(.+?)\s*[—–-]\s*(\d{1,3})\s*$/);
+    if (!match?.[1] || !match[2]) continue;
+    const n = Number(match[2]);
+    if (!Number.isFinite(n) || n < 0 || n > 100) continue;
+    const label = match[1].trim().toLocaleLowerCase("tr");
+    if (/^(overall|genel|toplam)$/i.test(label)) {
+      overall = n;
+      continue;
+    }
+    const muscle = MUSCLE_LABELS[label];
+    if (muscle) scores[muscle] = n;
+  }
+  if (Object.keys(scores).length < 2) return null;
+  return summarizePhysiqueScores(scores, overall);
+}
+
+export function resolvePhysiqueCard(
+  payload: unknown,
+  text?: string,
+): PhysiqueLaggingSummary | null {
+  const fromPayload = extractPhysiqueFromLeoPayload(payload);
+  if (fromPayload && Object.keys(fromPayload.scores).length > 0) return fromPayload;
+  if (!text?.trim()) return fromPayload;
+  return extractPhysiqueFromCoachText(text) ?? fromPayload;
 }
 
 function formatLiters(n: number): string {

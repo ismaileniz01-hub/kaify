@@ -3,12 +3,98 @@ import {
   displayPlanLabel,
   looksLikeI18nKey,
   planDayHeading,
+  resolveFoodCardMacros,
   unwrapChatCardPayload,
 } from "@/lib/chat/rich-card-payload";
+import { attachSpokenRichCard } from "@/lib/kaios/cards/spoken-card";
+import { extractPhysiqueFromCoachText } from "@/lib/kaios/context/physique-summary";
 import {
   parseWorkoutDaysFromSpeech,
   resolveWorkoutPlanDays,
 } from "@/lib/kaios/plan-speech";
+
+describe("resolveFoodCardMacros", () => {
+  it("reads a spoken Maya calorie line when the payload has no chart", () => {
+    expect(
+      resolveFoodCardMacros(
+        { intent: "meal_analysis" },
+        "Kalori: 650 kcal. Protein: 40g, karbonhidrat: 70g, yağ: 18g.",
+      ),
+    ).toEqual({ calories: 650, protein: 40, carb: 70, fat: 18 });
+  });
+
+  it("reads food_analysis nested under ui", () => {
+    expect(
+      resolveFoodCardMacros({
+        ui: {
+          cardType: "analysis",
+          food_analysis: { calories: 420, protein: 28, carb: 40, fat: 12 },
+        },
+      }),
+    ).toEqual({ calories: 420, protein: 28, carb: 40, fat: 12 });
+  });
+});
+
+describe("spoken rich cards", () => {
+  it("turns Maya's macro sentence into the calorie card", () => {
+    const envelope = attachSpokenRichCard({
+      coachId: "maya",
+      intent: "meal_analysis",
+      assistantText: "Bu öğün yaklaşık 650 kcal, 40g protein, 70g karbonhidrat, 18g yağ.",
+      envelope: {
+        schema_version: "kaios.envelope.v1",
+        coach: "maya",
+        message: "Bu öğün yaklaşık 650 kcal, 40g protein, 70g karbonhidrat, 18g yağ.",
+        intent: "meal_analysis",
+      },
+    });
+    expect(envelope.ui).toMatchObject({
+      cardType: "analysis",
+      food_analysis: { calories: 650, protein: 40, carb: 70, fat: 18 },
+    });
+  });
+
+  it("keeps a meal list on the meal-plan card", () => {
+    const envelope = attachSpokenRichCard({
+      coachId: "maya",
+      intent: "meal_plan",
+      assistantText: "Kahvaltıda yumurta.",
+      envelope: {
+        schema_version: "kaios.envelope.v1",
+        coach: "maya",
+        message: "Kahvaltıda yumurta.",
+        ui: {
+          meals: [{ label: "Kahvaltı", items: [{ name: "Yumurta", calories: 180 }] }],
+        },
+      },
+    });
+    expect(envelope.ui).toMatchObject({ cardType: "meal_plan" });
+  });
+
+  it("builds Leo's score card from the written list", () => {
+    const text =
+      "Physique read\n\nScores as observed:\n- Shoulders — 65\n- Chest — 60\n- Overall — 58";
+    expect(extractPhysiqueFromCoachText(text)?.scores).toMatchObject({
+      shoulders: 65,
+      chests: 60,
+    });
+    const envelope = attachSpokenRichCard({
+      coachId: "leo",
+      intent: "physique_analysis",
+      assistantText: text,
+      envelope: {
+        schema_version: "kaios.envelope.v1",
+        coach: "leo",
+        message: text,
+      },
+    });
+    expect(envelope.ui).toMatchObject({ cardType: "score" });
+    expect(envelope.data).toMatchObject({
+      scores: { shoulders: 65, chests: 60 },
+      overall_score: 58,
+    });
+  });
+});
 
 describe("unwrapChatCardPayload", () => {
   it("reads meal_plan fields from nested ui", () => {

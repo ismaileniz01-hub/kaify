@@ -1342,7 +1342,7 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
                             }}
                           />
                         ) : null}
-                        {isCoach && !msg.streaming && msg.id !== pinnedId && !isLeoScoreMessage(msg) ? (
+                        {isCoach && !msg.streaming && !isLeoScoreMessage(msg) ? (
                           <ChatRichCard
                             contactId={coachId}
                             messageType={msg.messageType ?? "text"}

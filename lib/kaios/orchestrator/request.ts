@@ -58,6 +58,7 @@ import type { PendingAnalyticsPayload } from "@/lib/analytics/confirmation-paylo
 import { ensureMayaMealWaterReminder } from "@/lib/kaios/maya/meal-water";
 import { relabelMayaMacroLabels } from "@/lib/kaios/maya/macro-labels";
 import { ensureAlexDailyCardio } from "@/lib/kaios/alex/daily-cardio";
+import { attachSpokenRichCard } from "@/lib/kaios/cards/spoken-card";
 import { ensureMayaMealSaveAsk } from "@/lib/kaios/maya/meal-save-ask";
 import { ensureMayaAlexHandoff } from "@/lib/kaios/maya/alex-handoff";
 import { ensureMayaAnalyticsSavedAck } from "@/lib/kaios/maya/analytics-ack";
@@ -754,7 +755,12 @@ export async function* orchestrateCoachChat(
     mealSaved,
     waterSaved,
   });
-  envelope = { ...envelope, message: assistantText };
+  envelope = attachSpokenRichCard({
+    coachId: input.coachId,
+    intent,
+    envelope: { ...envelope, message: assistantText },
+    assistantText,
+  });
 
   if (assistantText.length > streamedVisible.length) {
     const rest = assistantText.slice(streamedVisible.length);

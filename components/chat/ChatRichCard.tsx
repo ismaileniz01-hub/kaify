@@ -6,9 +6,10 @@ import { CONTACTS } from "@/lib/contacts";
 import { useLang } from "@/lib/lang-context";
 import type { MessageType } from "@/lib/types/database.types";
 import { WorkoutPlanCard } from "@/components/chat/WorkoutPlanCard";
-import { extractPhysiqueFromLeoPayload } from "@/lib/kaios/context/physique-summary";
+import { resolvePhysiqueCard } from "@/lib/kaios/context/physique-summary";
 import {
   displayPlanLabel,
+  resolveFoodCardMacros,
   unwrapChatCardPayload,
 } from "@/lib/chat/rich-card-payload";
 import { resolveWorkoutPlanDays } from "@/lib/kaios/plan-speech";
@@ -22,8 +23,8 @@ type ChatRichCardProps = {
 
 const SCORE_COLORS = ["#ef4444", "#f59e0b", "#3b82f6", "#22c55e", "#a855f7", "#ec4899"];
 
-function scorePayloadToAnalysis(payload: Record<string, unknown>) {
-  const physique = extractPhysiqueFromLeoPayload(payload);
+function scorePayloadToAnalysis(payload: Record<string, unknown>, fallbackText?: string) {
+  const physique = resolvePhysiqueCard(payload, fallbackText);
   const rawScores = physique?.scores ?? {};
   // Muscle scores are on a 0-100 scale (see vision prompt). Keep only numeric
   // entries and clamp defensively so a stray value never breaks the bars.
@@ -82,16 +83,24 @@ export function ChatRichCard({
       ? (payload as Record<string, unknown>)
       : {};
 
+  const unwrappedEarly = unwrapChatCardPayload(p);
+  const cardType =
+    typeof unwrappedEarly.cardType === "string" ? unwrappedEarly.cardType : undefined;
+  const showFoodCard =
+    contactId === "maya" ||
+    messageType === "analysis" ||
+    messageType === "photo_analysis" ||
+    cardType === "analysis";
+  const food = showFoodCard ? resolveFoodCardMacros(p, fallbackText) : null;
+  const structuredMeals =
+    (messageType === "meal_plan" || cardType === "meal_plan") &&
+    Array.isArray(unwrappedEarly.meals) &&
+    unwrappedEarly.meals.length > 0;
+
   // Food analysis (Maya) — macro/calorie card. Kept separate from the body
   // score card so a meal photo never renders an empty "Body Analysis Score".
-  if (messageType === "analysis") {
-    const analysis = (p.analysis ?? p) as Record<string, unknown>;
-    const food = analysis.food_analysis as
-      | { calories?: number; protein?: number; carb?: number; fat?: number }
-      | null
-      | undefined;
-    if (!food) return null;
-
+  // Spoken kcal/protein lines still draw the ring when the payload has no chart.
+  if (food && !structuredMeals) {
     const cal = Math.round(food.calories ?? 0);
     const macros: { key: string; label: string; grams: number; color: string }[] = [
       { key: "protein", label: t("analysis.protein"), grams: Math.round(food.protein ?? 0), color: "#22c55e" },
@@ -152,9 +161,14 @@ export function ChatRichCard({
 
   if (
     messageType === "score" ||
-    (messageType === "photo_analysis" && extractPhysiqueFromLeoPayload(p))
+    messageType === "photo_analysis" ||
+    cardType === "score" ||
+    contactId === "leo"
   ) {
-    const a = scorePayloadToAnalysis(p);
+    const a = scorePayloadToAnalysis(p, fallbackText);
+    if (a.categories.length === 0 && a.overallScore === 0) {
+      // Not a physique card — keep looking for a plan card.
+    } else {
     return (
       <div
         className="chat-card-unfold mt-2 overflow-hidden rounded-2xl"
@@ -199,9 +213,10 @@ export function ChatRichCard({
         </div>
       </div>
     );
+    }
   }
 
-  if (messageType === "meal_plan") {
+  if (messageType === "meal_plan" || cardType === "meal_plan") {
     const mp = unwrapChatCardPayload(p) as {
       totalCalories?: number;
       targetCalories?: number;
@@ -326,7 +341,7 @@ export function ChatRichCard({
     if (messageType === "workout_plan") return null;
   }
 
-  if (messageType === "daily_summary") {
+  if (messageType === "daily_summary" || cardType === "daily_summary") {
     const ds = p as {
       greeting?: string;
       workout?: { completed?: string; next?: string; status?: string };
