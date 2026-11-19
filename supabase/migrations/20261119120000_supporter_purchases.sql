@@ -30,6 +30,7 @@ create policy supporter_purchases_select_own
 revoke all on public.supporter_purchases from anon;
 revoke insert, update, delete on public.supporter_purchases from authenticated;
 grant select on public.supporter_purchases to authenticated;
+grant all on table public.supporter_purchases to service_role;
 
 comment on table public.supporter_purchases is
   'Founding Supporter one-time pack purchases (Paddle). Billing record — do not delete live rows.';
