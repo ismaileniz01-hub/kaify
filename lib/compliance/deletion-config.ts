@@ -92,6 +92,12 @@ export const RETAINED_AFTER_DELETE: readonly DeletionTableSpec[] = [
     notes: "Paddle subscription mirror retained for billing reconciliation",
   },
   {
+    table: "supporter_purchases",
+    column: "user_id",
+    behavior: "set_null",
+    notes: "Supporter pack purchase retained for billing reconciliation",
+  },
+  {
     table: "admin_audit_log",
     column: "admin_id",
     behavior: "set_null",

@@ -39,6 +39,12 @@ export function LandingFooter() {
           <Link href="/pricing" className="transition hover:text-white">
             {t("landing.nav.pricing")}
           </Link>
+          <Link
+            href="/pricing#supporter"
+            className="font-semibold text-rose-300 transition hover:text-rose-200"
+          >
+            {t("landing.nav.support_us")}
+          </Link>
           <Link href="/privacy" className="transition hover:text-white">
             {t("legal.privacy")}
           </Link>

@@ -1,7 +1,11 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { EventName } from "@paddle/paddle-node-sdk";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { buildPaddlePriceTierMap, buildPaddlePriceCycleMap } from "@/lib/billing/paddle-config";
+import {
+  buildPaddlePriceTierMap,
+  buildPaddlePriceCycleMap,
+  isSupporterPriceId,
+} from "@/lib/billing/paddle-config";
 import {
   getPaddleServerClient,
   getPaddleWebhookSecret,
@@ -806,6 +810,82 @@ async function provisionFromPrice(
   return { ok: true };
 }
 
+function transactionTotalsFromData(data: Record<string, unknown>): {
+  amountMinor: number | null;
+  currencyCode: string | null;
+} {
+  const details = asRecord(data.details);
+  const totals = details ? asRecord(details.totals) : null;
+  const raw = pickString(totals?.grandTotal, totals?.grand_total, totals?.total);
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+  return {
+    amountMinor: Number.isFinite(parsed) ? parsed : null,
+    currencyCode:
+      pickString(data.currencyCode, data.currency_code, totals?.currencyCode, totals?.currency_code) ??
+      null,
+  };
+}
+
+/** Records a one-time supporter pack purchase. Idempotent on transaction id. */
+async function recordSupporterPurchase(
+  admin: ReturnType<typeof createAdminSupabaseClient>,
+  userId: string | null,
+  data: Record<string, unknown>,
+  priceId: string,
+): Promise<void> {
+  const transactionId = pickString(data.id);
+  if (!transactionId) throw new Error("supporter_missing_transaction_id");
+  const { amountMinor, currencyCode } = transactionTotalsFromData(data);
+  const { error } = await admin.from("supporter_purchases").upsert(
+    {
+      transaction_id: transactionId,
+      user_id: userId,
+      customer_id: pickString(data.customerId, data.customer_id) ?? null,
+      price_id: priceId,
+      amount_minor: amountMinor,
+      currency_code: currencyCode,
+      status: "completed",
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "transaction_id", ignoreDuplicates: true },
+  );
+  if (error) throw error;
+  logger.info("billing.supporter_pack_purchased", { userId, transactionId });
+}
+
+/**
+ * Refund/dispute on a supporter transaction: update that record only and never
+ * touch the buyer's subscription. Returns false when the transaction is not a
+ * supporter purchase (caller falls through to subscription handling).
+ */
+async function applySupporterAdjustment(
+  admin: ReturnType<typeof createAdminSupabaseClient>,
+  data: Record<string, unknown>,
+  action: AdjustmentEntitlementAction,
+): Promise<boolean> {
+  const transactionId = pickString(data.transactionId, data.transaction_id);
+  if (!transactionId) return false;
+  const { data: row, error } = await admin
+    .from("supporter_purchases")
+    .select("transaction_id, status")
+    .eq("transaction_id", transactionId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!row) return false;
+
+  const isDispute = pickString(data.action)?.toLowerCase() !== "refund";
+  const nextStatus =
+    action === "restore" ? "completed" : action === "revoke" ? (isDispute ? "disputed" : "refunded") : null;
+  if (nextStatus && nextStatus !== row.status) {
+    const { error: updateError } = await admin
+      .from("supporter_purchases")
+      .update({ status: nextStatus, updated_at: new Date().toISOString() })
+      .eq("transaction_id", transactionId);
+    if (updateError) throw updateError;
+  }
+  return true;
+}
+
 async function restoreAfterChargebackReversal(
   admin: ReturnType<typeof createAdminSupabaseClient>,
   userId: string,
@@ -967,6 +1047,13 @@ export async function handleNormalizedPaddleEvent(
         if (customerId) {
           await ensureCustomerStub(admin, customerId, userId, customerEmail);
         }
+        const txnPriceId = priceIdFromData(data);
+        if (isSupporterPriceId(txnPriceId)) {
+          // One-time pack (guest checkout allowed): record it, never map it to
+          // a subscription tier. userId is null for buyers without an account.
+          await recordSupporterPurchase(admin, userId, data, txnPriceId!);
+          break;
+        }
         if (!userId) return failRetryable("user_not_found");
         const result = await provisionFromPrice(userId, data);
         if (!result.ok) {
@@ -977,9 +1064,12 @@ export async function handleNormalizedPaddleEvent(
 
       case "adjustment.created":
       case "adjustment.updated": {
-        if (!userId) return failRetryable("user_not_found");
         const entitlementAction =
           classifyAdjustmentEntitlementAction(data);
+        if (await applySupporterAdjustment(admin, data, entitlementAction)) {
+          break;
+        }
+        if (!userId) return failRetryable("user_not_found");
         if (entitlementAction === "restore") {
           const restored = await restoreAfterChargebackReversal(
             admin,
@@ -997,8 +1087,11 @@ export async function handleNormalizedPaddleEvent(
 
       case "dispute.created":
       case "dispute.updated": {
-        if (!userId) return failRetryable("user_not_found");
         const disputeAction = classifyDisputeEntitlementAction(data);
+        if (await applySupporterAdjustment(admin, data, disputeAction)) {
+          break;
+        }
+        if (!userId) return failRetryable("user_not_found");
         if (disputeAction === "restore") {
           const restored = await restoreAfterChargebackReversal(
             admin,

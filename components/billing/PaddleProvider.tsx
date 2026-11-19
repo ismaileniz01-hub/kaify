@@ -20,6 +20,8 @@ type PaddleContextValue = {
   ready: boolean;
   configured: boolean;
   checkoutCompleted: boolean;
+  /** Price ID of the last completed checkout (first line item). */
+  completedPriceId: string | null;
 };
 
 const PaddleContext = createContext<PaddleContextValue>({
@@ -27,6 +29,7 @@ const PaddleContext = createContext<PaddleContextValue>({
   ready: false,
   configured: false,
   checkoutCompleted: false,
+  completedPriceId: null,
 });
 
 export function usePaddle(): PaddleContextValue {
@@ -37,6 +40,7 @@ export function PaddleProvider({ children }: { children: ReactNode }) {
   const [paddle, setPaddle] = useState<Paddle | undefined>();
   const [ready, setReady] = useState(false);
   const [checkoutCompleted, setCheckoutCompleted] = useState(false);
+  const [completedPriceId, setCompletedPriceId] = useState<string | null>(null);
   const configured = isPaddleConfigured();
 
   useEffect(() => {
@@ -49,6 +53,7 @@ export function PaddleProvider({ children }: { children: ReactNode }) {
       environment: getPaddleEnvironment(),
       eventCallback: (event) => {
         if (event.name === "checkout.completed") {
+          setCompletedPriceId(event.data?.items?.[0]?.price_id ?? null);
           setCheckoutCompleted(true);
         }
       },
@@ -74,8 +79,8 @@ export function PaddleProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ paddle, ready, configured, checkoutCompleted }),
-    [checkoutCompleted, configured, paddle, ready],
+    () => ({ paddle, ready, configured, checkoutCompleted, completedPriceId }),
+    [checkoutCompleted, completedPriceId, configured, paddle, ready],
   );
 
   return (

@@ -50,6 +50,7 @@ export const SCHEMA_REGISTRY: readonly SchemaRegistryEntry[] = [
   { table: "data_export_logs", mode: "user_own", ownerColumn: "user_id", note: "select-only" },
   { table: "paddle_customers", mode: "user_own", ownerColumn: "user_id", note: "select-only" },
   { table: "paddle_subscriptions", mode: "user_own", ownerColumn: "user_id", note: "select-only" },
+  { table: "supporter_purchases", mode: "user_own", ownerColumn: "user_id", note: "select-only" },
   { table: "pending_gifts", mode: "user_own", ownerColumn: "user_id", note: "select-only" },
   { table: "support_tickets", mode: "user_own", ownerColumn: "user_id" },
   {

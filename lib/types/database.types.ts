@@ -972,6 +972,32 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["paddle_subscriptions"]["Row"]>;
         Relationships: [];
       };
+      supporter_purchases: {
+        Row: {
+          transaction_id: string;
+          user_id: string | null;
+          customer_id: string | null;
+          price_id: string;
+          amount_minor: number | null;
+          currency_code: string | null;
+          status: "completed" | "refunded" | "disputed";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          transaction_id: string;
+          price_id: string;
+          user_id?: string | null;
+          customer_id?: string | null;
+          amount_minor?: number | null;
+          currency_code?: string | null;
+          status?: "completed" | "refunded" | "disputed";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["supporter_purchases"]["Row"]>;
+        Relationships: [];
+      };
       push_subscriptions: {
         Row: {
           id: string;

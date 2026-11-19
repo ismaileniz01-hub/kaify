@@ -39,6 +39,7 @@ export const USER_EXPORT_TABLES: readonly ExportTableSpec[] = [
   { table: "billing_events", column: "user_id", description: "Subscription and payment webhook events" },
   { table: "paddle_customers", column: "user_id", description: "Linked Paddle customer billing identity" },
   { table: "paddle_subscriptions", column: "user_id", description: "Mirrored Paddle subscription status" },
+  { table: "supporter_purchases", column: "user_id", description: "Founding Supporter pack purchases" },
   { table: "data_export_logs", column: "user_id", description: "History of your data export requests" },
   { table: "pending_gifts", column: "user_id", description: "Unclaimed admin or referral gifts" },
   { table: "support_tickets", column: "user_id", description: "Support tickets you opened" },

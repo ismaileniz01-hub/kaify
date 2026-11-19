@@ -47,6 +47,7 @@ export const RETENTION_REGISTRY: readonly RetentionRegistryEntry[] = [
   { table: "data_export_logs", classification: "LEGAL_AUDIT", retainMonths: RETENTION.dataExportLogsMonths, purged: true, rationale: "DSAR export audit." },
   { table: "paddle_customers", classification: "LEGAL_AUDIT", purged: false, rationale: "Billing identity map." },
   { table: "paddle_subscriptions", classification: "LEGAL_AUDIT", purged: false, rationale: "Canonical subscription + event order metadata." },
+  { table: "supporter_purchases", classification: "LEGAL_AUDIT", purged: false, rationale: "One-time supporter pack billing record." },
   { table: "pending_gifts", classification: "INDEFINITE_BY_DESIGN", purged: false, rationale: "Until claimed or account deleted." },
   { table: "support_tickets", classification: "PRODUCT_HISTORY", purged: false, rationale: "Support history retained until account deletion." },
   { table: "analytics_pending_confirmations", classification: "OPERATIONAL_SHORT_LIVED", retainDays: 30, purged: false, rationale: "Short-lived confirmations; resolved rows stay until account deletion for now." },

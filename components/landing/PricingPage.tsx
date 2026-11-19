@@ -16,6 +16,8 @@ import { InlineAlert } from "@/components/InlineAlert";
 import { StepUpChallenge } from "@/components/auth/StepUpChallenge";
 import { usePaddle } from "@/components/billing/PaddleProvider";
 import { useBillingPortal } from "@/components/billing/useBillingPortal";
+import { SupporterPackCard } from "@/components/billing/SupporterPackCard";
+import { getPaddleSupporterPriceId } from "@/lib/billing/paddle-config";
 import { useSessionOptional } from "@/lib/session-contexts";
 import { useNativeApp } from "@/lib/native/platform";
 import { ProductEventBeacon } from "@/components/analytics/ProductEventBeacon";
@@ -143,9 +145,11 @@ function PaddleCheckoutResume() {
 }
 
 function WebCheckoutReturn() {
-  const { checkoutCompleted } = usePaddle();
+  const { checkoutCompleted, completedPriceId } = usePaddle();
   const { t } = useLang();
   if (!checkoutCompleted) return null;
+  // Supporter pack shows its own thank-you; it activates no subscription.
+  if (completedPriceId && completedPriceId === getPaddleSupporterPriceId()) return null;
 
   return (
     <div
@@ -647,6 +651,14 @@ export function PricingPage() {
               <p className="mt-4 text-center text-sm text-zinc-500">
                 {t("pricing.depends_on_region")}
               </p>
+            </ScrollReveal>
+          </div>
+        </section>
+
+        <section className="landing-section">
+          <div className="landing-container">
+            <ScrollReveal>
+              <SupporterPackCard />
             </ScrollReveal>
           </div>
         </section>

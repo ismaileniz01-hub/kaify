@@ -11,6 +11,9 @@ const deleteEqIs = vi.fn();
 const rpc = vi.fn();
 
 const paddleSubSelect = vi.fn();
+const supporterUpsert = vi.fn();
+const supporterSelect = vi.fn();
+const supporterUpdateEq = vi.fn();
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminSupabaseClient: () => ({
@@ -29,6 +32,7 @@ vi.mock("@/lib/supabase/admin", () => ({
       }
       if (table === "paddle_customers") {
         return {
+          insert: vi.fn().mockResolvedValue({ error: null }),
           select: () => ({
             eq: () => ({ maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) }),
           }),
@@ -47,6 +51,15 @@ vi.mock("@/lib/supabase/admin", () => ({
           }),
           upsert: vi.fn().mockResolvedValue({ error: null }),
           update: () => ({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+        };
+      }
+      if (table === "supporter_purchases") {
+        return {
+          upsert: supporterUpsert,
+          select: () => ({ eq: () => ({ maybeSingle: supporterSelect }) }),
+          update: (values: unknown) => ({
+            eq: (_col: string, id: string) => supporterUpdateEq(values, id),
+          }),
         };
       }
       if (table === "profiles") {
@@ -118,9 +131,16 @@ beforeEach(() => {
   selectEqMaybeSingle.mockReset();
   updateEq.mockReset();
   deleteEqIs.mockReset();
+  deleteEqIs.mockResolvedValue({ error: null });
   rpc.mockReset();
   paddleSubSelect.mockReset();
   paddleSubSelect.mockResolvedValue({ data: null, error: null });
+  supporterUpsert.mockReset();
+  supporterUpsert.mockResolvedValue({ error: null });
+  supporterSelect.mockReset();
+  supporterSelect.mockResolvedValue({ data: null, error: null });
+  supporterUpdateEq.mockReset();
+  supporterUpdateEq.mockResolvedValue({ error: null });
 });
 
 afterEach(() => {
@@ -367,5 +387,72 @@ describe("Paddle refund and dispute entitlement", () => {
     });
 
     expect(result).toEqual({ ok: true });
+  });
+});
+
+describe("supporter pack (guest checkout)", () => {
+  const SUPPORTER_PRICE = "pri_01m7ttwghve8z5ds38p465k676";
+
+  it("records a guest purchase without a user and never provisions a tier", async () => {
+    insert.mockResolvedValue({ error: null });
+    updateEq.mockResolvedValue({ error: null });
+
+    const result = await handleNormalizedPaddleEvent({
+      eventId: "evt_supporter_guest",
+      eventType: "transaction.completed",
+      data: {
+        id: "txn_guest_1",
+        customer_id: "ctm_guest",
+        currency_code: "EUR",
+        items: [{ price: { id: SUPPORTER_PRICE } }],
+        details: { totals: { grand_total: "250000" } },
+        custom_data: { kind: "supporter_pack" },
+      },
+      rawPayload: {},
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(supporterUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        transaction_id: "txn_guest_1",
+        user_id: null,
+        customer_id: "ctm_guest",
+        price_id: SUPPORTER_PRICE,
+        amount_minor: 250000,
+        currency_code: "EUR",
+        status: "completed",
+      }),
+      { onConflict: "transaction_id", ignoreDuplicates: true },
+    );
+  });
+
+  it("marks a refunded supporter transaction without revoking any subscription", async () => {
+    insert.mockResolvedValue({ error: null });
+    updateEq.mockResolvedValue({ error: null });
+    supporterSelect.mockResolvedValue({
+      data: { transaction_id: "txn_guest_1", status: "completed" },
+      error: null,
+    });
+
+    const result = await handleNormalizedPaddleEvent({
+      eventId: "evt_supporter_refund",
+      eventType: "adjustment.updated",
+      data: {
+        id: "adj_1",
+        transaction_id: "txn_guest_1",
+        action: "refund",
+        type: "full",
+        status: "approved",
+      },
+      rawPayload: {},
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(supporterUpdateEq).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "refunded" }),
+      "txn_guest_1",
+    );
   });
 });

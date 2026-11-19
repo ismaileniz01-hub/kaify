@@ -1671,5 +1671,15 @@
   "analytics.avg": "میانگین",
   "analytics.vs_last_week": "▲ {percent}% در مقایسه با هفته گذشته",
   "analytics.vs_last_month": "▲ {percent}% در مقایسه با ماه گذشته",
-  "analytics.vs_last_quarter": "▲ {percent}% در مقایسه با سه ماهه گذشته"
+  "analytics.vs_last_quarter": "▲ {percent}% در مقایسه با سه ماهه گذشته",
+  "pricing.supporter.title": "Become a Founding Supporter",
+  "pricing.supporter.description": "A one-time pack for people who want to back Kaify early and help shape what we build next.",
+  "pricing.supporter.perk.badge": "Founding Supporter recognition from the Kaify team",
+  "pricing.supporter.perk.early_access": "Early access to new features",
+  "pricing.supporter.perk.priority": "Priority support",
+  "pricing.supporter.one_time": "One-time payment · not a subscription",
+  "pricing.supporter.cta": "Get the Supporter Pack",
+  "pricing.supporter.thanks": "Thank you! Your Founding Supporter purchase is complete — the receipt is on its way to your email.",
+  "pricing.supporter.no_account": "No Kaify account needed — just your email at checkout.",
+  "landing.nav.support_us": "Support us"
 }

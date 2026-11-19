@@ -120,3 +120,27 @@ export function buildPaddlePriceCycleMap(): Record<string, "monthly" | "yearly">
   }
   return map;
 }
+
+/**
+ * One-time "Founding Supporter" pack (2500 EUR). Guest checkout — no account
+ * needed. Production price ID by default; NEXT_PUBLIC_PADDLE_PRICE_SUPPORTER
+ * (client) and PADDLE_PRICE_SUPPORTER (server) override it, e.g. for sandbox.
+ */
+export const SUPPORTER_PACK_AMOUNT_EUR = 2500;
+export const PADDLE_SUPPORTER_PRICE_ID = "pri_01m7ttwghve8z5ds38p465k676";
+
+export function getPaddleSupporterPriceId(): string {
+  // Static access so Next.js inlines the public env var into the client bundle.
+  return process.env.NEXT_PUBLIC_PADDLE_PRICE_SUPPORTER?.trim() || PADDLE_SUPPORTER_PRICE_ID;
+}
+
+/** True when a webhook price ID is the supporter pack (never a subscription tier). */
+export function isSupporterPriceId(priceId: string | undefined): boolean {
+  if (!priceId) return false;
+  const ids = [
+    PADDLE_SUPPORTER_PRICE_ID,
+    process.env.PADDLE_PRICE_SUPPORTER?.trim(),
+    process.env.NEXT_PUBLIC_PADDLE_PRICE_SUPPORTER?.trim(),
+  ].filter((id): id is string => Boolean(id));
+  return ids.includes(priceId.trim());
+}

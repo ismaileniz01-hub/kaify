@@ -1670,5 +1670,15 @@
   "analytics.confirm.calories": "Kalori",
   "analytics.confirm.protein": "Protein (g)",
   "myaccount.billing_status": "Durum: {status}",
-  "myaccount.billing_ends": "bitiş {date}"
+  "myaccount.billing_ends": "bitiş {date}",
+  "pricing.supporter.title": "Kurucu Destekçi Ol",
+  "pricing.supporter.description": "Kaify’ı erkenden desteklemek ve geliştireceklerimize yön vermek isteyenler için tek seferlik paket.",
+  "pricing.supporter.perk.badge": "Kaify ekibinden Kurucu Destekçi teşekkürü",
+  "pricing.supporter.perk.early_access": "Yeni özelliklere erken erişim",
+  "pricing.supporter.perk.priority": "Öncelikli destek",
+  "pricing.supporter.one_time": "Tek seferlik ödeme · abonelik değildir",
+  "pricing.supporter.cta": "Destekçi Paketini Al",
+  "pricing.supporter.thanks": "Teşekkürler! Kurucu Destekçi alımın tamamlandı — makbuzun e-postana geliyor.",
+  "pricing.supporter.no_account": "Kaify hesabı gerekmez — ödemede sadece e-postan istenir.",
+  "landing.nav.support_us": "Destek ol"
 }
