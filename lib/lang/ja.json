@@ -1672,7 +1672,7 @@
   "analytics.vs_last_week": "▲ {percent}% 対前週",
   "analytics.vs_last_month": "▲ 先月比 {percent}%",
   "analytics.vs_last_quarter": "▲ 前四半期比 {percent}%",
-  "pricing.supporter.title": "Become a Founding Supporter",
+  "pricing.supporter.title": "Founding Supporter",
   "pricing.supporter.description": "A one-time pack for people who want to back Kaify early and help shape what we build next.",
   "pricing.supporter.perk.badge": "Founding Supporter recognition from the Kaify team",
   "pricing.supporter.perk.early_access": "Early access to new features",

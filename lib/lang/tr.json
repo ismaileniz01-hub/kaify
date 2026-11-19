@@ -1671,7 +1671,7 @@
   "analytics.confirm.protein": "Protein (g)",
   "myaccount.billing_status": "Durum: {status}",
   "myaccount.billing_ends": "bitiş {date}",
-  "pricing.supporter.title": "Kurucu Destekçi Ol",
+  "pricing.supporter.title": "Kurucu Destekçi",
   "pricing.supporter.description": "Kaify’ı erkenden desteklemek ve geliştireceklerimize yön vermek isteyenler için tek seferlik paket.",
   "pricing.supporter.perk.badge": "Kaify ekibinden Kurucu Destekçi teşekkürü",
   "pricing.supporter.perk.early_access": "Yeni özelliklere erken erişim",

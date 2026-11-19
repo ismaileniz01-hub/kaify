@@ -1672,7 +1672,7 @@
   "analytics.vs_last_week": "▲ {percent} % v primerjavi s prejšnjim tednom",
   "analytics.vs_last_month": "▲ {percent} % v primerjavi s prejšnjim mesecem",
   "analytics.vs_last_quarter": "▲ {percent} % v primerjavi s prejšnjim četrtletjem",
-  "pricing.supporter.title": "Become a Founding Supporter",
+  "pricing.supporter.title": "Founding Supporter",
   "pricing.supporter.description": "A one-time pack for people who want to back Kaify early and help shape what we build next.",
   "pricing.supporter.perk.badge": "Founding Supporter recognition from the Kaify team",
   "pricing.supporter.perk.early_access": "Early access to new features",

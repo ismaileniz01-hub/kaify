@@ -1666,7 +1666,7 @@
   "analytics.confirm.protein": "Protein (g)",
   "myaccount.billing_status": "Status: {status}",
   "myaccount.billing_ends": "ends {date}",
-  "pricing.supporter.title": "Become a Founding Supporter",
+  "pricing.supporter.title": "Founding Supporter",
   "pricing.supporter.description": "A one-time pack for people who want to back Kaify early and help shape what we build next.",
   "pricing.supporter.perk.badge": "Founding Supporter recognition from the Kaify team",
   "pricing.supporter.perk.early_access": "Early access to new features",

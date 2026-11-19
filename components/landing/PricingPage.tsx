@@ -519,6 +519,12 @@ export function PricingPage() {
                   </ScrollReveal>
                 );
               })}
+              <ScrollReveal
+                delay={PRICING_PLANS_WITH_PADDLE.length * 120}
+                direction="up"
+              >
+                <SupporterPackCard />
+              </ScrollReveal>
             </div>
 
             <ScrollReveal delay={200} className="mx-auto mt-10 max-w-3xl">
@@ -651,14 +657,6 @@ export function PricingPage() {
               <p className="mt-4 text-center text-sm text-zinc-500">
                 {t("pricing.depends_on_region")}
               </p>
-            </ScrollReveal>
-          </div>
-        </section>
-
-        <section className="landing-section">
-          <div className="landing-container">
-            <ScrollReveal>
-              <SupporterPackCard />
             </ScrollReveal>
           </div>
         </section>
