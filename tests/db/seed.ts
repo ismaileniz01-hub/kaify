@@ -213,6 +213,17 @@ export async function seedUserOwnedRows(
       }),
       `paddle_subscriptions ${label}`,
     );
+    await must(
+      admin.from("supporter_purchases").upsert({
+        transaction_id: `txn_seed_${label.toLowerCase()}_${uid.slice(0, 8)}`,
+        user_id: uid,
+        customer_id: custId,
+        price_id: "pri_test_supporter",
+        amount_minor: 250000,
+        currency_code: "EUR",
+      }),
+      `supporter_purchases ${label}`,
+    );
 
     const gift = await mustData(
       admin
