@@ -56,6 +56,8 @@ describe("buildContentSecurityPolicy", () => {
     expect(staticCsp).not.toContain("'strict-dynamic'");
     expect(staticCsp).toMatch(/script-src 'self' 'unsafe-inline'/);
     expect(staticCsp).toContain("https://cdn.paddle.com");
+    // Paddle.js injects Paddle Retain; without strict-dynamic it must be listed.
+    expect(staticCsp).toContain("https://public.profitwell.com");
     expect(staticCsp).toContain("object-src 'none'");
     expect(staticCsp).toContain("frame-ancestors 'none'");
   });

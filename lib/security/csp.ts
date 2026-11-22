@@ -17,9 +17,16 @@ export function isLegalContentPath(pathname: string): boolean {
 const PADDLE_CSP = {
   // Wildcard matters on nonce-less (static) pages, where 'strict-dynamic' does
   // not cover scripts Paddle injects from its other subdomains.
-  script: ["https://cdn.paddle.com", "https://sandbox-cdn.paddle.com", "https://*.paddle.com"],
+  // Paddle.js also injects Paddle Retain (ProfitWell) from public.profitwell.com.
+  script: [
+    "https://cdn.paddle.com",
+    "https://sandbox-cdn.paddle.com",
+    "https://*.paddle.com",
+    "https://public.profitwell.com",
+  ],
   style: ["https://cdn.paddle.com", "https://sandbox-cdn.paddle.com"],
   connect: [
+    "https://*.profitwell.com",
     "https://cdn.paddle.com",
     "https://sandbox-cdn.paddle.com",
     "https://api.paddle.com",
