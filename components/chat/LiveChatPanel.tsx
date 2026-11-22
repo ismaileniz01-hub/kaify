@@ -208,7 +208,8 @@ export function LiveChatPanel({ coachId, onCoachTyping }: LiveChatPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [errorUpgrade, setErrorUpgrade] = useState(false);
   const [quotaWarning, setQuotaWarning] = useState<"LIMIT_80" | "LIMIT_100" | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  // Deletes are optimistic with a 7s undo window, so the UI never blocks on them.
+  const [deleting] = useState(false);
   const [selectingDelete, setSelectingDelete] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);

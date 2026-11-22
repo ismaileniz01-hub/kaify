@@ -109,11 +109,20 @@ const sentryConfig = withSentryConfig(nextConfig, {
   project: "javascript-nextjs",
   silent: !process.env.CI,
   widenClientFileUpload: true,
+  // Session Replay is disabled (replaysSessionSampleRate: 0), so drop its code
+  // and the SDK debug logging from client/edge bundles. Tracing stays on.
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+    excludeReplayIframe: true,
+    excludeReplayShadowDom: true,
+    excludeReplayWorker: true,
+  },
   webpack: {
     automaticVercelMonitors: true,
-    treeshake: {
-      removeDebugLogging: true,
-    },
+    // Middleware errors still reach Sentry through instrumentation.ts
+    // onRequestError (routeType "middleware"); wrapping the middleware itself
+    // pushed the edge bundle over its 125 KB budget.
+    autoInstrumentMiddleware: false,
   },
 });
 

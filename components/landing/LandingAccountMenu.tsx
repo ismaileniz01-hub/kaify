@@ -4,8 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { LogOut, User } from "lucide-react";
-import { apiGet } from "@/lib/api/client";
-import { signOutUser } from "@/lib/auth/logout";
 import { useLang } from "@/lib/lang-context";
 import { useSessionOptional } from "@/lib/session-contexts";
 import type { ProfileDTO } from "@/lib/types/domain.types";
@@ -30,7 +28,10 @@ export function useAccountSnapshot(isAuthenticated: boolean): AccountSnapshot {
     if (session?.profile) return;
 
     let cancelled = false;
-    void apiGet<ProfileDTO>("/api/profile")
+    // Loaded on demand: the API client pulls in Supabase + zod, which anonymous
+    // landing visitors (most traffic) never need in their first-load JS.
+    void import("@/lib/api/client")
+      .then(({ apiGet }) => apiGet<ProfileDTO>("/api/profile"))
       .then((profile) => {
         if (cancelled) return;
         setFetched({
@@ -97,6 +98,7 @@ export function LandingAccountMenu({ snapshot }: { snapshot: AccountSnapshot }) 
       if (session?.signOut) {
         await session.signOut();
       } else {
+        const { signOutUser } = await import("@/lib/auth/logout");
         await signOutUser();
       }
       window.location.assign("/");

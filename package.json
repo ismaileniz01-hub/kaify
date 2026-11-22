@@ -2,6 +2,9 @@
   "name": "kaify",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -65,13 +68,13 @@
   },
   "dependencies": {
     "@aparajita/capacitor-secure-storage": "^8.0.0",
-    "@capacitor/android": "8.5.0",
+    "@capacitor/android": "8.5.3",
     "@capacitor/app": "^8.1.0",
     "@capacitor/browser": "^8.0.4",
-    "@capacitor/cli": "8.5.0",
-    "@capacitor/core": "8.5.0",
+    "@capacitor/cli": "8.5.3",
+    "@capacitor/core": "8.5.3",
     "@capacitor/haptics": "^8.0.2",
-    "@capacitor/ios": "^8.5.0",
+    "@capacitor/ios": "8.5.3",
     "@capacitor/keyboard": "^8.0.5",
     "@capacitor/push-notifications": "^8.1.1",
     "@capacitor/splash-screen": "^8.0.1",
