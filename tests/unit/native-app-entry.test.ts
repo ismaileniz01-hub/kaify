@@ -10,14 +10,15 @@ describe("native packaged route policy", () => {
     expect(NATIVE_ENTRY_PATH).toBe("/login");
   });
 
-  it("keeps only the marketing landing web-only", () => {
+  // Store app is members-only (7037ae0): landing, signup and pricing stay on the website.
+  it("keeps landing, signup and pricing web-only", () => {
     expect(isWebOnlyPath("/")).toBe(true);
-    expect(isWebOnlyPath("/signup")).toBe(false);
-    expect(isWebOnlyPath("/pricing")).toBe(false);
+    expect(isWebOnlyPath("/signup")).toBe(true);
+    expect(isWebOnlyPath("/pricing")).toBe(true);
     expect(isWebOnlyPath("/login")).toBe(false);
   });
 
-  it.each(["/login", "/signup", "/welcome", "/settings", "/chat/kai"])(
+  it.each(["/login", "/welcome", "/settings", "/chat/kai"])(
     "allows %s inside the installed app",
     (path) => {
       expect(isWebOnlyPath(path)).toBe(false);
