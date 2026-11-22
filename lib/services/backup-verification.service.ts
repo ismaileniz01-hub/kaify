@@ -74,7 +74,8 @@ export async function runBackupVerification(): Promise<BackupVerificationResult>
     tables,
     storage: { avatarsObjectCount },
     migrations: { count: null, latestVersion: null },
-    gitRelease: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
+    gitRelease:
+      process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.RAILWAY_GIT_COMMIT_SHA ?? null,
   };
 
   const failedCounts = Object.values(tables).filter((v) => v === null).length;

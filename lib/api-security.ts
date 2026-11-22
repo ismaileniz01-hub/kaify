@@ -105,8 +105,9 @@ export function getClientIP(request: NextRequest): string {
     return request.headers.get("cf-connecting-ip") || "unknown";
   }
 
-  // Vercel sets x-real-ip at the edge; do not trust client-supplied x-forwarded-for.
-  if (process.env.VERCEL) {
+  // Vercel and Railway set x-real-ip at their edge proxy (overwriting any
+  // client-supplied value); do not trust client-supplied x-forwarded-for there.
+  if (process.env.VERCEL || process.env.RAILWAY_ENVIRONMENT_NAME) {
     return request.headers.get("x-real-ip") || "unknown";
   }
 

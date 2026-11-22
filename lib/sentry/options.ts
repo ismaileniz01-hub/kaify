@@ -10,9 +10,14 @@ export function isSentryEnabled(): boolean {
 const baseOptions = {
   dsn,
   enabled: isSentryEnabled(),
-  environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? "development",
+  environment:
+    process.env.VERCEL_ENV ??
+    process.env.RAILWAY_ENVIRONMENT_NAME ??
+    process.env.NODE_ENV ??
+    "development",
   // Ties every event to the exact deploy so regressions are traceable.
-  release: process.env.VERCEL_GIT_COMMIT_SHA ?? undefined,
+  release:
+    process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.RAILWAY_GIT_COMMIT_SHA ?? undefined,
   tracesSampleRate: process.env.NODE_ENV === "production" ? 0.05 : 1.0,
   enableLogs: false,
   sendDefaultPii: false,

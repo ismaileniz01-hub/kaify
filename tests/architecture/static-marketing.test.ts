@@ -14,12 +14,22 @@ describe("marketing rendering (PERF-004 + F3-09 CSP)", () => {
     expect(layout).toContain("export const metadata");
   });
 
-  it("marketing layout uses a per-request nonce instead of force-static", () => {
+  it("marketing layout stays static (no per-request headers/cookies/nonce)", () => {
     const layout = src("app/(marketing)/layout.tsx");
-    expect(layout).not.toContain('dynamic = "force-static"');
-    expect(layout).toContain("headers(");
-    expect(layout).toContain("x-nonce");
+    expect(layout).not.toContain("headers(");
+    expect(layout).not.toContain("x-nonce");
     expect(layout).not.toContain("cookies(");
+  });
+
+  it("landing components do not force a dynamic render", () => {
+    expect(src("components/landing/LandingPage.tsx")).not.toContain("headers(");
+    expect(src("components/seo/MarketingJsonLd.tsx")).not.toContain("headers(");
+  });
+
+  it("middleware sends the nonce-less policy for marketing paths only", () => {
+    const mw = src("middleware.ts");
+    expect(mw).toContain("isMarketingPath(pathname)");
+    expect(mw).toContain("buildContentSecurityPolicy(nonce || null");
   });
 
   it("public legal pages do not call cookies()", () => {

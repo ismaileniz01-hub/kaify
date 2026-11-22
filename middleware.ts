@@ -225,13 +225,17 @@ export async function middleware(request: NextRequest) {
   }
 
   const ip = getClientIP(request);
-  const nonce = generateCspNonce();
+  // Marketing/legal pages are statically prerendered (served from cache, no
+  // per-request render), so they get a nonce-less policy. Product pages stay
+  // dynamic and keep the strict per-request nonce policy.
+  const staticPage = isMarketingPath(pathname);
+  const nonce = staticPage ? "" : generateCspNonce();
   const requestId = crypto.randomUUID();
   const requestHeaders = new Headers(request.headers);
-  const contentSecurityPolicy = buildContentSecurityPolicy(nonce, {
+  const contentSecurityPolicy = buildContentSecurityPolicy(nonce || null, {
     legalEmbed: isLegalContentPath(pathname),
   });
-  requestHeaders.set("x-nonce", nonce);
+  if (nonce) requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("x-request-id", requestId);
   // Next.js extracts the nonce for framework/page scripts from the request CSP.
   // The identical policy is added to the browser response in finalizeResponse.

@@ -15,7 +15,9 @@ export function isLegalContentPath(pathname: string): boolean {
 
 /** Paddle Billing (checkout overlay + Paddle.js CDN assets). */
 const PADDLE_CSP = {
-  script: ["https://cdn.paddle.com", "https://sandbox-cdn.paddle.com"],
+  // Wildcard matters on nonce-less (static) pages, where 'strict-dynamic' does
+  // not cover scripts Paddle injects from its other subdomains.
+  script: ["https://cdn.paddle.com", "https://sandbox-cdn.paddle.com", "https://*.paddle.com"],
   style: ["https://cdn.paddle.com", "https://sandbox-cdn.paddle.com"],
   connect: [
     "https://cdn.paddle.com",
@@ -33,8 +35,15 @@ const PADDLE_CSP = {
   ],
 } as const;
 
+/**
+ * @param nonce Per-request nonce for dynamic (authenticated product) pages.
+ *   Pass `null` for statically prerendered marketing/legal pages: their HTML is
+ *   built once and served from cache, so it cannot carry a per-request nonce.
+ *   Those pages render no user-controlled content, so inline scripts are allowed
+ *   there instead of re-rendering every page on every request.
+ */
 export function buildContentSecurityPolicy(
-  nonce: string,
+  nonce: string | null,
   options?: { legalEmbed?: boolean },
 ): string {
   const styleSrc = options?.legalEmbed
@@ -46,12 +55,15 @@ export function buildContentSecurityPolicy(
   const scriptBase = [
     "script-src",
     "'self'",
-    `'nonce-${nonce}'`,
-    `'${NATIVE_ENTRY_BOOT_CSP_HASH}'`,
-    "'strict-dynamic'",
+    // Static pages: no nonce and no hash — browsers ignore 'unsafe-inline'
+    // whenever a nonce or hash source is present in the same directive.
+    ...(nonce
+      ? [`'nonce-${nonce}'`, `'${NATIVE_ENTRY_BOOT_CSP_HASH}'`, "'strict-dynamic'"]
+      : ["'unsafe-inline'"]),
     "https://www.google.com",
     "https://www.gstatic.com",
     "https://cdn.sender.net",
+    "https://*.sender.net",
     ...PADDLE_CSP.script,
   ];
   const scriptSrc = options?.legalEmbed

@@ -82,7 +82,13 @@ export function isAssociationPath(pathname: string): boolean {
 export function isMarketingPath(pathname: string): boolean {
   if (pathname === "/") return true;
   if (pathname === "/pricing") return true;
-  if (pathname === "/sitemap.xml" || pathname === "/robots.txt") return true;
+  if (
+    pathname === "/sitemap.xml" ||
+    pathname === "/robots.txt" ||
+    pathname === "/llms.txt"
+  ) {
+    return true;
+  }
   return (
     pathname === "/privacy" ||
     pathname.startsWith("/privacy/") ||

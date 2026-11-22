@@ -35,6 +35,11 @@ const isCapacitorBuild = process.env.IS_CAPACITOR === "true";
 const nextConfig = {
   output: isCapacitorBuild ? "export" : undefined,
   trailingSlash: isCapacitorBuild,
+  env: {
+    // Vercel Web Analytics / Speed Insights only exist on Vercel's edge
+    // (/_vercel/*). On any other host (Railway, Docker) skip loading them.
+    NEXT_PUBLIC_VERCEL_ANALYTICS: process.env.VERCEL ? "1" : "",
+  },
   experimental: {
     optimizePackageImports: ["lucide-react"],
   },

@@ -45,11 +45,7 @@ const FAQ_ITEMS = [
   },
 ] as const;
 
-type LandingFAQProps = {
-  nonce?: string;
-};
-
-export function LandingFAQ({ nonce }: LandingFAQProps) {
+export function LandingFAQ() {
   const { t } = useLang();
   const baseId = useId();
   const [openIndex, setOpenIndex] = useState(0);
@@ -69,8 +65,8 @@ export function LandingFAQ({ nonce }: LandingFAQProps) {
 
   return (
     <section id="faq" className="landing-section landing-section--faq relative overflow-hidden">
+      {/* JSON-LD is data, not executed script — CSP does not apply, no nonce needed. */}
       <script
-        nonce={nonce}
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />

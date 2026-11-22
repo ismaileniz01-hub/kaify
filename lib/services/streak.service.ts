@@ -75,19 +75,31 @@ export async function performCheckIn(
         dto.checkedInDate ?? "",
       ]),
     });
-    const profiles = admin as unknown as {
-      from?: (table: string) => {
-        update: (row: Record<string, string>) => {
-          eq: (col: string, id: string) => Promise<unknown>;
-        };
-      };
-    };
-    if (typeof profiles.from === "function") {
-      void profiles
-        .from("profiles")
-        .update({ last_meaningful_activity_at: new Date().toISOString() })
-        .eq("id", userId);
-    }
+    // Supabase query builders are lazy: a bare `void builder` never sends the
+    // request. Returning it from .then() executes it; failures stay best-effort.
+    void Promise.resolve()
+      .then(() =>
+        (admin as unknown as {
+          from: (table: string) => {
+            update: (row: Record<string, string>) => {
+              eq: (col: string, id: string) => PromiseLike<{ error: { message: string } | null }>;
+            };
+          };
+        })
+          .from("profiles")
+          .update({ last_meaningful_activity_at: new Date().toISOString() })
+          .eq("id", userId),
+      )
+      .then((res) => {
+        if (res?.error) {
+          logger.warn("check-in last activity update failed", { error: res.error.message });
+        }
+      })
+      .catch((activityError) => {
+        logger.warn("check-in last activity update failed", {
+          error: activityError instanceof Error ? activityError.message : "unknown",
+        });
+      });
 
     void emitCheckInNotifications(userId, dto).catch((emitError) => {
       logger.warn("check-in notification emit failed", {

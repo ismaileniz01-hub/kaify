@@ -62,8 +62,12 @@ export function OptionalAnalytics({ nonce }: OptionalAnalyticsProps) {
           `,
         }}
       />
-      <Analytics />
-      <SpeedInsights />
+      {process.env.NEXT_PUBLIC_VERCEL_ANALYTICS === "1" ? (
+        <>
+          <Analytics />
+          <SpeedInsights />
+        </>
+      ) : null}
     </>
   );
 }

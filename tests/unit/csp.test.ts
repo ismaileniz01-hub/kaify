@@ -42,12 +42,22 @@ describe("buildContentSecurityPolicy", () => {
     expect(csp).toContain("https://api.paddle.com");
   });
 
-  it("marketing and app CSPs both require a nonce and omit script unsafe-inline", () => {
+  it("dynamic (product) CSP requires a nonce and omits script unsafe-inline", () => {
     expect(csp).toContain(`'nonce-${nonce}'`);
     expect(csp).toContain("'strict-dynamic'");
     expect(csp).toContain(`'${NATIVE_ENTRY_BOOT_CSP_HASH}'`);
     expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
     expect(csp).toContain("style-src 'self' 'unsafe-inline'");
+  });
+
+  it("static (marketing) CSP has no nonce but keeps host allowlist and hardening", () => {
+    const staticCsp = buildContentSecurityPolicy(null);
+    expect(staticCsp).not.toContain("'nonce-");
+    expect(staticCsp).not.toContain("'strict-dynamic'");
+    expect(staticCsp).toMatch(/script-src 'self' 'unsafe-inline'/);
+    expect(staticCsp).toContain("https://cdn.paddle.com");
+    expect(staticCsp).toContain("object-src 'none'");
+    expect(staticCsp).toContain("frame-ancestors 'none'");
   });
 
   it("declares CSP reporting without weakening object-src", () => {
