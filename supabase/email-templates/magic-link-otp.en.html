@@ -1,15 +1,15 @@
 <!--
   Paste into Supabase Dashboard → Authentication → Email Templates → Magic Link
 
-  Also paste confirm-signup-otp.en.html into **Confirm signup** if new users
-  still receive a link instead of a code.
+  Also paste confirm-signup-otp.en.html into **Confirm signup**: new users receive
+  that template, and it is required before deploying the OTP send path.
 
   Subject: Your Kaify Ai login code
 
   BEFORE pasting: Authentication → Providers → Email → Email OTP length → 6
   (Template cannot change digit count — only that setting does.)
 -->
-{{ if eq .Data.language "tr" }}
+{{ if eq (printf "%v" .Data.language) "tr" }}
 <h2 style="margin:0 0 16px;font-family:system-ui,sans-serif;color:#111;">Giriş kodun</h2>
 <p style="margin:0 0 20px;font-family:system-ui,sans-serif;color:#444;line-height:1.5;">
   Giriş yapmak için bu tek kullanımlık kodu Kaify Ai uygulamasında gir. Kod kısa süre içinde geçersiz olur.
@@ -23,7 +23,7 @@
 <p style="margin:0 0 24px;font-family:ui-monospace,monospace;font-size:32px;font-weight:700;letter-spacing:0.35em;color:#7c3aed;">
   {{ .Token }}
 </p>
-{{ if eq .Data.language "tr" }}
+{{ if eq (printf "%v" .Data.language) "tr" }}
 <p style="margin:0;font-family:system-ui,sans-serif;font-size:13px;color:#888;line-height:1.5;">
   Bu kodu sen istemediysen bu e-postayı güvenle yok sayabilirsin.
 </p>

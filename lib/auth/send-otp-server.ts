@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { logger } from "@/lib/logger";
 import { getSupabasePublicEnv, getSupabaseServerEnv } from "@/lib/supabase/env";
 
 export type GoTrueOtpError = {
@@ -7,65 +8,43 @@ export type GoTrueOtpError = {
   status?: number;
 };
 
-type AdminAuth = ReturnType<typeof createClient>["auth"]["admin"];
-
-function isAlreadyRegistered(message: string | undefined): boolean {
-  return /already been registered|already exists|email_exists/i.test(
-    message ?? "",
-  );
-}
-
-async function findAuthUserId(
-  admin: AdminAuth,
-  email: string,
-): Promise<string | null> {
-  for (let page = 1; page <= 20; page += 1) {
-    const { data, error } = await admin.listUsers({ page, perPage: 200 });
-    if (error) throw error;
-    const found = data.users.find(
-      (user) => user.email?.toLowerCase() === email,
-    );
-    if (found) return found.id;
-    if (data.users.length < 200) return null;
-  }
-  return null;
-}
-
 /**
- * Confirm-signup emails use {{ .ConfirmationURL }} in the hosted Auth
- * template, so a brand-new Gmail gets a "confirm your email" link instead
- * of a 6-digit code. Mark the user confirmed via Admin, then send a login
- * OTP (create_user: false) which uses the magic-link template with {{ .Token }}.
+ * Make sure an auth row exists for this address before asking for a code.
+ *
+ * The row is created UNCONFIRMED and with a provider-generated password.
+ * Nothing here may ever confirm the address: only a code read from the mailbox
+ * (or an identity provider) proves ownership. Confirming early would let
+ * whoever registered the address first keep a working password for it, because
+ * GoTrue only discards an unproven password while the account is unconfirmed.
+ *
+ * Creating the row up front, instead of letting /otp do it, also means /otp
+ * never takes its "user not found" branch, where a concurrent signup could
+ * slip in a password of its own.
+ *
+ * A failure is never fatal. "Already registered" is the normal case, and a
+ * concurrent signup surfaces as a generic 500; in both, /otp must still run
+ * because that is the call that discards an unproven password. If no row
+ * exists, /otp with create_user: false fails closed.
  */
-async function ensureConfirmedAuthUser(
+async function ensureAuthUserExists(
   email: string,
   locale: "tr" | "en",
 ): Promise<void> {
   const { url, serviceRoleKey } = getSupabaseServerEnv();
-  const admin = createClient(url, serviceRoleKey, {
+  const { error } = await createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
-  }).auth.admin;
-
-  const created = await admin.createUser({
+  }).auth.admin.createUser({
     email,
-    email_confirm: true,
+    email_confirm: false,
     user_metadata: { language: locale },
   });
 
-  if (created.data.user) return;
-  if (created.error && !isAlreadyRegistered(created.error.message)) {
-    throw created.error;
+  if (error && error.code !== "email_exists") {
+    logger.warn("otp prepare: could not create auth user", {
+      code: error.code,
+      status: error.status,
+    });
   }
-
-  const existingId = await findAuthUserId(admin, email);
-  if (!existingId) {
-    throw created.error ?? new Error("Could not load auth user for OTP.");
-  }
-
-  const updated = await admin.updateUserById(existingId, {
-    email_confirm: true,
-  });
-  if (updated.error) throw updated.error;
 }
 
 async function requestLoginOtp(
@@ -98,15 +77,17 @@ async function requestLoginOtp(
   };
 
   try {
+    // GoTrue's legacy shape carries the HTTP status in a numeric `code`.
     const json = (await response.json()) as {
-      code?: string;
+      code?: string | number;
       msg?: string;
       message?: string;
       error_code?: string;
     };
     payload = {
       status: response.status,
-      code: json.code ?? json.error_code,
+      code:
+        json.error_code ?? (typeof json.code === "string" ? json.code : undefined),
       message: json.msg ?? json.message ?? payload.message,
     };
   } catch {
@@ -119,8 +100,9 @@ async function requestLoginOtp(
 /**
  * Request an email OTP via GoTrue (no PKCE / redirect_to).
  *
- * Never uses create_user: true — that triggers the Confirm signup mailer
- * (a Gmail confirmation link) instead of a 6-digit code.
+ * Confirmed users get the Magic Link template; unconfirmed users get the
+ * Confirm signup template. Both hosted templates must render {{ .Token }} and
+ * no link (supabase/email-templates, npm run auth:otp-template).
  */
 export async function sendAuthEmailOtp(
   email: string,
@@ -129,7 +111,7 @@ export async function sendAuthEmailOtp(
   const normalizedEmail = email.trim().toLowerCase();
 
   try {
-    await ensureConfirmedAuthUser(normalizedEmail, locale);
+    await ensureAuthUserExists(normalizedEmail, locale);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Could not prepare account.";

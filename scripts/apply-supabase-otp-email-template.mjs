@@ -38,6 +38,22 @@ const confirmSubject = fs
   .trim();
 const magicContent = readTemplate("magic-link-otp.en.html");
 const confirmContent = readTemplate("confirm-signup-otp.en.html");
+const emailChangeSubject = fs
+  .readFileSync(path.join(templateDir, "email-change-otp.en.subject.txt"), "utf8")
+  .trim();
+const emailChangeContent = readTemplate("email-change-otp.en.html");
+
+// These mails must carry a code and never a link (account pre-takeover).
+for (const [name, body] of [
+  ["confirm signup", confirmContent],
+  ["magic link", magicContent],
+  ["email change", emailChangeContent],
+]) {
+  if (!/\{\{\s*\.Token\s*\}\}/.test(body) || /ConfirmationURL|TokenHash|RedirectTo|SiteURL|href\s*=|https?:\/\//i.test(body)) {
+    console.error(`Refusing to apply: the ${name} template must contain {{ .Token }} and no link.`);
+    process.exit(1);
+  }
+}
 
 const response = await fetch(
   `https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth`,
@@ -52,6 +68,8 @@ const response = await fetch(
       mailer_templates_magic_link_content: magicContent,
       mailer_subjects_confirmation: confirmSubject,
       mailer_templates_confirmation_content: confirmContent,
+      mailer_subjects_email_change: emailChangeSubject,
+      mailer_templates_email_change_content: emailChangeContent,
       mailer_otp_length: 6,
     }),
   },

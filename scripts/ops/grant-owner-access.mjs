@@ -66,6 +66,10 @@ for (let page = 1; page <= 50 && !user; page += 1) {
   if (data.users.length < 200) break;
 }
 if (!user) fail("findUser", new Error(`No account for ${email}; sign in once first.`));
+// Anyone can register an address first; only a verified one may receive admin.
+if (!user.email_confirmed_at) {
+  fail("verifyUser", new Error(`${email} is not verified; sign in with the emailed code first.`));
+}
 
 const subscribed = await admin.rpc("apply_subscription", {
   p_user_id: user.id,

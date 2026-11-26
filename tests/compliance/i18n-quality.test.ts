@@ -237,7 +237,7 @@ describe("EN/TR localization quality", () => {
         join(process.cwd(), "supabase", "email-templates", file),
         "utf8",
       );
-      expect(template).toContain('{{ if eq .Data.language "tr" }}');
+      expect(template).toContain('{{ if eq (printf "%v" .Data.language) "tr" }}');
       expect(template).toContain("{{ .Token }}");
       expect(template).toContain("{{ else }}");
     }

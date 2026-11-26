@@ -15,7 +15,7 @@ call. Keep this file up to date when infra changes.
 | Scheduled jobs   | **Supabase pg_cron** + Vercel Cron      | Notifications via pg_cron (2h); cleanup via Vercel cron |
 | Error tracking   | **Sentry**                              | `@sentry/nextjs`, release = commit SHA |
 | Push             | Web Push (VAPID) + **FCM** (native)     | Capacitor app on iOS/Android |
-| Auth model       | **OTP-only** (email magic link/code)    | No passwords → password-related settings are N/A |
+| Auth model       | Email code (OTP) + Apple/Google         | Password sign-in only for the store-review account (`/api/auth/password`) |
 
 Request flow: `middleware.ts` (IP rate limit, bot/origin checks, CSP nonce,
 `x-request-id`) → route handler → service layer (`lib/services/**`) → Supabase
@@ -81,18 +81,23 @@ After changing an env var in Vercel, **redeploy** for it to take effect.
 
 ### Email OTP (6-digit code, not magic link)
 
-Signup/login uses `signInWithOtp` **without** `emailRedirectTo`. Supabase still
-sends a **magic link** if the **Magic Link** email template contains
-`{{ .ConfirmationURL }}`. It must use `{{ .Token }}` instead.
+Signup/login goes through `lib/auth/send-otp-server.ts`. New or unverified
+addresses receive the **Confirm signup** template, verified ones **Magic Link**.
+Both must use `{{ .Token }}` and contain no link.
+
+**Security:** the server never confirms an address; only a code from the mailbox
+(or Apple/Google) does. Keep "Confirm email" ON. Turning it off, or putting
+`{{ .ConfirmationURL }}` in **Confirm signup**, re-opens account pre-takeover.
+Check with `node scripts/ops/preflight-auth-config.mjs` (read-only).
 
 **One-time setup (production):**
 
 1. Supabase → **Authentication → Email Templates**
 2. **Magic Link** — paste `supabase/email-templates/magic-link-otp.en.html`
-3. **Confirm signup** — paste `supabase/email-templates/confirm-signup-otp.en.html`  
-   (yeni kayıtlarda link geliyorsa bu şablon da güncellenmeli)
-4. Her iki şablonda **`{{ .Token }}` olmalı**, `{{ .ConfirmationURL }}` **olmamalı**
-5. **Authentication → Providers → Email → Email OTP length → 6**
+3. **Confirm signup** — paste `supabase/email-templates/confirm-signup-otp.en.html` (zorunlu: yeni kullanıcılar bu şablonu alır)
+4. **Change Email Address** — paste `supabase/email-templates/email-change-otp.en.html`
+5. Üç şablonda da **`{{ .Token }}` olmalı**, hiçbir bağlantı (`{{ .ConfirmationURL }}`, `href`) **olmamalı**. Kısayol: `npm run auth:otp-template`
+6. **Authentication → Providers → Email → Email OTP length → 6**
 
 Or apply via Management API (needs personal access token):
 
