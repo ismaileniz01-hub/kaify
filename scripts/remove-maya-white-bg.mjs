@@ -92,7 +92,6 @@ async function processFile(inputPath, outputPath) {
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const i = (y * width + x) * channels;
-      const idx = y * width + x;
       if (buffer[i + 3] === 0) continue;
 
       let touchesTransparent = false;

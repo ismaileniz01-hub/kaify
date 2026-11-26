@@ -63,7 +63,7 @@ async function analyze() {
   }
 
   const sorted = Object.entries(colorGroups).sort((a, b) => b[1].count - a[1].count);
-  for (const [key, val] of sorted.slice(0, 10)) {
+  for (const [, val] of sorted.slice(0, 10)) {
     const avgR = (val.r / val.count).toFixed(0);
     const avgG = (val.g / val.count).toFixed(0);
     const avgB = (val.b / val.count).toFixed(0);

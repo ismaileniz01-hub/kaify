@@ -33,7 +33,21 @@ end $$;
 
 -- pg_net lives in public on this project (advisor WARN). Moving the extension
 -- on hosted Supabase is often blocked; keep a comment for ops review.
-comment on extension pg_net is
-  'Kaify: advisor prefers non-public schema; relocate only after Supabase support confirms safe on this project.';
+--
+-- K-011 (c): guarded. pg_net is only created by the NEXT migration
+-- (20260804171000), so the original unconditional `comment on extension pg_net`
+-- aborted the chain on any project without a pre-enabled pg_net (fresh
+-- `supabase db reset`, staging, CI, restore into a new project). Databases
+-- where this migration already ran had pg_net and got the identical comment;
+-- this edit only changes behaviour on fresh databases, and is idempotent.
+do $$
+begin
+  if exists (select 1 from pg_catalog.pg_extension where extname = 'pg_net') then
+    execute $c$comment on extension pg_net is
+      'Kaify: advisor prefers non-public schema; relocate only after Supabase support confirms safe on this project.'$c$;
+  else
+    raise notice 'pg_net not installed yet; skipping extension comment (fresh database)';
+  end if;
+end $$;
 
 notify pgrst, 'reload schema';

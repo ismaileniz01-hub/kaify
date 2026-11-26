@@ -1,0 +1,164 @@
+name: DB migrations
+
+# Production schema flow (audit K-062 / K-011):
+# - drift: compares the repository's migrations with the production database
+#   (daily and on demand). Production migrations missing from the repository,
+#   pending migrations and any schema diff fail it.
+# - apply: pushes pending migrations to production. Manual dispatch only, in
+#   the protected "production" environment (required reviewers), then checks
+#   that production matches the repository.
+#
+# Secrets live in GitHub *environments*, not repository secrets, and both
+# environments are limited to the main branch (owner setup, docs/RUNBOOK.md §5):
+#   db-drift   : SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD (no reviewers)
+#   production : the same secrets, required reviewers
+#   both       : variable SUPABASE_PROJECT_REF
+# There is deliberately no pull_request trigger: a pull request runs its own
+# copy of this file, so it must never be able to reach production secrets.
+# Without configuration the drift job reports "not configured" and passes.
+
+on:
+  schedule:
+    - cron: "30 5 * * *"
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Apply pending migrations to production (needs environment approval)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-migrations
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    name: Migration drift vs production
+    if: github.event_name == 'schedule' || !inputs.apply
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: db-drift
+    steps:
+      - name: Check configuration
+        id: cfg
+        env:
+          HAS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
+          HAS_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD != '' }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: |
+          if [ "$HAS_TOKEN" != "true" ] || [ "$HAS_PASSWORD" != "true" ] || [ -z "$PROJECT_REF" ]; then
+            echo "::warning::DB drift check not configured (environment db-drift). See docs/RUNBOOK.md section 5."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.cfg.outputs.ready == 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Supabase CLI
+        if: steps.cfg.outputs.ready == 'true'
+        uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
+        with:
+          version: 2.113.0
+
+      - name: Link project
+        if: steps.cfg.outputs.ready == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Migration history must match the repository
+        if: steps.cfg.outputs.ready == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          supabase migration list --linked | tee /tmp/migration-list.txt
+          bash scripts/ops/check-migration-history.sh /tmp/migration-list.txt strict
+
+      - name: Schema must match the migrations
+        if: steps.cfg.outputs.ready == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          supabase db diff --linked --schema public -f drift_check > /tmp/db-diff.log 2>&1 || { cat /tmp/db-diff.log; exit 1; }
+          cat /tmp/db-diff.log
+          if ls supabase/migrations/*_drift_check.sql >/dev/null 2>&1 && grep -qvE '^\s*(--.*)?$' supabase/migrations/*_drift_check.sql; then
+            echo "::error::Production schema differs from the migrations. Diff:"
+            cat supabase/migrations/*_drift_check.sql
+            exit 1
+          fi
+          echo "No schema drift."
+
+  apply:
+    name: Apply migrations to production
+    if: github.event_name == 'workflow_dispatch' && inputs.apply
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - name: Require configuration
+        env:
+          HAS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
+          HAS_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD != '' }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: |
+          if [ "$HAS_TOKEN" != "true" ] || [ "$HAS_PASSWORD" != "true" ] || [ -z "$PROJECT_REF" ]; then
+            echo "::error::Environment production lacks SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD or SUPABASE_PROJECT_REF."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
+        with:
+          version: 2.113.0
+
+      - name: Link project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Refuse when production has migrations the repository lacks
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          supabase migration list --linked | tee /tmp/migration-list.txt
+          bash scripts/ops/check-migration-history.sh /tmp/migration-list.txt allow-pending
+
+      - name: Dry run
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db push --linked --dry-run
+
+      - name: Apply
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db push --linked
+
+      - name: Production now matches the repository
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          supabase migration list --linked | tee /tmp/migration-list.txt
+          bash scripts/ops/check-migration-history.sh /tmp/migration-list.txt strict

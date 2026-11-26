@@ -19,6 +19,7 @@ export default defineConfig({
       "tests/kaios/live/**",
     ],
     globals: true,
+    setupFiles: ["tests/setup/web-storage.ts"],
     coverage: {
       provider: "v8",
       include: ["lib/**/*.ts", "app/api/**/*.ts"],

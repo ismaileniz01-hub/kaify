@@ -9,10 +9,10 @@ call. Keep this file up to date when infra changes.
 
 | Layer            | Technology                              | Notes |
 | ---------------- | --------------------------------------- | ----- |
-| Web + API        | Next.js 15 (App Router) on **Vercel**   | Single deployable; API routes under `app/api/**` |
+| Web + API        | Next.js 15 (App Router) on **Railway**  | Single deployable; API routes under `app/api/**` |
 | Database / Auth  | **Supabase** (Postgres 17, RLS, Auth)   | Project `Kaify Ai` (`urnetodzvszmddzdazdj`), region eu-central-1 |
 | Rate limiting / cache | **Upstash Redis** (REST)           | Fail-closed for limits, fail-open for cache |
-| Scheduled jobs   | **Supabase pg_cron** + Vercel Cron      | Notifications via pg_cron (2h); cleanup via Vercel cron |
+| Scheduled jobs   | **Supabase pg_cron**                    | Vercel Cron does not run on Railway (see §6) |
 | Error tracking   | **Sentry**                              | `@sentry/nextjs`, release = commit SHA |
 | Push             | Web Push (VAPID) + **FCM** (native)     | Capacitor app on iOS/Android |
 | Auth model       | Email code (OTP) + Apple/Google         | Password sign-in only for the store-review account (`/api/auth/password`) |
@@ -23,22 +23,43 @@ RPC/tables. Every response carries `X-Request-ID` for correlation.
 
 ## 2. Environments & access
 
-- **Production**: https://kaifyai.org (Vercel project `kaify`).
+- **Production**: https://kaifyai.org (Railway service, deployed from `main`).
 - **Supabase dashboard**: project `urnetodzvszmddzdazdj`.
-- **Vercel dashboard**: project `kaify` (org `ismaileniz01-hubs-projects`).
+- **Staging**: a separate Railway environment plus a separate Supabase project
+  (owner setup, see the Phase 2 report). Until it exists, nothing is tested
+  against a production-like stack before release.
+- **GitHub repository**: must be private, with branch protection on `main`
+  (§3) and the `production` environment requiring an approving reviewer (§5).
 
-Secrets live in Vercel env vars and `.env.local` (never committed). The full
+Secrets live in Railway service variables, GitHub Actions secrets (DB
+workflow only) and `.env.local` (never committed). The full
 list of required/optional keys is in `.env.example`.
 
 ## 3. Deploy
 
-Standard deploy is `git push` to `main` (Vercel auto-deploys) after CI is green.
+Production runs on **Railway**, built from `main`. Vercel is not used: its
+projects must stay disconnected, and `vercel.json` sets
+`git.deploymentEnabled: false` so a re-enabled project cannot deploy a second
+production or run duplicate crons.
 
-Manual deploy from a clean local tree:
+**Gate (all required, configured once by the owner; see §2):**
+
+1. Work happens on a branch and reaches `main` only through a pull request.
+2. Branch protection on `main` requires the CI checks
+   `Lint · Typecheck · Test · Build`, `Supabase DB · RLS · RPC` and
+   `Supply-chain audit`, plus one approving review; force pushes are blocked.
+3. The Railway service has **Wait for CI** enabled, so a commit on `main`
+   deploys only after its GitHub checks pass.
+4. `railway.json` makes Railway wait for `GET /api/health` (cheap anonymous
+   liveness) before switching traffic, and restarts a crashed process.
+
+Never deploy by hand from a laptop, and never let an agent push or deploy on
+its own (the old Cursor auto-push/auto-deploy rules were removed).
+
+Local check before opening a pull request (Node 24, see `.nvmrc`):
 
 ```bash
-npm run ci          # lint + typecheck + tests/coverage + build (must pass)
-npx vercel --prod   # deploy current code to production
+npm ci && npm run lint:strict && npm run typecheck && npm run test:coverage && npm run build
 ```
 
 Verify after deploy:
@@ -49,11 +70,10 @@ curl -s -A "Mozilla/5.0" https://kaifyai.org/api/health   # expect {"status":"ok
 
 ### Rollback
 
-Vercel keeps every deployment. To revert:
-
-1. Vercel dashboard → project → **Deployments**.
-2. Find the last known-good deployment → **⋯ → Promote to Production**
-   (or `vercel rollback <deployment-url>`).
+Railway keeps every deployment. Railway dashboard → service → **Deployments**
+→ the last known-good deployment → **Redeploy** (or **Rollback**). Then revert
+the bad commit on `main` through a pull request so the next deploy does not
+bring it back.
 
 Code rollback ≠ DB rollback. If a bad migration shipped, write a **forward-fix
 migration** (see §5). Never edit an already-applied migration file.
@@ -72,12 +92,12 @@ Important (degraded behaviour if missing):
   closed in production if absent** (requests get 429/500). Health check reports
   `down`.
 - `CRON_SECRET` — gates `/api/cron/*` and the detailed `/api/health` output.
-  Must have **no leading/trailing whitespace** (Vercel rejects it otherwise).
+  Must have **no leading/trailing whitespace** (the platform rejects it otherwise).
 - `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` — error tracking.
 - `SENDER_API_KEY` — waitlist/subscribe (Sender.net).
 - `VAPID_*`, Firebase (`FCM`) creds — push notifications.
 
-After changing an env var in Vercel, **redeploy** for it to take effect.
+After changing a Railway variable, **redeploy** the service for it to take effect.
 
 ### Email OTP (6-digit code, not magic link)
 
@@ -111,7 +131,25 @@ Dashboard: https://supabase.com/dashboard/project/urnetodzvszmddzdazdj/auth/temp
 
 - Migrations live in `supabase/migrations/*.sql`, timestamp-prefixed, applied in
   order. They are **append-only** — never rewrite an applied file.
-- Apply via the Supabase MCP `apply_migration` (DDL) or the Supabase CLI.
+- **Write migrations expand-first**: a migration must keep the currently
+  deployed code working (add columns/functions before code uses them; drop or
+  rename only after no deployed code needs the old shape).
+- **Order:** merge the pull request → run the **DB migrations** workflow with
+  `apply: true` (GitHub → Actions; it needs approval in the `production`
+  environment, does a dry run, then `supabase db push`) → then let Railway
+  deploy the code. Do not apply DDL by hand or through an MCP tool.
+- **Drift:** the same workflow compares production with the repository daily
+  (and on demand): production migrations missing from the repository, pending
+  migrations and any `supabase db diff` output fail it. It deliberately has no
+  pull-request trigger, because a pull request runs its own copy of the file.
+- **Secrets** live in two GitHub *environments*, both limited to the `main`
+  branch: `db-drift` (no reviewers) and `production` (required reviewers).
+  Each needs the secrets `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD`
+  and the variable `SUPABASE_PROJECT_REF`; without them drift reports "not
+  configured". `scripts/ops/check-migration-history.sh` parses the CLI table
+  and fails closed if it cannot read a single version.
+- Every CI run rebuilds the schema from the migrations twice (DB job) and the
+  unit suite checks migration-only and legacy schema shapes (`tests/db-shape`).
 - After **any** schema change, run the advisors and fix new findings:
   - Security advisor and Performance advisor (Supabase dashboard → Advisors, or
     MCP `get_advisors`).
@@ -127,7 +165,7 @@ Dashboard: https://supabase.com/dashboard/project/urnetodzvszmddzdazdj/auth/temp
 
 All times **UTC**.
 
-**Vercel Hobby** only allows **once-daily** crons — `vercel.json` stays on daily schedules as a backup. Production freshness (ADR 009) uses **Supabase pg_cron + pg_net** with Vault secret `kaify_cron_secret`: apply [`docs/operations/pg-cron-frequent-schedules-vault.sql`](./operations/pg-cron-frequent-schedules-vault.sql) (or migration `20260804171000_faz1_pg_cron_vault_schedules.sql`). Seed secret once via `node scripts/ops/apply-pg-cron.mjs --seed-vault` if missing.
+**Railway does not run `vercel.json` crons**, so the "Vercel (backup)" column below is not active in production (audit DB-14, a later phase); the schedules stay in `vercel.json` only as a record. Production freshness (ADR 009) uses **Supabase pg_cron + pg_net** with Vault secret `kaify_cron_secret`: apply [`docs/operations/pg-cron-frequent-schedules-vault.sql`](./operations/pg-cron-frequent-schedules-vault.sql) (or migration `20260804171000_faz1_pg_cron_vault_schedules.sql`). Seed secret once via `node scripts/ops/apply-pg-cron.mjs --seed-vault` if missing.
 
 | Job | Vercel (backup) | pg_cron (production) | Path | Notes |
 |-----|-----------------|----------------------|------|-------|
@@ -160,7 +198,7 @@ If notifications stop: verify the job is `active`, `CRON_SECRET` matches, and
 
 ## 7. Observability
 
-- **Logs**: structured single-line JSON (`lib/logger.ts`) in Vercel logs. Filter
+- **Logs**: structured single-line JSON (`lib/logger.ts`) in Railway logs. Filter
   by `requestId` to trace one request end-to-end (matches the `X-Request-ID`
   response header). Sensitive keys are auto-redacted.
 - **Errors**: server 5xx and unexpected throws are sent to Sentry from
@@ -186,7 +224,7 @@ Severity taxonomy + on-call checklist: [`docs/reliability/incident-response.md`]
 1. **Triage**: `curl -A "Mozilla/5.0" https://kaifyai.org/api/health`. If 503,
    the detail (with `CRON_SECRET`) shows which dependency is down.
 2. **Check Sentry** for the error spike; grab a `request_id`.
-3. **Check Vercel logs** filtered by that `request_id`.
+3. **Check Railway logs** filtered by that `request_id`.
 4. **Mitigate**:
    - Bad deploy → rollback (§3).
    - Bad migration → forward-fix migration (§5).
@@ -197,12 +235,12 @@ Severity taxonomy + on-call checklist: [`docs/reliability/incident-response.md`]
 | Symptom | Likely cause | Fix |
 | ------- | ------------ | --- |
 | All API returns 429/500, health `rateLimiter: down` | Upstash down or env missing | Restore `UPSTASH_*`; confirm Upstash service; limiter is fail-closed in prod by design |
-| `/api/cron/*` returns 401 | `CRON_SECRET` mismatch/whitespace | Reset secret in Vercel + pg_cron header; redeploy |
+| `/api/cron/*` returns 401 | `CRON_SECRET` mismatch/whitespace | Reset secret in Railway + pg_cron header; redeploy |
 | Notifications not sent | pg_cron inactive / pg_net timeout | See §6; re-schedule with higher `timeout_milliseconds` |
 | Health `database: down` | Supabase outage / bad service key | Check Supabase status; verify `SUPABASE_SERVICE_ROLE_KEY` |
 | AI chat failing, health `ai: degraded/down` | Provider outage → circuit breaker open | Wait for breaker half-open; check provider status/keys. High-risk safety replies still return without a model call. |
 | Library plan apply fails | Phase 3 SQL not applied | Apply `supabase/migrations/20260826150000_phase3_workout_plans.sql`. Daily workout increment still works. |
-| Waitlist signups failing | `SENDER_API_KEY` missing/invalid | Set key in Vercel; retry |
+| Waitlist signups failing | `SENDER_API_KEY` missing/invalid | Set key in Railway; retry |
 | Build fails in CI on env | Missing build-safe placeholder | Placeholders are set in `.github/workflows/ci.yml` |
 
 ## 10. Local development

@@ -1,4 +1,30 @@
-# Paths that may contain ephemeral local-demo credentials from CI diagnostics.
-# These are not production secrets; values are redacted in new writes, but
-# historical diagnostic commits may still mention local supabase URLs.
-audit/remediation/_CI_DB_FAILURE_LOG.md
+# Reviewed gitleaks findings (2026-11-26, audit K-058). Each entry is a
+# fingerprint (file:rule:line, or commit:file:rule:line for history) of a
+# finding that was checked and is NOT a secret:
+# - codemagic.yaml jwt: Supabase anon key (role=anon), public by design; it ships in the app bundle
+# - lib/lang/*.json: translation strings ("token", "tapis")
+# - scripts/kaios-registry/*: requirement ids, not keys
+# - android/.idea/planningMode.xml: IDE setting id
+# - tests/unit/logger.test.ts: fake JWT fixture for redaction tests
+# Add new entries only after the same review; never ignore by path.
+2d171717f8d3620801d4b4413088b739e3df973a:android/.idea/planningMode.xml:generic-api-key:6
+36a53487c9d479c7b5591c8ee9c93d91b4e4320e:codemagic.yaml:jwt:17
+50e580f83a95e3ed5e264bdf11f3944005244918:tests/unit/logger.test.ts:jwt:71
+792300bcff93eb5517bb6b3e9c301f506b778c5d:scripts/kaios-registry/requirements-01-05.mjs:generic-api-key:25
+792300bcff93eb5517bb6b3e9c301f506b778c5d:scripts/kaios-registry/requirements-01-05.mjs:generic-api-key:26
+792300bcff93eb5517bb6b3e9c301f506b778c5d:scripts/kaios-registry/requirements-06-10.mjs:generic-api-key:26
+7a9c190ce8e51f32fcb8f16651eb029f9b100863:lib/lang/tr.json:generic-api-key:1445
+9f35662f1d4b97bc480969322ddd8a1db4f9e6c6:codemagic.yaml:jwt:21
+android/.idea/planningMode.xml:generic-api-key:6
+cd5011db11903673a2d622d69a0dadd9f5cad05b:codemagic.yaml:jwt:100
+codemagic.yaml:jwt:112
+codemagic.yaml:jwt:25
+e3c8b188991da4db2ef562fed386a41079dd5448:lib/lang/fr.json:generic-api-key:1219
+e8bbbbdb215fc79d409a10393fecc9b60dcadd67:codemagic.yaml:jwt:17
+lib/lang/fr.json:generic-api-key:1521
+lib/lang/tr.json:generic-api-key:1492
+lib/lang/tr.json:generic-api-key:1493
+scripts/kaios-registry/requirements-01-05.mjs:generic-api-key:25
+scripts/kaios-registry/requirements-01-05.mjs:generic-api-key:26
+scripts/kaios-registry/requirements-06-10.mjs:generic-api-key:26
+tests/unit/logger.test.ts:jwt:71

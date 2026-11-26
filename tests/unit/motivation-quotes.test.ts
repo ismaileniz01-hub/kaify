@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import en from "@/lib/motivation-quotes/en.json";
 import {
-  dailyQuoteIndex,
   getDailyMotivationQuote,
   MOTIVATION_QUOTE_COUNT,
 } from "@/lib/motivation-quotes";

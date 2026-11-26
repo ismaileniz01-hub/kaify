@@ -5,8 +5,9 @@ Geldikten sonra yukarıdan aşağı işaretle.
 
 ## 1. Deploy (zorunlu)
 
-- [ ] Değişiklikleri commit + push et (veya `npx vercel --prod`)
-- [ ] Vercel deploy'unun yeşil olduğunu doğrula
+- [ ] Değişikliği pull request ile `main`'e al; CI yeşil olmadan birleştirme (branch koruması zorunlu kılar)
+- [ ] Migration varsa önce GitHub Actions → **DB migrations** iş akışını `apply: true` ile çalıştır (production onayı gerekir)
+- [ ] Railway deploy'unun yeşil olduğunu doğrula (Wait for CI açık; elle deploy yok)
 - [ ] Canlı health: `curl -s https://kaifyai.org/api/health` → `{"status":"ok",...}`
 
 ## 2. Vercel env değişkenleri (zorunlu)

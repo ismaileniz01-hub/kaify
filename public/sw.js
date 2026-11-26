@@ -35,7 +35,7 @@ function resolveSafeNotificationUrl(candidate) {
     }
 
     return (resolved.pathname + resolved.search + resolved.hash) || SAFE_NOTIFICATION_FALLBACK;
-  } catch (e) {
+  } catch {
     return SAFE_NOTIFICATION_FALLBACK;
   }
 }

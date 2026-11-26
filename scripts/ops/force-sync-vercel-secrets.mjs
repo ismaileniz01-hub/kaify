@@ -3,13 +3,11 @@ import {
   readFileSync,
   writeFileSync,
   existsSync,
-  unlinkSync,
 } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { tmpdir } from "node:os";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
 

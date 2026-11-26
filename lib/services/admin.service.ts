@@ -49,7 +49,8 @@ export async function listUsers(params: {
     id: row.id,
     displayName: row.display_name || (row as { full_name?: string }).full_name || "",
     role: row.role,
-    tier: row.tier ?? (row as { subscription_tier?: SubscriptionTier }).subscription_tier ?? "essential",
+    // Legacy `subscription_tier` is never trusted for the plan (audit K-011 d).
+    tier: row.tier ?? "essential",
     onboardingStatus: row.onboarding_status,
     referralCode: row.referral_code,
     createdAt: row.created_at,

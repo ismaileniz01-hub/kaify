@@ -15,7 +15,7 @@ import {
   subscriptionGrantsAccess,
   subscriptionIsCanceled,
 } from "@/lib/billing/subscription-access";
-import { applyLegacyProfileWrites } from "@/lib/supabase/profile-compat";
+import { writeProfileWithLegacyMirror } from "@/lib/services/profile-legacy-write";
 import type { SubscriptionTier } from "@/lib/types/database.types";
 import { parsePaddleExpiresAt } from "@/lib/billing/paddle-period";
 import { logger } from "@/lib/logger";
@@ -333,15 +333,11 @@ async function revokeSubscription(userId: string): Promise<void> {
     return;
   }
 
-  const updates = applyLegacyProfileWrites({
-    tier: null,
-    tier_expires_at: null,
-    tier_started_at: null,
-  });
-  const { error } = await admin
-    .from("profiles")
-    .update(updates as never)
-    .eq("id", userId);
+  // K-011: legacy subscription_tier is mirrored only where that column exists.
+  const { error } = await writeProfileWithLegacyMirror(
+    { tier: null, tier_expires_at: null, tier_started_at: null },
+    (payload) => admin.from("profiles").update(payload as never).eq("id", userId),
+  );
   if (error) {
     logger.error("[billing] revoke_subscription failed", {
       userId,
