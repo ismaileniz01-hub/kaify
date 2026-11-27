@@ -22,6 +22,10 @@ module.exports = {
           disabled: false,
         },
         throttlingMethod: "simulate",
+        // Shared CI runners can be slow to paint the client-rendered /login;
+        // the 30 s default produced a one-off NO_FCP failure (PR #31).
+        maxWaitForFcp: 60000,
+        maxWaitForLoad: 90000,
         chromePath: process.env.CHROME_PATH || undefined,
         onlyCategories: ["performance", "accessibility", "best-practices", "seo"],
         skipAudits: ["uses-http2", "is-on-https"],

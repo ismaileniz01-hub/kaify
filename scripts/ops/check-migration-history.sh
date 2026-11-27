@@ -12,15 +12,17 @@ if [ "$mode" != "strict" ] && [ "$mode" != "allow-pending" ]; then
   echo "usage: $0 <list-file> <strict|allow-pending>" >&2
   exit 2
 fi
-# Columns are separated by ASCII "|" or the box-drawing "│".
+# Columns are separated by ASCII "|" or the box-drawing "│"; the CLI may wrap
+# values in backticks (markdown table), which are stripped.
 parse() {
-  awk -F'[|│]' -v want="$1" 'NF >= 3 {
-    l = $1; r = $2; gsub(/[[:space:]]/, "", l); gsub(/[[:space:]]/, "", r)
+  # awk splits the multi-byte "│" into single bytes, so turn it into "|" first.
+  sed 's/│/|/g' "$file" | awk -F'|' -v want="$1" 'NF >= 3 {
+    l = $1; r = $2; gsub(/[`[:space:]]/, "", l); gsub(/[`[:space:]]/, "", r)
     if (l !~ /^[0-9]*$/ || r !~ /^[0-9]*$/ || (l == "" && r == "")) next
     if (want == "rows") print l "|" r
     else if (want == "remote_only" && l == "") print r
     else if (want == "local_only" && r == "") print l
-  }' "$file"
+  }'
 }
 rows=$(parse rows | wc -l | tr -d ' ')
 if [ "$rows" -eq 0 ]; then
