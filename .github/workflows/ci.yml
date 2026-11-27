@@ -7,6 +7,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Least privilege: jobs only read the repository (audit K-056).
+permissions:
+  contents: read
+
 concurrency:
   # Do not cancel in-progress database verification mid-suite.
   group: ci-${{ github.ref }}
@@ -32,10 +36,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
@@ -57,6 +61,21 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # Production mode refuses placeholder secrets (lib/startup/validate-env.ts), so
+          # the built server gets harmless CI values. *.invalid hosts never resolve: the
+          # rate limiter falls back to memory and no request leaves the runner.
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-stub.invalid
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key-not-a-secret
+          SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key-not-a-secret
+          CSRF_SECRET: ci-csrf-secret-not-a-secret
+          ADMIN_HUB_PASSWORD: ci-hub-password-not-a-secret
+          ADMIN_HUB_SECRET: ci-hub-hmac-not-a-secret
+          CRON_SECRET: ci-cron-secret-not-a-secret
+          UPSTASH_REDIS_REST_URL: https://ci-upstash.invalid
+          UPSTASH_REDIS_REST_TOKEN: ci-upstash-token-not-a-secret
+          ADMIN_EMAIL: ci-admin@example.invalid
+          PADDLE_NOTIFICATION_WEBHOOK_SECRET: ci-paddle-webhook-not-a-secret
 
       - name: Bundle budget gate
         run: npm run budget:bundle
@@ -65,6 +84,17 @@ jobs:
         run: npm run start &
         env:
           PORT: "3000"
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-stub.invalid
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key-not-a-secret
+          SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key-not-a-secret
+          CSRF_SECRET: ci-csrf-secret-not-a-secret
+          ADMIN_HUB_PASSWORD: ci-hub-password-not-a-secret
+          ADMIN_HUB_SECRET: ci-hub-hmac-not-a-secret
+          CRON_SECRET: ci-cron-secret-not-a-secret
+          UPSTASH_REDIS_REST_URL: https://ci-upstash.invalid
+          UPSTASH_REDIS_REST_TOKEN: ci-upstash-token-not-a-secret
+          ADMIN_EMAIL: ci-admin@example.invalid
+          PADDLE_NOTIFICATION_WEBHOOK_SECRET: ci-paddle-webhook-not-a-secret
 
       - name: Wait for /api/health
         run: |
@@ -81,6 +111,12 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Let Chrome use its sandbox (Ubuntu 24.04 AppArmor)
+        # ubuntu-latest blocks unprivileged user namespaces, so Chrome exits with
+        # "No usable sandbox!". Allow them on this throwaway runner instead of
+        # running Chrome with --no-sandbox.
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Lighthouse CI budgets
         run: |
           export CHROME_PATH="$(node -e "console.log(require('playwright').chromium.executablePath())")"
@@ -96,7 +132,7 @@ jobs:
           CI: "true"
 
       - name: Setup k6
-        uses: grafana/setup-k6-action@v1
+        uses: grafana/setup-k6-action@c47136d33d365efbeb9ae7266908b5dcf98cdece # v1
 
       - name: k6 load smoke (SLO gate)
         run: k6 run scripts/load-test/k6-smoke.js
@@ -110,7 +146,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      contents: write
+      contents: read
       checks: write
       actions: read
 
@@ -120,10 +156,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
@@ -132,7 +168,7 @@ jobs:
         run: npm ci
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
         with:
           version: 2.113.0
 
@@ -297,7 +333,7 @@ jobs:
 
       - name: Publish test:db failure to check run
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const fs = require('fs');
@@ -325,46 +361,9 @@ jobs:
               },
             });
 
-      - name: Commit failure diagnostics to branch
-        if: failure()
-        run: |
-          set -euo pipefail
-          mkdir -p audit/remediation
-          {
-            echo "# CI DB failure ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
-            echo "sha: ${GITHUB_SHA}"
-            echo "run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-            echo "attempt: ${GITHUB_RUN_ATTEMPT}"
-            for f in /tmp/supabase-start.log /tmp/supabase-db-reset-1.log /tmp/supabase-db-reset-2.log /tmp/supabase-status.env /tmp/supabase-status.json /tmp/docker-ps.txt /tmp/supabase-test-db.log; do
-              if [ -f "$f" ]; then
-                echo "## $(basename "$f")"
-                echo '```'
-                tail -n 800 "$f" \
-                  | sed -E 's#postgresql://[^@[:space:]]+@#postgresql://***:***@#g' \
-                  | sed -E 's#(ANON_KEY|SERVICE_ROLE_KEY|SUPABASE_ANON_KEY|SUPABASE_SERVICE_ROLE_KEY)=.*#\1=***REDACTED***#g' \
-                  | sed -E 's#eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+#***JWT***#g'
-                echo '```'
-              else
-                echo "## $(basename "$f")"
-                echo "_missing_"
-              fi
-            done
-          } > audit/remediation/_CI_DB_FAILURE_LOG.md
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin "${GITHUB_REF_NAME}"
-          git add audit/remediation/_CI_DB_FAILURE_LOG.md
-          if git diff --cached --quiet; then
-            echo "No diagnostic diff to commit"
-          else
-            git commit -m "ci: capture Wave 2 DB failure diagnostics [skip ci]"
-            git pull --rebase origin "${GITHUB_REF_NAME}" || true
-            git push origin "HEAD:${GITHUB_REF_NAME}"
-          fi
-
       - name: Upload supabase logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: supabase-db-logs
           path: |
@@ -383,16 +382,20 @@ jobs:
   audit:
     name: Supply-chain audit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # gitleaks-action lists the commits of a pull request.
+      pull-requests: read
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # Gitleaks PR scan needs parent commit history (default shallow clone breaks `SHA^..SHA`).
           fetch-depth: 0
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
@@ -404,6 +407,6 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Gitleaks secret scan
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

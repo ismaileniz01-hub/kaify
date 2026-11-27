@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   createExecutionBudget,
@@ -81,7 +82,6 @@ describe("cron execution budget (REL-003)", () => {
   });
 
   it("cron routes have a 60s maxDuration override in vercel.json", () => {
-    const { readFileSync } = require("node:fs") as typeof import("node:fs");
     const vercel = JSON.parse(readFileSync("vercel.json", "utf8")) as {
       functions: Record<string, { maxDuration: number }>;
     };

@@ -51,7 +51,7 @@ vi.mock("@/lib/supabase/admin", () => ({
             }),
           }),
           select: () => {
-            let filters: Record<string, string> = {};
+            const filters: Record<string, string> = {};
             const api = {
               eq: (col: string, val: string) => {
                 filters[col] = val;
@@ -69,7 +69,7 @@ vi.mock("@/lib/supabase/admin", () => ({
             return api;
           },
           update: (patch: Record<string, unknown>) => {
-            let filters: Record<string, string> = {};
+            const filters: Record<string, string> = {};
             const api = {
               eq: (col: string, val: string) => {
                 filters[col] = val;

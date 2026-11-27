@@ -12,7 +12,7 @@ async function analyze() {
   const { width, height } = await image.metadata();
   console.log(`📐 Size: ${width}x${height}`);
 
-  const { data, info } = await image
+  const { data } = await image
     .raw()
     .toBuffer({ resolveWithObject: true });
 

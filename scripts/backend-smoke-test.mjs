@@ -76,7 +76,7 @@ function expectStatus(name, status, expected, detail) {
   else fail(name, status, `expected ${expected}, got ${status}. ${detail ?? ""}`);
 }
 
-function expectEnvelope(name, res, expectSuccess) {
+function _expectEnvelope(name, res, expectSuccess) {
   if (res.json?.success === expectSuccess) {
     pass(name, expectSuccess ? "success envelope" : `error: ${res.json?.error?.code}`);
     return res.json;

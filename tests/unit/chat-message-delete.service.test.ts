@@ -55,7 +55,7 @@ vi.mock("@/lib/supabase/admin", () => ({
       if (table === "chat_messages") {
         return {
           select(_cols: string) {
-            let filters: Record<string, unknown> = {};
+            const filters: Record<string, unknown> = {};
             const chain = {
               eq(key: string, value: unknown) {
                 filters[key] = value;

@@ -18,8 +18,9 @@ describe("profile-compat", () => {
     expect(resolveTier({})).toBeNull();
   });
 
-  it("resolves tier from subscription_tier", () => {
-    expect(resolveTier({ subscription_tier: "pro" })).toBe("pro");
+  it("never reads the plan from the legacy subscription_tier column", () => {
+    expect(resolveTier({ subscription_tier: "pro" })).toBeNull();
+    expect(resolveTier({ tier: "essential", subscription_tier: "pro" })).toBe("essential");
   });
 
   it("dual-writes legacy columns on update", () => {

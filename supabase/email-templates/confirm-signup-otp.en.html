@@ -3,10 +3,11 @@
 
   Subject: Your Kaify Ai verification code
 
-  New signups can use this template when "Confirm email" is enabled.
-  Must include {{ .Token }} and must NOT include {{ .ConfirmationURL }}.
+  Every new (unconfirmed) address receives this one. SECURITY: it must include
+  {{ .Token }} and must NOT include {{ .ConfirmationURL }} or any other link. A link
+  would let one click confirm an account that somebody else registered.
 -->
-{{ if eq .Data.language "tr" }}
+{{ if eq (printf "%v" .Data.language) "tr" }}
 <h2 style="margin:0 0 16px;font-family:system-ui,sans-serif;color:#111;">Doğrulama kodun</h2>
 <p style="margin:0 0 20px;font-family:system-ui,sans-serif;color:#444;line-height:1.5;">
   Hesabını oluşturmayı tamamlamak için bu tek kullanımlık kodu Kaify Ai&apos;da gir.
@@ -20,7 +21,7 @@
 <p style="margin:0 0 24px;font-family:ui-monospace,monospace;font-size:32px;font-weight:700;letter-spacing:0.35em;color:#7c3aed;">
   {{ .Token }}
 </p>
-{{ if eq .Data.language "tr" }}
+{{ if eq (printf "%v" .Data.language) "tr" }}
 <p style="margin:0;font-family:system-ui,sans-serif;font-size:13px;color:#888;line-height:1.5;">
   Bu kodu sen istemediysen bu e-postayı güvenle yok sayabilirsin.
 </p>

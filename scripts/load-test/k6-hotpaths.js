@@ -40,7 +40,7 @@ export function setup() {
   }
 }
 
-export default function () {
+export default function hotpaths() {
   const session = http.get(`${BASE}/api/session`, {
     headers: authHeaders(),
     tags: { name: "session" },

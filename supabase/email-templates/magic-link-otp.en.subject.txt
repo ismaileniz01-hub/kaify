@@ -1,1 +1,1 @@
-{{ if eq .Data.language "tr" }}K.AIFY giriş kodun{{ else }}Your K.AIFY login code{{ end }}
+{{ if eq (printf "%v" .Data.language) "tr" }}K.AIFY giriş kodun{{ else }}Your K.AIFY login code{{ end }}

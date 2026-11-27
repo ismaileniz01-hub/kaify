@@ -69,7 +69,7 @@ vi.mock("@/lib/supabase/admin", () => ({
             };
           },
           select: () => {
-            let filters: Record<string, string> = {};
+            const filters: Record<string, string> = {};
             const api = {
               eq: (col: string, val: string) => {
                 filters[col] = val;
@@ -96,7 +96,7 @@ vi.mock("@/lib/supabase/admin", () => ({
             return api;
           },
           update: (patch: Record<string, unknown>) => {
-            let filters: Record<string, string> = {};
+            const filters: Record<string, string> = {};
             const apply = () => {
               const row = pendingStore.get(filters.id);
               if (!row) return { data: [], error: null };
@@ -129,30 +129,7 @@ vi.mock("@/lib/supabase/admin", () => ({
       }
 
       if (table === "chat_messages") {
-        let filters: Record<string, string> = {};
-        const rows: unknown[] = [];
-        const api = {
-          select: () => api,
-          eq: (col: string, val: string) => {
-            filters[col] = val;
-            return api;
-          },
-          in: () => api,
-          order: () => api,
-          limit: () => api,
-          then: undefined as unknown,
-          // awaitable thenable for executeTool getPhysiqueHistory
-        };
-        // Make thenable so `await admin.from(...).select...limit(5)` works
-        const promise = Promise.resolve({
-          data:
-            filters.user_id === USER_A
-              ? [{ id: "score-a", payload: { analysis: { overall_score: 70 } } }]
-              : filters.user_id === USER_B
-                ? [{ id: "score-b", payload: { analysis: { overall_score: 99 } } }]
-                : rows,
-          error: null,
-        });
+        const filters: Record<string, string> = {};
         return {
           select: () => ({
             eq: (col: string, val: string) => {
@@ -233,7 +210,6 @@ vi.mock("@/lib/logger", () => ({
 
 import {
   confirmPendingAnalytics,
-  createPendingAnalyticsConfirmation,
   linkPendingConfirmationToMessage,
   rejectPendingAnalytics,
 } from "@/lib/services/analytics-confirmation.service";

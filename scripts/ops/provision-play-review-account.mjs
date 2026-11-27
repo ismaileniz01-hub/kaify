@@ -135,11 +135,12 @@ if (!existing) {
     });
     if (updated.error) fail("updateUser", updated.error);
     passwordRotated = true;
-  } else {
-    const confirmed = await admin.auth.admin.updateUserById(userId, {
-      email_confirm: true,
-    });
-    if (confirmed.error) fail("confirmUser", confirmed.error);
+  } else if (!existing.email_confirmed_at) {
+    // Anyone could have registered this address first, with their own password.
+    fail(
+      "confirmUser",
+      new Error("Account exists but is unverified. Re-run with PLAY_REVIEW_ROTATE=1."),
+    );
   }
 }
 

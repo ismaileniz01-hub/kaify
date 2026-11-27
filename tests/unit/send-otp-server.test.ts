@@ -16,6 +16,7 @@ vi.mock("@supabase/supabase-js", () => ({
   }),
 }));
 
+import { mapGoTrueOtpSendError } from "@/lib/auth/map-otp-send-error";
 import { sendAuthEmailOtp } from "@/lib/auth/send-otp-server";
 
 const originalFetch = global.fetch;
@@ -35,7 +36,7 @@ function stubEnv() {
 }
 
 describe("sendAuthEmailOtp", () => {
-  it("confirms the user via Admin then POSTs /otp with create_user false", async () => {
+  it("creates an UNCONFIRMED user via Admin then POSTs /otp with create_user false", async () => {
     stubEnv();
     createUser.mockResolvedValue({
       data: { user: { id: "user-1" } },
@@ -51,7 +52,7 @@ describe("sendAuthEmailOtp", () => {
 
     expect(createUser).toHaveBeenCalledWith({
       email: "user@example.com",
-      email_confirm: true,
+      email_confirm: false,
       user_metadata: { language: "en" },
     });
     expect(fetchMock).toHaveBeenCalledWith(
@@ -71,28 +72,20 @@ describe("sendAuthEmailOtp", () => {
     expect(body).not.toHaveProperty("code_challenge");
   });
 
-  it("confirms an existing unconfirmed user instead of sending a signup link", async () => {
+  it.each([
+    ["an existing user", { code: "email_exists", status: 422, message: "already been registered" }],
+    ["a concurrent signup", { status: 500, message: "Database error creating new user" }],
+  ])("still POSTs /otp and never confirms when createUser reports %s", async (_label, error) => {
     stubEnv();
-    createUser.mockResolvedValue({
-      data: { user: null },
-      error: { message: "A user with this email address has already been registered" },
-    });
-    listUsers.mockResolvedValue({
-      data: {
-        users: [{ id: "existing-1", email: "user@example.com" }],
-      },
-      error: null,
-    });
-    updateUserById.mockResolvedValue({ data: { user: { id: "existing-1" } }, error: null });
-    global.fetch = vi.fn().mockResolvedValue(new Response("{}", { status: 200 })) as unknown as typeof fetch;
+    createUser.mockResolvedValue({ data: { user: null }, error });
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    global.fetch = fetchMock as unknown as typeof fetch;
 
-    await expect(sendAuthEmailOtp("user@example.com", "tr")).resolves.toEqual({
-      ok: true,
-    });
+    await expect(sendAuthEmailOtp("user@example.com", "tr")).resolves.toEqual({ ok: true });
 
-    expect(updateUserById).toHaveBeenCalledWith("existing-1", {
-      email_confirm: true,
-    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(listUsers).not.toHaveBeenCalled();
+    expect(updateUserById).not.toHaveBeenCalled();
   });
 
   it("returns structured error on non-2xx OTP response", async () => {
@@ -113,5 +106,45 @@ describe("sendAuthEmailOtp", () => {
       expect(result.error.status).toBe(429);
       expect(result.error.message).toMatch(/rate limit/i);
     }
+  });
+
+  it("uses the string error code when GoTrue also sends a numeric one", async () => {
+    stubEnv();
+    createUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 429,
+          error_code: "over_email_send_rate_limit",
+          msg: "For security purposes, you can only request this after 42 seconds.",
+        }),
+        { status: 429 },
+      ),
+    ) as unknown as typeof fetch;
+
+    const result = await sendAuthEmailOtp("a@b.com");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("over_email_send_rate_limit");
+      expect(mapGoTrueOtpSendError(result.error).code).toBe("RATE_LIMITED");
+    }
+  });
+
+  it("waits for the auth row before asking GoTrue for a code", async () => {
+    stubEnv();
+    const order: string[] = [];
+    createUser.mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      order.push("createUser done");
+      return { data: { user: { id: "user-1" } }, error: null };
+    });
+    global.fetch = vi.fn(async () => {
+      order.push("otp");
+      return new Response("{}", { status: 200 });
+    }) as unknown as typeof fetch;
+
+    await sendAuthEmailOtp("a@b.com");
+
+    expect(order).toEqual(["createUser done", "otp"]);
   });
 });

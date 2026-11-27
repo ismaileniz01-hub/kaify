@@ -42,8 +42,25 @@ enable_anonymous_sign_ins = false
 
 [auth.email]
 enable_signup = true
-enable_confirmations = false
+# Must stay true: with it off, `supabase config push` would make GoTrue confirm
+# addresses at signup, without anyone reading the mailbox.
+enable_confirmations = true
 double_confirm_changes = true
+otp_length = 6
+
+# Codes only. A template with a link would let an unsolicited signup be confirmed
+# by one click. Same files as scripts/apply-supabase-otp-email-template.mjs.
+[auth.email.template.confirmation]
+subject = '{{ if eq (printf "%v" .Data.language) "tr" }}K.AIFY doğrulama kodun{{ else }}Your K.AIFY verification code{{ end }}'
+content_path = "./supabase/email-templates/confirm-signup-otp.en.html"
+
+[auth.email.template.magic_link]
+subject = '{{ if eq (printf "%v" .Data.language) "tr" }}K.AIFY giriş kodun{{ else }}Your K.AIFY login code{{ end }}'
+content_path = "./supabase/email-templates/magic-link-otp.en.html"
+
+[auth.email.template.email_change]
+subject = '{{ if eq (printf "%v" .Data.language) "tr" }}K.AIFY e-posta değişikliği kodun{{ else }}Your K.AIFY email change code{{ end }}'
+content_path = "./supabase/email-templates/email-change-otp.en.html"
 
 [auth.sms]
 enable_signup = false

@@ -30,8 +30,13 @@ export function resolveDisplayName(row: ProfileRowLike): string {
   );
 }
 
+/**
+ * The plan comes from `profiles.tier` only. The legacy `subscription_tier`
+ * column may still exist on older databases, but it is a write-only mirror and
+ * must never be read back: users could once write it directly (audit K-011 d).
+ */
 export function resolveTier(row: ProfileRowLike): SubscriptionTier | null {
-  return row.tier ?? row.subscription_tier ?? null;
+  return row.tier ?? null;
 }
 
 export function resolveCountryCode(row: ProfileRowLike): string {

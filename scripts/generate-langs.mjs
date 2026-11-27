@@ -13,7 +13,7 @@ const LANG_DIR = path.resolve(__dirname, "../lib/lang");
 
 // Mevcut en.json'u oku (template olarak)
 const enJson = JSON.parse(fs.readFileSync(path.join(LANG_DIR, "en.json"), "utf-8"));
-const trJson = JSON.parse(fs.readFileSync(path.join(LANG_DIR, "tr.json"), "utf-8"));
+const _trJson = JSON.parse(fs.readFileSync(path.join(LANG_DIR, "tr.json"), "utf-8"));
 
 // Tüm key'ler
 const ALL_KEYS = Object.keys(enJson);

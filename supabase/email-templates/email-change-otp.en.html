@@ -1,0 +1,30 @@
+<!--
+  Paste into Supabase Dashboard → Authentication → Email Templates → Change Email Address
+
+  Subject: see email-change-otp.en.subject.txt
+  SECURITY: code only. A link here would let one click on an unsolicited
+  "confirm your new email" mail attach this address to someone else's account.
+-->
+{{ if eq (printf "%v" .Data.language) "tr" }}
+<h2 style="margin:0 0 16px;font-family:system-ui,sans-serif;color:#111;">E-posta değişikliği kodun</h2>
+<p style="margin:0 0 20px;font-family:system-ui,sans-serif;color:#444;line-height:1.5;">
+  E-posta adresini değiştirmeyi sen başlattıysan bu tek kullanımlık kodu Kaify Ai&apos;da gir.
+</p>
+{{ else }}
+<h2 style="margin:0 0 16px;font-family:system-ui,sans-serif;color:#111;">Your email change code</h2>
+<p style="margin:0 0 20px;font-family:system-ui,sans-serif;color:#444;line-height:1.5;">
+  If you asked to change your email address, enter this one-time code in Kaify Ai.
+</p>
+{{ end }}
+<p style="margin:0 0 24px;font-family:ui-monospace,monospace;font-size:32px;font-weight:700;letter-spacing:0.35em;color:#7c3aed;">
+  {{ .Token }}
+</p>
+{{ if eq (printf "%v" .Data.language) "tr" }}
+<p style="margin:0;font-family:system-ui,sans-serif;font-size:13px;color:#888;line-height:1.5;">
+  Bu isteği sen yapmadıysan bu e-postayı yok say; adresin değişmez.
+</p>
+{{ else }}
+<p style="margin:0;font-family:system-ui,sans-serif;font-size:13px;color:#888;line-height:1.5;">
+  If you didn&apos;t ask for this, ignore this email; nothing will change.
+</p>
+{{ end }}

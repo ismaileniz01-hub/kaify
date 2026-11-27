@@ -5,6 +5,9 @@ on:
     - cron: "0 4 * * 1"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   zap-baseline:
     name: OWASP ZAP baseline
@@ -15,13 +18,15 @@ jobs:
       STAGING_URL: ${{ vars.STAGING_URL }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: ZAP Baseline Scan
-        uses: zaproxy/action-baseline@v0.14.0
+        uses: zaproxy/action-baseline@7c4deb10e6261301961c86d65d54a516394f9aed # v0.14.0
         with:
           target: ${{ env.STAGING_URL }}
           cmd_options: "-a"
+          # The workflow token is read-only; keep the report as an artifact instead of an issue.
+          allow_issue_writing: false
 
   zap-status:
     name: ZAP staging gate status
@@ -41,10 +46,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
@@ -56,7 +61,7 @@ jobs:
         run: npx @cyclonedx/cyclonedx-npm --output-file sbom.json
 
       - name: OSV scan
-        uses: google/osv-scanner-action/osv-scanner-action@v2
+        uses: google/osv-scanner-action/osv-scanner-action@32d3cd482bdadfb38b186c0ad1b031902d55d932 # v2.7.1
         with:
           scan-args: |-
             --lockfile=package-lock.json

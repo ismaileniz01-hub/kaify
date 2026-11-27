@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 import type { Database } from "@/lib/types/database.types";
 import { mapProfileRow, type ProfileDTO } from "@/lib/types/domain.types";
 import type { ProfileUpdateInput } from "@/lib/validations/profile.schema";
-import { applyLegacyProfileWrites } from "@/lib/supabase/profile-compat";
+import { writeProfileWithLegacyMirror } from "@/lib/services/profile-legacy-write";
 import { createSignedAvatarUrl } from "@/lib/services/avatar-storage.service";
 
 type ProfileUpdateColumns = Database["public"]["Tables"]["profiles"]["Update"];
@@ -135,16 +135,18 @@ export async function updateOwnProfile(
     return getOwnProfile(userId);
   }
 
-  const payload = applyLegacyProfileWrites(
+  // K-011: legacy mirror columns (full_name, height, weight, experience) are
+  // written only where they exist; the canonical update always happens.
+  const { data, error } = await writeProfileWithLegacyMirror(
     updates as Record<string, unknown>,
-  ) as ProfileUpdateColumns;
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .update(payload)
-    .eq("id", userId)
-    .select("*")
-    .single();
+    (payload) =>
+      supabase
+        .from("profiles")
+        .update(payload as ProfileUpdateColumns)
+        .eq("id", userId)
+        .select("*")
+        .single(),
+  );
 
   if (error || !data) {
     logger.error("[profile.service:update] error", {

@@ -6,12 +6,11 @@
  */
 
 import { readdirSync, statSync, renameSync, existsSync } from "fs";
-import { join, extname, dirname } from "path";
+import { join, extname } from "path";
 import sharp from "sharp";
 
 const DIRS = ["public", "public/avatars"];
 const MAX_SIZE = 300 * 1024; // 300 KB threshold
-const QUALITY = 75; // JPEG quality if converting, PNG compression level
 
 async function optimizeFile(filePath) {
   const ext = extname(filePath).toLowerCase();

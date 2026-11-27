@@ -18,8 +18,6 @@ async function processFile(inputPath, outputPath) {
   const { width, height, channels } = info;
   const buffer = Buffer.from(data);
 
-  // Önce orijinali yedekle
-  const backup = Buffer.from(data);
 
   // 1. AŞAMA: Yeşil pikselleri tespit et ve şeffaf yap
   for (let i = 0; i < buffer.length; i += channels) {

@@ -31,7 +31,6 @@ async function removeWhiteBg() {
     const r = pixels[i];
     const g = pixels[i + 1];
     const b = pixels[i + 2];
-    const a = pixels[i + 3];
 
     // Eğer piksel beyaza yakınsa (tüm RGB kanalları 240+), saydam yap
     if (r >= whiteThreshold && g >= whiteThreshold && b >= whiteThreshold) {
