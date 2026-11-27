@@ -5,13 +5,15 @@ name: DB migrations
 #   (daily and on demand). Production migrations missing from the repository,
 #   pending migrations and any schema diff fail it.
 # - apply: pushes pending migrations to production. Manual dispatch only, in
-#   the protected "production" environment (required reviewers), then checks
+#   the "db-production" environment (main only; add required reviewers when the
+#   plan allows), then checks
 #   that production matches the repository.
 #
 # Secrets live in GitHub *environments*, not repository secrets, and both
 # environments are limited to the main branch (owner setup, docs/RUNBOOK.md §5):
 #   db-drift   : SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD (no reviewers)
-#   production : the same secrets, required reviewers
+#   db-production : the same secrets (named so it cannot clash with the
+#                   "Production" environment Vercel created; names are case-insensitive)
 #   both       : variable SUPABASE_PROJECT_REF
 # There is deliberately no pull_request trigger: a pull request runs its own
 # copy of this file, so it must never be able to reach production secrets.
@@ -105,7 +107,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.apply
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: production
+    environment: db-production
     steps:
       - name: Require configuration
         env:

@@ -155,7 +155,7 @@ describe("delivery foundation", () => {
     expect(Object.keys(db.on)).not.toContain("pull_request_target");
     const apply = db.jobs.apply as Job & { environment?: string; if?: string; needs?: unknown };
     const drift = db.jobs.drift as Job & { environment?: string };
-    expect(apply.environment).toBe("production");
+    expect(apply.environment).toBe("db-production");
     expect(drift.environment).toBe("db-drift");
     expect(apply.if).toContain("workflow_dispatch");
     // Apply must be reachable while migrations are pending: it may not wait for a strict drift job.

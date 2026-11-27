@@ -29,7 +29,7 @@ RPC/tables. Every response carries `X-Request-ID` for correlation.
   (owner setup, see the Phase 2 report). Until it exists, nothing is tested
   against a production-like stack before release.
 - **GitHub repository**: must be private, with branch protection on `main`
-  (§3) and the `production` environment requiring an approving reviewer (§5).
+  (§3) and the `db-production` environment limited to `main` (§5).
 
 Secrets live in Railway service variables, GitHub Actions secrets (DB
 workflow only) and `.env.local` (never committed). The full
@@ -135,7 +135,7 @@ Dashboard: https://supabase.com/dashboard/project/urnetodzvszmddzdazdj/auth/temp
   deployed code working (add columns/functions before code uses them; drop or
   rename only after no deployed code needs the old shape).
 - **Order:** merge the pull request → run the **DB migrations** workflow with
-  `apply: true` (GitHub → Actions; it needs approval in the `production`
+  `apply: true` (GitHub → Actions; it runs in the `db-production`
   environment, does a dry run, then `supabase db push`) → then let Railway
   deploy the code. Do not apply DDL by hand or through an MCP tool.
 - **Drift:** the same workflow compares production with the repository daily
@@ -143,7 +143,9 @@ Dashboard: https://supabase.com/dashboard/project/urnetodzvszmddzdazdj/auth/temp
   migrations and any `supabase db diff` output fail it. It deliberately has no
   pull-request trigger, because a pull request runs its own copy of the file.
 - **Secrets** live in two GitHub *environments*, both limited to the `main`
-  branch: `db-drift` (no reviewers) and `production` (required reviewers).
+  branch: `db-drift` and `db-production` (add required reviewers to
+  `db-production` once the GitHub plan allows it; not available on Free for
+  private repositories).
   Each needs the secrets `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD`
   and the variable `SUPABASE_PROJECT_REF`; without them drift reports "not
   configured". `scripts/ops/check-migration-history.sh` parses the CLI table
