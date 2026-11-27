@@ -111,6 +111,12 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Let Chrome use its sandbox (Ubuntu 24.04 AppArmor)
+        # ubuntu-latest blocks unprivileged user namespaces, so Chrome exits with
+        # "No usable sandbox!". Allow them on this throwaway runner instead of
+        # running Chrome with --no-sandbox.
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Lighthouse CI budgets
         run: |
           export CHROME_PATH="$(node -e "console.log(require('playwright').chromium.executablePath())")"
