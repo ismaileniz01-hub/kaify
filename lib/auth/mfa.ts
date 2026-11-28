@@ -96,3 +96,16 @@ export async function unenrollTotp(
 ) {
   return supabase.auth.mfa.unenroll({ factorId });
 }
+
+/**
+ * After a first-factor sign-in (email code or password): true when the account
+ * has a verified TOTP factor and this session is still aal1, so the user must
+ * finish on /login/mfa. The login page is outside MfaGate, so without this
+ * check enrolled users were left on /login with "You don't have permission".
+ */
+export async function needsMfaStepAfterSignIn(
+  supabase: SupabaseClient<Database> | null,
+): Promise<boolean> {
+  if (!supabase) return false;
+  return (await getMfaAssurance(supabase)).verificationRequired;
+}

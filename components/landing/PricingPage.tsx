@@ -81,7 +81,7 @@ function PlanIcon({ id }: { id: PlanId }) {
   return <Sparkles className="h-5 w-5 text-zinc-400" />;
 }
 
-function PaddleCheckoutResume() {
+function PaddleCheckoutResume({ consentGiven }: { consentGiven: boolean }) {
   const searchParams = useSearchParams();
   const { paddle, ready } = usePaddle();
   const session = useSessionOptional();
@@ -105,7 +105,8 @@ function PaddleCheckoutResume() {
       }
 
       const planId = parseCheckoutPlanParam(searchParams.get("checkout"));
-      if (!planId || openedPlan.current) return;
+      // Opens only after the immediate-performance / withdrawal acknowledgement is ticked.
+      if (!planId || openedPlan.current || !consentGiven) return;
       const plan = PRICING_PLANS_WITH_PADDLE.find((item) => item.id === planId);
       const priceId = plan?.paddlePriceId;
       if (!priceId) return;
@@ -131,7 +132,7 @@ function PaddleCheckoutResume() {
       openedPlan.current = true;
       paddle.Checkout.open({
         items: [{ priceId, quantity: 1 }],
-        customData: { user_id: userId },
+        customData: { user_id: userId, withdrawal_waiver_at: new Date().toISOString() },
         settings: { showAddDiscounts: true },
       });
       window.history.replaceState(null, "", "/pricing");
@@ -139,7 +140,7 @@ function PaddleCheckoutResume() {
     return () => {
       cancelled = true;
     };
-  }, [paddle, ready, searchParams, session?.profile]);
+  }, [consentGiven, paddle, ready, searchParams, session?.profile]);
 
   return null;
 }
@@ -189,7 +190,9 @@ function PlanCheckoutButton({
   hasPlan,
   onManagePlan,
   discountCode,
+  consentGiven,
 }: {
+  consentGiven: boolean;
   plan: PricingPlan;
   interval: BillingInterval;
   className: string;
@@ -238,13 +241,18 @@ function PlanCheckoutButton({
         onManagePlan();
         return;
       }
+      if (!consentGiven) {
+        setCheckoutError(t("pricing.withdrawal_consent_required"));
+        document.getElementById("withdrawal-consent")?.scrollIntoView({ block: "center" });
+        return;
+      }
       const priceId =
         interval === "yearly" ? plan.paddlePriceIdYearly : plan.paddlePriceId;
       if (configured && ready && paddle && priceId) {
         const code = discountCode?.trim();
         paddle.Checkout.open({
           items: [{ priceId, quantity: 1 }],
-          customData: { user_id: userId },
+          customData: { user_id: userId, withdrawal_waiver_at: new Date().toISOString() },
           ...(code ? { discountCode: code } : {}),
           settings: {
             showAddDiscounts: true,
@@ -267,6 +275,7 @@ function PlanCheckoutButton({
     })();
   }, [
     configured,
+    consentGiven,
     discountCode,
     hasPlan,
     interval,
@@ -304,6 +313,7 @@ function PlanCheckoutButton({
 export function PricingPage() {
   const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly");
   const [discountCode, setDiscountCode] = useState("");
+  const [withdrawalConsent, setWithdrawalConsent] = useState(false);
   const native = useNativeApp();
   const { lang, t } = useLang();
   const session = useSessionOptional();
@@ -331,7 +341,7 @@ export function PricingPage() {
       <ProductEventBeacon name="acquisition.pricing_viewed" page="pricing" />
       <WebCheckoutReturn />
       <Suspense fallback={null}>
-        <PaddleCheckoutResume />
+        <PaddleCheckoutResume consentGiven={withdrawalConsent} />
       </Suspense>
       <LandingNav pricingPage />
       <main>
@@ -403,6 +413,28 @@ export function PricingPage() {
                   </span>
                 </label>
               </ScrollReveal>
+            ) : null}
+
+            {!hasPlan ? (
+              <div className="mx-auto mt-6 max-w-xl px-1">
+                <label
+                  id="withdrawal-consent"
+                  className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left text-xs leading-relaxed text-zinc-300"
+                >
+                  <input
+                    type="checkbox"
+                    checked={withdrawalConsent}
+                    onChange={(e) => setWithdrawalConsent(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-purple-500"
+                  />
+                  <span>
+                    {t("pricing.withdrawal_consent")}{" "}
+                    <Link href="/refund" className="underline underline-offset-2 hover:text-white">
+                      {t("legal.refund")}
+                    </Link>
+                  </span>
+                </label>
+              </div>
             ) : null}
 
             {(portalError || needsStepUp) && (
@@ -501,6 +533,7 @@ export function PricingPage() {
                           interval={billingInterval}
                           hasPlan={hasPlan}
                           discountCode={discountCode}
+                          consentGiven={withdrawalConsent}
                           onManagePlan={() => void openPortal()}
                           className={`landing-btn mt-8 w-full ${
                             plan.popular ? "landing-btn--primary" : "landing-btn--ghost"

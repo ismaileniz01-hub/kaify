@@ -10,6 +10,7 @@ export const SEO_INDEXABLE_PATHS = [
   "/pricing",
   "/privacy",
   "/terms",
+  "/refund",
   "/cookies",
   "/kvkk",
   "/disclaimer",
@@ -95,6 +96,7 @@ export function isMarketingPath(pathname: string): boolean {
     pathname === "/terms" ||
     pathname.startsWith("/terms/") ||
     pathname === "/terms&conditions" ||
+    pathname === "/refund" ||
     pathname === "/cookies" ||
     pathname.startsWith("/cookies/") ||
     pathname === "/kvkk" ||
@@ -133,6 +135,7 @@ export const SEO_CONTENT_DATES = {
   "/pricing": "2026-08-21",
   "/privacy": "2026-08-22",
   "/terms": "2026-08-21",
+  "/refund": "2026-11-28",
   "/cookies": "2026-08-21",
   "/kvkk": "2026-08-21",
   "/disclaimer": "2026-08-21",

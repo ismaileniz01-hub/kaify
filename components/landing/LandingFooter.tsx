@@ -51,6 +51,9 @@ export function LandingFooter() {
           <Link href="/privacy" className="transition hover:text-white">
             {t("legal.privacy")}
           </Link>
+          <Link href="/refund" className="transition hover:text-white">
+            {t("legal.refund")}
+          </Link>
           <Link href="/terms" className="transition hover:text-white">
             {t("legal.terms")}
           </Link>

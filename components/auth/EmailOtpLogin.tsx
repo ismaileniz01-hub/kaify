@@ -15,6 +15,8 @@ import {
 import { maskEmail } from "@/lib/auth/mask-email";
 import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
 import { fetchWebCheckoutProfile } from "@/lib/billing/web-checkout-profile";
+import { needsMfaStepAfterSignIn } from "@/lib/auth/mfa";
+import { tryCreateBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { AuthMode } from "@/lib/auth/safe-redirect";
 import { sanitizeAuthRedirect } from "@/lib/auth/safe-redirect";
 import { isNativePlatform } from "@/lib/native/platform";
@@ -197,8 +199,14 @@ export function EmailOtpLogin({
   }, []);
 
   const goAfterAuth = useCallback(async () => {
-    await applyPendingReferral();
     sessionStorage.removeItem(PENDING_OTP_EMAIL_KEY);
+    // TOTP-enrolled accounts are aal1 here: every API call would answer 403
+    // until the second factor is verified, so finish sign-in on /login/mfa.
+    if (await needsMfaStepAfterSignIn(tryCreateBrowserSupabaseClient())) {
+      router.replace("/login/mfa");
+      return;
+    }
+    await applyPendingReferral();
     if (skipAutoRedirect) {
       onAuthSuccess?.();
       return;

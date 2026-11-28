@@ -40,6 +40,11 @@ export const SITEMAP_PAGE_META: Record<SeoIndexablePath, SitemapMeta> = {
     changeFrequency: "monthly",
     priority: 0.5,
   },
+  "/refund": {
+    lastModified: "2026-11-28",
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
   "/cookies": {
     lastModified: COOKIES_VERSION,
     changeFrequency: "monthly",

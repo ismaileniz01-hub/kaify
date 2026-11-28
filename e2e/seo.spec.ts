@@ -141,6 +141,7 @@ test.describe("rendered public SEO", () => {
       "https://kaifyai.org/pricing",
       "https://kaifyai.org/privacy",
       "https://kaifyai.org/terms",
+      "https://kaifyai.org/refund",
       "https://kaifyai.org/cookies",
       "https://kaifyai.org/kvkk",
       "https://kaifyai.org/disclaimer",
