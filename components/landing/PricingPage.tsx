@@ -17,7 +17,7 @@ import { StepUpChallenge } from "@/components/auth/StepUpChallenge";
 import { usePaddle } from "@/components/billing/PaddleProvider";
 import { useBillingPortal } from "@/components/billing/useBillingPortal";
 import { SupporterPackCard } from "@/components/billing/SupporterPackCard";
-import { getPaddleSupporterPriceId } from "@/lib/billing/paddle-config";
+import { getPaddleSupporterPriceId, isSupporterPackEnabled } from "@/lib/billing/paddle-config";
 import { useSessionOptional } from "@/lib/session-contexts";
 import { useNativeApp } from "@/lib/native/platform";
 import { ProductEventBeacon } from "@/components/analytics/ProductEventBeacon";
@@ -519,12 +519,14 @@ export function PricingPage() {
                   </ScrollReveal>
                 );
               })}
-              <ScrollReveal
-                delay={PRICING_PLANS_WITH_PADDLE.length * 120}
-                direction="up"
-              >
-                <SupporterPackCard />
-              </ScrollReveal>
+              {isSupporterPackEnabled() ? (
+                <ScrollReveal
+                  delay={PRICING_PLANS_WITH_PADDLE.length * 120}
+                  direction="up"
+                >
+                  <SupporterPackCard />
+                </ScrollReveal>
+              ) : null}
             </div>
 
             <ScrollReveal delay={200} className="mx-auto mt-10 max-w-3xl">

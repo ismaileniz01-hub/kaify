@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useLang } from "@/lib/lang-context";
+import { isSupporterPackEnabled } from "@/lib/billing/paddle-config";
 
 export function LandingFooter() {
   const { t } = useLang();
@@ -39,12 +40,14 @@ export function LandingFooter() {
           <Link href="/pricing" className="transition hover:text-white">
             {t("landing.nav.pricing")}
           </Link>
-          <Link
-            href="/pricing#supporter"
-            className="font-semibold text-rose-300 transition hover:text-rose-200"
-          >
-            {t("landing.nav.support_us")}
-          </Link>
+          {isSupporterPackEnabled() ? (
+            <Link
+              href="/pricing#supporter"
+              className="font-semibold text-rose-300 transition hover:text-rose-200"
+            >
+              {t("landing.nav.support_us")}
+            </Link>
+          ) : null}
           <Link href="/privacy" className="transition hover:text-white">
             {t("legal.privacy")}
           </Link>

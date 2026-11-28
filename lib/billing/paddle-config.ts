@@ -129,6 +129,16 @@ export function buildPaddlePriceCycleMap(): Record<string, "monthly" | "yearly">
 export const SUPPORTER_PACK_AMOUNT_EUR = 2500;
 export const PADDLE_SUPPORTER_PRICE_ID = "pri_01m7ttwghve8z5ds38p465k676";
 
+/**
+ * The supporter pack is offered on the site only when explicitly enabled
+ * (NEXT_PUBLIC_SUPPORTER_PACK_ENABLED=true). Off by default while the Paddle
+ * account is being replaced; webhooks for past purchases keep working.
+ */
+export function isSupporterPackEnabled(): boolean {
+  // Static access so Next.js inlines the public env var into the client bundle.
+  return process.env.NEXT_PUBLIC_SUPPORTER_PACK_ENABLED?.trim() === "true";
+}
+
 export function getPaddleSupporterPriceId(): string {
   // Static access so Next.js inlines the public env var into the client bundle.
   return process.env.NEXT_PUBLIC_PADDLE_PRICE_SUPPORTER?.trim() || PADDLE_SUPPORTER_PRICE_ID;
